@@ -1,6 +1,5 @@
 <script lang="ts">
 	export let title: string = 'Terminal';
-	export let content: string = '';
 	export let showCart: boolean = false;
 	export let cartItems: any[] = [];
 	export let currentView: string = 'read';
@@ -53,38 +52,6 @@
 		}
 	];
 
-	const investmentItems = [
-		{
-			name: 'All',
-			icon: '📄',
-			description: 'All investments portfolio'
-		},
-		{
-			name: 'Banister Angels',
-			icon: '👼',
-			description: 'Angel investment fund'
-		},
-		{
-			name: 'Growth',
-			icon: '📈',
-			description: 'Growth stage investments'
-		},
-		{
-			name: 'Founders Fund',
-			icon: '🏢',
-			description: 'Venture capital fund'
-		},
-		{
-			name: 'Long Journey',
-			icon: '👁',
-			description: 'Long-term investments'
-		},
-		{
-			name: 'Exited',
-			icon: '📊',
-			description: 'Successful exits'
-		}
-	];
 
 	const shopItems = [
 		{
@@ -122,7 +89,7 @@
 </script>
 
 {#if embedded}
-    <div class="p-4 flex-1 overflow-y-auto">
+    <div class="p-4 overflow-y-auto" style="height: 100%;">
 		{#if showCart}
 			<div class="space-y-4">
 				<h3 class="text-2xl font-bold font-mono mb-6">Your Items</h3>

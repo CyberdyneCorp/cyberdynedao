@@ -1,40 +1,11 @@
 <script lang="ts">
-	interface NavItem {
-		name: string;
-		icon: string;
-		href?: string;
-		action?: () => void;
-	}
+	import { navItems, viewMap, type NavItem } from '$lib/constants/navigation';
 
 	export let currentView: string = 'read';
-	export let onViewChange: (view: string) => void;
-	export let cartCount: number = 0;
-
-	const navItems: NavItem[] = [
-		{ name: 'Substack', icon: '/assets/substack.svg' },
-		{ name: 'Read', icon: '/assets/read.svg' },
-		{ name: 'Investments', icon: '/assets/investments.svg' },
-		{ name: 'Watch', icon: '/assets/watch.svg' },
-		{ name: 'Contact Me', icon: '/assets/contact.svg' },
-		{ name: 'Listen', icon: '/assets/listen.svg' },
-		{ name: 'enigma', icon: '/assets/enigma.svg' },
-		{ name: 'Shop', icon: '/assets/shop.svg' }
-	];
 
 	import { createWindow } from '$lib/stores/windowStore';
 
 	function handleItemClick(item: NavItem) {
-		const viewMap: { [key: string]: any } = {
-			'Shop': 'shop',
-			'Read': 'read',
-			'Investments': 'investments',
-			'Watch': 'watch',
-			'Listen': 'listen',
-			'Substack': 'substack',
-			'Contact Me': 'contact',
-			'enigma': 'enigma'
-		};
-		
 		const view = viewMap[item.name] || item.name.toLowerCase();
 		createWindow(view, item.name);
 	}

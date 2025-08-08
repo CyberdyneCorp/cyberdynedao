@@ -40,7 +40,6 @@ body {
     radial-gradient(circle at 25% 75%, rgba(255,255,255,0.1) 1px, transparent 1px),
     radial-gradient(circle at 75% 75%, rgba(255,255,255,0.05) 1px, transparent 1px);
   background-size: 20px 20px, 40px 40px, 60px 60px, 80px 80px;
-  animation: pixel-grid 30s linear infinite;
 }
 
 .retro-window {
@@ -158,17 +157,6 @@ body {
   overflow: hidden;
 }
 
-.resize-handle {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 16px;
-  height: 16px;
-  cursor: se-resize;
-  background: linear-gradient(135deg, #e5e7eb 0%, #cbd5e1 100%);
-  border-left: 2px solid #000;
-  border-top: 2px solid #000;
-}
 
 /* Footer for window */
 .window-footer {

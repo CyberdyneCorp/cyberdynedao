@@ -123,7 +123,7 @@
         </div>
     </div>
 	
-    <div class="window-content">
+    <div class="window-content" style="flex: 1; min-height: 0;">
 		<TerminalWindow 
 			title={window.title}
 			showCart={window.content === 'cart'}
