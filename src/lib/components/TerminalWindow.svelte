@@ -122,28 +122,7 @@
 </script>
 
 {#if embedded}
-	<!-- Simple title bar with horizontal lines like original -->
-	<div class="h-6 border-b-2 border-black flex items-center bg-white">
-		<div class="flex items-center gap-1 px-2">
-			<div class="w-3 h-3 bg-gray-300 border border-black"></div>
-			<div class="w-3 h-3 bg-gray-300 border border-black"></div>
-		</div>
-		
-		<div class="flex-1 flex items-center">
-			<div class="flex-1 h-0.5 bg-black"></div>
-			<div class="mx-4 text-center">
-				<span class="font-mono text-sm font-bold bg-white px-2">{title}</span>
-			</div>
-			<div class="flex-1 h-0.5 bg-black"></div>
-		</div>
-		
-		<div class="flex items-center gap-1 px-2">
-			<button class="w-4 h-3 bg-gray-300 border border-black text-xs hover:bg-gray-400 flex items-center justify-center">_</button>
-			<button class="w-4 h-3 bg-gray-300 border border-black text-xs hover:bg-gray-400 flex items-center justify-center">□</button>
-			<button class="w-4 h-3 bg-gray-300 border border-black text-xs hover:bg-gray-400 flex items-center justify-center">×</button>
-		</div>
-	</div>
-	<div class="p-4 flex-1 overflow-y-auto">
+    <div class="p-4 flex-1 overflow-y-auto">
 		{#if showCart}
 			<div class="space-y-4">
 				<h3 class="text-2xl font-bold font-mono mb-6">Your Items</h3>
@@ -350,20 +329,6 @@
 	</div>
 {:else}
 	<div class="retro-window flex-1 mx-4 my-4 overflow-hidden">
-		<div class="bg-gray-200 border-b-2 border-black p-2 flex items-center justify-between">
-			<div class="flex items-center gap-2">
-				<div class="w-3 h-3 bg-red-500 rounded-full border border-black"></div>
-				<div class="w-3 h-3 bg-yellow-500 rounded-full border border-black"></div>
-				<div class="w-3 h-3 bg-green-500 rounded-full border border-black"></div>
-			</div>
-			<h2 class="font-mono font-bold text-black text-center flex-1">{title}</h2>
-			<div class="flex items-center gap-2">
-				<button class="text-black hover:bg-gray-300 px-2 py-1 text-xs">_</button>
-				<button class="text-black hover:bg-gray-300 px-2 py-1 text-xs">□</button>
-				<button class="text-black hover:bg-gray-300 px-2 py-1 text-xs">×</button>
-			</div>
-		</div>
-		
 		<div class="bg-white p-4 h-full overflow-y-auto">
 			{#if showCart}
 				<div class="space-y-4">
