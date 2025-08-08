@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import type { WindowState } from '$lib/stores/windowStore';
-	import { bringToFront, closeWindow, minimizeWindow, maximizeWindow, windows } from '$lib/stores/windowStore';
-	import TerminalWindow from './TerminalWindow.svelte';
+    import { onMount } from 'svelte';
+    import type { WindowState } from '$lib/stores/windowStore';
+    import { bringToFront, closeWindow, windows } from '$lib/stores/windowStore';
+    import TerminalWindow from './TerminalWindow.svelte';
 
 	export let window: WindowState;
 	export let cartItems: any[] = [];
@@ -114,18 +114,6 @@
         </div>
         
         <div class="title-controls">
-            <button 
-                class="window-control"
-                on:click={() => minimizeWindow(window.id)}
-            >
-                _
-            </button>
-            <button 
-                class="window-control"
-                on:click={() => maximizeWindow(window.id)}
-            >
-                □
-            </button>
             <button 
                 class="window-control"
                 on:click={() => closeWindow(window.id)}
