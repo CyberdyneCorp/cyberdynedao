@@ -87,56 +87,55 @@
 </script>
 
 <div
-	bind:this={windowElement}
-	class="fixed retro-window overflow-hidden"
-	style={windowStyle}
-	on:mousedown={handleWindowClick}
-	role="dialog"
-	tabindex="-1"
+    bind:this={windowElement}
+    class="retro-window window-root"
+    style={windowStyle}
+    on:mousedown={handleWindowClick}
+    role="dialog"
+    tabindex="-1"
 >
-	<div
-		bind:this={titleBarElement}
-		class="bg-white border-b-4 border-black p-1 flex items-center cursor-move"
-		on:mousedown={handleMouseDown}
-		role="button"
-		tabindex="0"
-		style="background: linear-gradient(to bottom, #ffffff 0%, #e5e5e5 50%, #ffffff 100%);"
-	>
-		<div class="flex items-center gap-1 px-2">
-			<div class="w-4 h-1 bg-black"></div>
-			<div class="w-4 h-1 bg-black"></div>
-			<div class="w-4 h-1 bg-black"></div>
-		</div>
-		
-		<div class="flex-1 text-center">
-			<div class="inline-block bg-white border-2 border-black px-4 py-1" style="background: linear-gradient(to bottom, #ffffff 0%, #f0f0f0 100%);">
-				<h2 class="font-mono font-bold text-black text-sm">{window.title}</h2>
-			</div>
-		</div>
-		
-		<div class="flex items-center gap-1 px-2">
-			<button 
-				class="w-6 h-4 bg-gray-300 border border-black text-xs font-mono hover:bg-gray-400 flex items-center justify-center"
-				on:click={() => minimizeWindow(window.id)}
-			>
-				_
-			</button>
-			<button 
-				class="w-6 h-4 bg-gray-300 border border-black text-xs font-mono hover:bg-gray-400 flex items-center justify-center"
-				on:click={() => maximizeWindow(window.id)}
-			>
-				□
-			</button>
-			<button 
-				class="w-6 h-4 bg-gray-300 border border-black text-xs font-mono hover:bg-gray-400 flex items-center justify-center"
-				on:click={() => closeWindow(window.id)}
-			>
-				×
-			</button>
-		</div>
-	</div>
+    <div
+        bind:this={titleBarElement}
+        class="title-bar"
+        on:mousedown={handleMouseDown}
+        role="button"
+        tabindex="0"
+    >
+        <div class="title-lines">
+            <div class="title-line"></div>
+            <div class="title-line"></div>
+            <div class="title-line"></div>
+        </div>
+        
+        <div class="title-center">
+            <div class="title-pill">
+                <h2 class="title-text">{window.title}</h2>
+            </div>
+        </div>
+        
+        <div class="title-controls">
+            <button 
+                class="window-control"
+                on:click={() => minimizeWindow(window.id)}
+            >
+                _
+            </button>
+            <button 
+                class="window-control"
+                on:click={() => maximizeWindow(window.id)}
+            >
+                □
+            </button>
+            <button 
+                class="window-control"
+                on:click={() => closeWindow(window.id)}
+            >
+                ×
+            </button>
+        </div>
+    </div>
 	
-	<div class="bg-white h-full overflow-hidden relative">
+    <div class="window-content">
 		<TerminalWindow 
 			title={window.title}
 			showCart={window.content === 'cart'}
@@ -147,8 +146,8 @@
 		/>
 		
 		<!-- Resize handle -->
-		<div 
-			class="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize bg-gray-300 border-l-2 border-t-2 border-black"
+        <div 
+            class="resize-handle"
 			on:mousedown={handleResizeStart}
 			role="button"
 			tabindex="0"
