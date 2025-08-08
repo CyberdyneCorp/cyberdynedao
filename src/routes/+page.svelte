@@ -49,27 +49,29 @@
 	
 	<div class="flex-1 relative bg-retro-bg">
 		<!-- Desktop Icons positioned on main area -->
-		<div class="absolute left-8 top-20 grid grid-cols-2 gap-x-32 gap-y-12 z-10">
-			{#each navItems as item}
-				<div class="flex flex-col items-center gap-1">
-					<button
-						class="sidebar-icon flex items-center justify-center p-2 cursor-pointer"
-						on:click={() => handleItemClick(item)}
-						title={item.name}
-					>
-						<img src={item.icon} alt={item.name} class="w-8 h-8" />
-					</button>
-					<span class="nav-label text-white text-xs font-mono text-center px-2 py-0.5 rounded">
-						{item.name}
-					</span>
-				</div>
-			{/each}
+		<div class="absolute left-8 top-1/15 z-10">
+			<div class="grid grid-cols-2" style="gap: 50px 70px;">
+				{#each navItems as item}
+					<div class="flex flex-col items-center gap-2">
+						<button
+							class="sidebar-icon flex items-center justify-center p-2 cursor-pointer"
+							on:click={() => handleItemClick(item)}
+							title={item.name}
+						>
+							<img src={item.icon} alt={item.name} class="w-8 h-8" />
+						</button>
+						<span class="nav-label text-white text-xs font-mono text-center px-2 py-0.5 rounded">
+							{item.name}
+						</span>
+					</div>
+				{/each}
+			</div>
 		</div>
 		
 		<!-- Cart icon in top-right corner -->
 		{#if cartCount > 0}
-			<div class="absolute top-20 right-8 z-20">
-				<div class="flex flex-col items-center gap-1">
+			<div class="absolute top-16 right-8 z-20">
+				<div class="flex flex-col items-center gap-2">
 					<button
 						class="sidebar-icon flex items-center justify-center p-2 cursor-pointer relative"
 						on:click={() => createWindow('cart', `Your Bag (${cartCount})`)}
