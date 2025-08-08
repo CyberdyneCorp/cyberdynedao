@@ -1,0 +1,99 @@
+<script lang="ts">
+	import Window from '$lib/components/Window.svelte';
+	import TopBar from '$lib/components/TopBar.svelte';
+	import { windows, createWindow } from '$lib/stores/windowStore';
+	
+	interface NavItem {
+		name: string;
+		icon: string;
+	}
+
+	const navItems: NavItem[] = [
+		{ name: 'Substack', icon: '/assets/substack.svg' },
+		{ name: 'Read', icon: '/assets/read.svg' },
+		{ name: 'Investments', icon: '/assets/investments.svg' },
+		{ name: 'Watch', icon: '/assets/watch.svg' },
+		{ name: 'Contact Me', icon: '/assets/contact.svg' },
+		{ name: 'Listen', icon: '/assets/listen.svg' },
+		{ name: 'enigma', icon: '/assets/enigma.svg' },
+		{ name: 'Shop', icon: '/assets/shop.svg' }
+	];
+
+	let cartItems: any[] = [];
+	
+	function addToCart(item: any) {
+		cartItems = [...cartItems, item];
+	}
+	
+	function handleItemClick(item: NavItem) {
+		const viewMap: { [key: string]: any } = {
+			'Shop': 'shop',
+			'Read': 'read',
+			'Investments': 'investments',
+			'Watch': 'watch',
+			'Listen': 'listen',
+			'Substack': 'substack',
+			'Contact Me': 'contact',
+			'enigma': 'enigma'
+		};
+		
+		const view = viewMap[item.name] || item.name.toLowerCase();
+		createWindow(view, item.name);
+	}
+	
+	$: cartCount = cartItems.length;
+</script>
+
+<div class="flex flex-col h-screen">
+	<TopBar />
+	
+	<div class="flex-1 relative bg-retro-bg">
+		<!-- Desktop Icons positioned on main area -->
+		<div class="absolute left-8 top-20 grid grid-cols-2 gap-x-32 gap-y-12 z-10">
+			{#each navItems as item}
+				<div class="flex flex-col items-center gap-1">
+					<button
+						class="sidebar-icon flex items-center justify-center p-2 cursor-pointer"
+						on:click={() => handleItemClick(item)}
+						title={item.name}
+					>
+						<img src={item.icon} alt={item.name} class="w-8 h-8" />
+					</button>
+					<span class="nav-label text-white text-xs font-mono text-center px-2 py-0.5 rounded">
+						{item.name}
+					</span>
+				</div>
+			{/each}
+		</div>
+		
+		<!-- Cart icon in top-right corner -->
+		{#if cartCount > 0}
+			<div class="absolute top-20 right-8 z-20">
+				<div class="flex flex-col items-center gap-1">
+					<button
+						class="sidebar-icon flex items-center justify-center p-2 cursor-pointer relative"
+						on:click={() => createWindow('cart', `Your Bag (${cartCount})`)}
+						title="Your Bag"
+					>
+						<img src="/assets/cart.svg" alt="Cart" class="w-8 h-8" />
+						<div class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+							{cartCount}
+						</div>
+					</button>
+					<span class="nav-label text-white text-xs font-mono text-center px-2 py-0.5 rounded">
+						Your Bag ({cartCount})
+					</span>
+				</div>
+			</div>
+		{/if}
+		
+		<!-- Windows -->
+		{#each $windows as window (window.id)}
+			<Window 
+				{window}
+				bind:cartItems
+				onAddToCart={addToCart}
+			/>
+		{/each}
+	</div>
+</div>
