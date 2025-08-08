@@ -121,28 +121,33 @@
         role="button"
         tabindex="0"
     >
-        <div class="title-controls-left">
+        <div class="title-layout-modern">
+            <div class="hamburger-icon">
+                <div class="hamburger-line"></div>
+                <div class="hamburger-line"></div>
+                <div class="hamburger-line"></div>
+            </div>
+            
+            <button 
+                class="window-control close"
+                on:click={() => closeWindow(window.id)}
+            >×</button>
+            
             <div class="title-bars-left">
                 <div class="title-bar-line"></div>
                 <div class="title-bar-line"></div>
                 <div class="title-bar-line"></div>
                 <div class="title-bar-line"></div>
             </div>
-            <button 
-                class="window-control close"
-                on:click={() => closeWindow(window.id)}
-            >×</button>
-        </div>
-        
-        <div class="title-center-modern">
+            
             <span class="title-text-modern">{window.title}</span>
-        </div>
-        
-        <div class="title-bars-right">
-            <div class="title-bar-line"></div>
-            <div class="title-bar-line"></div>
-            <div class="title-bar-line"></div>
-            <div class="title-bar-line"></div>
+            
+            <div class="title-bars-right">
+                <div class="title-bar-line"></div>
+                <div class="title-bar-line"></div>
+                <div class="title-bar-line"></div>
+                <div class="title-bar-line"></div>
+            </div>
         </div>
     </div>
 	

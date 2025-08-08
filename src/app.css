@@ -90,11 +90,23 @@ body {
   justify-content: space-between;
 }
 
-.title-controls-left {
+.title-layout-modern {
   display: flex;
   align-items: center;
-  gap: 8px;
-  width: 250px;
+  gap: 12px;
+  width: 100%;
+}
+
+.hamburger-icon {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hamburger-line {
+  width: 16px;
+  height: 2px;
+  background-color: #000;
 }
 
 .title-bars-left,
@@ -102,7 +114,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  width: 200px;
+  flex: 1;
 }
 
 .title-bar-line {
@@ -111,15 +123,13 @@ body {
   background-color: #000;
 }
 
-.title-center-modern {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+.title-text-modern {
   font-family: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
   font-size: 14px;
   font-weight: 500;
   color: #333;
-  pointer-events: none;
+  white-space: nowrap;
+  padding: 0 20px;
 }
 
 .title-spacer {
