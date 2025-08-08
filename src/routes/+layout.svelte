@@ -1,6 +1,7 @@
 <script lang="ts">
 	import favicon from '$lib/assets/favicon.svg';
 	import '../app.css';
+    import TopBar from '$lib/components/TopBar.svelte';
 
 	let { children } = $props();
 </script>
@@ -10,6 +11,7 @@
 	<title>Retro Terminal</title>
 </svelte:head>
 
-<div class="pixel-dot w-screen h-screen bg-retro-bg">
-	{@render children?.()}
-</div>
+<TopBar />
+<div class="pixel-dot w-screen h-screen bg-retro-bg pt-12">
+    {@render children?.()}
+    </div>

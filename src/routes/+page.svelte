@@ -1,6 +1,5 @@
 <script lang="ts">
 	import Window from '$lib/components/Window.svelte';
-	import TopBar from '$lib/components/TopBar.svelte';
 	import { windows, createWindow } from '$lib/stores/windowStore';
 	
 	interface NavItem {
@@ -45,9 +44,7 @@
 </script>
 
 <div class="flex flex-col h-screen">
-	<TopBar />
-	
-	<div class="flex-1 relative bg-retro-bg">
+    <div class="flex-1 relative bg-retro-bg">
 		<!-- Desktop Icons positioned on main area -->
 		<div class="absolute left-8 top-1/15 z-10">
 			<div class="grid grid-cols-2" style="gap: 50px 70px;">
