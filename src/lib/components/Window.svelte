@@ -101,6 +101,15 @@
         role="button"
         tabindex="0"
     >
+        <div class="title-controls">
+            <button 
+                class="window-control"
+                on:click={() => closeWindow(window.id)}
+            >
+                ×
+            </button>
+        </div>
+
         <div class="title-lines">
             <div class="title-line"></div>
             <div class="title-line"></div>
@@ -111,15 +120,6 @@
             <div class="title-pill">
                 <h2 class="title-text">{window.title}</h2>
             </div>
-        </div>
-        
-        <div class="title-controls">
-            <button 
-                class="window-control"
-                on:click={() => closeWindow(window.id)}
-            >
-                ×
-            </button>
         </div>
     </div>
 	
@@ -132,13 +132,18 @@
 			{onAddToCart}
 			embedded={true}
 		/>
-		
-		<!-- Resize handle -->
-        <div 
-            class="resize-handle"
-			on:mousedown={handleResizeStart}
-			role="button"
-			tabindex="0"
-		></div>
 	</div>
+
+    <div class="window-footer">
+        <div class="footer-spacer"></div>
+        <div class="footer-controls">
+            <div 
+                class="footer-resize-control"
+                on:mousedown={handleResizeStart}
+                role="button"
+                tabindex="0"
+                aria-label="Resize window"
+            ></div>
+        </div>
+    </div>
 </div>

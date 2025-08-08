@@ -55,6 +55,8 @@ body {
 .window-root {
   position: fixed;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Window title bar styling to match mockup */
@@ -75,6 +77,7 @@ body {
       transparent 6px
     );
   background-blend-mode: overlay, normal;
+  position: relative;
 }
 
 .title-lines {
@@ -91,8 +94,11 @@ body {
 }
 
 .title-center {
-  flex: 1;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   text-align: center;
+  pointer-events: none;
 }
 
 /* Center title pill */
@@ -146,7 +152,9 @@ body {
 .window-content {
   position: relative;
   background: #fff;
-  height: 100%;
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -154,6 +162,36 @@ body {
   position: absolute;
   bottom: 0;
   right: 0;
+  width: 16px;
+  height: 16px;
+  cursor: se-resize;
+  background: linear-gradient(135deg, #e5e7eb 0%, #cbd5e1 100%);
+  border-left: 2px solid #000;
+  border-top: 2px solid #000;
+}
+
+/* Footer for window */
+.window-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 28px;
+  border-top: 4px solid #000;
+  background: linear-gradient(to bottom, #ffffff 0%, #f0f0f0 100%);
+}
+
+.footer-spacer {
+  flex: 1;
+}
+
+.footer-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+}
+
+.footer-resize-control {
   width: 16px;
   height: 16px;
   cursor: se-resize;
