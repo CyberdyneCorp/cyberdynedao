@@ -75,25 +75,20 @@ body {
 .sidebar-icon {
   width: 64px;
   height: 64px;
-  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
-  border: 2px solid #000;
-  box-shadow: 
-    2px 2px 0px #000,
-    4px 4px 0px rgba(0,0,0,0.3);
+  background: transparent;
+  border: none;
+  box-shadow: none;
   transition: all 0.1s ease;
   border-radius: 4px;
 }
 
 .sidebar-icon:hover {
-  transform: translate(1px, 1px);
-  box-shadow: 
-    1px 1px 0px #000,
-    2px 2px 0px rgba(0,0,0,0.3);
+  transform: scale(1.05);
+  transition: all 0.1s ease;
 }
 
 .sidebar-icon:active {
-  transform: translate(2px, 2px);
-  box-shadow: none;
+  transform: scale(0.95);
 }
 
 .sidebar-icon svg {
@@ -105,4 +100,5 @@ body {
   background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
   border: 1px solid #000;
   box-shadow: 1px 1px 0px rgba(0,0,0,0.3);
+  margin-top: 20px;
 }
