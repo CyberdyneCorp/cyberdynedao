@@ -89,7 +89,7 @@
 </script>
 
 {#if embedded}
-    <div class="p-4 overflow-y-auto" style="height: 100%;">
+    <div class="p-4 overflow-y-auto flex-1">
 		{#if showCart}
 			<div class="space-y-4">
 				<h3 class="text-2xl font-bold font-mono mb-6">Your Items</h3>

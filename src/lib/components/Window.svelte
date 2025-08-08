@@ -12,6 +12,7 @@
 	let titleBarElement: HTMLDivElement;
 	let isDragging = false;
 	let isResizing = false;
+	let resizeDirection = '';
 	let dragOffset = { x: 0, y: 0 };
 	let resizeStartSize = { width: 0, height: 0 };
 	let resizeStartMouse = { x: 0, y: 0 };
@@ -27,6 +28,17 @@
 
 	function handleResizeStart(e: MouseEvent) {
 		isResizing = true;
+		
+		// Determine resize direction based on target class
+		const target = e.target as HTMLElement;
+		if (target.classList.contains('resize-right')) {
+			resizeDirection = 'right';
+		} else if (target.classList.contains('resize-bottom')) {
+			resizeDirection = 'bottom';
+		} else {
+			resizeDirection = 'se'; // southeast (both width and height)
+		}
+		
 		resizeStartSize.width = window.width;
 		resizeStartSize.height = window.height;
 		resizeStartMouse.x = e.clientX;
@@ -45,15 +57,23 @@
 		} else if (isResizing) {
 			const deltaX = e.clientX - resizeStartMouse.x;
 			const deltaY = e.clientY - resizeStartMouse.y;
-			windows.update(wins => wins.map(w => 
-				w.id === window.id 
-					? { 
-						...w, 
-						width: Math.max(300, resizeStartSize.width + deltaX),
-						height: Math.max(200, resizeStartSize.height + deltaY)
+			
+			windows.update(wins => wins.map(w => {
+				if (w.id === window.id) {
+					let newWidth = w.width;
+					let newHeight = w.height;
+					
+					if (resizeDirection === 'right' || resizeDirection === 'se') {
+						newWidth = Math.max(300, resizeStartSize.width + deltaX);
 					}
-					: w
-			));
+					if (resizeDirection === 'bottom' || resizeDirection === 'se') {
+						newHeight = Math.max(200, resizeStartSize.height + deltaY);
+					}
+					
+					return { ...w, width: newWidth, height: newHeight };
+				}
+				return w;
+			}));
 		}
 	}
 
@@ -80,7 +100,7 @@
 		left: ${window.x}px;
 		top: ${window.y}px;
 		width: ${window.maximized ? '100vw' : `${window.width}px`};
-		height: ${window.maximized ? '100vh' : `${window.height}px`};
+		min-height: ${window.maximized ? '100vh' : `${window.height}px`};
 		z-index: ${window.zIndex};
 		display: ${window.minimized ? 'none' : 'block'};
 	`;
@@ -123,7 +143,7 @@
         </div>
     </div>
 	
-    <div class="window-content" style="flex: 1; min-height: 0;">
+    <div class="window-content">
 		<TerminalWindow 
 			title={window.title}
 			showCart={window.content === 'cart'}
@@ -135,6 +155,9 @@
 	</div>
 
     <div class="window-footer">
+        <div class="footer-left">
+            <span class="footer-status">{window.title}</span>
+        </div>
         <div class="footer-spacer"></div>
         <div class="footer-controls">
             <div 
@@ -146,4 +169,8 @@
             ></div>
         </div>
     </div>
+    
+    <!-- Resize handles -->
+    <div class="resize-handle resize-right" on:mousedown={handleResizeStart}></div>
+    <div class="resize-handle resize-bottom" on:mousedown={handleResizeStart}></div>
 </div>
