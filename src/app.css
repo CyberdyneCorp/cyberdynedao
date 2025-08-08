@@ -80,6 +80,92 @@ body {
   position: relative;
 }
 
+/* Modern title bar style */
+.title-bar.modern {
+  background: #f0f0f0;
+  background-image: none;
+  border-bottom: 1px solid #d0d0d0;
+  padding: 8px 12px;
+  height: 32px;
+  justify-content: space-between;
+}
+
+.title-controls-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 250px;
+}
+
+.title-bars-left,
+.title-bars-right {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 200px;
+}
+
+.title-bar-line {
+  width: 100%;
+  height: 1px;
+  background-color: #000;
+}
+
+.title-center-modern {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  pointer-events: none;
+}
+
+.title-spacer {
+  flex: 1;
+}
+
+.window-control.minimize,
+.window-control.maximize,
+.window-control.close {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  font-size: 12px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.window-control.minimize {
+  background-color: #ffbd44;
+}
+
+.window-control.maximize {
+  background-color: #00ca4e;
+}
+
+.window-control.close {
+  background-color: #ff605c;
+}
+
+.window-control.minimize:hover {
+  background-color: #ffaa00;
+}
+
+.window-control.maximize:hover {
+  background-color: #00b83a;
+}
+
+.window-control.close:hover {
+  background-color: #ff4742;
+}
+
 .title-lines {
   display: flex;
   align-items: center;

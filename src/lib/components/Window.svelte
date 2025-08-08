@@ -116,30 +116,33 @@
 >
     <div
         bind:this={titleBarElement}
-        class="title-bar"
+        class="title-bar modern"
         on:mousedown={handleMouseDown}
         role="button"
         tabindex="0"
     >
-        <div class="title-controls">
+        <div class="title-controls-left">
+            <div class="title-bars-left">
+                <div class="title-bar-line"></div>
+                <div class="title-bar-line"></div>
+                <div class="title-bar-line"></div>
+                <div class="title-bar-line"></div>
+            </div>
             <button 
-                class="window-control"
+                class="window-control close"
                 on:click={() => closeWindow(window.id)}
-            >
-                ×
-            </button>
-        </div>
-
-        <div class="title-lines">
-            <div class="title-line"></div>
-            <div class="title-line"></div>
-            <div class="title-line"></div>
+            >×</button>
         </div>
         
-        <div class="title-center">
-            <div class="title-pill">
-                <h2 class="title-text">{window.title}</h2>
-            </div>
+        <div class="title-center-modern">
+            <span class="title-text-modern">{window.title}</span>
+        </div>
+        
+        <div class="title-bars-right">
+            <div class="title-bar-line"></div>
+            <div class="title-bar-line"></div>
+            <div class="title-bar-line"></div>
+            <div class="title-bar-line"></div>
         </div>
     </div>
 	
