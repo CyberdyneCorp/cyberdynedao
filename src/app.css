@@ -85,8 +85,8 @@ body {
   background: #f0f0f0;
   background-image: none;
   border-bottom: 1px solid #d0d0d0;
-  padding: 8px 12px;
-  height: 32px;
+  padding: 12px 16px;
+  height: 44px;
   justify-content: space-between;
 }
 
@@ -95,12 +95,13 @@ body {
   align-items: center;
   gap: 12px;
   width: 100%;
+  position: relative;
 }
 
 .hamburger-icon {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 5px;
 }
 
 .hamburger-line {
@@ -113,23 +114,25 @@ body {
 .title-bars-right {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 5px;
   flex: 1;
 }
 
 .title-bar-line {
   width: 100%;
-  height: 1px;
+  height: 2px;
   background-color: #000;
 }
 
 .title-text-modern {
   font-family: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
-  font-size: 14px;
+  font-size: 20px;
   font-weight: 500;
   color: #333;
   white-space: nowrap;
   padding: 0 20px;
+  text-align: center;
+  flex-shrink: 0;
 }
 
 .title-spacer {
@@ -139,11 +142,11 @@ body {
 .window-control.minimize,
 .window-control.maximize,
 .window-control.close {
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   border: none;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: bold;
   display: flex;
   align-items: center;
@@ -161,7 +164,7 @@ body {
 }
 
 .window-control.close {
-  background-color: #ff605c;
+  background-color: #ff4444;
 }
 
 .window-control.minimize:hover {
@@ -173,7 +176,7 @@ body {
 }
 
 .window-control.close:hover {
-  background-color: #ff4742;
+  background-color: #cc3333;
 }
 
 .title-lines {
@@ -242,6 +245,20 @@ body {
 .window-control:active {
   transform: translate(1px, 1px);
   box-shadow: none;
+}
+
+/* Override for modern title bar close button */
+.title-bar.modern .window-control.close {
+  background: #ff4444 !important;
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 16px;
+}
+
+.title-bar.modern .window-control.close:hover {
+  background: #cc3333 !important;
 }
 
 /* Resize handle bottom-right */

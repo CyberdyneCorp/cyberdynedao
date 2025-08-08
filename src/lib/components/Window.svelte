@@ -151,7 +151,7 @@
         </div>
     </div>
 	
-    <div class="window-content" style="max-height: calc({window.height}px - 60px);">
+    <div class="window-content" style="max-height: calc({window.height}px - 72px);">
 		<TerminalWindow 
 			title={window.title}
 			showCart={window.content === 'cart'}
