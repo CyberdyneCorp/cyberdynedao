@@ -68,26 +68,26 @@
 			</div>
 		</div>
 		
-		<!-- Cart icon in top-right corner -->
-		{#if cartCount > 0}
-			<div class="absolute top-16 right-8 z-20">
-				<div class="flex flex-col items-center">
-					<button
-						class="sidebar-icon flex items-center justify-center cursor-pointer relative"
-						on:click={() => createWindow('cart', `Your Bag (${cartCount})`)}
-						title="Your Bag"
-					>
-						<img src="/assets/cart.svg" alt="Cart" class="w-8 h-8" />
+		<!-- Cart icon in right corner at same height as other icons -->
+		<div class="absolute right-1/10 top-1/15 z-20">
+			<div class="flex flex-col items-center">
+				<button
+					class="sidebar-icon flex items-center justify-center cursor-pointer relative"
+					on:click={() => createWindow('cart', `Your Bag (${cartCount})`)}
+					title="Your Bag"
+				>
+					<img src="/assets/cart.svg" alt="Cart" class="w-8 h-8" />
+					{#if cartCount > 0}
 						<div class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
 							{cartCount}
 						</div>
-					</button>
-					<span class="nav-label text-white text-xs font-mono text-center px-2 py-0.5 rounded mt-4">
-						Your Bag ({cartCount})
-					</span>
-				</div>
+					{/if}
+				</button>
+				<span class="nav-label text-white text-xs font-mono text-center px-2 py-0.5 rounded mt-4">
+					Your Bag {cartCount > 0 ? `(${cartCount})` : ''}
+				</span>
 			</div>
-		{/if}
+		</div>
 		
 		<!-- Windows -->
 		{#each $windows as window (window.id)}
