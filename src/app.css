@@ -338,3 +338,96 @@ body {
 .menu-item-text.blue {
   color: #2563eb;
 }
+
+/* Terminal Styles */
+.terminal-content {
+  background-color: #000 !important;
+  color: #00ff00 !important;
+  font-family: 'JetBrains Mono', 'Monaco', 'Menlo', monospace !important;
+  font-size: 16px !important;
+}
+
+/* Ensure terminal fills window content */
+.window-content:has(.terminal-content) {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Terminal container should fill available space */
+.terminal-content {
+  min-height: 0 !important;
+  flex: 1 !important;
+}
+
+.cursor-text {
+  cursor: text !important;
+}
+
+.terminal-input {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  outline: none !important;
+  color: #00ff00 !important;
+  caret-color: #00ff00 !important;
+  font-family: 'JetBrains Mono', 'Monaco', 'Menlo', monospace !important;
+  font-size: 16px !important;
+  box-shadow: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+
+/* Blinking cursor animation */
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.terminal-input {
+  animation: none !important;
+}
+
+.terminal-input:focus {
+  caret-color: #00ff00 !important;
+  animation: none !important;
+}
+
+/* Custom blinking cursor for webkit browsers */
+.terminal-input::-webkit-input-placeholder {
+  color: transparent !important;
+}
+
+.terminal-input::placeholder {
+  color: transparent !important;
+}
+
+/* Ensure cursor blinks */
+.terminal-input {
+  caret-color: #00ff00 !important;
+}
+
+.terminal-input:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #00ff00 !important;
+}
+
+/* Scrollbar styling for terminal */
+.terminal-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.terminal-content::-webkit-scrollbar-track {
+  background: #001100;
+}
+
+.terminal-content::-webkit-scrollbar-thumb {
+  background: #00aa00;
+  border-radius: 4px;
+}
+
+.terminal-content::-webkit-scrollbar-thumb:hover {
+  background: #00ff00;
+}

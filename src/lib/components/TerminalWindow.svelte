@@ -1,10 +1,135 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+	
 	export let title: string = 'Terminal';
 	export let showCart: boolean = false;
 	export let cartItems: any[] = [];
 	export let currentView: string = 'read';
 	export let onAddToCart: ((item: any) => void) | undefined = undefined;
 	export let embedded: boolean = false;
+
+	// Terminal functionality
+	let terminalInput = '';
+	let terminalHistory: Array<{type: 'input' | 'output' | 'system', text: string, timestamp?: string}> = [
+		{ type: 'system', text: 'Welcome to CyberdyneOS!' },
+		{ type: 'system', text: 'For available commands, try "help".' },
+		{ type: 'system', text: `Last login: ${new Date().toLocaleDateString()}, ${new Date().toLocaleTimeString()}` },
+		{ type: 'system', text: '' } // Empty line
+	];
+	let currentUser = 'user';
+	let currentHost = 'CyberdyneOS';
+
+	function handleTerminalSubmit() {
+		if (terminalInput.trim() === '') return;
+		
+		// Add user input to history
+		terminalHistory = [...terminalHistory, { 
+			type: 'input', 
+			text: `${currentUser}@${currentHost} $ ${terminalInput}`,
+			timestamp: new Date().toLocaleTimeString()
+		}];
+		
+		// Process command and get response
+		const response = processCommand(terminalInput.trim());
+		terminalHistory = [...terminalHistory, { 
+			type: 'output', 
+			text: response 
+		}];
+		
+		// Clear input
+		terminalInput = '';
+		
+		// Scroll to bottom
+		setTimeout(() => {
+			const terminal = document.querySelector('.terminal-content');
+			if (terminal) {
+				terminal.scrollTop = terminal.scrollHeight;
+			}
+		}, 10);
+	}
+
+	function processCommand(command: string): string {
+		const cmd = command.toLowerCase().trim();
+		
+		switch(cmd) {
+			case 'help':
+				return `Available commands:
+help     - Show this help message
+clear    - Clear the terminal
+date     - Show current date and time
+whoami   - Show current user
+chat     - Start chatbot conversation
+ask      - Ask the AI assistant a question (e.g., "ask What is JavaScript?")
+about    - Show information about this terminal
+exit     - Close terminal (same as clicking X)`;
+			
+			case 'clear':
+				terminalHistory = [
+					{ type: 'system', text: 'Welcome to duckOS!' },
+					{ type: 'system', text: 'For available commands, try "help".' }
+				];
+				return '';
+			
+			case 'date':
+				return new Date().toString();
+			
+			case 'whoami':
+				return currentUser;
+			
+			case 'chat':
+				return `ChatBot: Hello! I'm your AI assistant. How can I help you today?
+Type your questions or messages, and I'll do my best to help!`;
+			
+			case 'about':
+				return `duckOS Terminal v1.0
+A retro-style terminal interface for chatbot interactions
+Built with Svelte and styled with classic green terminal aesthetics`;
+			
+			case 'exit':
+				return 'Goodbye! Closing terminal...';
+			
+			default:
+				if (cmd.startsWith('ask ')) {
+					const question = command.substring(4);
+					return `ChatBot: You asked: "${question}"
+I'm a demo chatbot. In a real implementation, I would process your question and provide a helpful response!`;
+				}
+				
+				return `Command not found: ${command}
+Type 'help' for available commands.`;
+		}
+	}
+
+	function handleKeyDown(event: KeyboardEvent) {
+		if (event.key === 'Enter') {
+			handleTerminalSubmit();
+		}
+	}
+
+	function focusInput() {
+		const input = document.querySelector('.terminal-input') as HTMLInputElement;
+		if (input) {
+			input.focus();
+		}
+	}
+
+	// Auto-focus terminal input when terminal opens
+	let shouldAutoFocus = false;
+	
+	$: if (currentView === 'terminal' && !shouldAutoFocus) {
+		shouldAutoFocus = true;
+		setTimeout(() => {
+			focusInput();
+		}, 100);
+	}
+	
+	onMount(() => {
+		if (currentView === 'terminal') {
+			setTimeout(() => {
+				focusInput();
+			}, 200);
+		}
+	});
 
 	interface NewsItem {
 		title: string;
@@ -89,7 +214,7 @@
 </script>
 
 {#if embedded}
-    <div class="p-4 overflow-y-auto flex-1">
+    <div class="p-4 overflow-y-auto flex-1" style="{currentView === 'terminal' ? 'padding: 0; height: 100%;' : ''}">
 		{#if showCart}
 			<div class="space-y-4">
 				<h3 class="text-2xl font-bold font-mono mb-6">Your Items</h3>
@@ -242,6 +367,37 @@
 					</div>
 				</div>
 			</div>
+		{:else if currentView === 'terminal'}
+			<!-- Terminal Interface -->
+			<div class="flex flex-col" style="background-color: #000; color: #00ff00; font-family: 'JetBrains Mono', 'Monaco', 'Menlo', monospace; font-size: 16px; height: 100%; min-height: 0;">
+				<div class="terminal-content flex-1 overflow-y-auto p-4 space-y-1 cursor-text" style="min-height: 0;" on:click={focusInput}>
+					{#each terminalHistory as line}
+						<div class="whitespace-pre-wrap">
+							{#if line.type === 'input'}
+								<span style="color: #00ff00;">{line.text}</span>
+							{:else if line.type === 'output'}
+								<span style="color: #00dd00;">{line.text}</span>
+							{:else}
+								<span style="color: #00aa00;">{line.text}</span>
+							{/if}
+						</div>
+					{/each}
+				</div>
+				<div class="border-t border-green-600 p-4">
+					<div class="flex items-center">
+						<span style="color: #00ff00;" class="mr-2">{currentUser}@{currentHost} $ </span>
+						<input 
+							bind:value={terminalInput}
+							on:keydown={handleKeyDown}
+							class="flex-1 terminal-input"
+							style="background: transparent !important; border: none !important; outline: none !important; color: #00ff00 !important; font-family: 'JetBrains Mono', 'Monaco', 'Menlo', monospace !important; font-size: 16px !important; caret-color: #00ff00 !important;"
+							placeholder=""
+							autocomplete="off"
+							spellcheck="false"
+						/>
+					</div>
+				</div>
+			</div>
 		{:else if currentView === 'shop'}
 			<div class="space-y-4">
 				<h3 class="text-2xl font-bold font-mono mb-6">Shop</h3>
@@ -351,6 +507,37 @@
 							</button>
 						</div>
 					{/if}
+				</div>
+			{:else if currentView === 'terminal'}
+				<!-- Terminal Interface (non-embedded) -->
+				<div class="flex flex-col" style="background-color: #000; color: #00ff00; font-family: 'JetBrains Mono', 'Monaco', 'Menlo', monospace; font-size: 16px; height: 100%; min-height: 0;">
+					<div class="terminal-content flex-1 overflow-y-auto p-4 space-y-1 cursor-text" style="min-height: 0;" on:click={focusInput}>
+						{#each terminalHistory as line}
+							<div class="whitespace-pre-wrap">
+								{#if line.type === 'input'}
+									<span style="color: #00ff00;">{line.text}</span>
+								{:else if line.type === 'output'}
+									<span style="color: #00dd00;">{line.text}</span>
+								{:else}
+									<span style="color: #00aa00;">{line.text}</span>
+								{/if}
+							</div>
+						{/each}
+					</div>
+					<div class="border-t border-green-600 p-4">
+						<div class="flex items-center">
+							<span style="color: #00ff00;" class="mr-2">{currentUser}@{currentHost} $ </span>
+							<input 
+								bind:value={terminalInput}
+								on:keydown={handleKeyDown}
+								class="flex-1 terminal-input"
+								style="background: transparent !important; border: none !important; outline: none !important; color: #00ff00 !important; font-family: 'JetBrains Mono', 'Monaco', 'Menlo', monospace !important; font-size: 16px !important; caret-color: #00ff00 !important;"
+								placeholder=""
+								autocomplete="off"
+								spellcheck="false"
+							/>
+						</div>
+					</div>
 				</div>
 			{:else if currentView === 'shop'}
 				<div class="space-y-4">

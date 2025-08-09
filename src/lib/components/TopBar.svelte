@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { createWindow } from '$lib/stores/windowStore';
+	
 	// Top navigation bar component
 	let showMenu = false;
 	
@@ -11,6 +13,25 @@
 	
 	function closeMenu() {
 		showMenu = false;
+	}
+	
+	function handleMenuItemClick(action: string) {
+		closeMenu();
+		
+		switch(action) {
+			case 'terminal':
+				createWindow('terminal', 'Terminal');
+				break;
+			case 'about':
+				// Handle about me
+				break;
+			case 'refresh':
+				// Handle refresh ASCII
+				break;
+			case 'close-all':
+				// Handle close all windows
+				break;
+		}
 	}
 </script>
 
@@ -63,7 +84,7 @@
                 </div>
                 <span class="menu-item-text">About Me</span>
             </div>
-            <div class="menu-item" on:click={closeMenu} on:keydown={(e) => e.key === 'Enter' && closeMenu()} role="button" tabindex="0">
+            <div class="menu-item" on:click={() => handleMenuItemClick('terminal')} on:keydown={(e) => e.key === 'Enter' && handleMenuItemClick('terminal')} role="button" tabindex="0">
                 <div class="menu-item-icon">
                     <span class="text-lg">⬛</span>
                 </div>
