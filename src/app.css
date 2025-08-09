@@ -76,7 +76,7 @@ body {
 .hamburger-icon,
 .title-bar.modern .window-control.close {
   position: absolute;
-  left: 8px;
+  left: -10px;
   top: 50%;
   transform: translateY(-50%);
   z-index: 20;
@@ -84,7 +84,7 @@ body {
 }
 
 /* Put the “X” just to the right of the hamburger */
-.title-bar.modern .window-control.close { left: 40px; }
+.title-bar.modern .window-control.close { left: 20px; }
 
 /* Hamburger = thin monochrome lines */
 .hamburger-icon { display: flex; flex-direction: column; gap: 4px; }
@@ -100,7 +100,7 @@ body {
 }
 
 .title-bars-left  { margin-left:  var(--controls-reserve); padding-right: 12px; }
-.title-bars-right { margin-right: var(--controls-reserve); padding-left:  12px; }
+.title-bars-right { margin-right: var(--controls-reserve)+10; padding-left:  12px; }
 
 /* Thin bars like the ref */
 .title-bar-line { width: 100%; height: 2px; background-color: #000; }
