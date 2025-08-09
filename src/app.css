@@ -93,7 +93,7 @@ body {
 .title-layout-modern {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   width: 100%;
   position: relative;
 }
@@ -105,17 +105,26 @@ body {
 }
 
 .hamburger-line {
+  display: flex;
   width: 16px;
-  height: 2px;
+  height: 3px;
   background-color: #000;
 }
 
-.title-bars-left,
+.title-bars-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  margin-right: 80px;
+}
+
 .title-bars-right {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
   flex: 1;
+  margin-left: 100px;
 }
 
 .title-bar-line {
@@ -132,7 +141,10 @@ body {
   white-space: nowrap;
   padding: 0 20px;
   text-align: center;
-  flex-shrink: 0;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
 }
 
 .title-spacer {
