@@ -2,10 +2,10 @@
 	// Investment portfolio view component
 </script>
 
-<div class="investments-container">
-	<div class="investments-grid">
+<div class="p-12 flex justify-center items-center">
+	<div class="grid grid-cols-2 gap-x-20 gap-y-16 justify-items-center">
 		<!-- Row 1 -->
-		<div class="investment-item">
+		<div class="flex flex-col items-center gap-2 cursor-pointer">
 			<div class="investment-icon folder-icon">
 				<!-- Folder icon -->
 				<div class="folder-tab"></div>
@@ -15,10 +15,10 @@
 					<div class="folder-line medium"></div>
 				</div>
 			</div>
-			<div class="investment-label">All</div>
+			<div class="px-2 py-1 bg-blue-400 border border-black shadow-sm text-center font-mono text-xs font-bold text-white">All</div>
 		</div>
 
-		<div class="investment-item">
+		<div class="flex flex-col items-center gap-2 cursor-pointer">
 			<div class="investment-icon angel-icon">
 				<!-- Angel/character icon -->
 				<div class="angel-head"></div>
@@ -28,11 +28,11 @@
 				<div class="angel-arm left"></div>
 				<div class="angel-arm right"></div>
 			</div>
-			<div class="investment-label">Banister Angels</div>
+			<div class="px-2 py-1 bg-blue-400 border border-black shadow-sm text-center font-mono text-xs font-bold text-white">Banister Angels</div>
 		</div>
 
 		<!-- Row 2 -->
-		<div class="investment-item">
+		<div class="flex flex-col items-center gap-2 cursor-pointer">
 			<div class="investment-icon folder-icon">
 				<div class="folder-tab"></div>
 				<div class="folder-body">
@@ -41,10 +41,10 @@
 					<div class="folder-line medium"></div>
 				</div>
 			</div>
-			<div class="investment-label">Growth</div>
+			<div class="px-2 py-1 bg-blue-400 border border-black shadow-sm text-center font-mono text-xs font-bold text-white">Growth</div>
 		</div>
 
-		<div class="investment-item">
+		<div class="flex flex-col items-center gap-2 cursor-pointer">
 			<div class="investment-icon chart-icon">
 				<!-- Building/chart icon -->
 				<div class="chart-bar short"></div>
@@ -52,11 +52,11 @@
 				<div class="chart-bar medium"></div>
 				<div class="chart-bar mini"></div>
 			</div>
-			<div class="investment-label">Founders Fund</div>
+			<div class="px-2 py-1 bg-blue-400 border border-black shadow-sm text-center font-mono text-xs font-bold text-white">Founders Fund</div>
 		</div>
 
 		<!-- Row 3 -->
-		<div class="investment-item">
+		<div class="flex flex-col items-center gap-2 cursor-pointer">
 			<div class="investment-icon eye-icon">
 				<!-- Eye icon -->
 				<div class="eye-outer">
@@ -65,10 +65,10 @@
 					</div>
 				</div>
 			</div>
-			<div class="investment-label">Long Journey</div>
+			<div class="px-2 py-1 bg-blue-400 border border-black shadow-sm text-center font-mono text-xs font-bold text-white">Long Journey</div>
 		</div>
 
-		<div class="investment-item">
+		<div class="flex flex-col items-center gap-2 cursor-pointer">
 			<div class="investment-icon folder-icon">
 				<div class="folder-tab"></div>
 				<div class="folder-body">
@@ -77,48 +77,13 @@
 					<div class="folder-line medium"></div>
 				</div>
 			</div>
-			<div class="investment-label">Exited</div>
+			<div class="px-2 py-1 bg-blue-400 border border-black shadow-sm text-center font-mono text-xs font-bold text-white">Exited</div>
 		</div>
 	</div>
 </div>
 
 <style>
-	.investments-container {
-		padding: 48px;
-		display: flex;
-		justify-content: center;
-		align-items: center;
-	}
-	
-	.investments-grid {
-		display: grid;
-		grid-template-columns: repeat(2, 1fr);
-		gap: 64px 80px;
-		justify-items: center;
-	}
-	
-	.investment-item {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 8px;
-		cursor: pointer;
-	}
-	
-	.investment-icon {
-		width: 80px;
-		height: 96px;
-		border: 2px solid #000;
-		position: relative;
-		background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
-		box-shadow: 2px 2px 0px #000, 4px 4px 0px rgba(0,0,0,0.3);
-		transition: all 0.1s ease;
-	}
-	
-	.investment-icon:hover {
-		transform: translate(1px, 1px);
-		box-shadow: 1px 1px 0px #000, 2px 2px 0px rgba(0,0,0,0.3);
-	}
+	/* Keep only pixel art specific styles - layout handled by Tailwind */
 	
 	.folder-icon {
 		background: #fed7aa;
@@ -287,17 +252,5 @@
 		height: 16px;
 		background: #000;
 		border-radius: 50%;
-	}
-	
-	.investment-label {
-		padding: 4px 8px;
-		background: #60a5fa;
-		border: 1px solid #000;
-		box-shadow: 1px 1px 0px rgba(0,0,0,0.3);
-		text-align: center;
-		font-family: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
-		font-size: 12px;
-		font-weight: 700;
-		color: white;
 	}
 </style>

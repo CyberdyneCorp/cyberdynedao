@@ -46,84 +46,23 @@
 	];
 </script>
 
-<div class="news-container">
+<div class="p-4 flex flex-col gap-4">
 	{#each newsItems as item}
-		<article class="news-item">
+		<article class="flex gap-4 p-4 border-b border-gray-200 cursor-pointer transition-colors duration-150 hover:bg-gray-50">
 			<img 
 				src={item.image} 
 				alt={item.title} 
-				class="news-image"
+				class="w-20 h-20 object-cover border-2 border-black rounded flex-shrink-0"
 			/>
-			<div class="news-content">
-				<h3 class="news-title">{item.title}</h3>
-				<div class="news-meta">
-					<span class="news-source">{item.source}</span>
+			<div class="flex-1 min-w-0">
+				<h3 class="font-mono font-bold text-lg leading-tight mb-2">{item.title}</h3>
+				<div class="flex items-center gap-2 font-mono text-sm text-gray-600">
+					<span class="bg-blue-100 text-blue-600 px-2 py-1 rounded border border-gray-300 font-bold">{item.source}</span>
 					<span>•</span>
-					<span class="news-author">{item.author}</span>
+					<span>{item.author}</span>
 				</div>
 			</div>
 		</article>
 	{/each}
 </div>
 
-<style>
-	.news-container {
-		padding: 16px;
-		display: flex;
-		flex-direction: column;
-		gap: 16px;
-	}
-	
-	.news-item {
-		display: flex;
-		gap: 16px;
-		padding: 16px;
-		border-bottom: 1px solid #e5e7eb;
-		cursor: pointer;
-		transition: background-color 0.15s ease;
-	}
-	
-	.news-item:hover {
-		background-color: #f9fafb;
-	}
-	
-	.news-image {
-		width: 80px;
-		height: 80px;
-		object-fit: cover;
-		border: 2px solid #000;
-		border-radius: 4px;
-		flex-shrink: 0;
-	}
-	
-	.news-content {
-		flex: 1;
-		min-width: 0;
-	}
-	
-	.news-title {
-		font-family: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
-		font-weight: 700;
-		font-size: 18px;
-		line-height: 1.25;
-		margin-bottom: 8px;
-	}
-	
-	.news-meta {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		font-family: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
-		font-size: 14px;
-		color: #6b7280;
-	}
-	
-	.news-source {
-		background: #dbeafe;
-		color: #2563eb;
-		padding: 4px 8px;
-		border-radius: 4px;
-		border: 1px solid #d1d5db;
-		font-weight: 700;
-	}
-</style>

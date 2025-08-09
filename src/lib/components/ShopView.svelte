@@ -40,23 +40,23 @@
 	}
 </script>
 
-<div class="shop-container">
-	<h3 class="shop-title">Shop</h3>
-	<div class="shop-grid">
+<div class="p-4">
+	<h3 class="text-32 font-bold font-mono mb-6">Shop</h3>
+	<div class="flex flex-col gap-4">
 		{#each shopItems as item}
-			<div class="shop-item">
+			<div class="flex items-center gap-4 p-4 border-2 border-black rounded bg-retro-gradient shadow-retro transition-all duration-100 hover:translate-x-px hover:translate-y-px hover:shadow-retro-hover">
 				<img 
 					src={item.image} 
 					alt={item.title} 
-					class="shop-image"
+					class="w-20 h-20 object-cover border-2 border-black rounded"
 				/>
-				<div class="shop-content">
-					<h4 class="shop-item-title">{item.title}</h4>
-					<p class="shop-subtitle">{item.subtitle}</p>
-					<p class="shop-price">${item.price.toFixed(2)}</p>
+				<div class="flex-1">
+					<h4 class="font-mono font-bold text-lg mb-2">{item.title}</h4>
+					<p class="font-mono text-gray-600 mb-2">{item.subtitle}</p>
+					<p class="font-mono font-bold text-xl">${item.price.toFixed(2)}</p>
 				</div>
 				<button 
-					class="shop-button"
+					class="retro-button px-4 py-2 font-mono font-bold cursor-pointer"
 					on:click={() => addToCart(item)}
 				>
 					Add to Cart
@@ -66,90 +66,3 @@
 	</div>
 </div>
 
-<style>
-	.shop-container {
-		padding: 16px;
-	}
-	
-	.shop-title {
-		font-size: 32px;
-		font-weight: 700;
-		font-family: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
-		margin-bottom: 24px;
-	}
-	
-	.shop-grid {
-		display: flex;
-		flex-direction: column;
-		gap: 16px;
-	}
-	
-	.shop-item {
-		display: flex;
-		align-items: center;
-		gap: 16px;
-		padding: 16px;
-		border: 2px solid #000;
-		border-radius: 4px;
-		background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
-		box-shadow: 2px 2px 0px #000, 4px 4px 0px rgba(0,0,0,0.3);
-		transition: all 0.1s ease;
-	}
-	
-	.shop-item:hover {
-		transform: translate(1px, 1px);
-		box-shadow: 1px 1px 0px #000, 2px 2px 0px rgba(0,0,0,0.3);
-	}
-	
-	.shop-image {
-		width: 80px;
-		height: 80px;
-		object-fit: cover;
-		border: 2px solid #000;
-		border-radius: 4px;
-	}
-	
-	.shop-content {
-		flex: 1;
-	}
-	
-	.shop-item-title {
-		font-family: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
-		font-weight: 700;
-		font-size: 18px;
-		margin-bottom: 8px;
-	}
-	
-	.shop-subtitle {
-		font-family: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
-		color: #6b7280;
-		margin-bottom: 8px;
-	}
-	
-	.shop-price {
-		font-family: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
-		font-weight: 700;
-		font-size: 20px;
-	}
-	
-	.shop-button {
-		background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
-		border: 2px solid #000;
-		box-shadow: 2px 2px 0px #000, 4px 4px 0px rgba(0,0,0,0.3);
-		padding: 8px 16px;
-		font-family: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
-		font-weight: 700;
-		cursor: pointer;
-		transition: all 0.1s ease;
-	}
-	
-	.shop-button:hover {
-		transform: translate(1px, 1px);
-		box-shadow: 1px 1px 0px #000, 2px 2px 0px rgba(0,0,0,0.3);
-	}
-	
-	.shop-button:active {
-		transform: translate(2px, 2px);
-		box-shadow: none;
-	}
-</style>

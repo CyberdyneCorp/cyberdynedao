@@ -79,27 +79,27 @@
 	});
 </script>
 
-<div class="terminal-container">
-	<div class="terminal-content cursor-text" on:click={focusInput}>
+<div class="flex flex-col h-full bg-black text-retro-green font-mono text-base">
+	<div class="flex-1 overflow-y-auto p-4 min-h-0 cursor-text" on:click={focusInput}>
 		{#each terminalHistory as line}
-			<div class="terminal-line">
+			<div class="whitespace-pre-wrap mb-1">
 				{#if line.type === 'input'}
-					<span class="terminal-input-text">{line.text}</span>
+					<span class="text-retro-green">{line.text}</span>
 				{:else if line.type === 'output'}
-					<span class="terminal-output-text">{line.text}</span>
+					<span class="text-retro-green-dark">{line.text}</span>
 				{:else}
-					<span class="terminal-system-text">{line.text}</span>
+					<span class="text-retro-green-darker">{line.text}</span>
 				{/if}
 			</div>
 		{/each}
 	</div>
 	
-	<div class="terminal-prompt">
-		<span class="terminal-prompt-text">{currentUser}@{currentHost} $ </span>
+	<div class="border-t border-retro-border p-4 flex items-center">
+		<span class="text-retro-green mr-2">{currentUser}@{currentHost} $ </span>
 		<input 
 			bind:value={terminalInput}
 			on:keydown={handleKeyDown}
-			class="terminal-input"
+			class="flex-1 terminal-input"
 			placeholder=""
 			autocomplete="off"
 			spellcheck="false"
@@ -107,61 +107,3 @@
 	</div>
 </div>
 
-<style>
-	.terminal-container {
-		display: flex;
-		flex-direction: column;
-		height: 100%;
-		background-color: #000;
-		color: #00ff00;
-		font-family: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
-		font-size: 16px;
-	}
-	
-	.terminal-content {
-		flex: 1;
-		overflow-y: auto;
-		padding: 16px;
-		min-height: 0;
-	}
-	
-	.terminal-line {
-		white-space: pre-wrap;
-		margin-bottom: 4px;
-	}
-	
-	.terminal-input-text {
-		color: #00ff00;
-	}
-	
-	.terminal-output-text {
-		color: #00dd00;
-	}
-	
-	.terminal-system-text {
-		color: #00aa00;
-	}
-	
-	.terminal-prompt {
-		border-top: 1px solid #166534;
-		padding: 16px;
-		display: flex;
-		align-items: center;
-	}
-	
-	.terminal-prompt-text {
-		color: #00ff00;
-		margin-right: 8px;
-	}
-	
-	.terminal-input {
-		flex: 1;
-		background: transparent;
-		border: none;
-		outline: none;
-		color: #00ff00;
-		font-family: inherit;
-		font-size: inherit;
-		caret-color: #00ff00;
-	}
-</style>
