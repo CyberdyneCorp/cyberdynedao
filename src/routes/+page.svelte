@@ -32,7 +32,7 @@
 						>
 							<img src={item.icon} alt={item.name} class="w-24 h-24" />
 						</button>
-						<span class="nav-label text-white text-xs font-mono text-center px-2 py-0.5 rounded mt-4">
+						<span class="nav-label text-white text-base font-mono text-center px-2 py-0.5 rounded mt-4">
 							{item.name}
 						</span>
 					</div>
@@ -55,7 +55,7 @@
 						</div>
 					{/if}
 				</button>
-				<span class="nav-label text-white text-xs font-mono text-center px-2 py-0.5 rounded mt-4">
+				<span class="nav-label text-white text-base font-mono text-center px-2 py-0.5 rounded mt-4">
 					Your Bag {cartCount > 0 ? `(${cartCount})` : ''}
 				</span>
 			</div>

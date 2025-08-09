@@ -185,10 +185,13 @@ body {
 
 /* Buttons (unused here, kept for completeness) */
 .retro-button {
-  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
   border: 2px solid #000;
   box-shadow: 2px 2px 0px #000, 4px 4px 0px rgba(0,0,0,0.3);
   transition: all 0.1s ease;
+}
+
+.retro-button:not([class*="bg-"]) {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
 }
 .retro-button:hover { transform: translate(1px,1px); box-shadow: 1px 1px 0px #000, 2px 2px 0px rgba(0,0,0,0.3); }
 .retro-button:active { transform: translate(2px,2px); box-shadow: none; }
@@ -248,7 +251,9 @@ body {
 .bg-yellow-200 { background-color:#fef08a; } .bg-yellow-300 { background-color:#fde047; }
 .bg-blue-100 { background-color:#dbeafe; } .bg-blue-400 { background-color:#60a5fa; }
 .bg-blue-500 { background-color:#3b82f6; } .bg-blue-600 { background-color:#2563eb; }
-.bg-blue-700 { background-color:#1d4ed8; } .bg-purple-600 { background-color:#9333ea; }
+.bg-blue-700 { background-color:#1d4ed8; } .bg-green-500 { background-color:#22c55e; }
+.bg-green-600 { background-color:#16a34a; } .bg-green-700 { background-color:#15803d; }
+.bg-purple-600 { background-color:#9333ea; }
 .bg-purple-700 { background-color:#7c3aed; } .bg-cyan-400 { background-color:#22d3ee; }
 
 .text-white { color:#fff; } .text-black { color:#000; } .text-gray-600 { color:#4b5563; } .text-blue-600 { color:#2563eb; }
@@ -273,6 +278,8 @@ body {
 .hover\:bg-gray-300:hover { background-color:#d1d5db; }
 .hover\:bg-red-600:hover   { background-color:#dc2626; }
 .hover\:bg-blue-700:hover  { background-color:#1d4ed8; }
+.hover\:bg-green-600:hover { background-color:#16a34a; }
+.hover\:bg-green-700:hover { background-color:#15803d; }
 .hover\:bg-purple-700:hover{ background-color:#7c3aed; }
 .hover\:bg-gray-50:hover   { background-color:#f9fafb; }
 
