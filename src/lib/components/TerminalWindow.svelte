@@ -6,6 +6,8 @@
 	import InvestmentsView from './InvestmentsView.svelte';
 	import ProductsView from './ProductsView.svelte';
 	import TeamView from './TeamView.svelte';
+	import DaoView from './DaoView.svelte';
+	import ServicesView from './ServicesView.svelte';
 	
 	export const title: string = 'Terminal';
 	export let showCart: boolean = false;
@@ -29,6 +31,10 @@
 			<ProductsView />
 		{:else if currentView === 'team'}
 			<TeamView />
+		{:else if currentView === 'dao'}
+			<DaoView />
+		{:else if currentView === 'services'}
+			<ServicesView />
 		{:else}
 			<NewsView />
 		{/if}
@@ -48,6 +54,10 @@
 				<ProductsView />
 			{:else if currentView === 'team'}
 				<TeamView />
+			{:else if currentView === 'dao'}
+				<DaoView />
+			{:else if currentView === 'services'}
+				<ServicesView />
 			{:else}
 				<NewsView />
 			{/if}
