@@ -53,15 +53,22 @@
 	});
 </script>
 
-<div class="w-full h-1/25 bg-white border-b-4 border-black flex items-center justify-between px-6 fixed top-0 left-0 right-0 z-[2147483647] mix-blend-normal" style="background-color:#ffffff;">
-    <div class="flex items-center gap-3">
+<div class="w-full flex items-center justify-between px-6 fixed top-0 left-0 right-0 z-[2147483647] mix-blend-normal border-b-4 border-black" style="height: 60px; background: linear-gradient(to right, #1e3a8a, #3b82f6);">
+    <button 
+        bind:this={menuButton}
+        class="flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-200 cursor-pointer"
+        style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); backdrop-filter: blur(10px);"
+        on:mouseenter={(e) => e.target.style.background = 'rgba(255,255,255,0.25)'}
+        on:mouseleave={(e) => e.target.style.background = 'rgba(255,255,255,0.15)'}
+        on:click={toggleMenu}
+    >
         <div class="w-10 h-10 flex items-center justify-center">
             <svg class="w-8 h-8" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg">
                 <defs>
                     <style>
-                        .st0 { fill: #1c1941; }
-                        .st1 { fill: #02adee; }
-                        .st2 { fill: #3972c1; }
+                        .st0 { fill: #ffffff; }
+                        .st1 { fill: #e0e7ff; }
+                        .st2 { fill: #c7d2fe; }
                     </style>
                 </defs>
                 <path class="st1" d="M102,187.5c65.2-39.1,131.7-76.5,197.6-114.5l2.4.6,161.1,93c-19.4,2.1-36.6,17.8-37.1,38,0,3.8,2.4,9.5,0,12L107,400.5l-5,1.5v-93.5c58-34.9,117.3-68.2,176-102.1,3.2-.8,7.1,3.6,10.6,5.4,35.4,18.2,71.5-21.7,50.2-55.2-19.2-30.2-68-17.7-70.7,18s1.9,11.4-.1,13.9l-166,95.5v-96.5Z"/>
@@ -70,54 +77,47 @@
                 <polygon class="st0" points="64 165 82.4 175.1 84 177.5 84.2 425.8 300 550.5 300 572 297.1 571.4 64 436.5 64 165"/>
             </svg>
         </div>
-        <button 
-            bind:this={menuButton}
-            class="font-mono font-bold text-xl text-black cursor-pointer transition-colors duration-200"
-            style="color: #000;"
-            on:mouseenter={(e) => e.target.style.color = '#c084fc'}
-            on:mouseleave={(e) => e.target.style.color = '#000'}
-            on:click={toggleMenu}
-        >
-            Cyberdyne DAO {showMenu ? '▼' : '▶'}
-        </button>
-    </div>
+        <span class="font-mono font-bold text-xl text-white" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.7);">
+            Start {showMenu ? '▼' : '▶'}
+        </span>
+    </button>
     
-    <div class="flex items-center gap-3">
-        <button class="px-4 py-2 bg-green-500 border-2 border-black retro-button flex items-center justify-center hover:bg-green-600">
-            <span class="text-white text-sm font-mono">Connect Wallet</span>
+    <div class="flex items-center" style="margin-right: 12px;">
+        <button class="px-3 py-1.5 bg-green-500 border-2 border-black retro-button flex items-center justify-center hover:bg-green-600">
+            <span class="text-white text-sm font-mono font-semibold">Connect Wallet</span>
         </button>
     </div>
 </div>
 
 <!-- Dropdown Menu -->
 {#if showMenu}
-    <div bind:this={menuContainer} class="fixed bg-white border-4 border-black shadow-lg" style="top: 50px; left: 24px; width: 300px; z-index: 2147483647;">
+    <div bind:this={menuContainer} class="fixed bg-white border-2 border-black shadow-lg" style="top: 50px; left: 24px; width: 300px; z-index: 2147483647;">
         <!-- Header -->
-        <div class="bg-white border-b-2 border-black px-4 py-2">
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 flex items-center justify-center">
-                    <img src="/assets/icon_menu.svg" alt="Menu" class="w-6 h-6" />
+        <div style="background: linear-gradient(to right, #1e3a8a, #3b82f6); border-bottom: 2px solid black; padding: 8px 12px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.2); border-radius: 4px; border: 1px solid rgba(255,255,255,0.3);">
+                    <img src="/assets/icon_menu.svg" alt="Menu" style="width: 24px; height: 24px;" />
                 </div>
-                <span class="font-mono font-bold text-lg text-blue-600">Menu</span>
+                <span style="font-family: monospace; font-weight: bold; font-size: 24px; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">Menu</span>
             </div>
         </div>
         <!-- Menu Items -->
         <div>
             <div class="menu-item" on:click={closeMenu} on:keydown={(e) => e.key === 'Enter' && closeMenu()} role="button" tabindex="0">
                 <div class="menu-item-icon">
-                    <img src="/assets/the_team.svg" alt="Our Team" class="w-5 h-5" />
+                    <img src="/assets/the_team.svg" alt="Our Team" class="w-6 h-6" />
                 </div>
                 <span class="menu-item-text">Our Team</span>
             </div>
             <div class="menu-item" on:click={() => handleMenuItemClick('terminal')} on:keydown={(e) => e.key === 'Enter' && handleMenuItemClick('terminal')} role="button" tabindex="0">
                 <div class="menu-item-icon">
-                    <img src="/assets/icon_terminal.svg" alt="Terminal" class="w-5 h-5" />
+                    <img src="/assets/icon_terminal.svg" alt="Terminal" class="w-6 h-6" />
                 </div>
                 <span class="menu-item-text">Terminal</span>
             </div>
             <div class="menu-item" on:click={() => handleMenuItemClick('close-all')} on:keydown={(e) => e.key === 'Enter' && handleMenuItemClick('close-all')} role="button" tabindex="0">
                 <div class="menu-item-icon">
-                    <span class="text-lg">❌</span>
+                    <span class="text-xl">❌</span>
                 </div>
                 <span class="menu-item-text">Close All Windows</span>
             </div>
