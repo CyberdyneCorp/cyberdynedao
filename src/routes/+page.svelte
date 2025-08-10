@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Window from '$lib/components/Window.svelte';
-	import { windows, createWindow } from '$lib/stores/windowStore';
+	import { windows, createWindow, toggleWindowSlide } from '$lib/stores/windowStore';
 	import { navItems } from '$lib/constants/navigation';
 	import { handleItemClick } from '$lib/utils/navigationHelpers';
 	import { CYBERDYNE_ASCII_LOGO } from '$lib/constants/asciiLogo';
@@ -11,12 +11,25 @@
 	function addToCart(item: CartItem) {
 		cartItems = [...cartItems, item];
 	}
+
+	function handleBackgroundClick(e: MouseEvent) {
+		// Only trigger if clicking on the background, not on windows or icons
+		const target = e.target as HTMLElement;
+		if (target.closest('.retro-window') || target.closest('.sidebar-icon') || target.closest('button')) {
+			return;
+		}
+		
+		// Only toggle if there are windows open
+		if ($windows.length > 0) {
+			toggleWindowSlide();
+		}
+	}
 	
 	$: cartCount = cartItems.length;
 </script>
 
 <div class="flex flex-col h-screen">
-    <div class="flex-1 relative bg-retro-bg overflow-hidden">
+    <div class="flex-1 relative bg-retro-bg overflow-hidden" on:click={handleBackgroundClick}>
 		<!-- Enhanced Futuristic Background Animation -->
 		<div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; opacity: 1.2;">
 			

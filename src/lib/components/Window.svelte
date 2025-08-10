@@ -105,6 +105,7 @@
 		min-height: ${window.maximized ? '100vh' : `${window.height}px`};
 		z-index: ${window.zIndex};
 		display: ${window.minimized ? 'none' : 'block'};
+		transition: ${isDragging || isResizing ? 'none' : 'left 0.3s ease-out, top 0.3s ease-out'};
 	`;
 </script>
 

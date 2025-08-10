@@ -8,6 +8,7 @@
 	import TeamView from './TeamView.svelte';
 	import DaoView from './DaoView.svelte';
 	import ServicesView from './ServicesView.svelte';
+	import CyberddyneView from './CyberddyneView.svelte';
 	
 	export const title: string = 'Terminal';
 	export let showCart: boolean = false;
@@ -35,6 +36,8 @@
 			<DaoView />
 		{:else if currentView === 'services'}
 			<ServicesView />
+		{:else if currentView === 'cyberdyne'}
+			<CyberddyneView />
 		{:else}
 			<NewsView />
 		{/if}
@@ -58,6 +61,8 @@
 				<DaoView />
 			{:else if currentView === 'services'}
 				<ServicesView />
+			{:else if currentView === 'cyberdyne'}
+				<CyberddyneView />
 			{:else}
 				<NewsView />
 			{/if}
