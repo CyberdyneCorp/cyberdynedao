@@ -10,7 +10,7 @@ export interface WindowState {
 	zIndex: number;
 	minimized: boolean;
 	maximized: boolean;
-	content: 'read' | 'shop' | 'cart' | 'investments' | 'watch' | 'listen' | 'substack' | 'contact' | 'enigma' | 'terminal';
+	content: 'read' | 'shop' | 'cart' | 'investments' | 'watch' | 'listen' | 'substack' | 'contact' | 'dao' | 'terminal';
 }
 
 export const windows = writable<WindowState[]>([]);
@@ -35,6 +35,10 @@ export function createWindow(content: WindowState['content'], title: string) {
 
 export function closeWindow(id: string) {
 	windows.update(wins => wins.filter(w => w.id !== id));
+}
+
+export function closeAllWindows() {
+	windows.set([]);
 }
 
 

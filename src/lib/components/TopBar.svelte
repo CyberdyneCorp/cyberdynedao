@@ -1,8 +1,11 @@
 <script lang="ts">
-	import { createWindow } from '$lib/stores/windowStore';
+	import { createWindow, closeAllWindows } from '$lib/stores/windowStore';
+	import { onMount } from 'svelte';
 	
 	// Top navigation bar component
 	let showMenu = false;
+	let menuContainer: HTMLElement;
+	let menuButton: HTMLElement;
 	
 	function toggleMenu(event) {
 		event?.preventDefault();
@@ -29,10 +32,25 @@
 				// Handle refresh ASCII
 				break;
 			case 'close-all':
-				// Handle close all windows
+				closeAllWindows();
 				break;
 		}
 	}
+	
+	function handleClickOutside(event: MouseEvent) {
+		if (showMenu && menuContainer && menuButton && 
+			!menuContainer.contains(event.target as Node) && 
+			!menuButton.contains(event.target as Node)) {
+			closeMenu();
+		}
+	}
+	
+	onMount(() => {
+		document.addEventListener('click', handleClickOutside);
+		return () => {
+			document.removeEventListener('click', handleClickOutside);
+		};
+	});
 </script>
 
 <div class="w-full h-1/25 bg-white border-b-4 border-black flex items-center justify-between px-6 fixed top-0 left-0 right-0 z-[2147483647] mix-blend-normal" style="background-color:#ffffff;">
@@ -53,6 +71,7 @@
             </svg>
         </div>
         <button 
+            bind:this={menuButton}
             class="font-mono font-bold text-xl text-black cursor-pointer transition-colors duration-200"
             style="color: #000;"
             on:mouseenter={(e) => e.target.style.color = '#c084fc'}
@@ -70,22 +89,16 @@
     </div>
 </div>
 
-<!-- Background overlay to close menu when clicking outside -->
-{#if showMenu}
-    <div class="fixed inset-0 z-[2147483647]" on:click={closeMenu}></div>
-{/if}
-
-
 <!-- Dropdown Menu -->
 {#if showMenu}
-    <div class="fixed bg-white border-4 border-black shadow-lg" style="top: 60px; left: 24px; width: 300px; z-index: 999999;">
+    <div bind:this={menuContainer} class="fixed bg-white border-4 border-black shadow-lg" style="top: 60px; left: 24px; width: 300px; z-index: 2147483647;">
         <!-- Header -->
         <div class="bg-white border-b-2 border-black px-4 py-2">
             <div class="flex items-center gap-3">
                 <div class="w-8 h-8 bg-black rounded-full flex items-center justify-center">
                     <span class="text-white text-xs">👤</span>
                 </div>
-                <span class="font-mono font-bold text-lg text-blue-600">Cyan Banister</span>
+                <span class="font-mono font-bold text-lg text-blue-600">Menu</span>
             </div>
         </div>
         <!-- Menu Items -->
@@ -108,7 +121,7 @@
                 </div>
                 <span class="menu-item-text blue">Refresh ASCII</span>
             </div>
-            <div class="menu-item" on:click={closeMenu} on:keydown={(e) => e.key === 'Enter' && closeMenu()} role="button" tabindex="0">
+            <div class="menu-item" on:click={() => handleMenuItemClick('close-all')} on:keydown={(e) => e.key === 'Enter' && handleMenuItemClick('close-all')} role="button" tabindex="0">
                 <div class="menu-item-icon">
                     <span class="text-lg">❌</span>
                 </div>

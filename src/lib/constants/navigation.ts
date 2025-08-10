@@ -4,23 +4,23 @@ export interface NavItem {
 }
 
 export const navItems: NavItem[] = [
-	{ name: 'Substack', icon: '/assets/substack.svg' },
-	{ name: 'Read', icon: '/assets/read.svg' },
-	{ name: 'Investments', icon: '/assets/investments.svg' },
+	{ name: 'Cyberdyne', icon: '/assets/cyberdyne_logo.svg' },
+	{ name: 'Blog', icon: '/assets/read.svg' },
+	{ name: 'Investments', icon: '/assets/crypto_icon.svg' },
 	{ name: 'Watch', icon: '/assets/watch.svg' },
-	{ name: 'Contact Me', icon: '/assets/contact.svg' },
-	{ name: 'Listen', icon: '/assets/listen.svg' },
-	{ name: 'enigma', icon: '/assets/enigma.svg' },
-	{ name: 'Shop', icon: '/assets/shop.svg' }
+	{ name: 'Contact Us', icon: '/assets/contact.svg' },
+	{ name: 'Learn', icon: '/assets/study_icon.svg' },
+	{ name: 'DAO', icon: '/assets/blockchain_icon.svg' },
+	{ name: 'Marketplace', icon: '/assets/marketplace_icon.svg' }
 ];
 
 export const viewMap: { [key: string]: any } = {
-	'Shop': 'shop',
-	'Read': 'read',
+	'Marketplace': 'shop',
+	'Blog': 'read',
 	'Investments': 'investments',
 	'Watch': 'watch',
-	'Listen': 'listen',
-	'Substack': 'substack',
-	'Contact Me': 'contact',
-	'enigma': 'enigma'
+	'Learn': 'listen',
+	'Cyberdyne': 'substack',
+	'Contact Us': 'contact',
+	'DAO': 'dao'
 };
