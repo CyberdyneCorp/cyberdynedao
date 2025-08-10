@@ -5,8 +5,10 @@
     import TerminalWindow from './TerminalWindow.svelte';
 
 	export let window: WindowState;
-	export let cartItems: any[] = [];
-	export let onAddToCart: ((item: any) => void) | undefined = undefined;
+	import type { CartItem } from '$lib/types/cart';
+	
+	export let cartItems: CartItem[] = [];
+	export let onAddToCart: ((item: CartItem) => void) | undefined = undefined;
 
 	let windowElement: HTMLDivElement;
 	let titleBarElement: HTMLDivElement;
