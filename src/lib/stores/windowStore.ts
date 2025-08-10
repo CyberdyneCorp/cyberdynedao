@@ -10,7 +10,7 @@ export interface WindowState {
 	zIndex: number;
 	minimized: boolean;
 	maximized: boolean;
-	content: 'read' | 'shop' | 'cart' | 'investments' | 'watch' | 'listen' | 'substack' | 'contact' | 'dao' | 'products' | 'terminal';
+	content: 'read' | 'shop' | 'cart' | 'investments' | 'watch' | 'listen' | 'substack' | 'contact' | 'dao' | 'products' | 'team' | 'terminal';
 }
 
 export const windows = writable<WindowState[]>([]);

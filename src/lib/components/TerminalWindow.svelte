@@ -5,6 +5,7 @@
 	import CartView from './CartView.svelte';
 	import InvestmentsView from './InvestmentsView.svelte';
 	import ProductsView from './ProductsView.svelte';
+	import TeamView from './TeamView.svelte';
 	
 	export const title: string = 'Terminal';
 	export let showCart: boolean = false;
@@ -26,6 +27,8 @@
 			<ShopView {onAddToCart} />
 		{:else if currentView === 'products'}
 			<ProductsView />
+		{:else if currentView === 'team'}
+			<TeamView />
 		{:else}
 			<NewsView />
 		{/if}
@@ -43,6 +46,8 @@
 				<ShopView {onAddToCart} />
 			{:else if currentView === 'products'}
 				<ProductsView />
+			{:else if currentView === 'team'}
+				<TeamView />
 			{:else}
 				<NewsView />
 			{/if}
