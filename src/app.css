@@ -11,11 +11,137 @@ body {
   padding: 0;
   font-family: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
   background: #4338ca;
-  overflow: hidden;
 }
 
 /* Custom background color */
 .bg-retro-bg { background-color: #4338ca; }
+
+/* Retro-styled scrollbars - Only for windows, not main background */
+body, html, .bg-retro-bg {
+  overflow: hidden !important;
+  scrollbar-width: none !important;
+}
+
+body::-webkit-scrollbar, 
+html::-webkit-scrollbar, 
+.bg-retro-bg::-webkit-scrollbar {
+  display: none !important;
+}
+
+/* Retro scrollbars for window content only */
+.window-content::-webkit-scrollbar,
+.retro-scrollbar::-webkit-scrollbar {
+  width: 18px !important;
+  height: 18px !important;
+  background: #c0c0c0 !important;
+}
+
+.window-content::-webkit-scrollbar-track,
+.retro-scrollbar::-webkit-scrollbar-track {
+  background: #c0c0c0 !important;
+  border: 2px inset #dfdfdf !important;
+  border-radius: 0 !important;
+  box-shadow: inset 1px 1px 2px rgba(0,0,0,0.3) !important;
+}
+
+.window-content::-webkit-scrollbar-thumb,
+.retro-scrollbar::-webkit-scrollbar-thumb {
+  background: #dfdfdf !important;
+  border: 2px outset #dfdfdf !important;
+  border-radius: 0 !important;
+  min-height: 30px !important;
+  box-shadow: 1px 1px 2px rgba(0,0,0,0.3) !important;
+}
+
+.window-content::-webkit-scrollbar-thumb:hover,
+.retro-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #e8e8e8 !important;
+  border: 2px outset #e8e8e8 !important;
+}
+
+.window-content::-webkit-scrollbar-thumb:active,
+.retro-scrollbar::-webkit-scrollbar-thumb:active {
+  background: #b0b0b0 !important;
+  border: 2px inset #b0b0b0 !important;
+}
+
+.window-content::-webkit-scrollbar-corner,
+.retro-scrollbar::-webkit-scrollbar-corner {
+  background: #c0c0c0 !important;
+  border: 2px inset #dfdfdf !important;
+}
+
+/* Arrow buttons for scrollbar - window content only */
+.window-content::-webkit-scrollbar-button,
+.retro-scrollbar::-webkit-scrollbar-button {
+  background: #dfdfdf !important;
+  border: 2px outset #dfdfdf !important;
+  width: 18px !important;
+  height: 18px !important;
+  display: block !important;
+}
+
+.window-content::-webkit-scrollbar-button:hover,
+.retro-scrollbar::-webkit-scrollbar-button:hover {
+  background: #e8e8e8 !important;
+  border: 2px outset #e8e8e8 !important;
+}
+
+.window-content::-webkit-scrollbar-button:active,
+.retro-scrollbar::-webkit-scrollbar-button:active {
+  border: 2px inset #dfdfdf !important;
+}
+
+/* Up arrow - window content only */
+.window-content::-webkit-scrollbar-button:vertical:start:decrement,
+.retro-scrollbar::-webkit-scrollbar-button:vertical:start:decrement {
+  background-image: 
+    linear-gradient(45deg, transparent 30%, #000 30%, #000 70%, transparent 70%),
+    linear-gradient(-45deg, transparent 30%, #000 30%, #000 70%, transparent 70%) !important;
+  background-size: 8px 8px !important;
+  background-position: center 40% !important;
+  background-repeat: no-repeat !important;
+}
+
+/* Down arrow - window content only */
+.window-content::-webkit-scrollbar-button:vertical:end:increment,
+.retro-scrollbar::-webkit-scrollbar-button:vertical:end:increment {
+  background-image: 
+    linear-gradient(135deg, transparent 30%, #000 30%, #000 70%, transparent 70%),
+    linear-gradient(-135deg, transparent 30%, #000 30%, #000 70%, transparent 70%) !important;
+  background-size: 8px 8px !important;
+  background-position: center 60% !important;
+  background-repeat: no-repeat !important;
+}
+
+/* Left arrow - window content only */
+.window-content::-webkit-scrollbar-button:horizontal:start:decrement,
+.retro-scrollbar::-webkit-scrollbar-button:horizontal:start:decrement {
+  background-image: 
+    linear-gradient(45deg, transparent 30%, #000 30%, #000 70%, transparent 70%),
+    linear-gradient(135deg, transparent 30%, #000 30%, #000 70%, transparent 70%) !important;
+  background-size: 8px 8px !important;
+  background-position: 40% center !important;
+  background-repeat: no-repeat !important;
+}
+
+/* Right arrow - window content only */
+.window-content::-webkit-scrollbar-button:horizontal:end:increment,
+.retro-scrollbar::-webkit-scrollbar-button:horizontal:end:increment {
+  background-image: 
+    linear-gradient(-45deg, transparent 30%, #000 30%, #000 70%, transparent 70%),
+    linear-gradient(-135deg, transparent 30%, #000 30%, #000 70%, transparent 70%) !important;
+  background-size: 8px 8px !important;
+  background-position: 60% center !important;
+  background-repeat: no-repeat !important;
+}
+
+/* Firefox scrollbar styling - window content only */
+.window-content,
+.retro-scrollbar {
+  scrollbar-width: auto !important;
+  scrollbar-color: #dfdfdf #c0c0c0 !important;
+}
 
 @media (max-width: 768px) {
   .sidebar-icon { width: 48px; height: 48px; }
