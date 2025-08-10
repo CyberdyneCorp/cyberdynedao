@@ -11,6 +11,7 @@ export const navItems: NavItem[] = [
 	{ name: 'Contact Us', icon: '/assets/contact.svg' },
 	{ name: 'Learn', icon: '/assets/study_icon.svg' },
 	{ name: 'DAO', icon: '/assets/blockchain_icon.svg' },
+	{ name: 'Products', icon: '/assets/products_icon.svg' },
 	{ name: 'Marketplace', icon: '/assets/marketplace_icon.svg' }
 ];
 
@@ -22,5 +23,6 @@ export const viewMap: { [key: string]: any } = {
 	'Learn': 'listen',
 	'Cyberdyne': 'substack',
 	'Contact Us': 'contact',
-	'DAO': 'dao'
+	'DAO': 'dao',
+	'Products': 'products'
 };

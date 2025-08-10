@@ -8,7 +8,7 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
-	<title>Retro Terminal</title>
+	<title>CyberdyneCorp</title>
 </svelte:head>
 
 <TopBar />

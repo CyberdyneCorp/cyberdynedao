@@ -91,12 +91,12 @@
 
 <!-- Dropdown Menu -->
 {#if showMenu}
-    <div bind:this={menuContainer} class="fixed bg-white border-4 border-black shadow-lg" style="top: 60px; left: 24px; width: 300px; z-index: 2147483647;">
+    <div bind:this={menuContainer} class="fixed bg-white border-4 border-black shadow-lg" style="top: 50px; left: 24px; width: 300px; z-index: 2147483647;">
         <!-- Header -->
         <div class="bg-white border-b-2 border-black px-4 py-2">
             <div class="flex items-center gap-3">
-                <div class="w-8 h-8 bg-black rounded-full flex items-center justify-center">
-                    <span class="text-white text-xs">👤</span>
+                <div class="w-8 h-8 flex items-center justify-center">
+                    <img src="/assets/icon_menu.svg" alt="Menu" class="w-6 h-6" />
                 </div>
                 <span class="font-mono font-bold text-lg text-blue-600">Menu</span>
             </div>
@@ -107,19 +107,13 @@
                 <div class="menu-item-icon">
                     <span class="text-lg">👤</span>
                 </div>
-                <span class="menu-item-text">About Me</span>
+                <span class="menu-item-text">Our Team</span>
             </div>
             <div class="menu-item" on:click={() => handleMenuItemClick('terminal')} on:keydown={(e) => e.key === 'Enter' && handleMenuItemClick('terminal')} role="button" tabindex="0">
                 <div class="menu-item-icon">
                     <span class="text-lg">⬛</span>
                 </div>
                 <span class="menu-item-text">Terminal</span>
-            </div>
-            <div class="menu-item" on:click={closeMenu} on:keydown={(e) => e.key === 'Enter' && closeMenu()} role="button" tabindex="0">
-                <div class="menu-item-icon">
-                    <span class="text-lg">🔄</span>
-                </div>
-                <span class="menu-item-text blue">Refresh ASCII</span>
             </div>
             <div class="menu-item" on:click={() => handleMenuItemClick('close-all')} on:keydown={(e) => e.key === 'Enter' && handleMenuItemClick('close-all')} role="button" tabindex="0">
                 <div class="menu-item-icon">
