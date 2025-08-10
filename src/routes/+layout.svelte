@@ -1,5 +1,5 @@
 <script lang="ts">
-	import favicon from '$lib/assets/favicon.svg';
+	// Use favicon from static assets
 	import '../app.css';
     import TopBar from '$lib/components/TopBar.svelte';
 
@@ -7,7 +7,7 @@
 </script>
 
 <svelte:head>
-	<link rel="icon" href={favicon} />
+	<link rel="icon" href="/assets/favicon.svg" />
 	<title>CyberdyneCorp</title>
 </svelte:head>
 

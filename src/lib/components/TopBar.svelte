@@ -105,13 +105,13 @@
         <div>
             <div class="menu-item" on:click={closeMenu} on:keydown={(e) => e.key === 'Enter' && closeMenu()} role="button" tabindex="0">
                 <div class="menu-item-icon">
-                    <span class="text-lg">👤</span>
+                    <img src="/assets/the_team.svg" alt="Our Team" class="w-5 h-5" />
                 </div>
                 <span class="menu-item-text">Our Team</span>
             </div>
             <div class="menu-item" on:click={() => handleMenuItemClick('terminal')} on:keydown={(e) => e.key === 'Enter' && handleMenuItemClick('terminal')} role="button" tabindex="0">
                 <div class="menu-item-icon">
-                    <span class="text-lg">⬛</span>
+                    <img src="/assets/icon_terminal.svg" alt="Terminal" class="w-5 h-5" />
                 </div>
                 <span class="menu-item-text">Terminal</span>
             </div>
