@@ -83,7 +83,7 @@
     </button>
     
     <div class="flex items-center" style="margin-right: 12px;">
-        <button class="px-3 py-1.5 bg-green-500 border-2 border-black retro-button flex items-center justify-center hover:bg-green-600">
+        <button class="px-3 py-2 bg-green-500 border-2 border-black retro-button flex items-center justify-center hover:bg-green-600">
             <span class="text-white text-sm font-mono font-semibold">Connect Wallet</span>
         </button>
     </div>
