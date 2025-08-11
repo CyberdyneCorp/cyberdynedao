@@ -30,14 +30,19 @@ html::-webkit-scrollbar,
 
 /* Retro scrollbars for window content only */
 .window-content::-webkit-scrollbar,
-.retro-scrollbar::-webkit-scrollbar {
+.retro-scrollbar::-webkit-scrollbar,
+.window-content *::-webkit-scrollbar,
+.retro-scrollbar *::-webkit-scrollbar {
   width: 18px !important;
   height: 18px !important;
   background: #c0c0c0 !important;
+  -webkit-appearance: none !important;
 }
 
 .window-content::-webkit-scrollbar-track,
-.retro-scrollbar::-webkit-scrollbar-track {
+.retro-scrollbar::-webkit-scrollbar-track,
+.window-content *::-webkit-scrollbar-track,
+.retro-scrollbar *::-webkit-scrollbar-track {
   background: #c0c0c0 !important;
   border: 2px inset #dfdfdf !important;
   border-radius: 0 !important;
@@ -45,7 +50,9 @@ html::-webkit-scrollbar,
 }
 
 .window-content::-webkit-scrollbar-thumb,
-.retro-scrollbar::-webkit-scrollbar-thumb {
+.retro-scrollbar::-webkit-scrollbar-thumb,
+.window-content *::-webkit-scrollbar-thumb,
+.retro-scrollbar *::-webkit-scrollbar-thumb {
   background: #dfdfdf !important;
   border: 2px outset #dfdfdf !important;
   border-radius: 0 !important;
@@ -54,26 +61,34 @@ html::-webkit-scrollbar,
 }
 
 .window-content::-webkit-scrollbar-thumb:hover,
-.retro-scrollbar::-webkit-scrollbar-thumb:hover {
+.retro-scrollbar::-webkit-scrollbar-thumb:hover,
+.window-content *::-webkit-scrollbar-thumb:hover,
+.retro-scrollbar *::-webkit-scrollbar-thumb:hover {
   background: #e8e8e8 !important;
   border: 2px outset #e8e8e8 !important;
 }
 
 .window-content::-webkit-scrollbar-thumb:active,
-.retro-scrollbar::-webkit-scrollbar-thumb:active {
+.retro-scrollbar::-webkit-scrollbar-thumb:active,
+.window-content *::-webkit-scrollbar-thumb:active,
+.retro-scrollbar *::-webkit-scrollbar-thumb:active {
   background: #b0b0b0 !important;
   border: 2px inset #b0b0b0 !important;
 }
 
 .window-content::-webkit-scrollbar-corner,
-.retro-scrollbar::-webkit-scrollbar-corner {
+.retro-scrollbar::-webkit-scrollbar-corner,
+.window-content *::-webkit-scrollbar-corner,
+.retro-scrollbar *::-webkit-scrollbar-corner {
   background: #c0c0c0 !important;
   border: 2px inset #dfdfdf !important;
 }
 
 /* Arrow buttons for scrollbar - window content only */
 .window-content::-webkit-scrollbar-button,
-.retro-scrollbar::-webkit-scrollbar-button {
+.retro-scrollbar::-webkit-scrollbar-button,
+.window-content *::-webkit-scrollbar-button,
+.retro-scrollbar *::-webkit-scrollbar-button {
   background: #dfdfdf !important;
   border: 2px outset #dfdfdf !important;
   width: 18px !important;
@@ -82,19 +97,25 @@ html::-webkit-scrollbar,
 }
 
 .window-content::-webkit-scrollbar-button:hover,
-.retro-scrollbar::-webkit-scrollbar-button:hover {
+.retro-scrollbar::-webkit-scrollbar-button:hover,
+.window-content *::-webkit-scrollbar-button:hover,
+.retro-scrollbar *::-webkit-scrollbar-button:hover {
   background: #e8e8e8 !important;
   border: 2px outset #e8e8e8 !important;
 }
 
 .window-content::-webkit-scrollbar-button:active,
-.retro-scrollbar::-webkit-scrollbar-button:active {
+.retro-scrollbar::-webkit-scrollbar-button:active,
+.window-content *::-webkit-scrollbar-button:active,
+.retro-scrollbar *::-webkit-scrollbar-button:active {
   border: 2px inset #dfdfdf !important;
 }
 
 /* Up arrow - window content only */
 .window-content::-webkit-scrollbar-button:vertical:start:decrement,
-.retro-scrollbar::-webkit-scrollbar-button:vertical:start:decrement {
+.retro-scrollbar::-webkit-scrollbar-button:vertical:start:decrement,
+.window-content *::-webkit-scrollbar-button:vertical:start:decrement,
+.retro-scrollbar *::-webkit-scrollbar-button:vertical:start:decrement {
   background-image: 
     linear-gradient(45deg, transparent 30%, #000 30%, #000 70%, transparent 70%),
     linear-gradient(-45deg, transparent 30%, #000 30%, #000 70%, transparent 70%) !important;
@@ -105,7 +126,9 @@ html::-webkit-scrollbar,
 
 /* Down arrow - window content only */
 .window-content::-webkit-scrollbar-button:vertical:end:increment,
-.retro-scrollbar::-webkit-scrollbar-button:vertical:end:increment {
+.retro-scrollbar::-webkit-scrollbar-button:vertical:end:increment,
+.window-content *::-webkit-scrollbar-button:vertical:end:increment,
+.retro-scrollbar *::-webkit-scrollbar-button:vertical:end:increment {
   background-image: 
     linear-gradient(135deg, transparent 30%, #000 30%, #000 70%, transparent 70%),
     linear-gradient(-135deg, transparent 30%, #000 30%, #000 70%, transparent 70%) !important;
@@ -116,7 +139,9 @@ html::-webkit-scrollbar,
 
 /* Left arrow - window content only */
 .window-content::-webkit-scrollbar-button:horizontal:start:decrement,
-.retro-scrollbar::-webkit-scrollbar-button:horizontal:start:decrement {
+.retro-scrollbar::-webkit-scrollbar-button:horizontal:start:decrement,
+.window-content *::-webkit-scrollbar-button:horizontal:start:decrement,
+.retro-scrollbar *::-webkit-scrollbar-button:horizontal:start:decrement {
   background-image: 
     linear-gradient(45deg, transparent 30%, #000 30%, #000 70%, transparent 70%),
     linear-gradient(135deg, transparent 30%, #000 30%, #000 70%, transparent 70%) !important;
@@ -127,7 +152,9 @@ html::-webkit-scrollbar,
 
 /* Right arrow - window content only */
 .window-content::-webkit-scrollbar-button:horizontal:end:increment,
-.retro-scrollbar::-webkit-scrollbar-button:horizontal:end:increment {
+.retro-scrollbar::-webkit-scrollbar-button:horizontal:end:increment,
+.window-content *::-webkit-scrollbar-button:horizontal:end:increment,
+.retro-scrollbar *::-webkit-scrollbar-button:horizontal:end:increment {
   background-image: 
     linear-gradient(-45deg, transparent 30%, #000 30%, #000 70%, transparent 70%),
     linear-gradient(-135deg, transparent 30%, #000 30%, #000 70%, transparent 70%) !important;
@@ -136,9 +163,18 @@ html::-webkit-scrollbar,
   background-repeat: no-repeat !important;
 }
 
-/* Firefox scrollbar styling - window content only */
+/* Ensure scrollable elements show scrollbars */
 .window-content,
-.retro-scrollbar {
+.retro-scrollbar,
+.window-content div[class*="overflow"],
+.window-content div[style*="overflow"] {
+  scrollbar-width: auto !important;
+  scrollbar-color: #dfdfdf #c0c0c0 !important;
+}
+
+/* Force scrollbar visibility for overflow elements in Chrome/Brave */
+.window-content div,
+.retro-scrollbar div {
   scrollbar-width: auto !important;
   scrollbar-color: #dfdfdf #c0c0c0 !important;
 }
