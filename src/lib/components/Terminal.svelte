@@ -70,6 +70,13 @@
 			input.focus();
 		}
 	}
+
+	function handleTerminalKeyDown(event: KeyboardEvent) {
+		if (event.key === 'Enter' || event.key === ' ') {
+			event.preventDefault();
+			focusInput();
+		}
+	}
 	
 	// Auto-focus on mount
 	onMount(() => {
@@ -80,7 +87,14 @@
 </script>
 
 <div class="flex flex-col h-full bg-black text-retro-green font-mono text-base">
-	<div class="flex-1 overflow-y-auto p-4 min-h-0 cursor-text" on:click={focusInput}>
+	<div 
+		class="flex-1 overflow-y-auto p-4 min-h-0 cursor-text" 
+		on:click={focusInput}
+		on:keydown={handleTerminalKeyDown}
+		role="button"
+		tabindex="0"
+		aria-label="Terminal output - click to focus input"
+	>
 		{#each terminalHistory as line}
 			<div class="whitespace-pre-wrap mb-1">
 				{#if line.type === 'input'}

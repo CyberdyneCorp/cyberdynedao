@@ -182,6 +182,18 @@
     </div>
     
     <!-- Resize handles -->
-    <div class="resize-handle resize-right" on:mousedown={handleResizeStart}></div>
-    <div class="resize-handle resize-bottom" on:mousedown={handleResizeStart}></div>
+    <div 
+		class="resize-handle resize-right" 
+		on:mousedown={handleResizeStart}
+		role="button"
+		tabindex="0"
+		aria-label="Resize window horizontally"
+	></div>
+    <div 
+		class="resize-handle resize-bottom" 
+		on:mousedown={handleResizeStart}
+		role="button"
+		tabindex="0"
+		aria-label="Resize window vertically"
+	></div>
 </div>

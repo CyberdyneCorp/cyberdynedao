@@ -24,12 +24,28 @@
 			toggleWindowSlide();
 		}
 	}
+
+	function handleBackgroundKeyDown(e: KeyboardEvent) {
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			if ($windows.length > 0) {
+				toggleWindowSlide();
+			}
+		}
+	}
 	
 	$: cartCount = cartItems.length;
 </script>
 
 <div class="flex flex-col h-screen">
-    <div class="flex-1 relative bg-retro-bg overflow-hidden" on:click={handleBackgroundClick}>
+    <div 
+		class="flex-1 relative bg-retro-bg overflow-hidden" 
+		on:click={handleBackgroundClick}
+		on:keydown={handleBackgroundKeyDown}
+		role="button"
+		tabindex="0"
+		aria-label="Desktop background - click to toggle window slide"
+	>
 		<!-- Enhanced Futuristic Background Animation -->
 		<div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; opacity: 1.2;">
 			
