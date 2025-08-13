@@ -1,7 +1,6 @@
 import { ethers } from 'ethers';
 
 // Get environment variables using import.meta.env
-const VITE_INFURA_API_KEY = import.meta.env.VITE_INFURA_API_KEY;
 const VITE_INFURA_ENDPOINT = import.meta.env.VITE_INFURA_ENDPOINT;
 const VITE_CHAIN_ID = import.meta.env.VITE_CHAIN_ID;
 const VITE_NETWORK_NAME = import.meta.env.VITE_NETWORK_NAME;

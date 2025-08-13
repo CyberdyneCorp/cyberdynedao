@@ -1,33 +1,71 @@
 # Cyberdyne DAO Terminal
 
-A futuristic terminal-style application built with SvelteKit, featuring background animations, ASCII art, and a retro computing aesthetic inspired by Cyberdyne Systems.
+A futuristic terminal-style application built with SvelteKit, featuring Web3Auth authentication, WalletConnect integration, and a retro cyberpunk aesthetic inspired by Cyberdyne Systems.
+
+## 🏗️ Project Structure
+
+This project is organized into a clean frontend-focused structure:
+
+```
+retro-terminal/
+├── README.md                 # Project documentation
+└── frontend/                 # Main application directory
+    ├── Dockerfile            # Production Docker configuration
+    ├── package.json          # Dependencies and scripts
+    ├── svelte.config.js      # SvelteKit configuration
+    ├── vite.config.ts        # Vite build configuration
+    ├── tailwind.config.js    # Tailwind CSS configuration
+    ├── .env                  # Environment variables
+    ├── src/                  # Source code
+    │   ├── app.html          # HTML template
+    │   ├── app.css           # Global styles
+    │   ├── lib/              # Shared libraries
+    │   │   ├── components/   # Svelte components
+    │   │   ├── web3/         # Web3Auth & wallet integration
+    │   │   ├── stores/       # Svelte stores
+    │   │   ├── utils/        # Utility functions
+    │   │   └── types/        # TypeScript definitions
+    │   └── routes/           # SvelteKit pages
+    └── static/               # Static assets
+        └── assets/           # Icons, images, and media
+```
 
 ## ✨ Features
 
-### Visual & UX
-- **Futuristic Background Animations**: Cyber grid patterns, glowing particles, and digital rain effects
-- **ASCII Cyberdyne Logo**: Large animated logo with wavy glow effects
-- **Retro Terminal Interface**: Authentic terminal emulation with green phosphor styling
-- **Glassmorphism UI**: Modern glass-style navigation with backdrop blur effects
-- **Interactive Desktop Icons**: Grid-based navigation system with hover animations
-- **Draggable Windows**: Multi-window interface with resize functionality
+### 🎨 Visual & UX
+- **Retro Terminal Interface**: Authentic green phosphor terminal styling
+- **Cyberpunk Aesthetics**: Futuristic background animations and effects
+- **ASCII Art Logo**: Animated Cyberdyne Systems branding
+- **Glassmorphism UI**: Modern translucent interface elements
+- **Interactive Windows**: Draggable, resizable window system
+- **Responsive Design**: Optimized for desktop and mobile devices
 
-### Technical
-- **TypeScript**: Full type safety across the application
-- **Modular Architecture**: Well-organized component and utility structure
-- **Responsive Design**: Mobile-friendly layout with adaptive components
-- **Shopping Cart**: E-commerce functionality with cart management
-- **Team Profiles**: Dynamic team member showcase with images and skills
-
-### Web3 Integration
-- **Dual Wallet Support**: Both WalletConnect (mobile wallets) and Web3Auth (social login)
+### 🔗 Web3 Integration
+- **Web3Auth Authentication**: Social login with Google integration
+- **WalletConnect Support**: Mobile wallet connectivity via QR codes
 - **Base Network**: Configured for Base mainnet with Infura RPC
-- **ERC-20 Support**: Token balance and transfer capabilities
-- **Reactive State**: Real-time wallet connection status and balance updates
+- **Real-time Balance**: Live ETH balance display and updates
+- **Professional Wallet UI**: Clean connected state with expandable details
 
-## 🛠️ Development
+### 🛠️ Technical
+- **TypeScript**: Full type safety throughout the application
+- **SvelteKit**: Modern web framework with static site generation
+- **Tailwind CSS**: Utility-first CSS framework
+- **Docker Ready**: Production-ready containerization
+- **IPFS Compatible**: Static build optimized for decentralized hosting
+
+## 🚀 Development
+
+### Prerequisites
+- Node.js 18+ 
+- npm or yarn
+
+### Quick Start
 
 ```bash
+# Navigate to frontend directory
+cd frontend
+
 # Install dependencies
 npm install
 
@@ -45,233 +83,14 @@ npm run preview
 
 ### Environment Setup
 
-Create a `.env` file with the following variables:
+Create a `.env` file in the `frontend/` directory:
 
 ```env
-# Infura Configuration (Base Network)
-VITE_INFURA_API_KEY=ae1053a98c944d53968e5d725319be8f
-VITE_INFURA_ENDPOINT=https://base-mainnet.infura.io/v3/ae1053a98c944d53968e5d725319be8f
-
-# Base Network Configuration
-VITE_CHAIN_ID=8453
-VITE_NETWORK_NAME=Base Mainnet
-VITE_NATIVE_CURRENCY=ETH
-
-# WalletConnect (Reown AppKit)
-VITE_REOWN_PROJECT_ID=your_reown_project_id
-
-# Web3Auth
+# Web3Auth Configuration (Required for social login)
 VITE_WEB3AUTH_CLIENT_ID=your_web3auth_client_id
-```
+VITE_WEB3AUTH_NETWORK=sapphire_mainnet
 
-### Getting API Keys
-
-1. **Reown Project ID**:
-   - Visit [WalletConnect Cloud](https://cloud.walletconnect.com/)
-   - Create a new project
-   - Copy the Project ID
-
-2. **Web3Auth Client ID**:
-   - Visit [Web3Auth Dashboard](https://dashboard.web3auth.io/)
-   - Create a new project
-   - Copy the Client ID
-
-### Wallet Connection Options
-
-The application provides two wallet connection methods:
-
-#### 1. WalletConnect (Mobile Wallets)
-- **QR Code Scanning**: Perfect for mobile wallets like MetaMask Mobile
-- **Multi-Wallet Support**: Works with 50+ popular wallets
-- **Cross-Platform**: Connect from any device
-
-#### 2. Web3Auth (Social Login)  
-- **Google Authentication**: Sign in with your Google account
-- **Email/Password**: Passwordless email authentication
-- **Social Providers**: Support for multiple OAuth providers
-
-### Usage
-
-The wallet connection modal automatically appears when users click "Connect Wallet". Users can choose between:
-- **WalletConnect**: Displays QR code for mobile wallet scanning
-- **Web3Auth**: Opens social authentication modal
-
-Both methods provide:
-- Real-time balance updates
-- Network switching to Base
-- Transaction signing capabilities
-- Secure session management
-
-## 🌐 IPFS Deployment
-
-This application is configured for static deployment to IPFS using SvelteKit's static adapter.
-
-### Quick Deploy
-
-```bash
-# Build for IPFS deployment
-npm run build:ipfs
-
-# Preview IPFS build locally
-npm run preview:ipfs
-```
-
-### IPFS Configuration
-
-The application uses `@sveltejs/adapter-static` with the following IPFS-optimized settings:
-
-- **Static Generation**: All routes are pre-rendered at build time
-- **Relative Paths**: Uses relative paths for better IPFS compatibility
-- **Fallback Handling**: Includes `index.html` fallback for SPA routing
-- **Asset Optimization**: Assets are bundled into the `build/` directory
-
-### Deployment Options
-
-#### Option 1: IPFS Desktop/CLI
-```bash
-# Build the application
-npm run build:ipfs
-
-# Add to IPFS (using IPFS CLI)
-ipfs add -r build/
-
-# Or using IPFS Desktop: drag the build/ folder into IPFS Desktop
-```
-
-#### Option 2: Pinata/Fleek
-1. Build the application: `npm run build:ipfs`
-2. Upload the `build/` folder to your preferred IPFS pinning service
-3. Access your app via the generated IPFS hash
-
-#### Option 3: Web3.Storage/NFT.Storage
-```bash
-# Build the application  
-npm run build:ipfs
-
-# Upload using w3cli (install with: npm install -g @web3-storage/w3cli)
-w3 put build/
-```
-
-### IPFS Gateway Access
-
-Once deployed, access your app through IPFS gateways:
-- `https://ipfs.io/ipfs/YOUR_HASH`
-- `https://gateway.pinata.cloud/ipfs/YOUR_HASH`
-- `https://YOUR_HASH.ipfs.dweb.link`
-
-### Static Build Configuration
-
-The static adapter is configured in `svelte.config.js`:
-
-```javascript
-adapter: adapter({
-  pages: 'build',
-  assets: 'build', 
-  fallback: 'index.html',
-  precompress: false,
-  strict: true
-})
-```
-
-### Important Notes for IPFS
-
-- ✅ All routes are pre-rendered for static hosting
-- ✅ Uses relative paths for IPFS compatibility
-- ✅ Includes fallback routing for SPA navigation
-- ✅ Assets are self-contained in the build directory
-- ✅ No server-side functionality required
-
-## 📁 Project Structure
-
-```
-src/
-├── lib/
-│   ├── components/          # Svelte components
-│   │   ├── Window.svelte    # Draggable window system
-│   │   ├── TopBar.svelte    # Navigation header
-│   │   ├── Terminal.svelte  # Terminal emulator
-│   │   ├── TeamView.svelte  # Team member profiles
-│   │   └── ...
-│   ├── constants/           # App constants
-│   │   ├── navigation.ts    # Navigation menu items
-│   │   └── asciiLogo.ts     # ASCII art constants
-│   ├── styles/              # CSS modules
-│   │   └── backgroundAnimations.css
-│   ├── types/               # TypeScript interfaces
-│   │   └── cart.ts          # Shopping cart types
-│   ├── utils/               # Utility functions
-│   │   ├── navigationHelpers.ts
-│   │   └── terminalCommands.ts
-│   └── stores/              # Svelte stores
-│       └── windowStore.ts   # Window management
-├── routes/                  # SvelteKit pages
-│   ├── +layout.svelte      # App layout
-│   └── +page.svelte        # Main page
-└── app.css                 # Global styles & Tailwind
-```
-
-## 🎨 Assets
-
-### Icons & Images
-Located in `/static/assets/`:
-- **Navigation Icons**: `blockchain_icon.svg`, `crypto_icon.svg`, `products_icon.svg`, etc.
-- **Team Photos**: Individual member photos in `team/` subdirectory
-- **System Icons**: `favicon.svg`, `icon_menu.svg`, `icon_terminal.svg`
-
-### Animations
-- **Cyber Grid**: Moving grid pattern with pulse animation
-- **Glow Particles**: Floating cyan particles with scaling effects
-- **Digital Rain**: Matrix-style falling digital elements
-- **ASCII Logo**: Breathing and wavy glow text effects
-
-## 🚀 Key Components
-
-### Window System
-- Draggable windows with title bars
-- Resizable window handles
-- Focus management and z-index stacking
-- Multiple window types (Terminal, Team, Products, etc.)
-
-### Background Animations
-- Modular CSS architecture in `/lib/styles/`
-- Hardware-accelerated animations
-- Configurable opacity and timing
-- Performance-optimized with minimal DOM impact
-
-### Terminal Interface
-- Command history and auto-completion
-- Authentic retro phosphor styling
-- Interactive command processing
-- Scrollable output with custom scrollbars
-
-## 🎯 Architecture Highlights
-
-- **Clean Separation**: Logic, styles, and constants properly modularized
-- **Type Safety**: Comprehensive TypeScript interfaces throughout
-- **Reusable Utilities**: Shared functions eliminate code duplication
-- **Modern CSS**: CSS Grid, Flexbox, and CSS animations
-- **Component Composition**: Flexible, composable Svelte components
-
-## 📝 Recent Improvements
-
-- ✅ Extracted background animations to separate CSS module
-- ✅ Created shared navigation utilities to reduce duplication  
-- ✅ Implemented proper TypeScript interfaces for cart system
-- ✅ Organized constants and ASCII art into dedicated files
-- ✅ Removed unused components and optimized asset usage
-- ✅ Enhanced build process and code organization
-
-## 🌐 Web3 Integration
-
-This application is integrated with **Base Network** using **ethers.js** for Web3 functionality.
-
-### Environment Setup
-
-Create a `.env` file in the project root:
-
-```env
-# Infura Configuration
-VITE_INFURA_API_KEY=your_infura_api_key
+# Infura Configuration (Required for Base Network RPC)
 VITE_INFURA_ENDPOINT=https://base-mainnet.infura.io/v3/your_infura_api_key
 
 # Base Network Configuration
@@ -281,58 +100,228 @@ VITE_NATIVE_CURRENCY=ETH
 
 # App Configuration
 VITE_APP_NAME=Cyberdyne DAO Terminal
-VITE_APP_ENV=development
+VITE_APP_ENV=production
+VITE_APP_URL=https://your-domain.com
+
+# WalletConnect Configuration (Optional - for mobile wallets)
+VITE_REOWN_PROJECT_ID=your_reown_project_id
+VITE_REOWN_APP_NAME=Cyberdyne DAO Terminal
+VITE_REOWN_APP_DESCRIPTION=Retro terminal interface for DAO operations
+VITE_REOWN_APP_URL=https://your-domain.com
+VITE_REOWN_APP_ICON=https://your-domain.com/assets/cyberdyne_logo.svg
 ```
 
-### Web3 Features
+### Getting API Keys
 
-- **🔗 Wallet Connection**: Connect MetaMask and other Web3 wallets
-- **🌐 Base Network**: Configured for Base mainnet (Chain ID: 8453)  
-- **💰 Balance Display**: Real-time ETH balance updates
-- **🔄 Network Switching**: Automatic network switching to Base
-- **📱 Responsive**: Works on desktop and mobile Web3 browsers
-- **⚡ Transaction Support**: Send transactions and interact with contracts
-- **🎯 Contract Integration**: ERC-20 token support with standard methods
+1. **Web3Auth Client ID** (Required):
+   - Visit [Web3Auth Dashboard](https://dashboard.web3auth.io/)
+   - Create a new project
+   - Add your domain to the allowed origins
+   - Copy the Client ID
 
-### Usage Examples
+2. **Infura API Key** (Required):
+   - Visit [Infura](https://infura.io/)
+   - Create a new project for Base network
+   - Copy the API key and construct the endpoint URL
 
-```typescript
-// Connect wallet
-import { web3Actions, walletInfo } from '$lib/stores/web3Store';
-await web3Actions.connectWallet();
+3. **Reown Project ID** (Optional):
+   - Visit [WalletConnect Cloud](https://cloud.walletconnect.com/)
+   - Create a new project
+   - Copy the Project ID
 
-// Check connection status
-$: console.log('Connected:', $walletInfo?.isConnected);
+### Wallet Connection Features
 
-// Get token balance
-import { contractManager } from '$lib/web3/contracts';
-const balance = await contractManager.getTokenBalance(tokenAddress, userAddress);
+#### 🔑 Web3Auth (Primary Method)
+- **Google Authentication**: One-click social login
+- **Secure Key Management**: Non-custodial wallet creation
+- **User-Friendly**: No seed phrases or complex setup
+- **Custom Branding**: Cyberdyne logo in authentication modal
 
-// Send transaction  
-import { walletManager } from '$lib/web3/wallet';
-const txHash = await walletManager.sendTransaction(to, value);
+#### 📱 WalletConnect (Coming Soon)
+- **Mobile Wallet Support**: MetaMask, Trust Wallet, etc.
+- **QR Code Scanning**: Easy mobile connection
+- **Multi-Wallet Compatibility**: 50+ supported wallets
+
+### Connected State UI
+- **Minimal Interface**: Shows only "CONNECTED" when collapsed
+- **Expandable Details**: Click to view wallet information
+- **Clean Design**: Semi-transparent black background with green accents
+- **User Information**: Address, balance, email, name, and disconnect option
+
+## 🐳 Docker Deployment
+
+The project includes a production-ready Dockerfile for containerized deployment.
+
+### Quick Deploy with Docker
+
+```bash
+# Navigate to frontend directory
+cd frontend
+
+# Build Docker image
+docker build -t cyberdyne-terminal .
+
+# Run container
+docker run -p 80:80 cyberdyne-terminal
 ```
 
-### Web3 Architecture
+### Docker Configuration
+
+The Dockerfile uses a multi-stage build:
+1. **Builder Stage**: Node.js environment for building the SvelteKit app
+2. **Production Stage**: Nginx Alpine for serving static files
+
+**Features:**
+- ✅ Optimized for production with Nginx
+- ✅ Static file serving with proper caching headers
+- ✅ SPA routing support with fallback handling
+- ✅ Security headers included
+- ✅ Small image size using Alpine Linux
+
+### Coolify Deployment
+
+This project is optimized for deployment on Coolify:
+
+1. **Connect Repository**: Link your GitHub repository
+2. **Set Build Context**: Point to `frontend/` directory
+3. **Configure Environment Variables**: Add all `VITE_*` variables
+4. **Deploy**: Coolify will automatically build and deploy using the Dockerfile
+
+**Important**: Make sure to update `VITE_APP_URL` and related URLs to match your deployment domain.
+
+## 🌐 Static Deployment
+
+The application is also configured for static deployment (IPFS, Netlify, Vercel, etc.)
+
+### Build for Static Hosting
+
+```bash
+# Navigate to frontend directory
+cd frontend
+
+# Build for static deployment
+npm run build
+
+# Preview static build
+npm run preview
+```
+
+### Static Hosting Features
+
+- ✅ **Pre-rendered Routes**: All pages generated at build time
+- ✅ **Relative Paths**: Compatible with subdirectory deployments
+- ✅ **SPA Fallback**: Client-side routing support
+- ✅ **Asset Optimization**: Bundled and optimized static assets
+- ✅ **No Server Required**: Pure static hosting compatible
+
+## 📁 Detailed Structure
 
 ```
-src/lib/web3/
-├── config.ts          # Network configuration & provider setup
-├── wallet.ts          # Wallet connection & management
-├── contracts.ts       # Smart contract interactions
-└── stores/
-    └── web3Store.ts   # Svelte stores for Web3 state
+frontend/
+├── src/
+│   ├── lib/
+│   │   ├── components/          # Svelte components
+│   │   │   ├── Web3Wallet.svelte    # Web3Auth wallet integration
+│   │   │   ├── TopBar.svelte        # Navigation header  
+│   │   │   ├── Terminal.svelte      # Terminal emulator
+│   │   │   ├── TeamView.svelte      # Team member profiles
+│   │   │   └── Window.svelte        # Draggable window system
+│   │   ├── web3/                # Web3 integration
+│   │   │   ├── web3AuthService.ts   # Web3Auth service
+│   │   │   ├── config.ts            # Network configuration
+│   │   │   └── contracts.ts         # Smart contract helpers
+│   │   ├── stores/              # Svelte stores
+│   │   │   ├── windowStore.ts       # Window management
+│   │   │   └── web3Store.ts         # Web3 state management
+│   │   ├── constants/           # App constants
+│   │   │   ├── navigation.ts        # Navigation menu items
+│   │   │   └── asciiLogo.ts         # ASCII art constants
+│   │   ├── types/               # TypeScript interfaces
+│   │   │   ├── web3.ts              # Web3 type definitions
+│   │   │   └── cart.ts              # Shopping cart types
+│   │   └── utils/               # Utility functions
+│   │       └── terminalCommands.ts  # Terminal command handlers
+│   ├── routes/                  # SvelteKit pages
+│   │   ├── +layout.svelte           # App layout
+│   │   └── +page.svelte             # Main page
+│   └── app.css                  # Global styles & Tailwind
+└── static/                      # Static assets
+    └── assets/                  # Icons and images
+        ├── cyberdyne_logo.svg       # Main logo
+        ├── team/                    # Team member photos
+        └── *.svg                    # Navigation icons
 ```
+
+## 🎨 Design System
+
+### Visual Elements
+- **Retro Terminal**: Green phosphor text on dark backgrounds
+- **Glassmorphism**: Translucent panels with backdrop blur
+- **Cyberpunk Aesthetics**: Neon accents and futuristic styling
+- **Professional UI**: Clean, minimal interface design
+
+### Animations & Effects
+- **ASCII Art**: Animated Cyberdyne logo with glow effects
+- **Background Patterns**: Subtle grid and particle animations  
+- **Smooth Transitions**: CSS animations for interactive elements
+- **Hover States**: Interactive feedback on all clickable elements
+
+## 🚀 Key Features
+
+### 🔐 Web3 Wallet Integration
+- **Web3Auth Service**: Secure social authentication with Google
+- **Dynamic Imports**: Optimized loading to prevent SSR conflicts
+- **Clean UI**: Minimal "CONNECTED" button with expandable details
+- **Professional Design**: Semi-transparent panels with cyberpunk styling
+
+### 🖥️ Terminal Interface
+- **Authentic Styling**: Green phosphor text on dark terminal backgrounds
+- **Interactive Commands**: Functional terminal with command processing
+- **ASCII Art**: Animated Cyberdyne Systems logo
+- **Responsive Design**: Works on desktop and mobile devices
+
+### 🏗️ Architecture
+- **TypeScript**: Full type safety throughout the application
+- **Modular Design**: Clean separation of concerns and utilities
+- **Performance Optimized**: Efficient loading and rendering
+- **Production Ready**: Docker containerization and deployment configs
 
 ## 🔧 Technologies
 
-- **Frontend**: SvelteKit, TypeScript
-- **Web3**: ethers.js, Base Network, Infura
-- **Styling**: Tailwind CSS, Custom CSS animations
-- **Build**: Vite, SvelteKit Static Adapter
-- **Deployment**: IPFS, Static hosting
-- **Assets**: SVG icons, WebP images
+- **🎨 Frontend**: SvelteKit, TypeScript, Tailwind CSS
+- **🔗 Web3**: Web3Auth, ethers.js, Base Network, Infura
+- **📦 Build**: Vite, SvelteKit Static Adapter
+- **🐳 Deployment**: Docker, Nginx, Coolify-ready
+- **🎭 Assets**: SVG icons, WebP images, custom animations
+
+## 🏆 Recent Achievements
+
+- ✅ **Web3Auth Integration**: Fully functional Google authentication
+- ✅ **SSR Compatibility**: Resolved polyfill conflicts for server-side rendering
+- ✅ **Docker Ready**: Production-optimized containerization
+- ✅ **Clean UI**: Professional wallet interface with expandable details
+- ✅ **Project Structure**: Organized into dedicated frontend directory
+- ✅ **Performance**: Optimized builds and efficient asset loading
+
+## 📋 Development Status
+
+- 🟢 **Web3Auth Authentication**: Complete and working
+- 🟡 **WalletConnect Integration**: Planned for future release
+- 🟢 **Docker Deployment**: Ready for production
+- 🟢 **Static Hosting**: IPFS and traditional hosting compatible
+- 🟢 **Responsive Design**: Mobile and desktop optimized
+
+## 🚀 Get Started
+
+1. **Clone the repository**
+2. **Navigate to frontend directory**: `cd frontend`
+3. **Install dependencies**: `npm install`
+4. **Configure environment**: Copy `.env` template and add your API keys
+5. **Start development**: `npm run dev`
+6. **Build for production**: `npm run build`
 
 ---
 
-Built with ❤️ for the Cyberdyne DAO community
+**Built with ❤️ by the Cyberdyne DAO Team**
+
+*A futuristic terminal interface for the decentralized age*

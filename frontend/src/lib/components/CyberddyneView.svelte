@@ -9,7 +9,7 @@
 			<span class="text-2xl">🧠</span>
 			CYBERDYNE DAO
 		</h1>
-		<p class="font-mono text-xs text-black">The Future of Self-Sustaining Developer Infrastructure</p>
+		<p class="font-mono text-sm text-black">The Future of Self-Sustaining Developer Infrastructure</p>
 	</div>
 
 	<div class="flex-1 p-4 space-y-6">
@@ -400,18 +400,18 @@
 		</section>
 
 		<!-- Closing Statement -->
-		<section class="bg-gradient-to-r from-cyan-900 to-blue-900 text-white rounded border border-cyan-700 p-4 text-center">
+		<section class="bg-gradient-to-r from-cyan-900 to-blue-900 rounded border border-cyan-700 p-4 text-center">
 			<div class="flex items-center justify-center gap-2 mb-3">
 				<span class="text-xl">🧠</span>
-				<h2 class="text-lg font-bold font-mono">Closing Statement</h2>
+				<h2 class="text-lg font-bold font-mono text-black">Closing Statement</h2>
 			</div>
-			<p class="text-sm mb-3">
+			<p class="text-sm mb-3 text-black">
 				<strong>Cyberdyne is where infrastructure doesn't cost — it yields.</strong>
 			</p>
-			<p class="text-sm mb-3">
+			<p class="text-sm mb-3 text-black">
 				Build apps, earn dividends, and govern a self-sustaining ecosystem powered by DeFi.
 			</p>
-			<div class="bg-white text-cyan-900 rounded p-3 font-mono text-sm font-bold">
+			<div class="bg-white text-black rounded p-3 font-mono text-sm font-bold">
 				Cyberdyne = Decentralized Firebase + OpenAI + Heroku → Paid by Yield, Owned by Builders.
 			</div>
 		</section>
