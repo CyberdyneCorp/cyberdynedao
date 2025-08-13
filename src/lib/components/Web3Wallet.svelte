@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { web3AuthService, type Web3AuthUser } from '../web3/web3AuthService';
 	
 	let walletConnected = false;
 	let isLoading = false;
 	let errorMessage = '';
-	let currentUser: Web3AuthUser | null = null;
+	let currentUser: any = null;
+	let web3AuthService: any = null;
 
 	let showDetails = false;
 	let showConnectionModal = false;
@@ -34,6 +34,12 @@
 		closeConnectionModal();
 		
 		try {
+			// Dynamically import Web3Auth service to avoid initialization errors
+			if (!web3AuthService) {
+				const { web3AuthService: service } = await import('../web3/web3AuthService');
+				web3AuthService = service;
+			}
+			
 			const user = await web3AuthService.loginWithGoogle();
 			if (user) {
 				currentUser = user;
@@ -42,7 +48,7 @@
 			}
 		} catch (error) {
 			console.error('Web3Auth login failed:', error);
-			errorMessage = `Login failed: ${error.message || 'Unknown error'}`;
+			errorMessage = `Login failed: ${error?.message || 'Unknown error'}`;
 		} finally {
 			isLoading = false;
 		}
@@ -51,14 +57,16 @@
 	async function handleDisconnect() {
 		isLoading = true;
 		try {
-			await web3AuthService.logout();
+			if (web3AuthService) {
+				await web3AuthService.logout();
+			}
 			walletConnected = false;
 			currentUser = null;
 			showDetails = false;
 			console.log('User disconnected successfully');
 		} catch (error) {
 			console.error('Disconnect failed:', error);
-			errorMessage = `Disconnect failed: ${error.message || 'Unknown error'}`;
+			errorMessage = `Disconnect failed: ${error?.message || 'Unknown error'}`;
 		} finally {
 			isLoading = false;
 		}
@@ -70,20 +78,29 @@
 
 	async function checkAuthStatus() {
 		try {
-			const user = await web3AuthService.checkAuthStatus();
-			if (user) {
-				currentUser = user;
-				walletConnected = true;
-				console.log('User already authenticated:', user);
+			// Only check auth status if in browser environment
+			if (typeof window !== 'undefined') {
+				const { web3AuthService: service } = await import('../web3/web3AuthService');
+				web3AuthService = service;
+				const user = await service.checkAuthStatus();
+				if (user) {
+					currentUser = user;
+					walletConnected = true;
+					console.log('User already authenticated:', user);
+				}
 			}
 		} catch (error) {
 			console.error('Error checking auth status:', error);
+			// Don't set error message for initial auth check failures
 		}
 	}
 	
 	onMount(async () => {
 		console.log('Web3Wallet component mounted, checking authentication status...');
-		await checkAuthStatus();
+		// Small delay to ensure proper initialization
+		setTimeout(() => {
+			checkAuthStatus();
+		}, 100);
 	});
 </script>
 
