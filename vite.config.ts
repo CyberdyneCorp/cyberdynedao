@@ -21,4 +21,7 @@ export default defineConfig({
 	optimizeDeps: {
 		include: ['buffer', 'crypto-browserify', 'stream-browserify', 'assert', 'util', 'vm-browserify', 'process'],
 	},
+	ssr: {
+		noExternal: ['buffer'],
+	},
 });

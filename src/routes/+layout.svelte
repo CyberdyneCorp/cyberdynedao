@@ -1,6 +1,5 @@
 <script lang="ts">
-	// Load polyfills first before any other imports
-	import '$lib/polyfills';
+	import { onMount } from 'svelte';
 	
 	// Use favicon from static assets
 	import '../app.css';
@@ -17,4 +16,4 @@
 <TopBar />
 <div class="pixel-dot w-screen h-screen bg-retro-bg pt-12">
     {@render children?.()}
-    </div>
+</div>

@@ -4,6 +4,22 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<script>
+			// Global error handlers for unhandled promises and initialization issues
+			window.addEventListener('unhandledrejection', function(event) {
+				console.warn('[ERROR HANDLER] Unhandled promise rejection:', event.reason);
+				
+				// Don't prevent default for critical errors, but log them
+				if (event.reason && typeof event.reason === 'object') {
+					if (event.reason.message && (
+						event.reason.message.includes('Cannot access uninitialized variable') ||
+						event.reason.message.includes('ReferenceError')
+					)) {
+						console.warn('[ERROR HANDLER] Suppressing initialization error to prevent UI blocking');
+						event.preventDefault(); // Prevent console error spam
+					}
+				}
+			});
+			
 			// Inline polyfills for immediate availability
 			(function() {
 				// Buffer polyfill

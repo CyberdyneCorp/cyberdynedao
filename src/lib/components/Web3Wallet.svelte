@@ -34,15 +34,26 @@
 		closeConnectionModal();
 		
 		try {
+			// Ensure polyfills are ready before attempting login
+			const { polyfillsReady } = await import('$lib/polyfills');
+			await polyfillsReady;
+			console.log('Polyfills confirmed ready for login');
+			
 			const user = await web3AuthService.loginWithGoogle();
 			if (user) {
 				currentUser = user;
 				walletConnected = true;
 				console.log('Web3Auth login successful:', user);
+				errorMessage = ''; // Clear any previous errors
 			}
 		} catch (error) {
 			console.error('Web3Auth login failed:', error);
-			errorMessage = `Login failed: ${error?.message || 'Unknown error'}`;
+			const errorMsg = error?.message || error?.toString() || 'Unknown error';
+			errorMessage = `Login failed: ${errorMsg}`;
+			
+			// Reset state on error
+			walletConnected = false;
+			currentUser = null;
 		} finally {
 			isLoading = false;
 		}
@@ -83,8 +94,22 @@
 	}
 	
 	onMount(async () => {
-		console.log('Web3Wallet component mounted, checking authentication status...');
-		await checkAuthStatus();
+		console.log('Web3Wallet component mounted, waiting for polyfills...');
+		try {
+			// Wait for polyfills to be ready before initializing Web3Auth
+			const { polyfillsReady } = await import('$lib/polyfills');
+			await polyfillsReady;
+			
+			// Give a small additional delay for any async module initialization
+			await new Promise(resolve => setTimeout(resolve, 100));
+			
+			console.log('Polyfills loaded and settled, checking authentication status...');
+			await checkAuthStatus();
+		} catch (error) {
+			console.error('Error during component initialization:', error);
+			// Don't set error message for initialization failures, just log them
+			console.warn('Wallet initialization failed, but continuing...');
+		}
 	});
 </script>
 

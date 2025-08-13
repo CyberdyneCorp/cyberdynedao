@@ -1,35 +1,13 @@
-import { Web3Auth } from "@web3auth/modal";
-import { WEB3AUTH_NETWORK } from "@web3auth/base";
+// Dynamic imports to prevent SSR issues - these will be loaded when needed
 import type { IProvider } from "@web3auth/base";
-import { ethers } from "ethers";
 
 const clientId = import.meta.env.VITE_WEB3AUTH_CLIENT_ID;
 
-console.log('Web3Auth Client ID:', clientId ? `${clientId.substring(0, 10)}...` : 'NOT SET');
-
-if (!clientId) {
-  throw new Error("Web3Auth Client ID is not configured. Please check your environment variables.");
-}
-
-// Get network from environment or default to SAPPHIRE_DEVNET
-const networkName = import.meta.env.VITE_WEB3AUTH_NETWORK || 'sapphire_devnet';
-const web3AuthNetwork = WEB3AUTH_NETWORK[networkName.toUpperCase()] || WEB3AUTH_NETWORK.SAPPHIRE_DEVNET;
-
-// Web3Auth v10 configuration - chainConfig and privateKeyProvider handled by dashboard
-const web3auth = new Web3Auth({
-  clientId,
-  web3AuthNetwork: web3AuthNetwork,
-  uiConfig: {
-    appName: "Cyberdyne DAO Terminal",
-    appUrl: import.meta.env.VITE_APP_URL || "http://localhost:5173",
-    defaultLanguage: "en",
-    mode: "dark",
-    theme: {
-      primary: "#00ff00", // Retro green theme
-    },
-    useLogoLoader: false,
-  },
-});
+// These will be dynamically imported when needed
+let Web3Auth: any = null;
+let WEB3AUTH_NETWORK: any = null;
+let ethers: any = null;
+let web3auth: any = null;
 
 export interface UserInfo {
   email?: string;
@@ -101,8 +79,71 @@ class Web3AuthService {
     try {
       console.log('Starting Web3Auth initialization...');
       console.log('Client ID available:', !!clientId);
-      console.log('Network:', WEB3AUTH_NETWORK.SAPPHIRE_DEVNET);
       
+      // Check if we're in browser environment
+      if (typeof window === 'undefined') {
+        throw new Error('Web3Auth can only be initialized in browser environment');
+      }
+      
+      // Wait for polyfills to be ready
+      try {
+        const { polyfillsReady } = await import('$lib/polyfills');
+        await polyfillsReady;
+        console.log('Polyfills ready for Web3Auth initialization');
+      } catch (polyfillError) {
+        console.warn('Polyfills not available, proceeding anyway:', polyfillError);
+      }
+      
+      // Dynamically import Web3Auth modules
+      if (!Web3Auth || !WEB3AUTH_NETWORK) {
+        console.log('Loading Web3Auth modules...');
+        const [web3authModule, baseModule] = await Promise.all([
+          import("@web3auth/modal"),
+          import("@web3auth/base")
+        ]);
+        
+        Web3Auth = web3authModule.Web3Auth;
+        WEB3AUTH_NETWORK = baseModule.WEB3AUTH_NETWORK;
+        console.log('Web3Auth modules loaded successfully');
+      }
+      
+      // Dynamically import ethers
+      if (!ethers) {
+        console.log('Loading ethers...');
+        const ethersModule = await import("ethers");
+        ethers = ethersModule;
+        console.log('Ethers loaded successfully');
+      }
+      
+      // Validate client ID
+      if (!clientId) {
+        throw new Error("Web3Auth Client ID is not configured. Please check your environment variables.");
+      }
+      
+      // Create Web3Auth instance if not already created
+      if (!web3auth) {
+        const networkName = import.meta.env.VITE_WEB3AUTH_NETWORK || 'sapphire_devnet';
+        const web3AuthNetwork = WEB3AUTH_NETWORK[networkName.toUpperCase()] || WEB3AUTH_NETWORK.SAPPHIRE_DEVNET;
+        
+        console.log('Creating Web3Auth instance with network:', web3AuthNetwork);
+        
+        web3auth = new Web3Auth({
+          clientId,
+          web3AuthNetwork: web3AuthNetwork,
+          uiConfig: {
+            appName: "Cyberdyne DAO Terminal",
+            appUrl: import.meta.env.VITE_APP_URL || "http://localhost:5173",
+            defaultLanguage: "en",
+            mode: "dark",
+            theme: {
+              primary: "#00ff00", // Retro green theme
+            },
+            useLogoLoader: false,
+          },
+        });
+      }
+      
+      console.log('Initializing Web3Auth...');
       await web3auth.init();
       this.initialized = true;
       console.log("Web3Auth initialized successfully");
