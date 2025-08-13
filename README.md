@@ -194,9 +194,73 @@ Located in `/static/assets/`:
 - ✅ Removed unused components and optimized asset usage
 - ✅ Enhanced build process and code organization
 
+## 🌐 Web3 Integration
+
+This application is integrated with **Base Network** using **ethers.js** for Web3 functionality.
+
+### Environment Setup
+
+Create a `.env` file in the project root:
+
+```env
+# Infura Configuration
+VITE_INFURA_API_KEY=your_infura_api_key
+VITE_INFURA_ENDPOINT=https://base-mainnet.infura.io/v3/your_infura_api_key
+
+# Base Network Configuration
+VITE_CHAIN_ID=8453
+VITE_NETWORK_NAME=Base Mainnet
+VITE_NATIVE_CURRENCY=ETH
+
+# App Configuration
+VITE_APP_NAME=Cyberdyne DAO Terminal
+VITE_APP_ENV=development
+```
+
+### Web3 Features
+
+- **🔗 Wallet Connection**: Connect MetaMask and other Web3 wallets
+- **🌐 Base Network**: Configured for Base mainnet (Chain ID: 8453)  
+- **💰 Balance Display**: Real-time ETH balance updates
+- **🔄 Network Switching**: Automatic network switching to Base
+- **📱 Responsive**: Works on desktop and mobile Web3 browsers
+- **⚡ Transaction Support**: Send transactions and interact with contracts
+- **🎯 Contract Integration**: ERC-20 token support with standard methods
+
+### Usage Examples
+
+```typescript
+// Connect wallet
+import { web3Actions, walletInfo } from '$lib/stores/web3Store';
+await web3Actions.connectWallet();
+
+// Check connection status
+$: console.log('Connected:', $walletInfo?.isConnected);
+
+// Get token balance
+import { contractManager } from '$lib/web3/contracts';
+const balance = await contractManager.getTokenBalance(tokenAddress, userAddress);
+
+// Send transaction  
+import { walletManager } from '$lib/web3/wallet';
+const txHash = await walletManager.sendTransaction(to, value);
+```
+
+### Web3 Architecture
+
+```
+src/lib/web3/
+├── config.ts          # Network configuration & provider setup
+├── wallet.ts          # Wallet connection & management
+├── contracts.ts       # Smart contract interactions
+└── stores/
+    └── web3Store.ts   # Svelte stores for Web3 state
+```
+
 ## 🔧 Technologies
 
 - **Frontend**: SvelteKit, TypeScript
+- **Web3**: ethers.js, Base Network, Infura
 - **Styling**: Tailwind CSS, Custom CSS animations
 - **Build**: Vite, SvelteKit Static Adapter
 - **Deployment**: IPFS, Static hosting
