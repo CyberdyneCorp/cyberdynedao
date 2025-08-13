@@ -21,62 +21,63 @@ export interface WalletInfo {
 
 // AppKit store state interface
 interface AppKitState {
-  instance: AppKit | null
-  isInitialized: boolean
-  isLoading: boolean
+  initialized: boolean
+  loading: boolean
   error: string | null
   walletInfo: WalletInfo
+  chainId: number | null
 }
 
 // Initial state
 const initialState: AppKitState = {
-  instance: null,
-  isInitialized: false,
-  isLoading: false,
+  initialized: false,
+  loading: false,
   error: null,
   walletInfo: {
-    isConnected: false
-  }
+    isConnected: false,
+    address: undefined,
+    chainId: undefined,
+    balance: undefined
+  },
+  chainId: null
 }
 
 // Main AppKit store
 export const appKitStore = writable<AppKitState>(initialState)
 
+// Separate AppKit instance store (as expected by the service)
+export const appKitInstance = writable<AppKit | null>(null)
+
 // Derived stores for convenient access
-export const appKitInstance = derived(appKitStore, $store => $store.instance)
-export const isAppKitInitialized = derived(appKitStore, $store => $store.isInitialized)
-export const isAppKitLoading = derived(appKitStore, $store => $store.isLoading)
+export const isAppKitInitialized = derived(appKitStore, $store => $store.initialized)
+export const isAppKitLoading = derived(appKitStore, $store => $store.loading)
 export const appKitError = derived(appKitStore, $store => $store.error)
-export const appKitWalletInfo = derived(appKitStore, $store => $store.walletInfo)
+export const walletInfo = derived(appKitStore, $store => $store.walletInfo)
+export const isWalletConnected = derived(walletInfo, $walletInfo => $walletInfo.isConnected)
+export const connectedAddress = derived(walletInfo, $walletInfo => $walletInfo.address)
+export const connectedChainId = derived(walletInfo, $walletInfo => $walletInfo.chainId)
+export const walletBalance = derived(walletInfo, $walletInfo => $walletInfo.balance)
 
 // Store actions
 export const appKitActions = {
-  // Set AppKit instance
-  setInstance: (instance: AppKit) => {
-    appKitStore.update(state => ({
-      ...state,
-      instance
-    }))
-  },
-
   // Set initialization status
-  setInitialized: (isInitialized: boolean) => {
+  setInitialized: (initialized: boolean) => {
     appKitStore.update(state => ({
       ...state,
-      isInitialized
+      initialized
     }))
   },
 
   // Set loading state
-  setLoading: (isLoading: boolean) => {
+  setLoading: (loading: boolean) => {
     appKitStore.update(state => ({
       ...state,
-      isLoading
+      loading
     }))
   },
 
   // Set error message
-  setError: (error: string | null) => {
+  setError: (error: string) => {
     appKitStore.update(state => ({
       ...state,
       error
@@ -99,10 +100,11 @@ export const appKitActions = {
     }))
   },
 
-  // Set chain ID only
+  // Set chain ID
   setChainId: (chainId: number) => {
     appKitStore.update(state => ({
       ...state,
+      chainId,
       walletInfo: {
         ...state.walletInfo,
         chainId
@@ -115,7 +117,10 @@ export const appKitActions = {
     appKitStore.update(state => ({
       ...state,
       walletInfo: {
-        isConnected: false
+        isConnected: false,
+        address: undefined,
+        chainId: undefined,
+        balance: undefined
       }
     }))
   },
@@ -124,4 +129,41 @@ export const appKitActions = {
   reset: () => {
     appKitStore.set(initialState)
   }
+}
+
+// Utility functions
+export const formatAddress = (address?: string): string => {
+  if (!address) return ''
+  return `${address.slice(0, 6)}...${address.slice(-4)}`
+}
+
+export const formatBalance = (balance?: string): string => {
+  if (!balance) return '0'
+  
+  try {
+    const num = parseFloat(balance)
+    if (num === 0) return '0'
+    if (num < 0.0001) return '< 0.0001'
+    if (num < 1) return num.toFixed(4)
+    if (num < 1000) return num.toFixed(3)
+    return `${(num / 1000).toFixed(2)}k`
+  } catch {
+    return balance
+  }
+}
+
+// Chain ID to network name mapping
+export const getNetworkName = (chainId?: number): string => {
+  const networks: Record<number, string> = {
+    1: 'Ethereum',
+    8453: 'Base',
+    137: 'Polygon',
+    42161: 'Arbitrum One',
+    10: 'Optimism',
+    56: 'BNB Smart Chain',
+    43114: 'Avalanche',
+    250: 'Fantom'
+  }
+  
+  return networks[chainId || 0] || `Chain ${chainId || 'Unknown'}`
 }

@@ -124,9 +124,10 @@ VITE_REOWN_APP_ICON=https://your-domain.com/assets/cyberdyne_logo.svg
    - Create a new project for Base network
    - Copy the API key and construct the endpoint URL
 
-3. **Reown Project ID** (Optional):
+3. **Reown Project ID** (Required for WalletConnect):
    - Visit [WalletConnect Cloud](https://cloud.walletconnect.com/)
    - Create a new project
+   - Add your domain to the allowed origins
    - Copy the Project ID
 
 ### Wallet Connection Features
@@ -137,10 +138,12 @@ VITE_REOWN_APP_ICON=https://your-domain.com/assets/cyberdyne_logo.svg
 - **User-Friendly**: No seed phrases or complex setup
 - **Custom Branding**: Cyberdyne logo in authentication modal
 
-#### 📱 WalletConnect (Coming Soon)
-- **Mobile Wallet Support**: MetaMask, Trust Wallet, etc.
-- **QR Code Scanning**: Easy mobile connection
-- **Multi-Wallet Compatibility**: 50+ supported wallets
+#### 📱 WalletConnect (Production Ready)
+- **Mobile Wallet Support**: MetaMask, Trust Wallet, Coinbase Wallet, etc.
+- **QR Code Scanning**: Easy mobile connection via AppKit modal
+- **Multi-Wallet Compatibility**: 50+ supported wallets including featured wallets
+- **Multi-Chain Support**: Ethereum, Base, Polygon, Arbitrum networks
+- **Real-time Updates**: Live connection status and balance updates
 
 ### Connected State UI
 - **Minimal Interface**: Shows only "CONNECTED" when collapsed
@@ -297,6 +300,8 @@ frontend/
 ## 🏆 Recent Achievements
 
 - ✅ **Web3Auth Integration**: Fully functional Google authentication
+- ✅ **WalletConnect Integration**: Complete with AppKit and 50+ wallet support
+- ✅ **Dual Wallet Support**: Both social login and traditional wallet connections
 - ✅ **SSR Compatibility**: Resolved polyfill conflicts for server-side rendering
 - ✅ **Docker Ready**: Production-optimized containerization
 - ✅ **Clean UI**: Professional wallet interface with expandable details
@@ -306,7 +311,7 @@ frontend/
 ## 📋 Development Status
 
 - 🟢 **Web3Auth Authentication**: Complete and working
-- 🟡 **WalletConnect Integration**: Planned for future release
+- 🟢 **WalletConnect Integration**: Complete and working with 50+ wallet support
 - 🟢 **Docker Deployment**: Ready for production
 - 🟢 **Static Hosting**: IPFS and traditional hosting compatible
 - 🟢 **Responsive Design**: Mobile and desktop optimized

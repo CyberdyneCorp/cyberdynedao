@@ -1,14 +1,35 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { web3AuthService, type Web3AuthUser } from '../web3/web3AuthService';
+	import { appKitService } from '../web3/appKitService';
+	import { walletInfo, isWalletConnected, formatAddress, formatBalance, getNetworkName } from '../stores/appKitStore';
 	
 	let walletConnected = false;
 	let isLoading = false;
 	let errorMessage = '';
 	let currentUser: Web3AuthUser | null = null;
+	let connectionType: 'web3auth' | 'walletconnect' | null = null;
 
 	let showDetails = false;
 	let showConnectionModal = false;
+
+	// Subscribe to WalletConnect state
+	let walletConnectConnected = false;
+	let walletConnectInfo: any = null;
+
+	const unsubscribe = walletInfo.subscribe(info => {
+		walletConnectConnected = info.isConnected;
+		walletConnectInfo = info;
+		
+		// Update overall connection status
+		if (info.isConnected && connectionType !== 'web3auth') {
+			walletConnected = true;
+			connectionType = 'walletconnect';
+		} else if (!info.isConnected && connectionType === 'walletconnect') {
+			walletConnected = currentUser !== null; // Keep Web3Auth connection if present
+			if (!currentUser) connectionType = null;
+		}
+	});
 
 	function toggleDetails() {
 		showDetails = !showDetails;
@@ -23,9 +44,29 @@
 	}
 
 	async function handleWalletConnect() {
-		console.log('WalletConnect clicked - feature coming soon');
-		errorMessage = 'WalletConnect integration coming soon...';
+		console.log('WalletConnect clicked - initializing AppKit...');
+		isLoading = true;
 		closeConnectionModal();
+		
+		try {
+			// Initialize AppKit if not already done
+			const initialized = await appKitService.initialize();
+			if (!initialized) {
+				throw new Error('Failed to initialize AppKit');
+			}
+			
+			// Open the connection modal
+			await appKitService.openModal();
+			
+			console.log('AppKit modal opened successfully');
+			errorMessage = ''; // Clear any previous errors
+		} catch (error) {
+			console.error('WalletConnect failed:', error);
+			const errorMsg = (error as any)?.message || String(error) || 'Unknown error';
+			errorMessage = `WalletConnect failed: ${errorMsg}`;
+		} finally {
+			isLoading = false;
+		}
 	}
 
 	async function handleWeb3AuthConnect() {
@@ -43,17 +84,19 @@
 			if (user) {
 				currentUser = user;
 				walletConnected = true;
+				connectionType = 'web3auth';
 				console.log('Web3Auth login successful:', user);
 				errorMessage = ''; // Clear any previous errors
 			}
 		} catch (error) {
 			console.error('Web3Auth login failed:', error);
-			const errorMsg = error?.message || error?.toString() || 'Unknown error';
+			const errorMsg = (error as any)?.message || String(error) || 'Unknown error';
 			errorMessage = `Login failed: ${errorMsg}`;
 			
 			// Reset state on error
 			walletConnected = false;
 			currentUser = null;
+			connectionType = null;
 		} finally {
 			isLoading = false;
 		}
@@ -62,14 +105,23 @@
 	async function handleDisconnect() {
 		isLoading = true;
 		try {
-			await web3AuthService.logout();
+			// Disconnect based on connection type
+			if (connectionType === 'web3auth') {
+				await web3AuthService.logout();
+				currentUser = null;
+				console.log('Web3Auth user disconnected successfully');
+			} else if (connectionType === 'walletconnect') {
+				await appKitService.disconnect();
+				console.log('WalletConnect user disconnected successfully');
+			}
+			
+			// Reset state
 			walletConnected = false;
-			currentUser = null;
+			connectionType = null;
 			showDetails = false;
-			console.log('User disconnected successfully');
 		} catch (error) {
 			console.error('Disconnect failed:', error);
-			errorMessage = `Disconnect failed: ${error?.message || 'Unknown error'}`;
+			errorMessage = `Disconnect failed: ${(error as any)?.message || 'Unknown error'}`;
 		} finally {
 			isLoading = false;
 		}
@@ -85,6 +137,7 @@
 			if (user) {
 				currentUser = user;
 				walletConnected = true;
+				connectionType = 'web3auth';
 				console.log('User already authenticated:', user);
 			}
 		} catch (error) {
@@ -94,7 +147,7 @@
 	}
 	
 	onMount(async () => {
-		console.log('Web3Wallet component mounted, waiting for polyfills...');
+		console.log('Web3Wallet component mounted, initializing wallet services...');
 		try {
 			// Wait for polyfills to be ready before initializing Web3Auth
 			const { polyfillsReady } = await import('$lib/polyfills');
@@ -105,10 +158,22 @@
 			
 			console.log('Polyfills loaded and settled, checking authentication status...');
 			await checkAuthStatus();
+			
+			// Initialize AppKit in the background (don't await to avoid blocking)
+			appKitService.initialize().catch(error => {
+				console.log('AppKit initialization failed (will retry when needed):', error);
+			});
 		} catch (error) {
 			console.error('Error during component initialization:', error);
 			// Don't set error message for initialization failures, just log them
 			console.warn('Wallet initialization failed, but continuing...');
+		}
+	});
+
+	onDestroy(() => {
+		// Clean up subscription
+		if (unsubscribe) {
+			unsubscribe();
 		}
 	});
 </script>
@@ -133,7 +198,7 @@
 						<div class="option-icon">📱</div>
 						<div class="option-content">
 							<div class="option-title">WalletConnect</div>
-							<div class="option-description">Scan QR code with mobile wallet</div>
+							<div class="option-description">Connect MetaMask, Trust Wallet & 50+ wallets</div>
 						</div>
 					</button>
 
@@ -201,22 +266,51 @@
 				{#if showDetails}
 					<div class="wallet-details">
 						<div class="detail-grid">
+							<!-- Connection Type -->
+							<div class="detail-row">
+								<span class="detail-label">TYPE:</span>
+								<span class="detail-value">{connectionType === 'web3auth' ? 'Web3Auth (Google)' : connectionType === 'walletconnect' ? 'WalletConnect' : 'Unknown'}</span>
+							</div>
+							
+							<!-- Address -->
 							<div class="detail-row">
 								<span class="detail-label">ADDRESS:</span>
-								<span class="detail-value address-full">{currentUser?.address || 'Not available'}</span>
+								<span class="detail-value address-full">
+									{connectionType === 'web3auth' ? currentUser?.address || 'Not available' : 
+									 connectionType === 'walletconnect' ? walletConnectInfo?.address || 'Not available' : 'Not available'}
+								</span>
 							</div>
+							
+							<!-- Balance -->
 							<div class="detail-row">
 								<span class="detail-label">BALANCE:</span>
-								<span class="detail-value">{currentUser ? parseFloat(currentUser.balance).toFixed(4) : '0.0000'} ETH</span>
+								<span class="detail-value">
+									{connectionType === 'web3auth' ? 
+										(currentUser ? parseFloat(currentUser.balance).toFixed(4) : '0.0000') :
+									 connectionType === 'walletconnect' ? 
+										formatBalance(walletConnectInfo?.balance) : '0.0000'} ETH
+								</span>
 							</div>
-							<div class="detail-row">
-								<span class="detail-label">EMAIL:</span>
-								<span class="detail-value">{currentUser?.userInfo.email || 'Not provided'}</span>
-							</div>
-							<div class="detail-row">
-								<span class="detail-label">NAME:</span>
-								<span class="detail-value">{currentUser?.userInfo.name || 'Not provided'}</span>
-							</div>
+							
+							<!-- Network (for WalletConnect) -->
+							{#if connectionType === 'walletconnect'}
+								<div class="detail-row">
+									<span class="detail-label">NETWORK:</span>
+									<span class="detail-value">{getNetworkName(walletConnectInfo?.chainId)}</span>
+								</div>
+							{/if}
+							
+							<!-- Email and Name (only for Web3Auth) -->
+							{#if connectionType === 'web3auth'}
+								<div class="detail-row">
+									<span class="detail-label">EMAIL:</span>
+									<span class="detail-value">{currentUser?.userInfo.email || 'Not provided'}</span>
+								</div>
+								<div class="detail-row">
+									<span class="detail-label">NAME:</span>
+									<span class="detail-value">{currentUser?.userInfo.name || 'Not provided'}</span>
+								</div>
+							{/if}
 						</div>
 						<div class="wallet-actions">
 							<button 
