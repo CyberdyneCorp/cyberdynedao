@@ -20,13 +20,33 @@ export const windows = writable<WindowState[]>([]);
 
 export function createWindow(content: WindowState['content'], title: string) {
 	windows.update(wins => {
+		// Calculate screen dimensions (using browser window if available)
+		const screenWidth = (typeof globalThis !== 'undefined' && globalThis.innerWidth) ? globalThis.innerWidth : 1920;
+		const screenHeight = (typeof globalThis !== 'undefined' && globalThis.innerHeight) ? globalThis.innerHeight : 1080;
+		
+		let x, y, width, height;
+		
+		// Position cart windows in bottom right corner by default
+		if (content === 'cart') {
+			width = 350;  // Smaller width for cart
+			height = 650; // Taller height for cart
+			x = screenWidth - width - 20; // 20px from right edge
+			y = screenHeight - height - 60; // 60px from bottom edge (accounting for taskbar)
+		} else {
+			// Default positioning for other windows
+			width = 800;
+			height = 600;
+			x = 100 + wins.length * 30;
+			y = 50 + wins.length * 30;
+		}
+
 		const newWindow: WindowState = {
 			id: `window-${Date.now()}`,
 			title,
-			x: 100 + wins.length * 30,
-			y: 50 + wins.length * 30,
-			width: 800,
-			height: 600,
+			x,
+			y,
+			width,
+			height,
 			zIndex: 100 + wins.length,
 			minimized: false,
 			maximized: false,
