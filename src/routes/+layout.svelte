@@ -1,4 +1,7 @@
 <script lang="ts">
+	// Load polyfills first before any other imports
+	import '$lib/polyfills';
+	
 	// Use favicon from static assets
 	import '../app.css';
     import TopBar from '$lib/components/TopBar.svelte';

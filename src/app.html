@@ -3,34 +3,38 @@
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<script type="module">
-			// Load polyfills before any other modules
-			import './lib/polyfills.ts';
-			
-			// Global error handler for catching module loading issues
-			window.addEventListener('error', (event) => {
-				console.error('[APP] Global error caught:', {
-					message: event.message,
-					filename: event.filename,
-					lineno: event.lineno,
-					colno: event.colno,
-					error: event.error
-				});
-				
-				// Check for specific polyfill-related errors
-				if (event.message?.includes('Buffer') || event.message?.includes('process')) {
-					console.error('[APP] 🚨 POLYFILL ERROR: This looks like a Buffer/process polyfill issue');
-					console.error('[APP] Check that polyfills are loaded before this module');
+		<script>
+			// Inline polyfills for immediate availability
+			(function() {
+				// Buffer polyfill
+				if (typeof window !== 'undefined' && typeof window.Buffer === 'undefined') {
+					console.log('[POLYFILLS] Loading Buffer polyfill inline...');
+					// Simple Buffer polyfill placeholder - actual Buffer will be loaded by Vite
+					window.Buffer = window.Buffer || {};
 				}
-			});
+				
+				// Global polyfills
+				if (typeof global === 'undefined') {
+					var global = globalThis || window;
+				}
+				
+				if (typeof process === 'undefined') {
+					var process = {
+						env: {},
+						nextTick: function(fn) { setTimeout(fn, 0); },
+						browser: true,
+						version: '',
+						versions: {},
+						platform: 'browser'
+					};
+				}
 
-			window.addEventListener('unhandledrejection', (event) => {
-				console.error('[APP] Unhandled promise rejection:', event.reason);
+				// Make available globally
+				window.global = global;
+				window.process = process;
 				
-				if (event.reason?.message?.includes('Buffer') || event.reason?.message?.includes('process')) {
-					console.error('[APP] 🚨 POLYFILL PROMISE ERROR: This looks like a Buffer/process polyfill issue');
-				}
-			});
+				console.log('[POLYFILLS] Inline polyfills loaded');
+			})();
 		</script>
 		%sveltekit.head%
 	</head>
