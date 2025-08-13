@@ -35,6 +35,85 @@ npm run build
 npm run preview
 ```
 
+## 🌐 IPFS Deployment
+
+This application is configured for static deployment to IPFS using SvelteKit's static adapter.
+
+### Quick Deploy
+
+```bash
+# Build for IPFS deployment
+npm run build:ipfs
+
+# Preview IPFS build locally
+npm run preview:ipfs
+```
+
+### IPFS Configuration
+
+The application uses `@sveltejs/adapter-static` with the following IPFS-optimized settings:
+
+- **Static Generation**: All routes are pre-rendered at build time
+- **Relative Paths**: Uses relative paths for better IPFS compatibility
+- **Fallback Handling**: Includes `index.html` fallback for SPA routing
+- **Asset Optimization**: Assets are bundled into the `build/` directory
+
+### Deployment Options
+
+#### Option 1: IPFS Desktop/CLI
+```bash
+# Build the application
+npm run build:ipfs
+
+# Add to IPFS (using IPFS CLI)
+ipfs add -r build/
+
+# Or using IPFS Desktop: drag the build/ folder into IPFS Desktop
+```
+
+#### Option 2: Pinata/Fleek
+1. Build the application: `npm run build:ipfs`
+2. Upload the `build/` folder to your preferred IPFS pinning service
+3. Access your app via the generated IPFS hash
+
+#### Option 3: Web3.Storage/NFT.Storage
+```bash
+# Build the application  
+npm run build:ipfs
+
+# Upload using w3cli (install with: npm install -g @web3-storage/w3cli)
+w3 put build/
+```
+
+### IPFS Gateway Access
+
+Once deployed, access your app through IPFS gateways:
+- `https://ipfs.io/ipfs/YOUR_HASH`
+- `https://gateway.pinata.cloud/ipfs/YOUR_HASH`
+- `https://YOUR_HASH.ipfs.dweb.link`
+
+### Static Build Configuration
+
+The static adapter is configured in `svelte.config.js`:
+
+```javascript
+adapter: adapter({
+  pages: 'build',
+  assets: 'build', 
+  fallback: 'index.html',
+  precompress: false,
+  strict: true
+})
+```
+
+### Important Notes for IPFS
+
+- ✅ All routes are pre-rendered for static hosting
+- ✅ Uses relative paths for IPFS compatibility
+- ✅ Includes fallback routing for SPA navigation
+- ✅ Assets are self-contained in the build directory
+- ✅ No server-side functionality required
+
 ## 📁 Project Structure
 
 ```
@@ -119,7 +198,8 @@ Located in `/static/assets/`:
 
 - **Frontend**: SvelteKit, TypeScript
 - **Styling**: Tailwind CSS, Custom CSS animations
-- **Build**: Vite, SvelteKit adapter
+- **Build**: Vite, SvelteKit Static Adapter
+- **Deployment**: IPFS, Static hosting
 - **Assets**: SVG icons, WebP images
 
 ---
