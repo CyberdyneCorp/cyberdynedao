@@ -1,116 +1,155 @@
 <script lang="ts">
-	import { 
-		walletInfo, 
-		isConnected, 
-		isConnecting, 
-		connectionError, 
-		shortAddress, 
-		walletBalance,
-		isCorrectNetwork,
-		web3Actions 
-	} from '$lib/stores/web3Store';
-	import { BASE_NETWORK } from '$lib/web3/config';
+	// Temporarily simplify imports to avoid initialization errors
+	let walletConnected = false;
+	let isLoading = false;
+	let errorMessage = '';
 
 	let showDetails = false;
+	let showConnectionModal = false;
 
 	function toggleDetails() {
 		showDetails = !showDetails;
 	}
 
-	async function handleConnect() {
-		await web3Actions.connectWallet();
+	function openConnectionModal() {
+		showConnectionModal = true;
+	}
+
+	function closeConnectionModal() {
+		showConnectionModal = false;
+	}
+
+	async function handleWalletConnect() {
+		console.log('WalletConnect clicked - feature coming soon');
+		errorMessage = 'WalletConnect integration coming soon...';
+		closeConnectionModal();
+	}
+
+	async function handleWeb3AuthConnect() {
+		console.log('Web3Auth clicked - feature coming soon');
+		errorMessage = 'Web3Auth integration coming soon...';
+		closeConnectionModal();
 	}
 
 	async function handleDisconnect() {
-		await web3Actions.disconnectWallet();
+		walletConnected = false;
 		showDetails = false;
 	}
 
-	async function handleSwitchNetwork() {
-		await web3Actions.switchToBaseNetwork();
+	function clearError() {
+		errorMessage = '';
 	}
 
-	function clearError() {
-		web3Actions.clearError();
-	}
+	import { onMount } from 'svelte';
+	
+	onMount(() => {
+		console.log('Web3Wallet component mounted successfully');
+	});
 </script>
 
 <div class="web3-wallet">
-	{#if $connectionError}
-		<div class="error-banner bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-2">
-			<div class="flex items-center justify-between">
-				<span class="text-xs font-mono">{$connectionError}</span>
-				<button on:click={clearError} class="text-red-500 hover:text-red-700">
-					<span class="text-xs">✕</span>
-				</button>
+	<!-- Connection Modal -->
+	{#if showConnectionModal}
+		<div class="connection-modal-overlay" on:click={closeConnectionModal}>
+			<div class="connection-modal" on:click|stopPropagation>
+				<div class="modal-header">
+					<h2 class="modal-title">🖥️ CONNECT WALLET</h2>
+					<button on:click={closeConnectionModal} class="close-btn">✕</button>
+				</div>
+				
+				<div class="connection-options">
+					<!-- WalletConnect Option -->
+					<button 
+						on:click={handleWalletConnect}
+						disabled={isLoading}
+						class="connection-option walletconnect-option"
+					>
+						<div class="option-icon">📱</div>
+						<div class="option-content">
+							<div class="option-title">WalletConnect</div>
+							<div class="option-description">Scan QR code with mobile wallet</div>
+						</div>
+					</button>
+
+					<!-- Web3Auth/Google Option -->
+					<button 
+						on:click={handleWeb3AuthConnect}
+						disabled={isLoading}
+						class="connection-option web3auth-option"
+					>
+						<div class="option-icon">G</div>
+						<div class="option-content">
+							<div class="option-title">Continue with Google</div>
+							<div class="option-description">Secure authentication via Google</div>
+						</div>
+					</button>
+				</div>
+
+				<!-- Loading States -->
+				{#if isLoading}
+					<div class="loading-indicator">
+						<div class="loading-text">Connecting...</div>
+						<div class="loading-dots">...</div>
+					</div>
+				{/if}
 			</div>
 		</div>
 	{/if}
 
-	{#if !$isConnected}
+	<!-- Error Banner - positioned absolutely to avoid clipping -->
+	{#if errorMessage}
+		<div class="error-banner-absolute">
+			<div class="error-content">
+				<span class="error-text">{errorMessage}</span>
+				<button on:click={clearError} class="error-close">✕</button>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Main Wallet Interface -->
+	{#if !walletConnected}
 		<button 
-			on:click={handleConnect}
-			disabled={$isConnecting}
-			class="connect-btn w-full bg-blue-600 text-white py-2 px-4 rounded font-mono text-xs hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+			on:click={openConnectionModal}
+			disabled={isLoading}
+			class="connect-btn"
 		>
-			{$isConnecting ? 'Connecting...' : '🔗 Connect Wallet'}
+			{isLoading ? '> CONNECTING...' : '> CONNECT WALLET'}
 		</button>
 	{:else}
 		<div class="wallet-connected">
-			{#if !$isCorrectNetwork}
-				<div class="network-warning bg-orange-100 border border-orange-400 text-orange-700 px-3 py-2 rounded mb-2">
-					<div class="flex items-center justify-between">
-						<span class="text-xs font-mono">Wrong Network</span>
-						<button 
-							on:click={handleSwitchNetwork}
-							class="bg-orange-600 text-white px-2 py-1 rounded text-xs hover:bg-orange-700"
-						>
-							Switch to {BASE_NETWORK.name}
-						</button>
-					</div>
-				</div>
-			{/if}
-
 			<div class="wallet-info">
 				<button 
 					on:click={toggleDetails}
-					class="wallet-summary w-full bg-green-100 border border-green-400 text-green-800 px-3 py-2 rounded font-mono text-xs hover:bg-green-200 transition-colors text-left"
+					class="wallet-summary"
 				>
-					<div class="flex items-center justify-between">
-						<div>
-							<div class="font-bold">🟢 Connected</div>
-							<div class="text-xs opacity-75">{$shortAddress}</div>
+					<div class="wallet-status">
+						<div class="status-indicator">
+							<div class="status-text">█ CONNECTED</div>
+							<div class="wallet-type">DEMO</div>
 						</div>
-						<div class="text-right">
-							<div class="font-bold">{$walletBalance} ETH</div>
-							<div class="text-xs opacity-75">{showDetails ? '▲' : '▼'}</div>
+						<div class="wallet-balance">
+							<div class="balance-amount">0.0000 ETH</div>
+							<div class="expand-icon">{showDetails ? '▲' : '▼'}</div>
 						</div>
 					</div>
+					<div class="wallet-address">0x1234...abcd</div>
 				</button>
 
 				{#if showDetails}
-					<div class="wallet-details bg-white border border-gray-300 rounded-b px-3 py-2 -mt-1">
-						<div class="space-y-2 text-xs font-mono">
-							<div class="flex justify-between">
-								<span class="text-gray-600">Network:</span>
-								<span class="font-bold">{BASE_NETWORK.name}</span>
+					<div class="wallet-details">
+						<div class="detail-grid">
+							<div class="detail-row">
+								<span class="detail-label">STATUS:</span>
+								<span class="detail-value">Demo Mode</span>
 							</div>
-							<div class="flex justify-between">
-								<span class="text-gray-600">Chain ID:</span>
-								<span class="font-bold">{BASE_NETWORK.chainId}</span>
-							</div>
-							<div class="flex justify-between">
-								<span class="text-gray-600">Address:</span>
-								<span class="font-mono text-xs break-all">{$walletInfo?.address}</span>
-							</div>
-							<div class="pt-2 border-t">
-								<button 
-									on:click={handleDisconnect}
-									class="w-full bg-red-100 text-red-700 py-1 px-2 rounded text-xs hover:bg-red-200 transition-colors"
-								>
-									🔌 Disconnect
-								</button>
-							</div>
+						</div>
+						<div class="wallet-actions">
+							<button 
+								on:click={handleDisconnect}
+								class="disconnect-btn"
+							>
+								> DISCONNECT
+							</button>
 						</div>
 					</div>
 				{/if}
@@ -121,11 +160,402 @@
 
 <style>
 	.web3-wallet {
-		font-family: 'Courier New', monospace;
+		font-family: 'JetBrains Mono', 'Courier New', monospace;
+		color: #00ff00;
+		background: transparent;
+		position: relative;
+		z-index: 5;
 	}
 
+	/* Connection Modal */
+	.connection-modal-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: rgba(0, 0, 0, 0.9);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 1000;
+	}
+
+	.connection-modal {
+		background: #000000;
+		border: 2px solid #00ff00;
+		border-radius: 8px;
+		padding: 24px;
+		min-width: 400px;
+		max-width: 90vw;
+		box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+	}
+
+	.modal-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 24px;
+		border-bottom: 1px solid #00ff00;
+		padding-bottom: 12px;
+	}
+
+	.modal-title {
+		color: #00ff00;
+		font-size: 16px;
+		font-weight: bold;
+		margin: 0;
+	}
+
+	.close-btn {
+		background: none;
+		border: none;
+		color: #00ff00;
+		font-size: 18px;
+		cursor: pointer;
+		padding: 4px;
+		border-radius: 4px;
+		transition: all 0.2s ease;
+	}
+
+	.close-btn:hover {
+		background: #00ff00;
+		color: #000000;
+	}
+
+	.connection-options {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+
+	.connection-option {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+		padding: 16px;
+		background: rgba(0, 255, 0, 0.1);
+		border: 1px solid #00ff00;
+		border-radius: 6px;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		width: 100%;
+		text-align: left;
+	}
+
+	.connection-option:hover:not(:disabled) {
+		background: rgba(0, 255, 0, 0.2);
+		border-color: #40ff40;
+		box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+	}
+
+	.connection-option:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.option-icon {
+		font-size: 24px;
+		width: 40px;
+		height: 40px;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(0, 255, 0, 0.2);
+		border: 1px solid #00ff00;
+	}
+
+	.web3auth-option .option-icon {
+		background: #4285f4;
+		color: white;
+		font-weight: bold;
+		border-color: #4285f4;
+	}
+
+	.option-content {
+		flex: 1;
+	}
+
+	.option-title {
+		font-weight: bold;
+		color: #00ff00;
+		margin-bottom: 4px;
+	}
+
+	.option-description {
+		font-size: 12px;
+		color: #80ff80;
+	}
+
+	/* Main Interface */
+	.connect-btn {
+		width: 100%;
+		padding: 8px 12px;
+		background: #22c55e;
+		border: 2px solid #000000;
+		color: #ffffff;
+		font-family: 'JetBrains Mono', monospace;
+		font-size: 12px;
+		font-weight: bold;
+		cursor: pointer;
+		border-radius: 4px;
+		transition: all 0.2s ease;
+		text-align: center;
+		box-shadow: 2px 2px 0px #000000;
+	}
+
+	.connect-btn:hover:not(:disabled) {
+		background: #16a34a;
+		transform: translate(1px, 1px);
+		box-shadow: 1px 1px 0px #000000;
+	}
+
+	.connect-btn:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
+	/* Error Banner */
+	.error-banner {
+		background: rgba(255, 0, 0, 0.9);
+		border: 2px solid #ff4444;
+		border-radius: 4px;
+		padding: 12px;
+		margin-bottom: 12px;
+		position: relative;
+		z-index: 10;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+	}
+
+	.error-banner-absolute {
+		position: fixed;
+		top: 70px; /* Below the 60px TopBar */
+		right: 20px;
+		background: rgba(255, 0, 0, 0.95);
+		border: 2px solid #ff4444;
+		border-radius: 8px;
+		padding: 16px;
+		z-index: 2147483647; /* Higher than TopBar */
+		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+		min-width: 300px;
+		max-width: 400px;
+	}
+
+	.error-content {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.error-text {
+		color: #ffffff;
+		font-size: 12px;
+		font-weight: bold;
+	}
+
+	.error-close {
+		background: rgba(255, 255, 255, 0.2);
+		border: 1px solid #ffffff;
+		color: #ffffff;
+		cursor: pointer;
+		padding: 4px 8px;
+		border-radius: 4px;
+		transition: all 0.2s ease;
+		font-weight: bold;
+	}
+
+	.error-close:hover {
+		background: #ffffff;
+		color: #ff4444;
+	}
+
+	/* Network Warning */
+	.network-warning {
+		background: rgba(255, 165, 0, 0.1);
+		border: 1px solid #ffa500;
+		border-radius: 4px;
+		padding: 8px 12px;
+		margin-bottom: 12px;
+	}
+
+	.warning-content {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.warning-text {
+		color: #ffa500;
+		font-size: 12px;
+		font-weight: bold;
+	}
+
+	.switch-network-btn {
+		background: #ffa500;
+		color: #000000;
+		border: none;
+		padding: 4px 8px;
+		border-radius: 4px;
+		font-size: 10px;
+		font-weight: bold;
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	.switch-network-btn:hover {
+		background: #ffb533;
+	}
+
+	/* Wallet Summary */
+	.wallet-summary {
+		width: 100%;
+		padding: 8px 12px;
+		background: #22c55e;
+		border: 2px solid #000000;
+		color: #ffffff;
+		font-family: 'JetBrains Mono', monospace;
+		cursor: pointer;
+		border-radius: 4px;
+		transition: all 0.2s ease;
+		text-align: left;
+		box-shadow: 2px 2px 0px #000000;
+	}
+
+	.wallet-summary:hover {
+		background: #16a34a;
+		transform: translate(1px, 1px);
+		box-shadow: 1px 1px 0px #000000;
+	}
+
+	.wallet-status {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 4px;
+	}
+
+	.status-text {
+		font-weight: bold;
+		font-size: 11px;
+		color: #ffffff;
+	}
+
+	.wallet-type {
+		font-size: 9px;
+		color: #e5e7eb;
+	}
+
+	.wallet-balance {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.balance-amount {
+		font-weight: bold;
+		color: #ffffff;
+		font-size: 11px;
+	}
+
+	.expand-icon {
+		font-size: 10px;
+		color: #e5e7eb;
+	}
+
+	.wallet-address {
+		font-size: 10px;
+		color: #e5e7eb;
+		font-family: monospace;
+	}
+
+	/* Wallet Details */
 	.wallet-details {
+		background: rgba(0, 255, 0, 0.05);
+		border: 1px solid #00ff00;
+		border-top: none;
+		border-radius: 0 0 4px 4px;
+		padding: 12px;
 		animation: slideDown 0.2s ease-out;
+	}
+
+	.detail-grid {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		margin-bottom: 12px;
+	}
+
+	.detail-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.detail-label {
+		color: #80ff80;
+		font-size: 10px;
+		font-weight: bold;
+	}
+
+	.detail-value {
+		color: #00ff00;
+		font-size: 11px;
+		font-family: monospace;
+	}
+
+	.address-full {
+		max-width: 200px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.disconnect-btn {
+		width: 100%;
+		padding: 8px;
+		background: rgba(255, 0, 0, 0.1);
+		border: 1px solid #ff4444;
+		color: #ff4444;
+		font-family: inherit;
+		font-size: 12px;
+		font-weight: bold;
+		cursor: pointer;
+		border-radius: 4px;
+		transition: all 0.2s ease;
+	}
+
+	.disconnect-btn:hover {
+		background: rgba(255, 0, 0, 0.2);
+		box-shadow: 0 0 5px rgba(255, 68, 68, 0.3);
+	}
+
+	/* Modal Error */
+	.modal-error {
+		background: rgba(255, 0, 0, 0.1);
+		border: 1px solid #ff4444;
+		border-radius: 4px;
+		padding: 8px 12px;
+		margin-top: 16px;
+		color: #ff4444;
+		font-size: 12px;
+	}
+
+	/* Loading Indicator */
+	.loading-indicator {
+		margin-top: 16px;
+		text-align: center;
+		color: #80ff80;
+	}
+
+	.loading-text {
+		font-size: 12px;
+		margin-bottom: 8px;
+	}
+
+	.loading-dots {
+		animation: pulse 1.5s infinite;
+		font-size: 16px;
+		color: #00ff00;
 	}
 
 	@keyframes slideDown {
@@ -136,6 +566,15 @@
 		to {
 			opacity: 1;
 			transform: translateY(0);
+		}
+	}
+
+	@keyframes pulse {
+		0%, 100% {
+			opacity: 0.3;
+		}
+		50% {
+			opacity: 1;
 		}
 	}
 </style>

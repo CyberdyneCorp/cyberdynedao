@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { createWindow, closeAllWindows } from '$lib/stores/windowStore';
 	import { onMount } from 'svelte';
+	import Web3Wallet from './Web3Wallet.svelte';
 	
 	// Top navigation bar component
 	let showMenu = false;
@@ -83,9 +84,9 @@
     </button>
     
     <div class="flex items-center" style="margin-right: 12px;">
-        <button class="px-3 py-2 bg-green-500 border-2 border-black retro-button flex items-center justify-center hover:bg-green-600">
-            <span class="text-white text-sm font-mono font-semibold">Connect Wallet</span>
-        </button>
+        <div class="w-48">
+            <Web3Wallet />
+        </div>
     </div>
 </div>
 

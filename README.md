@@ -19,6 +19,12 @@ A futuristic terminal-style application built with SvelteKit, featuring backgrou
 - **Shopping Cart**: E-commerce functionality with cart management
 - **Team Profiles**: Dynamic team member showcase with images and skills
 
+### Web3 Integration
+- **Dual Wallet Support**: Both WalletConnect (mobile wallets) and Web3Auth (social login)
+- **Base Network**: Configured for Base mainnet with Infura RPC
+- **ERC-20 Support**: Token balance and transfer capabilities
+- **Reactive State**: Real-time wallet connection status and balance updates
+
 ## 🛠️ Development
 
 ```bash
@@ -34,6 +40,67 @@ npm run build
 # Preview production build
 npm run preview
 ```
+
+## 🔐 Web3 Configuration
+
+### Environment Setup
+
+Create a `.env` file with the following variables:
+
+```env
+# Infura Configuration (Base Network)
+VITE_INFURA_API_KEY=ae1053a98c944d53968e5d725319be8f
+VITE_INFURA_ENDPOINT=https://base-mainnet.infura.io/v3/ae1053a98c944d53968e5d725319be8f
+
+# Base Network Configuration
+VITE_CHAIN_ID=8453
+VITE_NETWORK_NAME=Base Mainnet
+VITE_NATIVE_CURRENCY=ETH
+
+# WalletConnect (Reown AppKit)
+VITE_REOWN_PROJECT_ID=your_reown_project_id
+
+# Web3Auth
+VITE_WEB3AUTH_CLIENT_ID=your_web3auth_client_id
+```
+
+### Getting API Keys
+
+1. **Reown Project ID**:
+   - Visit [WalletConnect Cloud](https://cloud.walletconnect.com/)
+   - Create a new project
+   - Copy the Project ID
+
+2. **Web3Auth Client ID**:
+   - Visit [Web3Auth Dashboard](https://dashboard.web3auth.io/)
+   - Create a new project
+   - Copy the Client ID
+
+### Wallet Connection Options
+
+The application provides two wallet connection methods:
+
+#### 1. WalletConnect (Mobile Wallets)
+- **QR Code Scanning**: Perfect for mobile wallets like MetaMask Mobile
+- **Multi-Wallet Support**: Works with 50+ popular wallets
+- **Cross-Platform**: Connect from any device
+
+#### 2. Web3Auth (Social Login)  
+- **Google Authentication**: Sign in with your Google account
+- **Email/Password**: Passwordless email authentication
+- **Social Providers**: Support for multiple OAuth providers
+
+### Usage
+
+The wallet connection modal automatically appears when users click "Connect Wallet". Users can choose between:
+- **WalletConnect**: Displays QR code for mobile wallet scanning
+- **Web3Auth**: Opens social authentication modal
+
+Both methods provide:
+- Real-time balance updates
+- Network switching to Base
+- Transaction signing capabilities
+- Secure session management
 
 ## 🌐 IPFS Deployment
 

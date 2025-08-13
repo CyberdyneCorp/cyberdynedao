@@ -31,6 +31,14 @@
 	"dependencies": {
 		"@ethersproject/contracts": "^5.8.0",
 		"@ethersproject/providers": "^5.8.0",
-		"ethers": "^6.15.0"
+		"@reown/appkit": "^1.7.19",
+		"@reown/appkit-adapter-wagmi": "^1.7.19",
+		"@tanstack/svelte-query": "^5.83.1",
+		"@web3auth/base": "^9.7.0",
+		"@web3auth/ethereum-provider": "^9.7.0",
+		"@web3auth/modal": "^10.2.0",
+		"ethers": "^6.15.0",
+		"viem": "^2.33.3",
+		"wagmi": "^2.16.3"
 	}
 }

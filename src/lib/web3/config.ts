@@ -1,11 +1,11 @@
 import { ethers } from 'ethers';
-import { 
-	VITE_INFURA_API_KEY, 
-	VITE_INFURA_ENDPOINT, 
-	VITE_CHAIN_ID,
-	VITE_NETWORK_NAME,
-	VITE_NATIVE_CURRENCY
-} from '$env/static/public';
+
+// Get environment variables using import.meta.env
+const VITE_INFURA_API_KEY = import.meta.env.VITE_INFURA_API_KEY;
+const VITE_INFURA_ENDPOINT = import.meta.env.VITE_INFURA_ENDPOINT;
+const VITE_CHAIN_ID = import.meta.env.VITE_CHAIN_ID;
+const VITE_NETWORK_NAME = import.meta.env.VITE_NETWORK_NAME;
+const VITE_NATIVE_CURRENCY = import.meta.env.VITE_NATIVE_CURRENCY;
 
 export interface NetworkConfig {
 	chainId: number;
