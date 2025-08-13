@@ -217,10 +217,6 @@
 								<span class="detail-label">NAME:</span>
 								<span class="detail-value">{currentUser?.userInfo.name || 'Not provided'}</span>
 							</div>
-							<div class="detail-row">
-								<span class="detail-label">PROVIDER:</span>
-								<span class="detail-value">{currentUser?.userInfo.typeOfLogin || 'Unknown'}</span>
-							</div>
 						</div>
 						<div class="wallet-actions">
 							<button 
@@ -244,10 +240,16 @@
 		background: transparent;
 		position: relative;
 		z-index: 5;
+		min-height: fit-content;
 	}
 	
 	.wallet-connected {
 		position: relative;
+	}
+	
+	.wallet-info {
+		position: relative;
+		z-index: 20;
 	}
 
 	/* Connection Modal */
@@ -509,18 +511,22 @@
 
 	/* Wallet Details */
 	.wallet-details {
-		background: rgba(0, 255, 0, 0.05);
+		background: rgba(0, 0, 0, 0.8);
 		border: 1px solid #00ff00;
 		border-top: none;
 		border-radius: 0 0 4px 4px;
 		padding: 12px;
 		animation: slideDown 0.2s ease-out;
-		position: relative;
-		top: 0;
-		left: 0;
+		position: absolute;
+		top: 100%;
 		right: 0;
-		z-index: 10;
+		z-index: 1000;
 		margin-top: 0;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+		width: 300px;
+		max-height: 80vh;
+		overflow-y: auto;
+		margin-right: 0;
 	}
 
 	.detail-grid {
