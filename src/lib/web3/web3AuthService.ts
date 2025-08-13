@@ -1,5 +1,5 @@
 import { Web3Auth } from "@web3auth/modal";
-import { CHAIN_NAMESPACES, WEB3AUTH_NETWORK, WALLET_ADAPTERS } from "@web3auth/base";
+import { WEB3AUTH_NETWORK } from "@web3auth/base";
 import type { IProvider } from "@web3auth/base";
 import { ethers } from "ethers";
 

@@ -1,8 +1,11 @@
 <script lang="ts">
-	// Temporarily simplify imports to avoid initialization errors
+	import { onMount } from 'svelte';
+	import { web3AuthService, type Web3AuthUser } from '../web3/web3AuthService';
+	
 	let walletConnected = false;
 	let isLoading = false;
 	let errorMessage = '';
+	let currentUser: Web3AuthUser | null = null;
 
 	let showDetails = false;
 	let showConnectionModal = false;
@@ -26,24 +29,61 @@
 	}
 
 	async function handleWeb3AuthConnect() {
-		console.log('Web3Auth clicked - feature coming soon');
-		errorMessage = 'Web3Auth integration coming soon...';
+		console.log('Web3Auth Google authentication starting...');
+		isLoading = true;
 		closeConnectionModal();
+		
+		try {
+			const user = await web3AuthService.loginWithGoogle();
+			if (user) {
+				currentUser = user;
+				walletConnected = true;
+				console.log('Web3Auth login successful:', user);
+			}
+		} catch (error) {
+			console.error('Web3Auth login failed:', error);
+			errorMessage = `Login failed: ${error.message || 'Unknown error'}`;
+		} finally {
+			isLoading = false;
+		}
 	}
 
 	async function handleDisconnect() {
-		walletConnected = false;
-		showDetails = false;
+		isLoading = true;
+		try {
+			await web3AuthService.logout();
+			walletConnected = false;
+			currentUser = null;
+			showDetails = false;
+			console.log('User disconnected successfully');
+		} catch (error) {
+			console.error('Disconnect failed:', error);
+			errorMessage = `Disconnect failed: ${error.message || 'Unknown error'}`;
+		} finally {
+			isLoading = false;
+		}
 	}
 
 	function clearError() {
 		errorMessage = '';
 	}
 
-	import { onMount } from 'svelte';
+	async function checkAuthStatus() {
+		try {
+			const user = await web3AuthService.checkAuthStatus();
+			if (user) {
+				currentUser = user;
+				walletConnected = true;
+				console.log('User already authenticated:', user);
+			}
+		} catch (error) {
+			console.error('Error checking auth status:', error);
+		}
+	}
 	
-	onMount(() => {
-		console.log('Web3Wallet component mounted successfully');
+	onMount(async () => {
+		console.log('Web3Wallet component mounted, checking authentication status...');
+		await checkAuthStatus();
 	});
 </script>
 
@@ -125,22 +165,34 @@
 					<div class="wallet-status">
 						<div class="status-indicator">
 							<div class="status-text">█ CONNECTED</div>
-							<div class="wallet-type">DEMO</div>
+							<div class="wallet-type">{currentUser?.userInfo.typeOfLogin?.toUpperCase() || 'WEB3AUTH'}</div>
 						</div>
 						<div class="wallet-balance">
-							<div class="balance-amount">0.0000 ETH</div>
+							<div class="balance-amount">{currentUser ? parseFloat(currentUser.balance).toFixed(4) : '0.0000'} ETH</div>
 							<div class="expand-icon">{showDetails ? '▲' : '▼'}</div>
 						</div>
 					</div>
-					<div class="wallet-address">0x1234...abcd</div>
+					<div class="wallet-address">{currentUser ? `${currentUser.address.slice(0, 6)}...${currentUser.address.slice(-4)}` : '0x0000...0000'}</div>
 				</button>
 
 				{#if showDetails}
 					<div class="wallet-details">
 						<div class="detail-grid">
 							<div class="detail-row">
-								<span class="detail-label">STATUS:</span>
-								<span class="detail-value">Demo Mode</span>
+								<span class="detail-label">EMAIL:</span>
+								<span class="detail-value">{currentUser?.userInfo.email || 'Not provided'}</span>
+							</div>
+							<div class="detail-row">
+								<span class="detail-label">NAME:</span>
+								<span class="detail-value">{currentUser?.userInfo.name || 'Not provided'}</span>
+							</div>
+							<div class="detail-row">
+								<span class="detail-label">PROVIDER:</span>
+								<span class="detail-value">{currentUser?.userInfo.typeOfLogin || 'Unknown'}</span>
+							</div>
+							<div class="detail-row">
+								<span class="detail-label">ADDRESS:</span>
+								<span class="detail-value address-full">{currentUser?.address || 'Not available'}</span>
 							</div>
 						</div>
 						<div class="wallet-actions">
@@ -317,16 +369,6 @@
 	}
 
 	/* Error Banner */
-	.error-banner {
-		background: rgba(255, 0, 0, 0.9);
-		border: 2px solid #ff4444;
-		border-radius: 4px;
-		padding: 12px;
-		margin-bottom: 12px;
-		position: relative;
-		z-index: 10;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-	}
 
 	.error-banner-absolute {
 		position: fixed;
@@ -370,42 +412,7 @@
 		color: #ff4444;
 	}
 
-	/* Network Warning */
-	.network-warning {
-		background: rgba(255, 165, 0, 0.1);
-		border: 1px solid #ffa500;
-		border-radius: 4px;
-		padding: 8px 12px;
-		margin-bottom: 12px;
-	}
-
-	.warning-content {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
-
-	.warning-text {
-		color: #ffa500;
-		font-size: 12px;
-		font-weight: bold;
-	}
-
-	.switch-network-btn {
-		background: #ffa500;
-		color: #000000;
-		border: none;
-		padding: 4px 8px;
-		border-radius: 4px;
-		font-size: 10px;
-		font-weight: bold;
-		cursor: pointer;
-		transition: all 0.2s ease;
-	}
-
-	.switch-network-btn:hover {
-		background: #ffb533;
-	}
+	/* Network Warning - removed unused styles */
 
 	/* Wallet Summary */
 	.wallet-summary {
@@ -529,16 +536,7 @@
 		box-shadow: 0 0 5px rgba(255, 68, 68, 0.3);
 	}
 
-	/* Modal Error */
-	.modal-error {
-		background: rgba(255, 0, 0, 0.1);
-		border: 1px solid #ff4444;
-		border-radius: 4px;
-		padding: 8px 12px;
-		margin-top: 16px;
-		color: #ff4444;
-		font-size: 12px;
-	}
+	/* Modal Error - removed unused styles */
 
 	/* Loading Indicator */
 	.loading-indicator {
