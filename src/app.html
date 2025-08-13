@@ -3,11 +3,34 @@
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<script>
-			// Add global polyfills for Web3 compatibility
-			if (typeof global === 'undefined') {
-				var global = globalThis;
-			}
+		<script type="module">
+			// Load polyfills before any other modules
+			import './lib/polyfills.ts';
+			
+			// Global error handler for catching module loading issues
+			window.addEventListener('error', (event) => {
+				console.error('[APP] Global error caught:', {
+					message: event.message,
+					filename: event.filename,
+					lineno: event.lineno,
+					colno: event.colno,
+					error: event.error
+				});
+				
+				// Check for specific polyfill-related errors
+				if (event.message?.includes('Buffer') || event.message?.includes('process')) {
+					console.error('[APP] 🚨 POLYFILL ERROR: This looks like a Buffer/process polyfill issue');
+					console.error('[APP] Check that polyfills are loaded before this module');
+				}
+			});
+
+			window.addEventListener('unhandledrejection', (event) => {
+				console.error('[APP] Unhandled promise rejection:', event.reason);
+				
+				if (event.reason?.message?.includes('Buffer') || event.reason?.message?.includes('process')) {
+					console.error('[APP] 🚨 POLYFILL PROMISE ERROR: This looks like a Buffer/process polyfill issue');
+				}
+			});
 		</script>
 		%sveltekit.head%
 	</head>

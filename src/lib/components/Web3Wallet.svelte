@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { web3AuthService, type Web3AuthUser } from '../web3/web3AuthService';
 	
 	let walletConnected = false;
 	let isLoading = false;
 	let errorMessage = '';
-	let currentUser: any = null;
-	let web3AuthService: any = null;
+	let currentUser: Web3AuthUser | null = null;
 
 	let showDetails = false;
 	let showConnectionModal = false;
@@ -34,12 +34,6 @@
 		closeConnectionModal();
 		
 		try {
-			// Dynamically import Web3Auth service to avoid initialization errors
-			if (!web3AuthService) {
-				const { web3AuthService: service } = await import('../web3/web3AuthService');
-				web3AuthService = service;
-			}
-			
 			const user = await web3AuthService.loginWithGoogle();
 			if (user) {
 				currentUser = user;
@@ -57,9 +51,7 @@
 	async function handleDisconnect() {
 		isLoading = true;
 		try {
-			if (web3AuthService) {
-				await web3AuthService.logout();
-			}
+			await web3AuthService.logout();
 			walletConnected = false;
 			currentUser = null;
 			showDetails = false;
@@ -78,16 +70,11 @@
 
 	async function checkAuthStatus() {
 		try {
-			// Only check auth status if in browser environment
-			if (typeof window !== 'undefined') {
-				const { web3AuthService: service } = await import('../web3/web3AuthService');
-				web3AuthService = service;
-				const user = await service.checkAuthStatus();
-				if (user) {
-					currentUser = user;
-					walletConnected = true;
-					console.log('User already authenticated:', user);
-				}
+			const user = await web3AuthService.checkAuthStatus();
+			if (user) {
+				currentUser = user;
+				walletConnected = true;
+				console.log('User already authenticated:', user);
 			}
 		} catch (error) {
 			console.error('Error checking auth status:', error);
@@ -97,10 +84,7 @@
 	
 	onMount(async () => {
 		console.log('Web3Wallet component mounted, checking authentication status...');
-		// Small delay to ensure proper initialization
-		setTimeout(() => {
-			checkAuthStatus();
-		}, 100);
+		await checkAuthStatus();
 	});
 </script>
 
