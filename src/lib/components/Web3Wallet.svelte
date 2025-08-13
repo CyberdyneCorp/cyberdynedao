@@ -190,20 +190,25 @@
 				>
 					<div class="wallet-status">
 						<div class="status-indicator">
-							<div class="status-text">█ CONNECTED</div>
-							<div class="wallet-type">{currentUser?.userInfo.typeOfLogin?.toUpperCase() || 'WEB3AUTH'}</div>
+							<div class="status-text">CONNECTED</div>
 						</div>
 						<div class="wallet-balance">
-							<div class="balance-amount">{currentUser ? parseFloat(currentUser.balance).toFixed(4) : '0.0000'} ETH</div>
 							<div class="expand-icon">{showDetails ? '▲' : '▼'}</div>
 						</div>
 					</div>
-					<div class="wallet-address">{currentUser ? `${currentUser.address.slice(0, 6)}...${currentUser.address.slice(-4)}` : '0x0000...0000'}</div>
 				</button>
 
 				{#if showDetails}
 					<div class="wallet-details">
 						<div class="detail-grid">
+							<div class="detail-row">
+								<span class="detail-label">ADDRESS:</span>
+								<span class="detail-value address-full">{currentUser?.address || 'Not available'}</span>
+							</div>
+							<div class="detail-row">
+								<span class="detail-label">BALANCE:</span>
+								<span class="detail-value">{currentUser ? parseFloat(currentUser.balance).toFixed(4) : '0.0000'} ETH</span>
+							</div>
 							<div class="detail-row">
 								<span class="detail-label">EMAIL:</span>
 								<span class="detail-value">{currentUser?.userInfo.email || 'Not provided'}</span>
@@ -215,10 +220,6 @@
 							<div class="detail-row">
 								<span class="detail-label">PROVIDER:</span>
 								<span class="detail-value">{currentUser?.userInfo.typeOfLogin || 'Unknown'}</span>
-							</div>
-							<div class="detail-row">
-								<span class="detail-label">ADDRESS:</span>
-								<span class="detail-value address-full">{currentUser?.address || 'Not available'}</span>
 							</div>
 						</div>
 						<div class="wallet-actions">
@@ -243,6 +244,10 @@
 		background: transparent;
 		position: relative;
 		z-index: 5;
+	}
+	
+	.wallet-connected {
+		position: relative;
 	}
 
 	/* Connection Modal */
@@ -510,6 +515,12 @@
 		border-radius: 0 0 4px 4px;
 		padding: 12px;
 		animation: slideDown 0.2s ease-out;
+		position: relative;
+		top: 0;
+		left: 0;
+		right: 0;
+		z-index: 10;
+		margin-top: 0;
 	}
 
 	.detail-grid {

@@ -125,7 +125,19 @@ class Web3AuthService {
         const networkName = import.meta.env.VITE_WEB3AUTH_NETWORK || 'sapphire_devnet';
         const web3AuthNetwork = WEB3AUTH_NETWORK[networkName.toUpperCase()] || WEB3AUTH_NETWORK.SAPPHIRE_DEVNET;
         
-        console.log('Creating Web3Auth instance with network:', web3AuthNetwork);
+        console.log('Web3Auth configuration:', {
+          clientId: clientId ? `${clientId.substring(0, 10)}...` : 'MISSING',
+          networkName,
+          web3AuthNetwork,
+          appUrl: import.meta.env.VITE_APP_URL || "http://localhost:5173"
+        });
+        
+        // Validate configuration
+        if (!clientId || clientId.length < 10) {
+          throw new Error('Invalid Web3Auth Client ID - must be properly configured');
+        }
+        
+        console.log('Creating Web3Auth instance...');
         
         web3auth = new Web3Auth({
           clientId,
@@ -139,14 +151,32 @@ class Web3AuthService {
               primary: "#00ff00", // Retro green theme
             },
             useLogoLoader: false,
+            logoLight: "/assets/cyberdyne_logo.svg", // Cyberdyne logo for light mode
+            logoDark: "/assets/cyberdyne_logo.svg",  // Cyberdyne logo for dark mode
           },
+          // Enable storage for better user experience
+          storageKey: "local",
         });
+        
+        console.log('Web3Auth instance created successfully');
       }
       
       console.log('Initializing Web3Auth...');
+      console.log('Current domain info:', {
+        origin: window.location.origin,
+        hostname: window.location.hostname,
+        protocol: window.location.protocol,
+        port: window.location.port
+      });
+      
       await web3auth.init();
       this.initialized = true;
       console.log("Web3Auth initialized successfully");
+      console.log("Web3Auth state after init:", {
+        connected: web3auth.connected,
+        ready: web3auth.ready,
+        status: web3auth.status
+      });
     } catch (error) {
       console.error("Error initializing Web3Auth:", error);
       console.error("Error details:", {
@@ -170,25 +200,48 @@ class Web3AuthService {
     }
 
     try {
-      // Web3Auth v10 uses connect() without parameters for modal
+      console.log('Starting Web3Auth login process...');
+      console.log('Login provider:', loginProvider || 'default (modal)');
+      console.log('Web3Auth instance status:', {
+        connected: web3auth?.connected,
+        ready: web3auth?.ready,
+        status: web3auth?.status
+      });
+
+      // Web3Auth v10 connect - use modal for all connections
+      console.log('Opening Web3Auth modal for authentication...');
       const web3authProvider = await web3auth.connect();
+      
+      console.log('Web3Auth provider received:', !!web3authProvider);
       
       if (!web3authProvider) {
         throw this.createError(
-          "Failed to connect to Web3Auth",
+          "Failed to connect to Web3Auth - no provider returned",
           "CONNECTION_FAILED"
         );
       }
 
       this.provider = web3authProvider;
-      const userInfo = await web3auth.getUserInfo();
       
+      console.log('Getting user info from Web3Auth...');
+      const userInfo = await web3auth.getUserInfo();
+      console.log('User info received:', {
+        email: userInfo?.email,
+        name: userInfo?.name,
+        verifier: userInfo?.verifier,
+        typeOfLogin: userInfo?.typeOfLogin
+      });
+      
+      console.log('Creating ethers provider...');
       // Get user's Ethereum address and balance
       const ethersProvider = new ethers.BrowserProvider(web3authProvider);
       const signer = await ethersProvider.getSigner();
       const address = await signer.getAddress();
+      console.log('User address:', address);
+      
       const balance = await ethersProvider.getBalance(address);
       const balanceInEth = ethers.formatEther(balance);
+      console.log('User balance:', balanceInEth, 'ETH');
 
       const user: Web3AuthUser = {
         userInfo,
@@ -206,12 +259,19 @@ class Web3AuthService {
       return user;
     } catch (error) {
       console.error("Error during Web3Auth login:", error);
+      console.error("Error details:", {
+        message: error.message,
+        code: error.code,
+        name: error.name,
+        cause: error.cause,
+        stack: error.stack
+      });
       
       // Reset provider on login failure
       this.provider = null;
       
       throw this.createError(
-        "Login failed",
+        `Login failed: ${error.message}`,
         "LOGIN_ERROR",
         error
       );
