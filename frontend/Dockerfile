@@ -3,10 +3,12 @@ FROM node:20-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
+# Add python + build tools for node-gyp on Alpine
+RUN apk add --no-cache libc6-compat python3 make g++
+ENV PYTHON=/usr/bin/python3
 WORKDIR /app
 
-# Install dependencies
+# Copy and install dependencies
 COPY package.json package-lock.json* ./
 RUN npm ci
 
@@ -15,8 +17,6 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
-# Build SvelteKit static app
 RUN npm run build
 
 # Production image using Nginx to serve static files
@@ -25,35 +25,35 @@ FROM nginx:alpine AS runner
 # Copy built static files to nginx
 COPY --from=builder /app/build /usr/share/nginx/html
 
-# Copy custom nginx config if needed
+# Copy custom nginx config
 COPY <<EOF /etc/nginx/conf.d/default.conf
 server {
-    listen 80;
-    server_name localhost;
-    root /usr/share/nginx/html;
-    index index.html;
+  listen 80;
+  server_name localhost;
+  root /usr/share/nginx/html;
+  index index.html;
 
-    # Handle client-side routing
-    location / {
-        try_files \$uri \$uri/ /index.html;
-    }
+  # Handle client-side routing
+  location / {
+    try_files \$uri \$uri/ /index.html;
+  }
 
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
+  # Security headers
+  add_header X-Frame-Options "SAMEORIGIN" always;
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header X-XSS-Protection "1; mode=block" always;
 
-    # Cache static assets
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
+  # Cache static assets
+  location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+  }
 
-    # Don't cache HTML files
-    location ~* \.html$ {
-        expires -1;
-        add_header Cache-Control "no-cache, no-store, must-revalidate";
-    }
+  # Don't cache HTML files
+  location ~* \.html$ {
+    expires -1;
+    add_header Cache-Control "no-cache, no-store, must-revalidate";
+  }
 }
 EOF
 
