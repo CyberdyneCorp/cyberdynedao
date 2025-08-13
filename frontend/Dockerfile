@@ -17,6 +17,44 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# ---- BUILD ARGS (from Coolify) ----
+# Infura
+ARG VITE_INFURA_ENDPOINT
+
+# Base Network
+ARG VITE_CHAIN_ID
+ARG VITE_NETWORK_NAME
+ARG VITE_NATIVE_CURRENCY
+
+# App
+ARG VITE_APP_NAME
+
+# Reown / WalletConnect
+ARG VITE_REOWN_PROJECT_ID
+ARG VITE_REOWN_APP_NAME
+ARG VITE_REOWN_APP_DESCRIPTION
+ARG VITE_REOWN_APP_URL
+ARG VITE_REOWN_APP_ICON
+
+# Web3Auth
+ARG VITE_WEB3AUTH_CLIENT_ID
+ARG VITE_WEB3AUTH_NETWORK
+
+# ---- Make them visible to the build (Vite reads import.meta.env) ----
+ENV VITE_INFURA_ENDPOINT=${VITE_INFURA_ENDPOINT} \
+    VITE_CHAIN_ID=${VITE_CHAIN_ID} \
+    VITE_NETWORK_NAME="${VITE_NETWORK_NAME}" \
+    VITE_NATIVE_CURRENCY=${VITE_NATIVE_CURRENCY} \
+    VITE_APP_NAME="${VITE_APP_NAME}" \
+    VITE_REOWN_PROJECT_ID=${VITE_REOWN_PROJECT_ID} \
+    VITE_REOWN_APP_NAME="${VITE_REOWN_APP_NAME}" \
+    VITE_REOWN_APP_DESCRIPTION="${VITE_REOWN_APP_DESCRIPTION}" \
+    VITE_REOWN_APP_URL=${VITE_REOWN_APP_URL} \
+    VITE_REOWN_APP_ICON=${VITE_REOWN_APP_ICON} \
+    VITE_WEB3AUTH_CLIENT_ID=${VITE_WEB3AUTH_CLIENT_ID} \
+    VITE_WEB3AUTH_NETWORK=${VITE_WEB3AUTH_NETWORK}
+
 RUN npm run build
 
 # Production image using Nginx to serve static files
@@ -33,23 +71,16 @@ server {
   root /usr/share/nginx/html;
   index index.html;
 
-  # Handle client-side routing
-  location / {
-    try_files \$uri \$uri/ /index.html;
-  }
+  location / { try_files \$uri \$uri/ /index.html; }
 
-  # Security headers
   add_header X-Frame-Options "SAMEORIGIN" always;
   add_header X-Content-Type-Options "nosniff" always;
   add_header X-XSS-Protection "1; mode=block" always;
 
-  # Cache static assets
   location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
     expires 1y;
     add_header Cache-Control "public, immutable";
   }
-
-  # Don't cache HTML files
   location ~* \.html$ {
     expires -1;
     add_header Cache-Control "no-cache, no-store, must-revalidate";
@@ -57,8 +88,5 @@ server {
 }
 EOF
 
-# Expose port 80
 EXPOSE 80
-
-# Start nginx
 CMD ["nginx", "-g", "daemon off;"]
