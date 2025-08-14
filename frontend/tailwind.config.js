@@ -2,6 +2,14 @@
 export default {
 	content: ['./src/**/*.{html,js,svelte,ts}'],
 	theme: {
+		screens: {
+			'xs': '480px',
+			'sm': '640px',
+			'md': '768px',
+			'lg': '1024px',
+			'xl': '1280px',
+			'2xl': '1536px',
+		},
 		extend: {
 			fontFamily: {
 				'mono': ['JetBrains Mono', 'Monaco', 'Menlo', 'monospace']
@@ -27,14 +35,28 @@ export default {
 				'pixel-dot': '20px 20px, 40px 40px, 60px 60px, 80px 80px'
 			},
 			width: {
-				'15': '3.75rem'
+				'15': '3.75rem',
+				'10': '2.5rem',
+				'12': '3rem',
+				'16': '4rem',
+				'20': '5rem'
 			},
 			height: {
 				'15': '3.75rem', 
-				'1/25': '4%'
+				'1/25': '4%',
+				'10': '2.5rem',
+				'12': '3rem',
+				'16': '4rem',
+				'20': '5rem'
 			},
 			spacing: {
-				'15': '3.75rem'
+				'15': '3.75rem',
+				'18': '4.5rem',
+				'22': '5.5rem',
+				'28': '7rem',
+				'32': '8rem',
+				'36': '9rem',
+				'40': '10rem'
 			},
 			fontSize: {
 				'22': '22px',
