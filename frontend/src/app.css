@@ -314,7 +314,7 @@ html::-webkit-scrollbar,
 
 /* ===== Modern header styled like the reference ===== */
 .title-bar.modern {
-  --controls-reserve: 48px;   /* space "consumed" by hamburger + X */
+  --controls-reserve: 28px;   /* space "consumed" by X button */
   height: 52px;               /* a bit taller like the mock */
   padding: 0 16px;
   border-top: 2px solid #000;     /* thin black rails */
@@ -332,23 +332,15 @@ html::-webkit-scrollbar,
   position: relative; /* anchor for absolute controls */
 }
 
-/* Controls float at far-left and DO NOT affect centering */
-.hamburger-icon,
+/* Close button floats at far-left */
 .title-bar.modern .window-control.close {
   position: absolute;
-  left: 0px;
+  left: -4px;
   top: 50%;
   transform: translateY(-50%);
   z-index: 20;
   pointer-events: auto;
 }
-
-/* Put the "X" just to the right of the hamburger */
-.title-bar.modern .window-control.close { left: 24px; }
-
-/* Hamburger = thin monochrome lines */
-.hamburger-icon { display: flex; flex-direction: column; gap: 4px; }
-.hamburger-line { width: 18px; height: 2px; background-color: #000; }
 
 /* Mobile responsive title bar controls */
 @media (max-width: 768px) {
@@ -357,12 +349,8 @@ html::-webkit-scrollbar,
     padding: 0 12px;
   }
   
-  .hamburger-icon {
-    left: 8px;
-  }
-  
   .title-bar.modern .window-control.close {
-    left: 30px;
+    left: -2px;
   }
   
   .window-control.close {
@@ -383,12 +371,8 @@ html::-webkit-scrollbar,
     padding: 0 8px;
   }
   
-  .hamburger-icon {
-    left: 4px;
-  }
-  
   .title-bar.modern .window-control.close {
-    left: 26px;
+    left: -2px;
   }
   
   .window-control.close {
@@ -400,11 +384,6 @@ html::-webkit-scrollbar,
   .title-text-modern {
     font-size: 16px;
     padding: 0 10px;
-  }
-  
-  .hamburger-line {
-    width: 16px;
-    height: 2px;
   }
 }
 
@@ -423,32 +402,32 @@ html::-webkit-scrollbar,
 /* Mobile adjustments for title bar spacing */
 @media (max-width: 768px) {
   .title-bar.modern {
-    --controls-reserve: 60px;   /* Adjusted for new control positions */
+    --controls-reserve: 28px;   /* Adjusted for X button at left edge */
   }
   
   .title-bars-left {
-    margin-left: 60px;
+    margin-left: 28px;
     padding-right: 8px;
   }
   
   .title-bars-right {
-    margin-right: 60px;
+    margin-right: 28px;
     padding-left: 8px;
   }
 }
 
 @media (max-width: 480px) {
   .title-bar.modern {
-    --controls-reserve: 52px;   /* Adjusted for new control positions */
+    --controls-reserve: 26px;   /* Adjusted for smaller X button */
   }
   
   .title-bars-left {
-    margin-left: 52px;
+    margin-left: 26px;
     padding-right: 6px;
   }
   
   .title-bars-right {
-    margin-right: 52px;
+    margin-right: 26px;
     padding-left: 6px;
   }
 }

@@ -188,12 +188,6 @@
         tabindex="0"
     >
         <div class="title-layout-modern">
-            <div class="hamburger-icon">
-                <div class="hamburger-line"></div>
-                <div class="hamburger-line"></div>
-                <div class="hamburger-line"></div>
-            </div>
-            
             <button 
                 class="window-control close"
                 on:click={() => closeWindow(window.id)}
