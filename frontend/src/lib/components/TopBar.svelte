@@ -63,8 +63,8 @@
         on:mouseleave={(e) => e.target.style.background = 'rgba(255,255,255,0.15)'}
         on:click={toggleMenu}
     >
-        <div class="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center">
-            <svg class="w-8 h-8 sm:w-6 sm:h-6" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg">
+        <div class="w-10 h-10 sm:w-6 sm:h-6 flex items-center justify-center">
+            <svg class="w-8 h-8 sm:w-5 sm:h-5" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg">
                 <defs>
                     <style>
                         .st0 { fill: #ffffff; }
