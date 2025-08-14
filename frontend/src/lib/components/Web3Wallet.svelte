@@ -3,6 +3,7 @@
 	import { web3AuthService, type Web3AuthUser } from '../web3/web3AuthService';
 	import { appKitService } from '../web3/appKitService';
 	import { walletInfo, isWalletConnected, formatAddress, formatBalance, getNetworkName } from '../stores/appKitStore';
+	import { completeWalletDisconnect } from '../utils/walletDisconnect';
 	
 	let walletConnected = false;
 	let isLoading = false;
@@ -103,25 +104,47 @@
 	}
 
 	async function handleDisconnect() {
+		console.log('🔌 Complete wallet disconnect initiated from UI');
 		isLoading = true;
+		
 		try {
-			// Disconnect based on connection type
-			if (connectionType === 'web3auth') {
-				await web3AuthService.logout();
-				currentUser = null;
-				console.log('Web3Auth user disconnected successfully');
-			} else if (connectionType === 'walletconnect') {
-				await appKitService.disconnect();
-				console.log('WalletConnect user disconnected successfully');
-			}
+			// Use the centralized disconnect utility
+			const result = await completeWalletDisconnect();
 			
-			// Reset state
+			// Reset all local component state
 			walletConnected = false;
 			connectionType = null;
+			currentUser = null;
 			showDetails = false;
+			walletConnectConnected = false;
+			walletConnectInfo = null;
+			
+			if (result.success) {
+				errorMessage = '';
+				console.log('✅ Complete wallet disconnect successful');
+				
+				// Show warnings if any
+				if (result.warnings.length > 0) {
+					console.warn('⚠️ Disconnect warnings:', result.warnings);
+					// Optionally show warnings to user but don't treat as error
+				}
+			} else {
+				console.error('❌ Disconnect completed with errors:', result.errors);
+				errorMessage = `Disconnect completed with issues: ${result.errors.join(', ')}`;
+			}
+			
 		} catch (error) {
-			console.error('Disconnect failed:', error);
-			errorMessage = `Disconnect failed: ${(error as any)?.message || 'Unknown error'}`;
+			console.error('💥 Unexpected error during disconnect:', error);
+			
+			// Even if centralized disconnect fails, reset local component state
+			walletConnected = false;
+			connectionType = null;
+			currentUser = null;
+			showDetails = false;
+			walletConnectConnected = false;
+			walletConnectInfo = null;
+			
+			errorMessage = `Unexpected disconnect error: ${(error as any)?.message || 'Unknown error'}`;
 		} finally {
 			isLoading = false;
 		}
@@ -132,41 +155,88 @@
 	}
 
 	async function checkAuthStatus() {
+		console.log('🔍 Web3Wallet: Checking authentication status...');
+		console.log('🔍 Web3Wallet: Current component state before check:', {
+			walletConnected,
+			connectionType,
+			hasCurrentUser: !!currentUser
+		});
+		
 		try {
 			const user = await web3AuthService.checkAuthStatus();
+			console.log('🔍 Web3Wallet: checkAuthStatus returned:', !!user);
+			
 			if (user) {
+				// Update component state
 				currentUser = user;
 				walletConnected = true;
 				connectionType = 'web3auth';
-				console.log('User already authenticated:', user);
+				
+				console.log('✅ Web3Wallet: User session restored successfully:', {
+					email: user.userInfo.email,
+					address: user.address
+				});
+				console.log('✅ Web3Wallet: Component state updated:', {
+					walletConnected,
+					connectionType,
+					hasCurrentUser: !!currentUser
+				});
+			} else {
+				console.log('ℹ️ Web3Wallet: No existing authentication session found');
+				console.log('ℹ️ Web3Wallet: Component state remains:', {
+					walletConnected,
+					connectionType,
+					hasCurrentUser: !!currentUser
+				});
 			}
 		} catch (error) {
-			console.error('Error checking auth status:', error);
-			// Don't set error message for initial auth check failures
+			console.error('❌ Web3Wallet: Error checking auth status:', error);
+			// Don't set error message for initial auth check failures - this is normal
 		}
 	}
 	
 	onMount(async () => {
-		console.log('Web3Wallet component mounted, initializing wallet services...');
+		console.log('🚀 Web3Wallet component mounted, initializing wallet services...');
+		
 		try {
 			// Wait for polyfills to be ready before initializing Web3Auth
+			console.log('⏳ Loading polyfills...');
 			const { polyfillsReady } = await import('$lib/polyfills');
 			await polyfillsReady;
+			console.log('✅ Polyfills ready');
 			
 			// Give a small additional delay for any async module initialization
 			await new Promise(resolve => setTimeout(resolve, 100));
 			
-			console.log('Polyfills loaded and settled, checking authentication status...');
+			console.log('🔄 Checking for existing authentication sessions...');
 			await checkAuthStatus();
 			
+			// If no session was found initially, try again after a longer delay
+			// Web3Auth might need more time to restore sessions after page refresh
+			if (!walletConnected) {
+				console.log('⏳ No session found initially, retrying after delay...');
+				await new Promise(resolve => setTimeout(resolve, 1000));
+				await checkAuthStatus();
+				
+				// If still not connected, try one more time with an even longer delay
+				if (!walletConnected) {
+					console.log('⏳ Still no session, final retry after longer delay...');
+					await new Promise(resolve => setTimeout(resolve, 2000));
+					await checkAuthStatus();
+				}
+			}
+			
 			// Initialize AppKit in the background (don't await to avoid blocking)
+			console.log('🔄 Initializing AppKit in background...');
 			appKitService.initialize().catch(error => {
-				console.log('AppKit initialization failed (will retry when needed):', error);
+				console.log('⚠️ AppKit initialization failed (will retry when needed):', error);
 			});
+			
+			console.log('✅ Web3Wallet initialization complete');
 		} catch (error) {
-			console.error('Error during component initialization:', error);
+			console.error('❌ Error during Web3Wallet component initialization:', error);
 			// Don't set error message for initialization failures, just log them
-			console.warn('Wallet initialization failed, but continuing...');
+			console.warn('⚠️ Wallet initialization failed, but continuing...');
 		}
 	});
 
@@ -278,17 +348,6 @@
 								<span class="detail-value address-full">
 									{connectionType === 'web3auth' ? currentUser?.address || 'Not available' : 
 									 connectionType === 'walletconnect' ? walletConnectInfo?.address || 'Not available' : 'Not available'}
-								</span>
-							</div>
-							
-							<!-- Balance -->
-							<div class="detail-row">
-								<span class="detail-label">BALANCE:</span>
-								<span class="detail-value">
-									{connectionType === 'web3auth' ? 
-										(currentUser ? parseFloat(currentUser.balance).toFixed(4) : '0.0000') :
-									 connectionType === 'walletconnect' ? 
-										formatBalance(walletConnectInfo?.balance) : '0.0000'} ETH
 								</span>
 							</div>
 							

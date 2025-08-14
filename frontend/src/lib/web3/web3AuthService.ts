@@ -175,8 +175,33 @@ class Web3AuthService {
       console.log("Web3Auth state after init:", {
         connected: web3auth.connected,
         ready: web3auth.ready,
-        status: web3auth.status
+        status: web3auth.status,
+        hasProvider: !!web3auth.provider
       });
+      
+      // After initialization, try to restore the provider if it exists
+      // This helps with persistence across browser refreshes
+      if (web3auth.provider && !this.provider) {
+        console.log("Web3Auth: Found existing provider during init, restoring...");
+        this.provider = web3auth.provider;
+        console.log("Web3Auth: Provider restored from initialization");
+      }
+      
+      // Additional check: Web3Auth might be connected but provider not yet available
+      // This can happen during the restoration process
+      if (web3auth.connected && !this.provider) {
+        console.log("Web3Auth: Connected but no provider, attempting to get provider...");
+        try {
+          // Sometimes we need to wait a bit for the provider to become available
+          await new Promise(resolve => setTimeout(resolve, 500));
+          if (web3auth.provider) {
+            this.provider = web3auth.provider;
+            console.log("Web3Auth: Provider obtained after connection check");
+          }
+        } catch (error) {
+          console.warn("Web3Auth: Could not get provider after connection check:", error);
+        }
+      }
     } catch (error) {
       console.error("Error initializing Web3Auth:", error);
       console.error("Error details:", {
@@ -296,16 +321,84 @@ class Web3AuthService {
   }
 
   async logout(): Promise<void> {
-    if (!this.initialized) return;
-
+    console.log('Web3Auth logout initiated...');
+    
     try {
-      await web3auth.logout();
+      // Clear provider first to prevent any further operations
       this.provider = null;
-      console.log("User logged out successfully");
+      
+      if (this.initialized && web3auth) {
+        console.log('Calling Web3Auth logout...');
+        await web3auth.logout();
+        console.log('Web3Auth logout completed');
+      }
+      
+      // Clear any stored authentication data from browser storage
+      if (typeof window !== 'undefined') {
+        try {
+          // Clear Web3Auth related localStorage items
+          const keysToRemove = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (
+              key.startsWith('Web3Auth') || 
+              key.startsWith('openlogin') || 
+              key.startsWith('torus') ||
+              key.includes('web3auth') ||
+              key.includes('auth-')
+            )) {
+              keysToRemove.push(key);
+            }
+          }
+          
+          keysToRemove.forEach(key => {
+            localStorage.removeItem(key);
+            console.log(`Cleared localStorage key: ${key}`);
+          });
+          
+          // Also clear sessionStorage
+          const sessionKeysToRemove = [];
+          for (let i = 0; i < sessionStorage.length; i++) {
+            const key = sessionStorage.key(i);
+            if (key && (
+              key.startsWith('Web3Auth') || 
+              key.startsWith('openlogin') || 
+              key.startsWith('torus') ||
+              key.includes('web3auth') ||
+              key.includes('auth-')
+            )) {
+              sessionKeysToRemove.push(key);
+            }
+          }
+          
+          sessionKeysToRemove.forEach(key => {
+            sessionStorage.removeItem(key);
+            console.log(`Cleared sessionStorage key: ${key}`);
+          });
+          
+        } catch (storageError) {
+          console.warn('Error clearing Web3Auth storage:', storageError);
+        }
+      }
+      
+      console.log("Web3Auth user logged out and storage cleared successfully");
     } catch (error) {
-      console.error("Error during logout:", error);
+      console.error("Error during Web3Auth logout:", error);
       // Clean up state even if logout fails
       this.provider = null;
+      
+      // Still attempt to clear storage on error
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.removeItem('Web3Auth-cachedAdapter');
+          localStorage.removeItem('openlogin_store');
+          sessionStorage.removeItem('Web3Auth-cachedAdapter');
+          console.log('Cleared Web3Auth storage after error');
+        } catch (storageError) {
+          console.warn('Error clearing Web3Auth storage after logout error:', storageError);
+        }
+      }
+      
       throw this.createError(
         "Logout failed",
         "LOGOUT_ERROR",
@@ -315,14 +408,23 @@ class Web3AuthService {
   }
 
   async getUserInfo(): Promise<UserInfo | null> {
-    if (!this.initialized || !web3auth.connected) {
+    if (!this.initialized) {
+      console.log('Web3Auth: Not initialized for getUserInfo');
+      return null;
+    }
+
+    if (!web3auth) {
+      console.log('Web3Auth: web3auth instance not available');
       return null;
     }
 
     try {
-      return await web3auth.getUserInfo();
+      // Try to get user info regardless of connected status
+      // as the session might be restored but connected flag not yet updated
+      const userInfo = await web3auth.getUserInfo();
+      return userInfo;
     } catch (error) {
-      console.error("Error getting user info:", error);
+      console.log("Web3Auth: Error getting user info (user likely not authenticated):", error.message);
       return null;
     }
   }
@@ -382,36 +484,90 @@ class Web3AuthService {
 
   // Helper method to check if user is authenticated
   async checkAuthStatus(): Promise<Web3AuthUser | null> {
+    console.log('Web3Auth: Checking authentication status...');
+    
     if (!this.initialized) {
+      console.log('Web3Auth: Not initialized, initializing...');
       await this.initialize();
     }
 
-    if (!web3auth.connected) {
-      return null;
-    }
+    console.log('Web3Auth status after init:', {
+      initialized: this.initialized,
+      connected: web3auth?.connected,
+      hasProvider: !!this.provider
+    });
 
+    // After a browser refresh, web3auth might not show as "connected" 
+    // but we should try to restore the session anyway
     try {
-      const userInfo = await this.getUserInfo();
-      if (!userInfo) return null;
+      // Try to get the provider first - this will restore the session if it exists
+      if (!this.provider && web3auth) {
+        console.log('Web3Auth: No provider but web3auth exists, attempting to get provider...');
+        console.log('Web3Auth: web3auth.provider value:', !!web3auth.provider);
+        console.log('Web3Auth: web3auth.connected value:', web3auth.connected);
+        
+        const web3authProvider = web3auth.provider;
+        
+        if (web3authProvider) {
+          console.log('Web3Auth: Provider restored from session');
+          this.provider = web3authProvider;
+        } else {
+          console.log('Web3Auth: No provider available - user not authenticated');
+          return null;
+        }
+      }
 
+      // Now check if we're actually connected with a valid provider
+      if (!this.provider) {
+        console.log('Web3Auth: No provider available after restoration attempt');
+        return null;
+      }
+
+      // Try to get user info - this will fail if not truly authenticated
+      const userInfo = await this.getUserInfo();
+      if (!userInfo) {
+        console.log('Web3Auth: No user info available');
+        return null;
+      }
+
+      console.log('Web3Auth: User info retrieved:', {
+        email: userInfo.email,
+        name: userInfo.name,
+        verifier: userInfo.verifier
+      });
+
+      // Get account and balance
       const accounts = await this.getAccounts();
       const balance = await this.getBalance();
 
-      return {
+      const user: Web3AuthUser = {
         userInfo,
         address: accounts[0],
         balance,
-        provider: this.provider!,
+        provider: this.provider,
       };
+
+      console.log('Web3Auth: Authentication status restored successfully:', {
+        address: user.address,
+        email: userInfo.email,
+        balance: user.balance
+      });
+
+      return user;
     } catch (error) {
-      console.error("Error checking auth status:", error);
+      console.error("Web3Auth: Error checking auth status:", error);
+      console.log("Web3Auth: Clearing provider due to auth check failure");
+      
+      // Clear provider if authentication check fails
+      this.provider = null;
       return null;
     }
   }
 
   // Check if Web3Auth is connected
   isConnected(): boolean {
-    return this.initialized && web3auth.connected;
+    // Check both the web3auth connected status and if we have a valid provider
+    return this.initialized && !!this.provider && (web3auth?.connected || !!web3auth?.provider);
   }
 
   // Get the current provider instance

@@ -16,6 +16,7 @@ import type { AppKit, AppKitNetwork } from '@reown/appkit'
 import { 
   appKitInstance, 
   appKitActions, 
+  setValidatedWalletInfo,
   type WalletInfo
 } from '../stores/appKitStore'
 import { get } from 'svelte/store'
@@ -241,10 +242,25 @@ class AppKitService {
 
     const state = this.appKit.getState()
     
+    // Extract chain ID from caipAddress if selectedNetworkId is undefined
+    let chainId = state.selectedNetworkId
+    if (!chainId && state.selectedAccount?.caipAddress) {
+      // Parse CAIP-10 format: "eip155:42161:0x..."
+      const match = state.selectedAccount.caipAddress.match(/^eip155:(\d+):/)
+      if (match) {
+        chainId = parseInt(match[1], 10)
+      }
+    }
+    
+    // Only consider connected if we have both a valid address AND chain ID
+    const hasValidAddress = !!state.selectedAccount?.address;
+    const hasValidChainId = !!chainId;
+    const isFullyConnected = hasValidAddress && hasValidChainId;
+    
     return {
-      isConnected: !!state.selectedNetworkId,
+      isConnected: isFullyConnected,
       address: state.selectedAccount?.address,
-      chainId: state.selectedNetworkId,
+      chainId: chainId,
       balance: state.selectedAccount?.balance
     }
   }
@@ -254,23 +270,99 @@ class AppKitService {
    * @returns Promise<boolean> - Success status
    */
   async disconnect(): Promise<boolean> {
+    console.log('WalletConnect disconnect initiated...');
+    
     try {
       if (!this.appKit) {
-        console.warn('AppKit not initialized')
-        return false
+        console.warn('AppKit not initialized, clearing state anyway');
+        appKitActions.setDisconnected();
+        this.clearWalletConnectStorage();
+        return true;
       }
 
-      await this.appKit.disconnect()
-      appKitActions.setDisconnected()
+      console.log('Calling AppKit disconnect...');
+      await this.appKit.disconnect();
+      
+      // Update store state
+      appKitActions.setDisconnected();
+      
+      // Clear WalletConnect related storage
+      this.clearWalletConnectStorage();
 
-      console.log('Successfully disconnected from wallet')
-      return true
+      console.log('Successfully disconnected from WalletConnect wallet');
+      return true;
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to disconnect wallet'
-      console.error('Disconnect error:', errorMessage)
-      appKitActions.setError(errorMessage)
-      return false
+      const errorMessage = error instanceof Error ? error.message : 'Failed to disconnect wallet';
+      console.error('WalletConnect disconnect error:', errorMessage);
+      
+      // Even if disconnect fails, clear local state and storage
+      appKitActions.setDisconnected();
+      this.clearWalletConnectStorage();
+      
+      // Don't throw error - we want to clear state regardless
+      console.log('Cleared WalletConnect state despite disconnect error');
+      return true; // Return true since we cleared the state
+    }
+  }
+
+  /**
+   * Clear WalletConnect related browser storage
+   * @private
+   */
+  private clearWalletConnectStorage(): void {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      console.log('Clearing WalletConnect storage...');
+      
+      // Clear localStorage items
+      const localKeysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (
+          key.startsWith('wc@') || 
+          key.startsWith('walletconnect') ||
+          key.startsWith('@w3m') ||
+          key.startsWith('reown') ||
+          key.includes('wagmi') ||
+          key.includes('appkit') ||
+          key.includes('connector')
+        )) {
+          localKeysToRemove.push(key);
+        }
+      }
+      
+      localKeysToRemove.forEach(key => {
+        localStorage.removeItem(key);
+        console.log(`Cleared localStorage key: ${key}`);
+      });
+      
+      // Clear sessionStorage items
+      const sessionKeysToRemove = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && (
+          key.startsWith('wc@') || 
+          key.startsWith('walletconnect') ||
+          key.startsWith('@w3m') ||
+          key.startsWith('reown') ||
+          key.includes('wagmi') ||
+          key.includes('appkit') ||
+          key.includes('connector')
+        )) {
+          sessionKeysToRemove.push(key);
+        }
+      }
+      
+      sessionKeysToRemove.forEach(key => {
+        sessionStorage.removeItem(key);
+        console.log(`Cleared sessionStorage key: ${key}`);
+      });
+      
+      console.log('WalletConnect storage cleared successfully');
+    } catch (storageError) {
+      console.warn('Error clearing WalletConnect storage:', storageError);
     }
   }
 
@@ -314,20 +406,28 @@ class AppKitService {
         }
       }
       
+      // Only consider connected if we have both a valid address AND chain ID
+      const hasValidAddress = !!state.selectedAccount?.address;
+      const hasValidChainId = !!chainId;
+      const isFullyConnected = hasValidAddress && hasValidChainId;
+      
       const walletInfo: WalletInfo = {
-        isConnected: !!chainId || !!state.selectedAccount?.address,
+        isConnected: isFullyConnected,
         address: state.selectedAccount?.address,
         chainId: chainId,
         balance: state.selectedAccount?.balance
       }
 
-      appKitActions.setWalletInfo(walletInfo)
+      setValidatedWalletInfo(walletInfo)
       
       console.log('AppKit state changed:', {
         isConnected: walletInfo.isConnected,
+        hasValidAddress,
+        hasValidChainId,
         address: walletInfo.address,
         chainId: walletInfo.chainId,
-        chainIdType: typeof walletInfo.chainId
+        chainIdType: typeof walletInfo.chainId,
+        isFullyConnected
       })
     })
 
@@ -339,27 +439,39 @@ class AppKitService {
       console.log('Account caipAddress:', account.caipAddress)
       console.log('Account isConnected:', account.isConnected)
       
-      if (account.isConnected) {
-        // Extract chain ID from caipAddress if chainId is undefined
-        let chainId = account.chainId
-        if (!chainId && account.caipAddress) {
-          // Parse CAIP-10 format: "eip155:42161:0x..."
-          const match = account.caipAddress.match(/^eip155:(\d+):/)
-          if (match) {
-            chainId = parseInt(match[1], 10)
-            console.log('Extracted chainId from caipAddress:', chainId)
-          }
+      // Extract chain ID from caipAddress if chainId is undefined
+      let chainId = account.chainId
+      if (!chainId && account.caipAddress) {
+        // Parse CAIP-10 format: "eip155:42161:0x..."
+        const match = account.caipAddress.match(/^eip155:(\d+):/)
+        if (match) {
+          chainId = parseInt(match[1], 10)
+          console.log('Extracted chainId from caipAddress:', chainId)
         }
-        
+      }
+      
+      // Only consider connected if we have both a valid address AND chain ID
+      const hasValidAddress = !!account.address;
+      const hasValidChainId = !!chainId;
+      const isFullyConnected = account.isConnected && hasValidAddress && hasValidChainId;
+      
+      if (isFullyConnected) {
         const walletInfo: WalletInfo = {
           isConnected: true,
           address: account.address,
           chainId: chainId,
           balance: account.balance
         }
-        console.log('Setting wallet info from account:', walletInfo)
-        appKitActions.setWalletInfo(walletInfo)
+        console.log('Setting wallet info from account (fully connected):', walletInfo)
+        setValidatedWalletInfo(walletInfo)
       } else {
+        console.log('Account not fully connected:', {
+          accountIsConnected: account.isConnected,
+          hasValidAddress,
+          hasValidChainId,
+          address: account.address,
+          chainId
+        })
         appKitActions.setDisconnected()
       }
     })

@@ -67,6 +67,24 @@ export const web3Actions = {
 		connectionError.set(null);
 	},
 
+	// Complete disconnect - clears all wallet state and storage
+	async completeDisconnect() {
+		console.log('Web3Store: Complete disconnect initiated');
+		
+		try {
+			await walletManager.disconnectWallet();
+		} catch (error) {
+			console.warn('Web3Store: Error disconnecting wallet manager:', error);
+		}
+		
+		// Reset all store state
+		walletInfo.set(null);
+		connectionError.set(null);
+		isConnecting.set(false);
+		
+		console.log('Web3Store: All state reset');
+	},
+
 	// Refresh wallet info
 	async refreshWalletInfo() {
 		if (!browser) return;

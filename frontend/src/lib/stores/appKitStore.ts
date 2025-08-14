@@ -128,6 +128,59 @@ export const appKitActions = {
   // Reset store to initial state
   reset: () => {
     appKitStore.set(initialState)
+  },
+
+  // Complete disconnect - clears all state and storage
+  completeDisconnect: () => {
+    console.log('AppKit store: Complete disconnect initiated');
+    
+    // Reset store state
+    appKitStore.set(initialState);
+    
+    // Clear WalletConnect related browser storage
+    if (typeof window !== 'undefined') {
+      try {
+        // Clear localStorage items
+        const localKeysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (
+            key.startsWith('wc@') || 
+            key.startsWith('walletconnect') ||
+            key.startsWith('@w3m') ||
+            key.startsWith('reown') ||
+            key.includes('wagmi') ||
+            key.includes('appkit')
+          )) {
+            localKeysToRemove.push(key);
+          }
+        }
+        
+        localKeysToRemove.forEach(key => localStorage.removeItem(key));
+        
+        // Clear sessionStorage items
+        const sessionKeysToRemove = [];
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const key = sessionStorage.key(i);
+          if (key && (
+            key.startsWith('wc@') || 
+            key.startsWith('walletconnect') ||
+            key.startsWith('@w3m') ||
+            key.startsWith('reown') ||
+            key.includes('wagmi') ||
+            key.includes('appkit')
+          )) {
+            sessionKeysToRemove.push(key);
+          }
+        }
+        
+        sessionKeysToRemove.forEach(key => sessionStorage.removeItem(key));
+        
+        console.log('AppKit store: Storage cleared during complete disconnect');
+      } catch (error) {
+        console.warn('AppKit store: Error clearing storage:', error);
+      }
+    }
   }
 }
 
@@ -135,6 +188,36 @@ export const appKitActions = {
 export const formatAddress = (address?: string): string => {
   if (!address) return ''
   return `${address.slice(0, 6)}...${address.slice(-4)}`
+}
+
+// Validation function to ensure complete wallet connection
+export const isValidWalletConnection = (walletInfo: WalletInfo): boolean => {
+  const hasValidAddress = !!walletInfo.address && walletInfo.address.length > 0;
+  const hasValidChainId = !!walletInfo.chainId && walletInfo.chainId > 0;
+  
+  return walletInfo.isConnected && hasValidAddress && hasValidChainId;
+}
+
+// Enhanced wallet info setter with validation
+export const setValidatedWalletInfo = (walletInfo: WalletInfo): void => {
+  const isValid = isValidWalletConnection(walletInfo);
+  
+  if (!isValid) {
+    console.warn('AppKit: Invalid wallet connection detected, setting as disconnected:', {
+      isConnected: walletInfo.isConnected,
+      hasAddress: !!walletInfo.address,
+      address: walletInfo.address,
+      hasChainId: !!walletInfo.chainId,
+      chainId: walletInfo.chainId
+    });
+    
+    // Force disconnect if connection is invalid
+    appKitActions.setDisconnected();
+    return;
+  }
+  
+  // Connection is valid, proceed with setting the info
+  appKitActions.setWalletInfo(walletInfo);
 }
 
 export const formatBalance = (balance?: string): string => {
