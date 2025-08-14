@@ -86,9 +86,9 @@
 	});
 </script>
 
-<div class="flex flex-col h-full bg-black text-retro-green font-mono text-base">
+<div class="flex flex-col h-full bg-black text-retro-green font-mono text-base terminal-container">
 	<div 
-		class="flex-1 overflow-y-auto p-4 min-h-0 cursor-text" 
+		class="flex-1 overflow-y-auto p-4 min-h-0 cursor-text terminal-output" 
 		on:click={focusInput}
 		on:keydown={handleTerminalKeyDown}
 		role="button"
@@ -108,8 +108,8 @@
 		{/each}
 	</div>
 	
-	<div class="border-t border-retro-border p-4 flex items-center">
-		<span class="text-retro-green mr-2">{currentUser}@{currentHost} $ </span>
+	<div class="border-t border-retro-border p-4 flex items-center terminal-input-container">
+		<span class="text-retro-green mr-2 terminal-prompt">{currentUser}@{currentHost} $ </span>
 		<input 
 			bind:value={terminalInput}
 			on:keydown={handleKeyDown}
@@ -120,4 +120,74 @@
 		/>
 	</div>
 </div>
+
+<style>
+	.terminal-container {
+		min-height: 200px;
+	}
+	
+	.terminal-output {
+		scrollbar-width: thin;
+		scrollbar-color: #00aa00 #001100;
+	}
+	
+	.terminal-prompt {
+		flex-shrink: 0;
+		white-space: nowrap;
+	}
+	
+	.terminal-input-container {
+		flex-shrink: 0;
+		min-height: 48px;
+		align-items: center;
+	}
+	
+	/* Mobile optimizations */
+	@media (max-width: 768px) {
+		.terminal-container {
+			font-size: 14px;
+		}
+		
+		.terminal-output {
+			padding: 8px 12px;
+		}
+		
+		.terminal-input-container {
+			padding: 8px 12px;
+			min-height: 44px;
+		}
+		
+		.terminal-prompt {
+			font-size: 13px;
+			margin-right: 8px;
+		}
+	}
+	
+	@media (max-width: 480px) {
+		.terminal-container {
+			font-size: 13px;
+		}
+		
+		.terminal-output {
+			padding: 6px 8px;
+		}
+		
+		.terminal-input-container {
+			padding: 6px 8px;
+			min-height: 40px;
+		}
+		
+		.terminal-prompt {
+			font-size: 12px;
+			margin-right: 6px;
+		}
+	}
+	
+	/* Improve touch targets on mobile */
+	@media (hover: none) and (pointer: coarse) {
+		.terminal-input-container {
+			min-height: 48px;
+		}
+	}
+</style>
 

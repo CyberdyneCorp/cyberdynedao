@@ -123,7 +123,9 @@ export default {
 					'font-family': 'JetBrains Mono, Monaco, Menlo, monospace !important',
 					'font-size': '16px !important',
 					'-webkit-appearance': 'none !important',
-					'appearance': 'none !important'
+					'appearance': 'none !important',
+					'width': '100% !important',
+					'min-height': '20px !important'
 				},
 				'.terminal-input:focus': {
 					'background-color': '#000 !important',
@@ -133,6 +135,18 @@ export default {
 					'box-shadow': 'none !important',
 					'color': '#00ff00 !important',
 					'caret-color': '#00ff00 !important'
+				},
+				'@media (max-width: 768px)': {
+					'.terminal-input': {
+						'font-size': '14px !important',
+						'min-height': '24px !important'
+					}
+				},
+				'@media (max-width: 480px)': {
+					'.terminal-input': {
+						'font-size': '13px !important',
+						'min-height': '22px !important'
+					}
 				}
 			})
 		}

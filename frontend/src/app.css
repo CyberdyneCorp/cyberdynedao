@@ -314,7 +314,7 @@ html::-webkit-scrollbar,
 
 /* ===== Modern header styled like the reference ===== */
 .title-bar.modern {
-  --controls-reserve: 56px;   /* space “consumed” by hamburger + X */
+  --controls-reserve: 48px;   /* space "consumed" by hamburger + X */
   height: 52px;               /* a bit taller like the mock */
   padding: 0 16px;
   border-top: 2px solid #000;     /* thin black rails */
@@ -336,19 +336,77 @@ html::-webkit-scrollbar,
 .hamburger-icon,
 .title-bar.modern .window-control.close {
   position: absolute;
-  left: -10px;
+  left: 0px;
   top: 50%;
   transform: translateY(-50%);
   z-index: 20;
   pointer-events: auto;
 }
 
-/* Put the “X” just to the right of the hamburger */
-.title-bar.modern .window-control.close { left: 20px; }
+/* Put the "X" just to the right of the hamburger */
+.title-bar.modern .window-control.close { left: 24px; }
 
 /* Hamburger = thin monochrome lines */
 .hamburger-icon { display: flex; flex-direction: column; gap: 4px; }
 .hamburger-line { width: 18px; height: 2px; background-color: #000; }
+
+/* Mobile responsive title bar controls */
+@media (max-width: 768px) {
+  .title-bar.modern {
+    height: 48px;
+    padding: 0 12px;
+  }
+  
+  .hamburger-icon {
+    left: 8px;
+  }
+  
+  .title-bar.modern .window-control.close {
+    left: 30px;
+  }
+  
+  .window-control.close {
+    width: 24px;
+    height: 24px;
+    font-size: 14px;
+  }
+  
+  .title-text-modern {
+    font-size: 18px;
+    padding: 0 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .title-bar.modern {
+    height: 44px;
+    padding: 0 8px;
+  }
+  
+  .hamburger-icon {
+    left: 4px;
+  }
+  
+  .title-bar.modern .window-control.close {
+    left: 26px;
+  }
+  
+  .window-control.close {
+    width: 22px;
+    height: 22px;
+    font-size: 12px;
+  }
+  
+  .title-text-modern {
+    font-size: 16px;
+    padding: 0 10px;
+  }
+  
+  .hamburger-line {
+    width: 16px;
+    height: 2px;
+  }
+}
 
 /* Bar stacks mirror each other and reserve space for left controls */
 .title-bars-left,
@@ -360,7 +418,40 @@ html::-webkit-scrollbar,
 }
 
 .title-bars-left  { margin-left:  var(--controls-reserve); padding-right: 12px; }
-.title-bars-right { margin-right: var(--controls-reserve)+10; padding-left:  12px; }
+.title-bars-right { margin-right: var(--controls-reserve); padding-left:  12px; }
+
+/* Mobile adjustments for title bar spacing */
+@media (max-width: 768px) {
+  .title-bar.modern {
+    --controls-reserve: 60px;   /* Adjusted for new control positions */
+  }
+  
+  .title-bars-left {
+    margin-left: 60px;
+    padding-right: 8px;
+  }
+  
+  .title-bars-right {
+    margin-right: 60px;
+    padding-left: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .title-bar.modern {
+    --controls-reserve: 52px;   /* Adjusted for new control positions */
+  }
+  
+  .title-bars-left {
+    margin-left: 52px;
+    padding-right: 6px;
+  }
+  
+  .title-bars-right {
+    margin-right: 52px;
+    padding-left: 6px;
+  }
+}
 
 /* Thin bars like the ref */
 .title-bar-line { width: 100%; height: 2px; background-color: #000; }
@@ -761,6 +852,24 @@ html::-webkit-scrollbar,
   color: #00ff00 !important;
   font-family: 'JetBrains Mono', 'Monaco', 'Menlo', monospace !important;
   font-size: 16px !important;
+  line-height: 1.4 !important;
+}
+
+/* Mobile terminal styles */
+@media (max-width: 768px) {
+  .terminal-content {
+    font-size: 14px !important;
+    line-height: 1.3 !important;
+    padding: 8px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .terminal-content {
+    font-size: 13px !important;
+    line-height: 1.25 !important;
+    padding: 6px !important;
+  }
 }
 
 /* Ensure terminal fills window content */
@@ -791,6 +900,23 @@ html::-webkit-scrollbar,
   box-shadow: none !important;
   -webkit-appearance: none !important;
   appearance: none !important;
+  width: 100% !important;
+  min-height: 20px !important;
+}
+
+/* Mobile terminal input styles */
+@media (max-width: 768px) {
+  .terminal-input {
+    font-size: 14px !important;
+    min-height: 24px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .terminal-input {
+    font-size: 13px !important;
+    min-height: 22px !important;
+  }
 }
 
 /* Blinking cursor animation */
@@ -853,14 +979,28 @@ html::-webkit-scrollbar,
   /* General mobile adjustments */
   body {
     font-size: 14px;
+    line-height: 1.4;
+  }
+  
+  /* Improve text readability on mobile */
+  .text-base {
+    font-size: 15px !important;
+    line-height: 1.5 !important;
+  }
+  
+  .text-sm {
+    font-size: 13px !important;
+    line-height: 1.4 !important;
   }
   
   /* Window system mobile improvements */
   .retro-window {
     min-width: 280px !important;
-    max-width: calc(100vw - 20px) !important;
-    min-height: 200px !important;
-    max-height: calc(100vh - 20px) !important;
+    max-width: calc(100vw - 16px) !important;
+    min-height: 240px !important;
+    max-height: calc(100vh - 80px) !important;
+    margin: 8px !important;
+    border-width: 2px !important;
   }
   
   .retro-window.maximized {
@@ -891,7 +1031,14 @@ html::-webkit-scrollbar,
   /* Content area mobile improvements */
   .window-content {
     padding: 12px !important;
-    font-size: 13px !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+  }
+  
+  /* Terminal specific window content */
+  .window-content.terminal-content {
+    padding: 8px !important;
+    font-size: 14px !important;
   }
   
   /* Footer mobile improvements */
@@ -1044,9 +1191,22 @@ html::-webkit-scrollbar,
 
 /* Very small screens */
 @media (max-width: 480px) {
+  /* Improve text readability on very small screens */
+  .text-base {
+    font-size: 14px !important;
+    line-height: 1.45 !important;
+  }
+  
+  .text-sm {
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+  }
+  
   .retro-window {
-    min-width: 260px !important;
-    margin: 10px !important;
+    min-width: 280px !important;
+    max-width: calc(100vw - 12px) !important;
+    margin: 6px !important;
+    border-width: 1px !important;
   }
   
   .title-bar {
@@ -1065,8 +1225,15 @@ html::-webkit-scrollbar,
   }
   
   .window-content {
-    padding: 8px !important;
-    font-size: 12px !important;
+    padding: 10px !important;
+    font-size: 13px !important;
+    line-height: 1.45 !important;
+  }
+  
+  /* Terminal specific window content for very small screens */
+  .window-content.terminal-content {
+    padding: 6px !important;
+    font-size: 13px !important;
   }
   
   .window-footer {
@@ -1238,5 +1405,76 @@ html::-webkit-scrollbar,
   
   .footer-resize-control {
     background-size: 2px 2px !important;
+  }
+}
+
+/* General mobile readability improvements */
+@media (max-width: 768px) {
+  /* Improve line spacing for better readability */
+  p {
+    line-height: 1.6 !important;
+    margin-bottom: 0.75rem !important;
+  }
+  
+  /* Make lists more readable */
+  ul, ol {
+    line-height: 1.5 !important;
+  }
+  
+  li {
+    margin-bottom: 0.25rem !important;
+  }
+  
+  /* Improve button touch targets */
+  button {
+    min-height: 44px !important;
+    padding: 8px 16px !important;
+  }
+  
+  /* Better form inputs */
+  input, textarea, select {
+    min-height: 44px !important;
+    font-size: 16px !important; /* Prevents zoom on iOS */
+  }
+  
+  /* Better contrast for small text */
+  .text-gray-600 {
+    color: #374151 !important;
+  }
+  
+  .text-gray-700 {
+    color: #1f2937 !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Even better spacing for very small screens */
+  p {
+    line-height: 1.5 !important;
+    margin-bottom: 0.5rem !important;
+  }
+  
+  /* Improve text contrast further */
+  .text-sm {
+    color: #1f2937 !important;
+  }
+  
+  .text-xs {
+    color: #111827 !important;
+  }
+}
+
+/* Improve mobile terminal readability */
+@media (max-width: 768px) {
+  .terminal-content .whitespace-pre-wrap {
+    line-height: 1.4 !important;
+    margin-bottom: 0.25rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .terminal-content .whitespace-pre-wrap {
+    line-height: 1.3 !important;
+    margin-bottom: 0.2rem !important;
   }
 }

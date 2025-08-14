@@ -417,3 +417,102 @@
 		</section>
 	</div>
 </div>
+
+<style>
+	/* Mobile responsive improvements */
+	@media (max-width: 768px) {
+		.flex-1 {
+			padding: 12px !important;
+		}
+		
+		section {
+			padding: 12px !important;
+			margin-bottom: 16px !important;
+		}
+		
+		h1 {
+			font-size: 18px !important;
+		}
+		
+		h2 {
+			font-size: 16px !important;
+		}
+		
+		h3 {
+			font-size: 14px !important;
+		}
+		
+		p, li span {
+			font-size: 13px !important;
+			line-height: 1.5 !important;
+		}
+		
+		.text-sm {
+			font-size: 12px !important;
+		}
+		
+		.text-xs {
+			font-size: 11px !important;
+		}
+		
+		/* Table improvements for mobile */
+		table {
+			font-size: 10px !important;
+		}
+		
+		th, td {
+			padding: 6px !important;
+		}
+		
+		/* Grid improvements for mobile */
+		.grid-cols-2 {
+			grid-template-columns: 1fr !important;
+			gap: 8px !important;
+		}
+	}
+	
+	@media (max-width: 480px) {
+		.flex-1 {
+			padding: 8px !important;
+		}
+		
+		section {
+			padding: 8px !important;
+			margin-bottom: 12px !important;
+		}
+		
+		h1 {
+			font-size: 16px !important;
+		}
+		
+		h2 {
+			font-size: 15px !important;
+		}
+		
+		h3 {
+			font-size: 13px !important;
+		}
+		
+		p, li span {
+			font-size: 12px !important;
+			line-height: 1.4 !important;
+		}
+		
+		.text-sm {
+			font-size: 11px !important;
+		}
+		
+		.text-xs {
+			font-size: 10px !important;
+		}
+		
+		/* Table improvements for very small screens */
+		table {
+			font-size: 9px !important;
+		}
+		
+		th, td {
+			padding: 4px !important;
+		}
+	}
+</style>
