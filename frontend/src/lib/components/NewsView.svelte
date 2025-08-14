@@ -19,6 +19,8 @@
 		count: number;
 	}
 
+	export let isMobile: boolean = false;
+
 	const blogPosts: BlogPost[] = [
 		{
 			id: 'dao-governance-evolution',
@@ -339,4 +341,80 @@
 		</div>
 	</div>
 </div>
+
+<style>
+	/* Mobile responsive styles */
+	@media (max-width: 768px) {
+		.news-container {
+			flex-direction: column;
+		}
+		
+		.sidebar {
+			width: 100%;
+			max-width: none;
+			border-right: none;
+			border-bottom: 1px solid #e5e7eb;
+		}
+		
+		.category-grid {
+			grid-template-columns: repeat(2, 1fr);
+			gap: 8px;
+		}
+		
+		.post-grid {
+			grid-template-columns: 1fr;
+			gap: 12px;
+		}
+		
+		.post-card {
+			padding: 12px;
+		}
+		
+		.post-title {
+			font-size: 14px;
+		}
+		
+		.post-excerpt {
+			font-size: 12px;
+		}
+		
+		.post-meta {
+			font-size: 10px;
+		}
+	}
+	
+	@media (max-width: 480px) {
+		.category-grid {
+			grid-template-columns: 1fr;
+		}
+		
+		.post-card {
+			padding: 8px;
+		}
+		
+		.post-title {
+			font-size: 13px;
+		}
+		
+		.post-excerpt {
+			font-size: 11px;
+		}
+		
+		.post-meta {
+			font-size: 9px;
+		}
+		
+		.category-item {
+			padding: 8px;
+		}
+		
+		.category-name {
+			font-size: 12px;
+		}
+		
+		.category-count {
+			font-size: 10px;
+		}
+	}
+</style>
 

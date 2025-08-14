@@ -18,6 +18,14 @@
 	let dragOffset = { x: 0, y: 0 };
 	let resizeStartSize = { width: 0, height: 0 };
 	let resizeStartMouse = { x: 0, y: 0 };
+	let isMobile = false;
+	let touchStartPos = { x: 0, y: 0 };
+	let touchStartSize = { width: 0, height: 0 };
+
+	// Check if device is mobile
+	function checkMobile() {
+		isMobile = globalThis.window.innerWidth <= 768 || 'ontouchstart' in globalThis.window;
+	}
 
 	function handleMouseDown(e: MouseEvent) {
 		if (e.target === titleBarElement || titleBarElement.contains(e.target as Node)) {
@@ -28,7 +36,19 @@
 		}
 	}
 
+	function handleTouchStart(e: TouchEvent) {
+		if (e.target === titleBarElement || titleBarElement.contains(e.target as Node)) {
+			isDragging = true;
+			const touch = e.touches[0];
+			dragOffset.x = touch.clientX - window.x;
+			dragOffset.y = touch.clientY - window.y;
+			bringToFront(window.id);
+		}
+	}
+
 	function handleResizeStart(e: MouseEvent) {
+		if (isMobile) return; // Disable resize on mobile
+		
 		isResizing = true;
 		
 		// Determine resize direction based on target class
@@ -56,7 +76,7 @@
 					? { ...w, x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y }
 					: w
 			));
-		} else if (isResizing) {
+		} else if (isResizing && !isMobile) {
 			const deltaX = e.clientX - resizeStartMouse.x;
 			const deltaY = e.clientY - resizeStartMouse.y;
 			
@@ -79,7 +99,23 @@
 		}
 	}
 
+	function handleTouchMove(e: TouchEvent) {
+		if (isDragging) {
+			const touch = e.touches[0];
+			windows.update(wins => wins.map(w => 
+				w.id === window.id 
+					? { ...w, x: touch.clientX - dragOffset.x, y: touch.clientY - dragOffset.y }
+					: w
+			));
+		}
+	}
+
 	function handleMouseUp() {
+		isDragging = false;
+		isResizing = false;
+	}
+
+	function handleTouchEnd() {
 		isDragging = false;
 		isResizing = false;
 	}
@@ -88,13 +124,36 @@
 		bringToFront(window.id);
 	}
 
+	// Mobile-specific window positioning
+	function centerOnMobile() {
+		if (isMobile && window.width > globalThis.window.innerWidth) {
+			windows.update(wins => wins.map(w => 
+				w.id === window.id 
+					? { ...w, x: 0, width: Math.min(globalThis.window.innerWidth - 20, w.width) }
+					: w
+			));
+		}
+	}
+
 	onMount(() => {
+		checkMobile();
+		centerOnMobile();
+		
+		// Add event listeners
 		document.addEventListener('mousemove', handleMouseMove);
 		document.addEventListener('mouseup', handleMouseUp);
+		document.addEventListener('touchmove', handleTouchMove, { passive: false });
+		document.addEventListener('touchend', handleTouchEnd);
+		
+		// Handle window resize
+		globalThis.window.addEventListener('resize', checkMobile);
 
 		return () => {
 			document.removeEventListener('mousemove', handleMouseMove);
 			document.removeEventListener('mouseup', handleMouseUp);
+			document.removeEventListener('touchmove', handleTouchMove);
+			document.removeEventListener('touchend', handleTouchEnd);
+			globalThis.window.removeEventListener('resize', checkMobile);
 		};
 	});
 
@@ -106,14 +165,17 @@
 		z-index: ${window.zIndex};
 		display: ${window.minimized ? 'none' : 'block'};
 		transition: ${isDragging || isResizing ? 'none' : 'left 0.3s ease-out, top 0.3s ease-out'};
+		${isMobile ? 'max-width: calc(100vw - 20px); max-height: calc(100vh - 20px);' : ''}
 	`;
 </script>
 
 <div
     bind:this={windowElement}
     class="retro-window window-root"
+    class:mobile={isMobile}
     style={windowStyle}
     on:mousedown={handleWindowClick}
+    on:touchstart={handleTouchStart}
     role="dialog"
     tabindex="-1"
 >
@@ -121,6 +183,7 @@
         bind:this={titleBarElement}
         class="title-bar modern"
         on:mousedown={handleMouseDown}
+        on:touchstart={handleTouchStart}
         role="button"
         tabindex="0"
     >
@@ -181,19 +244,83 @@
         </div>
     </div>
     
-    <!-- Resize handles -->
-    <div 
-		class="resize-handle resize-right" 
-		on:mousedown={handleResizeStart}
-		role="button"
-		tabindex="0"
-		aria-label="Resize window horizontally"
-	></div>
-    <div 
-		class="resize-handle resize-bottom" 
-		on:mousedown={handleResizeStart}
-		role="button"
-		tabindex="0"
-		aria-label="Resize window vertically"
-	></div>
+    <!-- Resize handles - hidden on mobile -->
+    {#if !isMobile}
+        <div 
+            class="resize-handle resize-right" 
+            on:mousedown={handleResizeStart}
+            role="button"
+            tabindex="0"
+            aria-label="Resize window horizontally"
+        ></div>
+        <div 
+            class="resize-handle resize-bottom" 
+            on:mousedown={handleResizeStart}
+            role="button"
+            tabindex="0"
+            aria-label="Resize window vertically"
+        ></div>
+    {/if}
 </div>
+
+<style>
+    .retro-window.mobile {
+        border-radius: 8px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+    
+    .retro-window.mobile .title-bar {
+        border-radius: 8px 8px 0 0;
+    }
+    
+    .retro-window.mobile .window-footer {
+        border-radius: 0 0 8px 8px;
+    }
+    
+    /* Mobile touch improvements */
+    @media (max-width: 768px) {
+        .retro-window {
+            touch-action: manipulation;
+        }
+        
+        .title-bar {
+            min-height: 44px;
+        }
+        
+        .window-control {
+            min-width: 44px;
+            min-height: 44px;
+        }
+        
+        .title-text-modern {
+            font-size: 14px;
+        }
+        
+        .window-content {
+            padding: 12px;
+        }
+        
+        .window-footer {
+            min-height: 36px;
+        }
+        
+        .footer-status {
+            font-size: 11px;
+        }
+    }
+    
+    /* Very small screens */
+    @media (max-width: 480px) {
+        .retro-window {
+            margin: 10px;
+        }
+        
+        .title-text-modern {
+            font-size: 13px;
+        }
+        
+        .window-content {
+            padding: 8px;
+        }
+    }
+</style>

@@ -67,7 +67,7 @@
 			</div>
 		</div>
 		<!-- Desktop Icons positioned on main area -->
-		<div class="absolute left-8 z-10 sm:left-4 desktop-icons">
+		<div class="absolute left-8 z-10 sm:left-4 main-icons">
 			<div class="icon-grid grid grid-cols-2 sm:grid-cols-3">
 				{#each navItems as item}
 					<div class="flex flex-col items-center">
@@ -88,7 +88,7 @@
 		</div>
 		
 		<!-- Cart icon in right corner at same height as other icons -->
-		<div class="absolute right-1/10 z-20 sm:right-4 desktop-icons">
+		<div class="absolute right-1/10 z-20 sm:right-4 cart-icon">
 			<div class="flex flex-col items-center">
 				<button
 					class="sidebar-icon flex items-center justify-center cursor-pointer relative"
@@ -121,3 +121,195 @@
 </div>
 
 <!-- Background animations CSS moved to /lib/styles/backgroundAnimations.css -->
+
+<style>
+	/* Desktop positioning adjustments */
+	.main-icons {
+		top: 120px;
+	}
+	
+	.cart-icon {
+		top: 120px;
+	}
+	
+	/* Mobile responsive styles for main page */
+	@media (max-width: 768px) {
+		.main-icons {
+			position: absolute !important;
+			left: 16px !important;
+			right: auto !important;
+			top: 120px !important;
+			display: flex !important;
+			justify-content: flex-start !important;
+			align-items: flex-start !important;
+			flex-direction: column !important;
+			gap: 16px !important;
+		}
+		
+		.cart-icon {
+			position: absolute !important;
+			right: 16px !important;
+			left: auto !important;
+			top: 120px !important;
+			display: flex !important;
+			justify-content: flex-end !important;
+			align-items: flex-start !important;
+			flex-direction: column !important;
+		}
+		
+		.icon-grid {
+			grid-template-columns: repeat(2, 1fr) !important;
+			gap: 24px 20px !important;
+			width: auto !important;
+			max-width: 320px !important;
+			justify-items: flex-start !important;
+			align-items: start !important;
+		}
+		
+		.icon-grid > div {
+			display: flex !important;
+			flex-direction: column !important;
+			align-items: center !important;
+			justify-content: flex-start !important;
+			width: 100% !important;
+		}
+		
+		.sidebar-icon {
+			width: 48px !important;
+			height: 48px !important;
+		}
+		
+		.sidebar-icon img {
+			width: 32px !important;
+			height: 32px !important;
+		}
+		
+		.nav-label {
+			font-size: 10px !important;
+			margin-top: 4px !important;
+			max-width: 60px !important;
+			display: block !important;
+			opacity: 1 !important;
+			visibility: visible !important;
+		}
+		
+		.ascii-logo {
+			display: none !important;
+		}
+		
+		.cyber-grid {
+			opacity: 0.3 !important;
+		}
+		
+		.glow-particle {
+			display: none !important;
+		}
+		
+		.digital-rain {
+			display: none !important;
+		}
+	}
+	
+	@media (max-width: 480px) {
+		.main-icons {
+			left: 12px !important;
+			top: 100px !important;
+		}
+		
+		.cart-icon {
+			right: 12px !important;
+			top: 100px !important;
+		}
+		
+		.icon-grid {
+			grid-template-columns: repeat(2, 1fr) !important;
+			gap: 20px 16px !important;
+			max-width: 280px !important;
+		}
+		
+		.sidebar-icon {
+			width: 40px !important;
+			height: 40px !important;
+		}
+		
+		.sidebar-icon img {
+			width: 24px !important;
+			height: 24px !important;
+		}
+		
+		.nav-label {
+			font-size: 9px !important;
+			max-width: 50px !important;
+			display: block !important;
+			opacity: 1 !important;
+			visibility: visible !important;
+		}
+	}
+	
+	/* Touch device optimizations */
+	@media (hover: none) and (pointer: coarse) {
+		.sidebar-icon {
+			min-width: 44px !important;
+			min-height: 44px !important;
+		}
+		
+		.sidebar-icon:hover {
+			transform: none !important;
+		}
+	}
+	
+	/* Ensure nav-label is always visible */
+	.nav-label {
+		display: block !important;
+		visibility: visible !important;
+		opacity: 1 !important;
+	}
+	
+	/* Mobile-specific nav-label overrides */
+	@media (max-width: 768px) {
+		.nav-label {
+			display: block !important;
+			visibility: visible !important;
+			opacity: 1 !important;
+			background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
+			border: 1px solid #000 !important;
+			box-shadow: 1px 1px 0px rgba(0,0,0,0.3) !important;
+			color: white !important;
+			font-weight: bold !important;
+		}
+		
+		/* Override any conflicting styles */
+		.desktop-icons .nav-label {
+			display: block !important;
+			visibility: visible !important;
+			opacity: 1 !important;
+		}
+		
+		.icon-grid .nav-label {
+			display: block !important;
+			visibility: visible !important;
+			opacity: 1 !important;
+		}
+	}
+	
+	@media (max-width: 480px) {
+		.nav-label {
+			font-size: 9px !important;
+			max-width: 50px !important;
+			padding: 1px 3px !important;
+		}
+		
+		/* Override any conflicting styles */
+		.desktop-icons .nav-label {
+			display: block !important;
+			visibility: visible !important;
+			opacity: 1 !important;
+		}
+		
+		.icon-grid .nav-label {
+			display: block !important;
+			visibility: visible !important;
+			opacity: 1 !important;
+		}
+	}
+</style>

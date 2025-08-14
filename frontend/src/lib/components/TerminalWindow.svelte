@@ -18,10 +18,11 @@
 	export let currentView: string = 'read';
 	export let onAddToCart: ((item: any) => void) | undefined = undefined;
 	export let embedded: boolean = false;
+	export let isMobile: boolean = false;
 </script>
 
 {#if embedded}
-	<div class="window-content" class:terminal-content={currentView === 'terminal'}>
+	<div class="window-content" class:terminal-content={currentView === 'terminal'} class:mobile={isMobile}>
 		{#if showCart}
 			<CartView bind:cartItems />
 		{:else if currentView === 'terminal'}
@@ -45,11 +46,11 @@
 		{:else if currentView === 'contact'}
 			<ContactView />
 		{:else}
-			<NewsView />
+			<NewsView {isMobile} />
 		{/if}
 	</div>
 {:else}
-	<div class="retro-window flex-1 mx-4 my-4 overflow-hidden">
+	<div class="retro-window flex-1 mx-4 my-4 overflow-hidden" class:mobile={isMobile}>
 		<div class="bg-white p-4 h-full overflow-y-auto">
 			{#if showCart}
 				<CartView bind:cartItems />
@@ -74,7 +75,7 @@
 			{:else if currentView === 'contact'}
 				<ContactView />
 			{:else}
-				<NewsView />
+				<NewsView {isMobile} />
 			{/if}
 		</div>
 	</div>
@@ -90,5 +91,35 @@
 	.window-content.terminal-content {
 		padding: 0;
 		height: 100%;
+	}
+	
+	.window-content.mobile {
+		padding: 12px;
+	}
+	
+	.retro-window.mobile {
+		margin: 8px;
+		border-radius: 8px;
+	}
+	
+	/* Mobile responsive styles */
+	@media (max-width: 768px) {
+		.window-content {
+			padding: 12px;
+		}
+		
+		.window-content.terminal-content {
+			padding: 8px;
+		}
+	}
+	
+	@media (max-width: 480px) {
+		.window-content {
+			padding: 8px;
+		}
+		
+		.window-content.terminal-content {
+			padding: 4px;
+		}
 	}
 </style>
