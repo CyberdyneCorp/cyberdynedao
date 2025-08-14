@@ -116,7 +116,12 @@
 			class="flex-1 terminal-input"
 			placeholder=""
 			autocomplete="off"
+			autocapitalize="off"
+			autocorrect="off"
 			spellcheck="false"
+			type="text"
+			name="terminal-command"
+			data-form-type="other"
 		/>
 	</div>
 </div>
