@@ -142,6 +142,7 @@ class Web3AuthService {
         web3auth = new Web3Auth({
           clientId,
           web3AuthNetwork: web3AuthNetwork,
+          enableLogging: false,
           uiConfig: {
             appName: "Cyberdyne DAO Terminal",
             appUrl: import.meta.env.VITE_APP_URL || "http://localhost:5173",
