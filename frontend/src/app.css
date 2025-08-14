@@ -183,12 +183,12 @@ html::-webkit-scrollbar,
 @media (max-width: 480px) {
   /* Extra small screens */
   .sidebar-icon { 
-    width: 40px !important; 
-    height: 40px !important; 
+    width: 48px !important; 
+    height: 48px !important; 
   }
   .sidebar-icon img { 
-    width: 32px !important; 
-    height: 32px !important; 
+    width: 40px !important; 
+    height: 40px !important; 
   }
   .nav-label { 
     font-size: 9px !important; 
@@ -199,18 +199,18 @@ html::-webkit-scrollbar,
     min-height: 12px !important;
   }
   .grid.grid-cols-2 {
-    gap: 16px !important;
+    gap: 24px !important;
   }
 }
 
 @media (min-width: 481px) and (max-width: 640px) {
   .sidebar-icon { 
-    width: 48px !important; 
-    height: 48px !important; 
+    width: 56px !important; 
+    height: 56px !important; 
   }
   .sidebar-icon img { 
-    width: 40px !important; 
-    height: 40px !important; 
+    width: 48px !important; 
+    height: 48px !important; 
   }
   .nav-label { 
     font-size: 10px !important; 
@@ -224,7 +224,7 @@ html::-webkit-scrollbar,
   }
   /* Make the grid more compact on mobile */
   .icon-grid {
-    gap: 16px !important;
+    gap: 32px !important;
   }
   /* Adjust cart badge position for smaller icons */
   .absolute.-top-1.-right-1 {
@@ -264,7 +264,7 @@ html::-webkit-scrollbar,
 /* Desktop spacing override */
 @media (min-width: 769px) {
   .icon-grid {
-    gap: 80px !important;
+    gap: 60px !important;
   }
 }
 

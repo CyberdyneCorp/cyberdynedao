@@ -76,7 +76,7 @@
 							on:click={() => handleItemClick(item)}
 							title={item.name}
 						>
-							<img src={item.icon} alt={item.name} class="w-24 h-24 md:w-24 md:h-24 sm:w-16 sm:h-16" />
+							<img src={item.icon} alt={item.name} class="w-24 h-24 md:w-24 md:h-24 sm:w-20 sm:h-20" />
 						</button>
 						<span class="nav-label text-white text-base md:text-base sm:text-xs font-mono text-center px-2 py-0.5 sm:px-1 sm:py-0 rounded mt-4 sm:mt-1 break-words max-w-20 sm:max-w-16">
 							<span class="sm:hidden">{item.name}</span>
@@ -95,7 +95,7 @@
 					on:click={() => createWindow('cart', `Your Bag (${cartCount})`)}
 					title="Your Bag"
 				>
-					<img src="/assets/cart.svg" alt="Cart" class="w-24 h-24 md:w-24 md:h-24 sm:w-16 sm:h-16" />
+					<img src="/assets/cart.svg" alt="Cart" class="w-24 h-24 md:w-24 md:h-24 sm:w-20 sm:h-20" />
 					{#if cartCount > 0}
 						<div class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
 							{cartCount}
