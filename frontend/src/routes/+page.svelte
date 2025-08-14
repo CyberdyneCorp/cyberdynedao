@@ -175,13 +175,13 @@
 		}
 		
 		.sidebar-icon {
-			width: 56px !important;
-			height: 56px !important;
+			width: 60px !important;
+			height: 60px !important;
 		}
 		
 		.sidebar-icon img {
-			width: 40px !important;
-			height: 40px !important;
+			width: 44px !important;
+			height: 44px !important;
 		}
 		
 		.nav-label {
@@ -228,13 +228,13 @@
 		}
 		
 		.sidebar-icon {
-			width: 48px !important;
-			height: 48px !important;
+			width: 52px !important;
+			height: 52px !important;
 		}
 		
 		.sidebar-icon img {
-			width: 32px !important;
-			height: 32px !important;
+			width: 36px !important;
+			height: 36px !important;
 		}
 		
 		.nav-label {
