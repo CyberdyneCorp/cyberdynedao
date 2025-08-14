@@ -54,17 +54,17 @@
 	});
 </script>
 
-<div class="w-full flex items-center justify-between px-6 fixed top-0 left-0 right-0 z-[2147483647] mix-blend-normal border-b-4 border-black" style="height: 60px; background: linear-gradient(to right, #1e3a8a, #3b82f6);">
+<div class="w-full flex items-center justify-between px-6 sm:px-3 fixed top-0 left-0 right-0 z-[2147483647] mix-blend-normal border-b-4 border-black topbar-container" style="background: linear-gradient(to right, #1e3a8a, #3b82f6);">
     <button 
         bind:this={menuButton}
-        class="flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-200 cursor-pointer"
+        class="flex items-center gap-3 sm:gap-2 px-4 sm:px-2 py-2 sm:py-1 rounded-lg transition-all duration-200 cursor-pointer"
         style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); backdrop-filter: blur(10px);"
         on:mouseenter={(e) => e.target.style.background = 'rgba(255,255,255,0.25)'}
         on:mouseleave={(e) => e.target.style.background = 'rgba(255,255,255,0.15)'}
         on:click={toggleMenu}
     >
-        <div class="w-10 h-10 flex items-center justify-center">
-            <svg class="w-8 h-8" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg">
+        <div class="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center">
+            <svg class="w-8 h-8 sm:w-6 sm:h-6" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg">
                 <defs>
                     <style>
                         .st0 { fill: #ffffff; }
@@ -78,13 +78,14 @@
                 <polygon class="st0" points="64 165 82.4 175.1 84 177.5 84.2 425.8 300 550.5 300 572 297.1 571.4 64 436.5 64 165"/>
             </svg>
         </div>
-        <span class="font-mono font-bold text-xl text-white" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.7);">
-            Start {showMenu ? '▼' : '▶'}
+        <span class="font-mono font-bold text-xl md:text-lg sm:text-base text-white" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.7);">
+            <span class="sm:hidden">Start {showMenu ? '▼' : '▶'}</span>
+            <span class="hidden sm:inline">{showMenu ? '▼' : '▶'}</span>
         </span>
     </button>
     
     <div class="flex items-center" style="margin-right: 12px;">
-        <div class="w-48">
+        <div class="w-48 sm:w-32">
             <Web3Wallet />
         </div>
     </div>
@@ -92,14 +93,14 @@
 
 <!-- Dropdown Menu -->
 {#if showMenu}
-    <div bind:this={menuContainer} class="fixed bg-white border-2 border-black shadow-lg" style="top: 50px; left: 24px; width: 300px; z-index: 2147483647;">
+    <div bind:this={menuContainer} class="fixed bg-white border-2 border-black shadow-lg menu-dropdown" style="z-index: 2147483647;">
         <!-- Header -->
         <div style="background: linear-gradient(to right, #1e3a8a, #3b82f6); border-bottom: 2px solid black; padding: 8px 12px;">
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.2); border-radius: 4px; border: 1px solid rgba(255,255,255,0.3);">
                     <img src="/assets/icon_menu.svg" alt="Menu" style="width: 24px; height: 24px;" />
                 </div>
-                <span style="font-family: monospace; font-weight: bold; font-size: 24px; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">Menu</span>
+                <span class="menu-title font-mono font-bold text-2xl md:text-xl sm:text-lg text-white" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">Menu</span>
             </div>
         </div>
         <!-- Menu Items -->

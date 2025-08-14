@@ -14,6 +14,6 @@
 </svelte:head>
 
 <TopBar />
-<div class="pixel-dot w-screen h-screen bg-retro-bg pt-12">
+<div class="pixel-dot w-screen h-screen bg-retro-bg pt-20 sm:pt-16">
     {@render children?.()}
 </div>

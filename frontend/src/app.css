@@ -261,6 +261,17 @@ html::-webkit-scrollbar,
   gap: 24px; /* mobile default */
 }
 
+/* Desktop icons positioning */
+.desktop-icons {
+  top: 120px; /* Desktop spacing from header */
+}
+
+@media screen and (max-width: 640px) {
+  .desktop-icons {
+    top: 80px !important; /* Mobile spacing from header */
+  }
+}
+
 /* Desktop spacing override */
 @media (min-width: 769px) {
   .icon-grid {
@@ -559,6 +570,162 @@ html::-webkit-scrollbar,
   text-align: left;
   border-bottom: 1px solid #e5e7eb;
   transition: all 0.15s ease;
+}
+
+/* TopBar Styles */
+.topbar-container {
+  height: 60px;
+}
+
+/* Menu Dropdown Styles */
+.menu-dropdown {
+  top: 50px;
+  left: 24px;
+  width: 300px;
+}
+
+/* Responsive TopBar and Menu Styles */
+@media screen and (max-width: 640px) {
+  .topbar-container {
+    height: 52px !important;
+  }
+  
+  .menu-dropdown {
+    width: calc(100vw - 24px) !important;
+    max-width: 280px !important;
+    left: 12px !important;
+    top: 44px !important;
+  }
+  
+  .menu-title {
+    font-size: 16px !important;
+  }
+  
+  /* Header button text responsive */
+  .font-mono.font-bold.text-xl {
+    font-size: 16px !important;
+  }
+  
+  /* Web3Wallet responsive text */
+  .connect-btn {
+    font-size: 14px !important;
+  }
+  
+  .status-text {
+    font-size: 12px !important;
+  }
+  
+  .menu-item {
+    padding: 10px 12px !important;
+    font-size: 13px !important;
+    gap: 10px !important;
+  }
+  
+  .menu-item-icon {
+    width: 20px !important;
+    height: 20px !important;
+  }
+  
+  .menu-item-icon img {
+    width: 18px !important;
+    height: 18px !important;
+  }
+}
+
+/* Additional mobile responsiveness for very small screens */
+@media screen and (max-width: 480px) {
+  .topbar-container {
+    height: 48px !important;
+  }
+  
+  .menu-dropdown {
+    top: 40px !important;
+    width: calc(100vw - 16px) !important;
+    left: 8px !important;
+  }
+  
+  .menu-title {
+    font-size: 14px !important;
+  }
+  
+  /* Header button text responsive for very small screens */
+  .font-mono.font-bold.text-xl {
+    font-size: 14px !important;
+  }
+  
+  /* Web3Wallet responsive text for very small screens */
+  .connect-btn {
+    font-size: 12px !important;
+  }
+  
+  .status-text {
+    font-size: 10px !important;
+  }
+  
+  .menu-item {
+    padding: 8px 10px !important;
+    font-size: 12px !important;
+    gap: 8px !important;
+  }
+  
+  .menu-item-icon {
+    width: 18px !important;
+    height: 18px !important;
+  }
+  
+  .menu-item-icon img {
+    width: 16px !important;
+    height: 16px !important;
+  }
+}
+
+/* Responsive Web3Wallet Styles */
+@media screen and (max-width: 640px) {
+  .connect-btn {
+    font-size: 10px !important;
+    padding: 6px 8px !important;
+  }
+  
+  .wallet-summary {
+    font-size: 10px !important;
+    padding: 6px 8px !important;
+  }
+  
+  .status-text {
+    font-size: 10px !important;
+  }
+  
+  .expand-icon {
+    font-size: 10px !important;
+  }
+  
+  .detail-label,
+  .detail-value {
+    font-size: 9px !important;
+  }
+  
+  .disconnect-btn {
+    font-size: 10px !important;
+    padding: 6px !important;
+  }
+  
+  .connection-modal {
+    width: calc(100vw - 32px) !important;
+    max-width: 320px !important;
+    margin: 0 16px !important;
+  }
+  
+  .modal-title {
+    font-size: 16px !important;
+  }
+  
+  .option-title {
+    font-size: 12px !important;
+  }
+  
+  .option-description {
+    font-size: 10px !important;
+  }
 }
 
 .menu-item:hover {

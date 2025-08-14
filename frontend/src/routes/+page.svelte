@@ -67,7 +67,7 @@
 			</div>
 		</div>
 		<!-- Desktop Icons positioned on main area -->
-		<div class="absolute left-8 top-1/15 z-10 sm:left-4 sm:top-8">
+		<div class="absolute left-8 z-10 sm:left-4 desktop-icons">
 			<div class="icon-grid grid grid-cols-2 sm:grid-cols-3">
 				{#each navItems as item}
 					<div class="flex flex-col items-center">
@@ -88,7 +88,7 @@
 		</div>
 		
 		<!-- Cart icon in right corner at same height as other icons -->
-		<div class="absolute right-1/10 top-1/15 z-20 sm:right-4 sm:top-8">
+		<div class="absolute right-1/10 z-20 sm:right-4 desktop-icons">
 			<div class="flex flex-col items-center">
 				<button
 					class="sidebar-icon flex items-center justify-center cursor-pointer relative"
