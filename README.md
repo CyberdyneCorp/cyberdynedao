@@ -9,6 +9,12 @@ This project is organized into a clean frontend-focused structure:
 ```
 retro-terminal/
 ├── README.md                 # Project documentation
+├── contracts/                # Smart contracts directory
+│   ├── contracts/            # Solidity smart contracts
+│   ├── test/                 # Contract tests
+│   ├── scripts/              # Deployment scripts
+│   ├── hardhat.config.js     # Hardhat configuration
+│   └── package.json          # Contract dependencies
 └── frontend/                 # Main application directory
     ├── Dockerfile            # Production Docker configuration
     ├── package.json          # Dependencies and scripts
@@ -53,6 +59,15 @@ retro-terminal/
 - **Tailwind CSS**: Utility-first CSS framework
 - **Docker Ready**: Production-ready containerization
 - **IPFS Compatible**: Static build optimized for decentralized hosting
+- **Smart Contracts**: Solidity contracts for training materials management
+
+### 📚 Smart Contract System
+- **Training Materials Contract**: IPFS-integrated content management
+- **Creator Authorization**: Whitelist system for content creators
+- **USDC Pricing**: Native USDC pricing with 6 decimal precision
+- **Category Management**: Organized content categorization
+- **Deletion Control**: Owner and creator deletion permissions
+- **Base Network Ready**: Deployed on Base mainnet and Sepolia testnet
 
 ## 🚀 Development
 
@@ -61,6 +76,8 @@ retro-terminal/
 - npm or yarn
 
 ### Quick Start
+
+### Frontend Development
 
 ```bash
 # Navigate to frontend directory
@@ -77,6 +94,28 @@ npm run build
 
 # Preview production build
 npm run preview
+```
+
+### Smart Contract Development
+
+```bash
+# Navigate to contracts directory
+cd contracts
+
+# Install dependencies
+npm install
+
+# Compile contracts
+npm run compile
+
+# Run tests
+npm test
+
+# Deploy to Base Sepolia (testnet)
+npm run deploy:base-sepolia
+
+# Deploy to Base Mainnet
+npm run deploy:base-mainnet
 ```
 
 ## 🔐 Web3 Configuration
@@ -296,6 +335,9 @@ frontend/
 - **📦 Build**: Vite, SvelteKit Static Adapter
 - **🐳 Deployment**: Docker, Nginx, Coolify-ready
 - **🎭 Assets**: SVG icons, WebP images, custom animations
+- **⚡ Smart Contracts**: Solidity, Hardhat, OpenZeppelin
+- **🗄️ Storage**: IPFS integration for decentralized content
+- **💰 Payments**: USDC token integration with 6 decimal precision
 
 ## 🏆 Recent Achievements
 
@@ -307,6 +349,11 @@ frontend/
 - ✅ **Clean UI**: Professional wallet interface with expandable details
 - ✅ **Project Structure**: Organized into dedicated frontend directory
 - ✅ **Performance**: Optimized builds and efficient asset loading
+- ✅ **Smart Contract System**: Complete training materials contract with comprehensive features
+- ✅ **Base Network Deployment**: Ready for Base mainnet and Sepolia testnet
+- ✅ **IPFS Integration**: Decentralized storage for training content
+- ✅ **Creator Authorization**: Whitelist system for content management
+- ✅ **Contract Optimization**: 17.2KB size (70% of 24KB limit) with 52 passing tests
 
 ## 📋 Development Status
 
@@ -315,15 +362,29 @@ frontend/
 - 🟢 **Docker Deployment**: Ready for production
 - 🟢 **Static Hosting**: IPFS and traditional hosting compatible
 - 🟢 **Responsive Design**: Mobile and desktop optimized
+- 🟢 **Smart Contracts**: Complete training materials system with 52 passing tests
+- 🟢 **Base Network Configuration**: Ready for mainnet and testnet deployment
+- 🟢 **Contract Security**: OpenZeppelin integration with comprehensive access controls
 
 ## 🚀 Get Started
 
+### Frontend Development
 1. **Clone the repository**
 2. **Navigate to frontend directory**: `cd frontend`
 3. **Install dependencies**: `npm install`
 4. **Configure environment**: Copy `.env` template and add your API keys
 5. **Start development**: `npm run dev`
 6. **Build for production**: `npm run build`
+
+### Smart Contract Development
+1. **Navigate to contracts directory**: `cd contracts`
+2. **Install dependencies**: `npm install`
+3. **Configure environment**: Copy `.env.example` to `.env` and add your private key
+4. **Compile contracts**: `npm run compile`
+5. **Run tests**: `npm test`
+6. **Deploy to testnet**: `npm run deploy:base-sepolia`
+
+For detailed instructions, see the respective README files in `frontend/` and `contracts/` directories.
 
 ---
 

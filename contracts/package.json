@@ -1,0 +1,33 @@
+{
+  "name": "contracts",
+  "version": "1.0.0",
+  "description": "Training Materials Smart Contracts",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx hardhat test",
+    "compile": "npx hardhat compile",
+    "deploy": "npx hardhat run scripts/deploy.js",
+    "deploy:base-sepolia": "npx hardhat run scripts/deploy.js --network base-sepolia",
+    "deploy:base-mainnet": "npx hardhat run scripts/deploy.js --network base-mainnet",
+    "verify:base-sepolia": "npx hardhat verify --network base-sepolia",
+    "verify:base-mainnet": "npx hardhat verify --network base-mainnet"
+  },
+  "keywords": [
+    "smart-contracts",
+    "hardhat",
+    "training"
+  ],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "chai": "^4.3.7",
+    "dotenv": "^17.2.1",
+    "ethers": "^6.4.0",
+    "hardhat": "^2.22.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.0"
+  }
+}
