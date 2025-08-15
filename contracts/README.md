@@ -1,14 +1,24 @@
-# Training Materials Smart Contracts
+# Cyberdyne DAO Smart Contracts
 
-A Solidity smart contract system for managing training materials with IPFS storage integration.
+A comprehensive Solidity smart contract system for managing training materials and DAO products with IPFS storage integration.
 
 ## Features
 
+### Training Materials Contract
 - **Category Management**: Create and manage training material categories
 - **Training Materials**: Store training materials with metadata and IPFS links
 - **Access Control**: Owner-only functions for creating categories and materials
 - **Query Functions**: Retrieve materials by category, get all categories, etc.
 - **IPFS Integration**: Store images and content on IPFS with hash references
+
+### Cyberdyne Products Contract
+- **Product Management**: Create and manage DAO products
+- **Auto-Generated UUIDs**: Unique identifiers for each product
+- **Price Management**: USDC pricing with 6-decimal precision
+- **IPFS Storage**: Decentralized storage for product content
+- **Access Control**: Creator authorization system with owner controls
+- **Product Status**: Active/inactive status management
+- **Query Functions**: Retrieve products by creator, status, etc.
 
 ## Contract Structure
 
@@ -67,6 +77,49 @@ A Solidity smart contract system for managing training materials with IPFS stora
 - `categoryExists(categoryId)`: Check if category exists
 - `trainingMaterialExists(uuid)`: Check if training material exists (and not deleted)
 
+### CyberdyneProducts Contract
+
+#### Data Structures
+
+**Product**
+- `uuid`: Auto-generated unique identifier for the product
+- `title`: Product title
+- `priceUSDC`: Price in USDC (6 decimal places)
+- `ipfsLocation`: IPFS hash for additional product content
+- `creator`: Address of the wallet that created this product
+- `createdAt`: Timestamp of creation
+- `updatedAt`: Timestamp of last update
+- `isActive`: Product availability status
+- `exists`: Boolean flag for existence check
+
+#### Owner-Only Functions
+
+- `authorizeCreator(creator)`: Authorize an address to create products
+- `deauthorizeCreator(creator)`: Remove authorization from an address (cannot deauthorize owner)
+- `transferContractOwnership(newOwner)`: Transfer contract ownership to a new address
+
+#### Authorized Creator Functions
+
+- `createProduct(title, priceUSDC, ipfsLocation)`: Create a new product (returns auto-generated UUID)
+
+#### Owner or Creator Functions
+
+- `updateProduct(uuid, title, priceUSDC, ipfsLocation)`: Update an existing product
+- `toggleProductStatus(uuid)`: Toggle product active/inactive status
+- `deleteProduct(uuid)`: Delete a product (only owner or original creator can delete)
+
+#### Public View Functions
+
+- `getProduct(uuid)`: Get product by UUID
+- `getProductsByCreator(creator)`: Get all products created by a specific address
+- `getAllProducts()`: Get all products (including inactive ones)
+- `getActiveProducts()`: Get only active products
+- `productExists(uuid)`: Check if product exists
+- `getCreatorProductCount(creator)`: Get product count for a specific creator
+- `getActiveProductCount()`: Get count of active products
+- `getAuthorizedCreators()`: Get list of all authorized creator addresses
+- `isAuthorizedCreator(creator)`: Check if an address is authorized to create products
+
 ## Setup
 
 1. Install dependencies:
@@ -84,15 +137,21 @@ npm run compile
 npm test
 ```
 
-4. Deploy to local network:
+4. Deploy contracts to local network:
 ```bash
 npx hardhat node
+
+# Deploy TrainingMaterials contract
 npm run deploy
+
+# Deploy CyberdyneProducts contract  
+npx hardhat run scripts/deploy-products.js --network localhost
 ```
 
 ## Testing
 
-The contract includes comprehensive tests covering:
+### TrainingMaterials Contract Tests
+The TrainingMaterials contract includes comprehensive tests covering:
 - Contract deployment and initialization
 - Creator authorization and deauthorization
 - Contract ownership transfer functionality
@@ -106,6 +165,20 @@ The contract includes comprehensive tests covering:
 - Query functions (by category, by creator, etc.)
 - Data integrity after deletions
 - Integration scenarios with multiple creators
+
+### CyberdyneProducts Contract Tests
+The CyberdyneProducts contract includes comprehensive tests covering:
+- Contract deployment and initialization
+- Creator authorization and deauthorization
+- Product creation functionality
+- Product management (update, toggle status, delete)
+- Access control for product operations
+- Product querying by creator and status
+- Price validation and storage (USDC with 6 decimals)
+- IPFS hash validation and storage
+- UUID generation and uniqueness
+- Data integrity after deletions
+- Edge cases and error handling
 
 Run tests with:
 ```bash
@@ -138,12 +211,20 @@ BASESCAN_API_KEY=your_basescan_api_key_from_basescan.org
 
 **Deploy to Base Sepolia Testnet (Recommended for testing):**
 ```bash
+# Deploy TrainingMaterials contract
 npm run deploy:base-sepolia
+
+# Deploy CyberdyneProducts contract
+npx hardhat run scripts/deploy-products.js --network base-sepolia
 ```
 
 **Deploy to Base Mainnet:**
 ```bash
+# Deploy TrainingMaterials contract
 npm run deploy:base-mainnet
+
+# Deploy CyberdyneProducts contract
+npx hardhat run scripts/deploy-products.js --network base-mainnet
 ```
 
 **Verify contracts on BaseScan:**
@@ -161,17 +242,19 @@ npx hardhat verify --network base-mainnet <CONTRACT_ADDRESS>
 
 Deployment artifacts are saved to `deployments/` directory.
 
-## Usage Example
+## Usage Examples
+
+### TrainingMaterials Contract
 
 ```javascript
 // Only owner can create categories
-await contract.createCategory("Blockchain Basics", "Fundamental blockchain concepts");
+await trainingContract.createCategory("Blockchain Basics", "Fundamental blockchain concepts");
 
 // Owner can authorize additional creators
-await contract.authorizeCreator("0x1234..."); // Address of authorized creator
+await trainingContract.authorizeCreator("0x1234..."); // Address of authorized creator
 
 // Both owner and authorized creators can create materials
-const tx = await contract.createTrainingMaterial(
+const tx = await trainingContract.createTrainingMaterial(
   "Intro to Smart Contracts", 
   "Learn smart contract development",
   1, // category ID
@@ -189,19 +272,56 @@ const creator = event.args.creator;
 console.log("Created material with UUID:", generatedUuid, "by:", creator);
 
 // Query materials by category
-const materials = await contract.getTrainingMaterialsByCategory(1);
+const materials = await trainingContract.getTrainingMaterialsByCategory(1);
 
 // Query materials by creator
-const creatorMaterials = await contract.getTrainingMaterialsByCreator("0x1234...");
-
-// Check authorization status
-const isAuthorized = await contract.isAuthorizedCreator("0x1234...");
+const creatorMaterials = await trainingContract.getTrainingMaterialsByCreator("0x1234...");
 
 // Delete a training material (only owner or creator can delete)
-await contract.deleteTrainingMaterial(generatedUuid);
+await trainingContract.deleteTrainingMaterial(generatedUuid);
+```
+
+### CyberdyneProducts Contract
+
+```javascript
+// Owner can authorize additional creators
+await productsContract.authorizeCreator("0x1234..."); // Address of authorized creator
+
+// Both owner and authorized creators can create products
+const productTx = await productsContract.createProduct(
+  "Cyberdyne Product Pro", 
+  ethers.parseUnits("99.99", 6), // 99.99 USDC (6 decimals)
+  "QmProductContentHash..." // IPFS content hash
+);
+
+// Get the generated UUID and creator from the event
+const productReceipt = await productTx.wait();
+const productEvent = productReceipt.logs.find(log => log.eventName === "ProductCreated");
+const productUuid = productEvent.args.uuid;
+console.log("Created product with UUID:", productUuid);
+
+// Update product (only owner or creator)
+await productsContract.updateProduct(
+  productUuid,
+  "Cyberdyne Product Pro v2",
+  ethers.parseUnits("149.99", 6),
+  "QmUpdatedContentHash..."
+);
+
+// Toggle product status
+await productsContract.toggleProductStatus(productUuid);
+
+// Query products by creator
+const creatorProducts = await productsContract.getProductsByCreator("0x1234...");
+
+// Get all active products
+const activeProducts = await productsContract.getActiveProducts();
+
+// Delete a product (only owner or creator can delete)
+await productsContract.deleteProduct(productUuid);
 
 // Transfer contract ownership to a new address
-await contract.transferContractOwnership("0x5678..."); // New owner address
+await productsContract.transferContractOwnership("0x5678..."); // New owner address
 ```
 
 ## Security Considerations
