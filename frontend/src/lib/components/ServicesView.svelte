@@ -217,27 +217,29 @@
 		</section>
 
 		<!-- Why Cyberdyne -->
-		<section class="bg-gradient-to-r from-cyan-900 to-blue-900 text-white rounded border border-cyan-700 p-4">
+		<section class="bg-gradient-to-r from-cyan-50 to-blue-50 rounded border border-cyan-200 p-4">
 			<div class="flex items-center gap-2 mb-3">
-				<span class="text-xl">⚡</span>
-				<h2 class="text-lg font-bold font-mono">Why Cyberdyne</h2>
+				<svg class="w-5 h-5" fill="#eab308" viewBox="0 0 20 20">
+					<path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd" />
+				</svg>
+				<h2 class="text-lg font-bold font-mono text-gray-800">Why Cyberdyne</h2>
 			</div>
 			<ul class="space-y-2 text-sm">
 				<li class="flex items-start gap-2">
-					<span class="text-cyan-400">•</span>
-					<span><strong>Yield-powered:</strong> "Usage ⇒ Yield ⇒ Self-Sustaining Infrastructure."</span>
+					<span class="text-cyan-600">•</span>
+					<span class="text-gray-700"><strong>Yield-powered:</strong> "Usage ⇒ Yield ⇒ Self-Sustaining Infrastructure."</span>
 				</li>
 				<li class="flex items-start gap-2">
-					<span class="text-cyan-400">•</span>
-					<span><strong>All-in-one:</strong> Firebase + OpenAI + Heroku—but decentralized, community-owned, and yield-paying.</span>
+					<span class="text-cyan-600">•</span>
+					<span class="text-gray-700"><strong>All-in-one:</strong> Firebase + OpenAI + Heroku—but decentralized, community-owned, and yield-paying.</span>
 				</li>
 				<li class="flex items-start gap-2">
-					<span class="text-cyan-400">•</span>
-					<span><strong>Open & composable:</strong> choose hosted LLMs (OpenRouter) or your own (Ollama/vLLM).</span>
+					<span class="text-cyan-600">•</span>
+					<span class="text-gray-700"><strong>Open & composable:</strong> choose hosted LLMs (OpenRouter) or your own (Ollama/vLLM).</span>
 				</li>
 				<li class="flex items-start gap-2">
-					<span class="text-cyan-400">•</span>
-					<span><strong>DAO-native:</strong> EVM compatible and governance-ready; CBY max supply fixed at 25,000,000.</span>
+					<span class="text-cyan-600">•</span>
+					<span class="text-gray-700"><strong>DAO-native:</strong> EVM compatible and governance-ready; CBY max supply fixed at 25,000,000.</span>
 				</li>
 			</ul>
 		</section>
