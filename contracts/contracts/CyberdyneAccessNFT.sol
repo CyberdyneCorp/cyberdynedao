@@ -13,6 +13,9 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable {
         bool learningMaterials;    // Access to training materials
         bool frontendServers;      // Access to frontend development servers
         bool backendServers;       // Access to backend development servers
+        bool blogCreator;          // Access to create and manage blog content
+        bool admin;                // Administrative access to DAO systems
+        bool canSellMarketplace;   // Permission to sell items on the marketplace
         uint256 issuedAt;          // Timestamp when NFT was minted
         uint256 lastUpdated;       // Timestamp when permissions were last updated
         string metadataURI;        // Custom metadata URI for this NFT
@@ -32,13 +35,19 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable {
         address indexed to,
         bool learningMaterials,
         bool frontendServers,
-        bool backendServers
+        bool backendServers,
+        bool blogCreator,
+        bool admin,
+        bool canSellMarketplace
     );
     event PermissionsUpdated(
         uint256 indexed tokenId,
         bool learningMaterials,
         bool frontendServers,
         bool backendServers,
+        bool blogCreator,
+        bool admin,
+        bool canSellMarketplace,
         address indexed updatedBy
     );
     event MetadataUpdated(
@@ -117,6 +126,9 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable {
         bool learningMaterials,
         bool frontendServers,
         bool backendServers,
+        bool blogCreator,
+        bool admin,
+        bool canSellMarketplace,
         string memory metadataURI
     ) external onlyOwner returns (uint256) {
         require(to != address(0), "Cannot mint to zero address");
@@ -130,12 +142,15 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable {
             learningMaterials: learningMaterials,
             frontendServers: frontendServers,
             backendServers: backendServers,
+            blogCreator: blogCreator,
+            admin: admin,
+            canSellMarketplace: canSellMarketplace,
             issuedAt: block.timestamp,
             lastUpdated: block.timestamp,
             metadataURI: metadataURI
         });
         
-        emit NFTMinted(tokenId, to, learningMaterials, frontendServers, backendServers);
+        emit NFTMinted(tokenId, to, learningMaterials, frontendServers, backendServers, blogCreator, admin, canSellMarketplace);
         
         return tokenId;
     }
@@ -145,6 +160,9 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable {
         bool[] memory learningMaterials,
         bool[] memory frontendServers,
         bool[] memory backendServers,
+        bool[] memory blogCreator,
+        bool[] memory admin,
+        bool[] memory canSellMarketplace,
         string[] memory metadataURIs
     ) external onlyOwner returns (uint256[] memory) {
         require(recipients.length > 0, "No recipients provided");
@@ -152,6 +170,9 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable {
             recipients.length == learningMaterials.length &&
             recipients.length == frontendServers.length &&
             recipients.length == backendServers.length &&
+            recipients.length == blogCreator.length &&
+            recipients.length == admin.length &&
+            recipients.length == canSellMarketplace.length &&
             recipients.length == metadataURIs.length,
             "Array lengths must match"
         );
@@ -159,13 +180,27 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable {
         uint256[] memory tokenIds = new uint256[](recipients.length);
         
         for (uint256 i = 0; i < recipients.length; i++) {
-            tokenIds[i] = mint(
-                recipients[i],
-                learningMaterials[i],
-                frontendServers[i],
-                backendServers[i],
-                metadataURIs[i]
-            );
+            require(recipients[i] != address(0), "Cannot mint to zero address");
+            
+            uint256 tokenId = _nextTokenId;
+            _nextTokenId++;
+            
+            _safeMint(recipients[i], tokenId);
+            
+            tokenPermissions[tokenId] = AccessPermissions({
+                learningMaterials: learningMaterials[i],
+                frontendServers: frontendServers[i],
+                backendServers: backendServers[i],
+                blogCreator: blogCreator[i],
+                admin: admin[i],
+                canSellMarketplace: canSellMarketplace[i],
+                issuedAt: block.timestamp,
+                lastUpdated: block.timestamp,
+                metadataURI: metadataURIs[i]
+            });
+            
+            emit NFTMinted(tokenId, recipients[i], learningMaterials[i], frontendServers[i], backendServers[i], blogCreator[i], admin[i], canSellMarketplace[i]);
+            tokenIds[i] = tokenId;
         }
         
         return tokenIds;
@@ -176,16 +211,22 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable {
         uint256 tokenId,
         bool learningMaterials,
         bool frontendServers,
-        bool backendServers
+        bool backendServers,
+        bool blogCreator,
+        bool admin,
+        bool canSellMarketplace
     ) external onlyAuthorizedManager tokenExists(tokenId) {
         AccessPermissions storage permissions = tokenPermissions[tokenId];
         
         permissions.learningMaterials = learningMaterials;
         permissions.frontendServers = frontendServers;
         permissions.backendServers = backendServers;
+        permissions.blogCreator = blogCreator;
+        permissions.admin = admin;
+        permissions.canSellMarketplace = canSellMarketplace;
         permissions.lastUpdated = block.timestamp;
         
-        emit PermissionsUpdated(tokenId, learningMaterials, frontendServers, backendServers, msg.sender);
+        emit PermissionsUpdated(tokenId, learningMaterials, frontendServers, backendServers, blogCreator, admin, canSellMarketplace, msg.sender);
     }
 
     function updateMetadata(
@@ -202,23 +243,36 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable {
         uint256[] memory tokenIds,
         bool[] memory learningMaterials,
         bool[] memory frontendServers,
-        bool[] memory backendServers
+        bool[] memory backendServers,
+        bool[] memory blogCreator,
+        bool[] memory admin,
+        bool[] memory canSellMarketplace
     ) external onlyAuthorizedManager {
         require(tokenIds.length > 0, "No token IDs provided");
         require(
             tokenIds.length == learningMaterials.length &&
             tokenIds.length == frontendServers.length &&
-            tokenIds.length == backendServers.length,
+            tokenIds.length == backendServers.length &&
+            tokenIds.length == blogCreator.length &&
+            tokenIds.length == admin.length &&
+            tokenIds.length == canSellMarketplace.length,
             "Array lengths must match"
         );
         
         for (uint256 i = 0; i < tokenIds.length; i++) {
-            updatePermissions(
-                tokenIds[i],
-                learningMaterials[i],
-                frontendServers[i],
-                backendServers[i]
-            );
+            require(_ownerOf(tokenIds[i]) != address(0), "Token does not exist");
+            
+            AccessPermissions storage permissions = tokenPermissions[tokenIds[i]];
+            
+            permissions.learningMaterials = learningMaterials[i];
+            permissions.frontendServers = frontendServers[i];
+            permissions.backendServers = backendServers[i];
+            permissions.blogCreator = blogCreator[i];
+            permissions.admin = admin[i];
+            permissions.canSellMarketplace = canSellMarketplace[i];
+            permissions.lastUpdated = block.timestamp;
+            
+            emit PermissionsUpdated(tokenIds[i], learningMaterials[i], frontendServers[i], backendServers[i], blogCreator[i], admin[i], canSellMarketplace[i], msg.sender);
         }
     }
 
@@ -235,6 +289,18 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable {
         return tokenPermissions[tokenId].backendServers;
     }
 
+    function hasBlogCreatorAccess(uint256 tokenId) external view tokenExists(tokenId) returns (bool) {
+        return tokenPermissions[tokenId].blogCreator;
+    }
+
+    function hasAdminAccess(uint256 tokenId) external view tokenExists(tokenId) returns (bool) {
+        return tokenPermissions[tokenId].admin;
+    }
+
+    function hasMarketplaceSellAccess(uint256 tokenId) external view tokenExists(tokenId) returns (bool) {
+        return tokenPermissions[tokenId].canSellMarketplace;
+    }
+
     function hasAccess(uint256 tokenId, string memory accessType) external view tokenExists(tokenId) returns (bool) {
         AccessPermissions memory permissions = tokenPermissions[tokenId];
         
@@ -244,6 +310,12 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable {
             return permissions.frontendServers;
         } else if (keccak256(abi.encodePacked(accessType)) == keccak256(abi.encodePacked("backend"))) {
             return permissions.backendServers;
+        } else if (keccak256(abi.encodePacked(accessType)) == keccak256(abi.encodePacked("blogCreator"))) {
+            return permissions.blogCreator;
+        } else if (keccak256(abi.encodePacked(accessType)) == keccak256(abi.encodePacked("admin"))) {
+            return permissions.admin;
+        } else if (keccak256(abi.encodePacked(accessType)) == keccak256(abi.encodePacked("marketplace"))) {
+            return permissions.canSellMarketplace;
         }
         
         return false;
@@ -277,6 +349,39 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable {
         for (uint256 i = 0; i < balance; i++) {
             uint256 tokenId = tokenOfOwnerByIndex(user, i);
             if (tokenPermissions[tokenId].backendServers) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function addressHasBlogCreatorAccess(address user) external view returns (bool) {
+        uint256 balance = balanceOf(user);
+        for (uint256 i = 0; i < balance; i++) {
+            uint256 tokenId = tokenOfOwnerByIndex(user, i);
+            if (tokenPermissions[tokenId].blogCreator) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function addressHasAdminAccess(address user) external view returns (bool) {
+        uint256 balance = balanceOf(user);
+        for (uint256 i = 0; i < balance; i++) {
+            uint256 tokenId = tokenOfOwnerByIndex(user, i);
+            if (tokenPermissions[tokenId].admin) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function addressHasMarketplaceSellAccess(address user) external view returns (bool) {
+        uint256 balance = balanceOf(user);
+        for (uint256 i = 0; i < balance; i++) {
+            uint256 tokenId = tokenOfOwnerByIndex(user, i);
+            if (tokenPermissions[tokenId].canSellMarketplace) {
                 return true;
             }
         }

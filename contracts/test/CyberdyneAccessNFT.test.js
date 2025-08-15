@@ -100,6 +100,9 @@ describe("CyberdyneAccessNFT", function () {
         true,  // learning access
         false, // frontend access
         true,  // backend access
+        false, // blog creator access
+        false, // admin access
+        false, // marketplace sell access
         "custom-metadata-uri"
       );
 
@@ -111,28 +114,31 @@ describe("CyberdyneAccessNFT", function () {
       expect(event.args.learningMaterials).to.be.true;
       expect(event.args.frontendServers).to.be.false;
       expect(event.args.backendServers).to.be.true;
+      expect(event.args.blogCreator).to.be.false;
+      expect(event.args.admin).to.be.false;
+      expect(event.args.canSellMarketplace).to.be.false;
     });
 
     it("Should not allow non-owner to mint NFTs", async function () {
       await expect(
         cyberdyneAccessNFT.connect(manager1).mint(
           user1.address,
-          true, false, true,
+          true, false, true, false, false, false,
           "metadata-uri"
         )
       ).to.be.revertedWithCustomError(cyberdyneAccessNFT, "OwnableUnauthorizedAccount");
     });
 
     it("Should increment token ID and total supply", async function () {
-      await cyberdyneAccessNFT.mint(user1.address, true, false, true, "uri1");
-      await cyberdyneAccessNFT.mint(user2.address, false, true, false, "uri2");
+      await cyberdyneAccessNFT.mint(user1.address, true, false, true, false, false, false, "uri1");
+      await cyberdyneAccessNFT.mint(user2.address, false, true, false, false, false, false, "uri2");
 
       expect(await cyberdyneAccessNFT.totalSupply()).to.equal(2);
       expect(await cyberdyneAccessNFT.getNextTokenId()).to.equal(3);
     });
 
     it("Should set correct permissions for minted NFT", async function () {
-      await cyberdyneAccessNFT.mint(user1.address, true, false, true, "test-uri");
+      await cyberdyneAccessNFT.mint(user1.address, true, false, true, false, false, false, "test-uri");
       
       const permissions = await cyberdyneAccessNFT.getTokenPermissions(1);
       expect(permissions.learningMaterials).to.be.true;
@@ -146,16 +152,20 @@ describe("CyberdyneAccessNFT", function () {
       const learning = [true, false];
       const frontend = [false, true];
       const backend = [true, false];
+      const blogCreator = [false, false];
+      const admin = [false, false];
+      const canSellMarketplace = [false, false];
       const uris = ["uri1", "uri2"];
 
-      const tokenIds = await cyberdyneAccessNFT.batchMint(
-        recipients, learning, frontend, backend, uris
+      const tx = await cyberdyneAccessNFT.batchMint(
+        recipients, learning, frontend, backend, blogCreator, admin, canSellMarketplace, uris
       );
-
-      expect(tokenIds.length).to.equal(2);
+      const receipt = await tx.wait();
+      
+      // Get the actual return value by finding the transaction result
       expect(await cyberdyneAccessNFT.totalSupply()).to.equal(2);
-      expect(await cyberdyneAccessNFT.ownerOf(tokenIds[0])).to.equal(user1.address);
-      expect(await cyberdyneAccessNFT.ownerOf(tokenIds[1])).to.equal(user2.address);
+      expect(await cyberdyneAccessNFT.ownerOf(1)).to.equal(user1.address);
+      expect(await cyberdyneAccessNFT.ownerOf(2)).to.equal(user2.address);
     });
   });
 
@@ -165,7 +175,7 @@ describe("CyberdyneAccessNFT", function () {
     beforeEach(async function () {
       const tx = await cyberdyneAccessNFT.mint(
         user1.address,
-        true, false, true,
+        true, false, true, false, false, false,
         "initial-uri"
       );
       const receipt = await tx.wait();
@@ -181,32 +191,41 @@ describe("CyberdyneAccessNFT", function () {
         tokenId,
         false, // learning
         true,  // frontend
-        false  // backend
+        false, // backend
+        true,  // blog creator
+        false, // admin
+        true   // marketplace sell
       );
 
       const permissions = await cyberdyneAccessNFT.getTokenPermissions(tokenId);
       expect(permissions.learningMaterials).to.be.false;
       expect(permissions.frontendServers).to.be.true;
       expect(permissions.backendServers).to.be.false;
+      expect(permissions.blogCreator).to.be.true;
+      expect(permissions.admin).to.be.false;
+      expect(permissions.canSellMarketplace).to.be.true;
     });
 
     it("Should allow owner to update permissions", async function () {
       await cyberdyneAccessNFT.connect(owner).updatePermissions(
         tokenId,
-        false, true, false
+        false, true, false, false, true, false
       );
 
       const permissions = await cyberdyneAccessNFT.getTokenPermissions(tokenId);
       expect(permissions.learningMaterials).to.be.false;
       expect(permissions.frontendServers).to.be.true;
       expect(permissions.backendServers).to.be.false;
+      expect(permissions.blogCreator).to.be.false;
+      expect(permissions.admin).to.be.true;
+      expect(permissions.canSellMarketplace).to.be.false;
     });
 
     it("Should not allow unauthorized users to update permissions", async function () {
       await expect(
         cyberdyneAccessNFT.connect(unauthorized).updatePermissions(
           tokenId,
-          false, true, false
+          false, true, false, false, false, false
         )
       ).to.be.revertedWith("Not authorized to manage permissions");
     });
@@ -215,10 +234,10 @@ describe("CyberdyneAccessNFT", function () {
       await expect(
         cyberdyneAccessNFT.connect(manager1).updatePermissions(
           tokenId,
-          false, true, false
+          false, true, false, true, false, true
         )
       ).to.emit(cyberdyneAccessNFT, "PermissionsUpdated")
-       .withArgs(tokenId, false, true, false, manager1.address);
+       .withArgs(tokenId, false, true, false, true, false, true, manager1.address);
     });
 
     it("Should allow updating metadata", async function () {
@@ -231,15 +250,18 @@ describe("CyberdyneAccessNFT", function () {
 
     it("Should support batch permission updates", async function () {
       // Mint another NFT
-      await cyberdyneAccessNFT.mint(user2.address, false, false, false, "uri2");
+      await cyberdyneAccessNFT.mint(user2.address, false, false, false, false, false, false, "uri2");
       
       const tokenIds = [1, 2];
       const learning = [true, false];
       const frontend = [false, true];
       const backend = [true, false];
+      const blogCreator = [false, true];
+      const admin = [true, false];
+      const canSellMarketplace = [false, true];
 
       await cyberdyneAccessNFT.connect(manager1).batchUpdatePermissions(
-        tokenIds, learning, frontend, backend
+        tokenIds, learning, frontend, backend, blogCreator, admin, canSellMarketplace
       );
 
       const perms1 = await cyberdyneAccessNFT.getTokenPermissions(1);
@@ -248,35 +270,60 @@ describe("CyberdyneAccessNFT", function () {
       expect(perms1.learningMaterials).to.be.true;
       expect(perms1.frontendServers).to.be.false;
       expect(perms1.backendServers).to.be.true;
+      expect(perms1.blogCreator).to.be.false;
+      expect(perms1.admin).to.be.true;
+      expect(perms1.canSellMarketplace).to.be.false;
       
       expect(perms2.learningMaterials).to.be.false;
       expect(perms2.frontendServers).to.be.true;
       expect(perms2.backendServers).to.be.false;
+      expect(perms2.blogCreator).to.be.true;
+      expect(perms2.admin).to.be.false;
+      expect(perms2.canSellMarketplace).to.be.true;
     });
   });
 
   describe("Access Checking", function () {
     beforeEach(async function () {
       // Mint NFTs with different permissions
-      await cyberdyneAccessNFT.mint(user1.address, true, false, true, "uri1");   // Token 1
-      await cyberdyneAccessNFT.mint(user1.address, false, true, false, "uri2");  // Token 2
-      await cyberdyneAccessNFT.mint(user2.address, false, false, true, "uri3");  // Token 3
+      await cyberdyneAccessNFT.mint(user1.address, true, false, true, false, false, false, "uri1");   // Token 1
+      await cyberdyneAccessNFT.mint(user1.address, false, true, false, true, false, true, "uri2");  // Token 2
+      await cyberdyneAccessNFT.mint(user2.address, false, false, true, false, true, false, "uri3");  // Token 3
     });
 
     it("Should check individual token permissions correctly", async function () {
       expect(await cyberdyneAccessNFT.hasLearningAccess(1)).to.be.true;
       expect(await cyberdyneAccessNFT.hasFrontendAccess(1)).to.be.false;
       expect(await cyberdyneAccessNFT.hasBackendAccess(1)).to.be.true;
+      expect(await cyberdyneAccessNFT.hasBlogCreatorAccess(1)).to.be.false;
+      expect(await cyberdyneAccessNFT.hasAdminAccess(1)).to.be.false;
+      expect(await cyberdyneAccessNFT.hasMarketplaceSellAccess(1)).to.be.false;
 
       expect(await cyberdyneAccessNFT.hasLearningAccess(2)).to.be.false;
       expect(await cyberdyneAccessNFT.hasFrontendAccess(2)).to.be.true;
       expect(await cyberdyneAccessNFT.hasBackendAccess(2)).to.be.false;
+      expect(await cyberdyneAccessNFT.hasBlogCreatorAccess(2)).to.be.true;
+      expect(await cyberdyneAccessNFT.hasAdminAccess(2)).to.be.false;
+      expect(await cyberdyneAccessNFT.hasMarketplaceSellAccess(2)).to.be.true;
+
+      expect(await cyberdyneAccessNFT.hasLearningAccess(3)).to.be.false;
+      expect(await cyberdyneAccessNFT.hasFrontendAccess(3)).to.be.false;
+      expect(await cyberdyneAccessNFT.hasBackendAccess(3)).to.be.true;
+      expect(await cyberdyneAccessNFT.hasBlogCreatorAccess(3)).to.be.false;
+      expect(await cyberdyneAccessNFT.hasAdminAccess(3)).to.be.true;
+      expect(await cyberdyneAccessNFT.hasMarketplaceSellAccess(3)).to.be.false;
     });
 
     it("Should check access by string type", async function () {
       expect(await cyberdyneAccessNFT.hasAccess(1, "learning")).to.be.true;
       expect(await cyberdyneAccessNFT.hasAccess(1, "frontend")).to.be.false;
       expect(await cyberdyneAccessNFT.hasAccess(1, "backend")).to.be.true;
+      expect(await cyberdyneAccessNFT.hasAccess(1, "blogCreator")).to.be.false;
+      expect(await cyberdyneAccessNFT.hasAccess(1, "admin")).to.be.false;
+      expect(await cyberdyneAccessNFT.hasAccess(1, "marketplace")).to.be.false;
+      expect(await cyberdyneAccessNFT.hasAccess(2, "blogCreator")).to.be.true;
+      expect(await cyberdyneAccessNFT.hasAccess(2, "marketplace")).to.be.true;
+      expect(await cyberdyneAccessNFT.hasAccess(3, "admin")).to.be.true;
       expect(await cyberdyneAccessNFT.hasAccess(1, "invalid")).to.be.false;
     });
 
@@ -285,16 +332,25 @@ describe("CyberdyneAccessNFT", function () {
       expect(await cyberdyneAccessNFT.addressHasLearningAccess(user1.address)).to.be.true;  // Token 1
       expect(await cyberdyneAccessNFT.addressHasFrontendAccess(user1.address)).to.be.true;  // Token 2
       expect(await cyberdyneAccessNFT.addressHasBackendAccess(user1.address)).to.be.true;   // Token 1
+      expect(await cyberdyneAccessNFT.addressHasBlogCreatorAccess(user1.address)).to.be.true; // Token 2
+      expect(await cyberdyneAccessNFT.addressHasAdminAccess(user1.address)).to.be.false;
+      expect(await cyberdyneAccessNFT.addressHasMarketplaceSellAccess(user1.address)).to.be.true; // Token 2
 
-      // user2 has token 3 with only backend access
+      // user2 has token 3 with backend and admin access
       expect(await cyberdyneAccessNFT.addressHasLearningAccess(user2.address)).to.be.false;
       expect(await cyberdyneAccessNFT.addressHasFrontendAccess(user2.address)).to.be.false;
       expect(await cyberdyneAccessNFT.addressHasBackendAccess(user2.address)).to.be.true;   // Token 3
+      expect(await cyberdyneAccessNFT.addressHasBlogCreatorAccess(user2.address)).to.be.false;
+      expect(await cyberdyneAccessNFT.addressHasAdminAccess(user2.address)).to.be.true;     // Token 3
+      expect(await cyberdyneAccessNFT.addressHasMarketplaceSellAccess(user2.address)).to.be.false;
 
       // unauthorized has no tokens
       expect(await cyberdyneAccessNFT.addressHasLearningAccess(unauthorized.address)).to.be.false;
       expect(await cyberdyneAccessNFT.addressHasFrontendAccess(unauthorized.address)).to.be.false;
       expect(await cyberdyneAccessNFT.addressHasBackendAccess(unauthorized.address)).to.be.false;
+      expect(await cyberdyneAccessNFT.addressHasBlogCreatorAccess(unauthorized.address)).to.be.false;
+      expect(await cyberdyneAccessNFT.addressHasAdminAccess(unauthorized.address)).to.be.false;
+      expect(await cyberdyneAccessNFT.addressHasMarketplaceSellAccess(unauthorized.address)).to.be.false;
     });
 
     it("Should revert for non-existent tokens", async function () {
@@ -306,9 +362,9 @@ describe("CyberdyneAccessNFT", function () {
 
   describe("User Token Queries", function () {
     beforeEach(async function () {
-      await cyberdyneAccessNFT.mint(user1.address, true, false, true, "uri1");   // Token 1
-      await cyberdyneAccessNFT.mint(user1.address, false, true, false, "uri2");  // Token 2
-      await cyberdyneAccessNFT.mint(user2.address, true, true, true, "uri3");    // Token 3
+      await cyberdyneAccessNFT.mint(user1.address, true, false, true, false, false, false, "uri1");   // Token 1
+      await cyberdyneAccessNFT.mint(user1.address, false, true, false, true, false, true, "uri2");  // Token 2
+      await cyberdyneAccessNFT.mint(user2.address, true, true, true, false, true, false, "uri3");    // Token 3
     });
 
     it("Should return user tokens correctly", async function () {
@@ -354,7 +410,7 @@ describe("CyberdyneAccessNFT", function () {
     beforeEach(async function () {
       const tx = await cyberdyneAccessNFT.mint(
         user1.address,
-        true, false, true,
+        true, false, true, false, false, false,
         "custom-metadata-uri"
       );
       const receipt = await tx.wait();
@@ -368,7 +424,7 @@ describe("CyberdyneAccessNFT", function () {
     });
 
     it("Should return base URI when no custom URI is set", async function () {
-      await cyberdyneAccessNFT.mint(user2.address, false, true, false, "");
+      await cyberdyneAccessNFT.mint(user2.address, false, true, false, false, false, false, "");
       const tokenURI = await cyberdyneAccessNFT.tokenURI(2);
       expect(tokenURI).to.equal(BASE_URI + "2");
     });
@@ -377,7 +433,7 @@ describe("CyberdyneAccessNFT", function () {
       const newBaseURI = "https://new-api.cyberdyne.xyz/metadata/";
       await cyberdyneAccessNFT.setBaseURI(newBaseURI);
       
-      await cyberdyneAccessNFT.mint(user2.address, false, true, false, "");
+      await cyberdyneAccessNFT.mint(user2.address, false, true, false, false, false, false, "");
       const tokenURI = await cyberdyneAccessNFT.tokenURI(2);
       expect(tokenURI).to.equal(newBaseURI + "2");
     });
@@ -418,15 +474,15 @@ describe("CyberdyneAccessNFT", function () {
     it("Should check token existence correctly", async function () {
       expect(await cyberdyneAccessNFT.exists(1)).to.be.false;
       
-      await cyberdyneAccessNFT.mint(user1.address, true, false, true, "uri");
+      await cyberdyneAccessNFT.mint(user1.address, true, false, true, false, false, false, "uri");
       
       expect(await cyberdyneAccessNFT.exists(1)).to.be.true;
       expect(await cyberdyneAccessNFT.exists(2)).to.be.false;
     });
 
     it("Should handle ERC721Enumerable functions correctly", async function () {
-      await cyberdyneAccessNFT.mint(user1.address, true, false, true, "uri1");
-      await cyberdyneAccessNFT.mint(user1.address, false, true, false, "uri2");
+      await cyberdyneAccessNFT.mint(user1.address, true, false, true, false, false, false, "uri1");
+      await cyberdyneAccessNFT.mint(user1.address, false, true, false, false, false, false, "uri2");
       
       expect(await cyberdyneAccessNFT.balanceOf(user1.address)).to.equal(2);
       expect(await cyberdyneAccessNFT.tokenOfOwnerByIndex(user1.address, 0)).to.equal(1);
@@ -445,7 +501,7 @@ describe("CyberdyneAccessNFT", function () {
     });
 
     it("Should handle permission updates after token transfers", async function () {
-      await cyberdyneAccessNFT.mint(user1.address, true, false, true, "uri");
+      await cyberdyneAccessNFT.mint(user1.address, true, false, true, false, false, false, "uri");
       await cyberdyneAccessNFT.authorizeManager(manager1.address);
       
       // Transfer token from user1 to user2
@@ -456,7 +512,7 @@ describe("CyberdyneAccessNFT", function () {
       expect(await cyberdyneAccessNFT.addressHasLearningAccess(user2.address)).to.be.true;
       
       // Manager should still be able to update permissions
-      await cyberdyneAccessNFT.connect(manager1).updatePermissions(1, false, true, false);
+      await cyberdyneAccessNFT.connect(manager1).updatePermissions(1, false, true, false, false, false, false);
       
       const permissions = await cyberdyneAccessNFT.getTokenPermissions(1);
       expect(permissions.learningMaterials).to.be.false;

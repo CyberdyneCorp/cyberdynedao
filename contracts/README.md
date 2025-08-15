@@ -20,6 +20,16 @@ A comprehensive Solidity smart contract system for managing training materials a
 - **Product Status**: Active/inactive status management
 - **Query Functions**: Retrieve products by creator, status, etc.
 
+### Cyberdyne Access NFT Contract
+- **ERC721 NFT**: Standard NFT with enumerable extensions for DAO access control
+- **Six Access Types**: Learning materials, frontend servers, backend servers, blog creator, admin, marketplace selling
+- **Updatable Permissions**: Change access rights after minting (managers only)
+- **Manager System**: Authorized addresses can update NFT permissions
+- **Batch Operations**: Mint and update multiple NFTs efficiently
+- **Custom Metadata**: Individual metadata URIs per token with update capability
+- **Address-Based Checking**: Check if user owns tokens with specific access
+- **🛡️ Centralized Control**: NFT holders cannot modify their own permissions - only authorized managers can update access rights (this is intentional for maintaining DAO control over access)
+
 ## Contract Structure
 
 ### TrainingMaterials Contract
@@ -120,6 +130,59 @@ A comprehensive Solidity smart contract system for managing training materials a
 - `getAuthorizedCreators()`: Get list of all authorized creator addresses
 - `isAuthorizedCreator(creator)`: Check if an address is authorized to create products
 
+### CyberdyneAccessNFT Contract
+
+#### Data Structures
+
+**AccessPermissions**
+- `learningMaterials`: Boolean access to training materials
+- `frontendServers`: Boolean access to frontend development servers
+- `backendServers`: Boolean access to backend development servers
+- `blogCreator`: Boolean access to create and manage blog content
+- `admin`: Boolean administrative access to DAO systems
+- `canSellMarketplace`: Boolean permission to sell items on the marketplace
+- `issuedAt`: Timestamp when NFT was minted
+- `lastUpdated`: Timestamp when permissions were last updated
+- `metadataURI`: Custom metadata URI for this specific NFT
+
+#### Owner-Only Functions
+
+- `mint(to, learningMaterials, frontendServers, backendServers, blogCreator, admin, canSellMarketplace, metadataURI)`: Mint new access NFT to address
+- `batchMint(recipients[], learningMaterials[], frontendServers[], backendServers[], blogCreator[], admin[], canSellMarketplace[], metadataURIs[])`: Mint multiple NFTs in one transaction
+- `authorizeManager(manager)`: Authorize an address to manage NFT permissions
+- `deauthorizeManager(manager)`: Remove authorization from an address (cannot deauthorize owner)
+- `setBaseURI(baseURI)`: Update the base URI for token metadata
+- `transferContractOwnership(newOwner)`: Transfer contract ownership to a new address
+
+#### Manager Functions (Authorized Managers Only)
+
+- `updatePermissions(tokenId, learningMaterials, frontendServers, backendServers, blogCreator, admin, canSellMarketplace)`: Update access permissions for a specific NFT
+- `updateMetadata(tokenId, metadataURI)`: Update custom metadata URI for a specific NFT
+- `batchUpdatePermissions(tokenIds[], learningMaterials[], frontendServers[], backendServers[], blogCreator[], admin[], canSellMarketplace[])`: Update permissions for multiple NFTs
+
+#### Public View Functions
+
+- `getTokenPermissions(tokenId)`: Get complete permission structure for a token
+- `hasLearningAccess(tokenId)`: Check if token has learning materials access
+- `hasFrontendAccess(tokenId)`: Check if token has frontend servers access
+- `hasBackendAccess(tokenId)`: Check if token has backend servers access
+- `hasBlogCreatorAccess(tokenId)`: Check if token has blog creator access
+- `hasAdminAccess(tokenId)`: Check if token has admin access
+- `hasMarketplaceSellAccess(tokenId)`: Check if token has marketplace selling access
+- `hasAccess(tokenId, accessType)`: Check access by string type ("learning", "frontend", "backend", "blogCreator", "admin", "marketplace")
+- `addressHasLearningAccess(user)`: Check if user owns any tokens with learning access
+- `addressHasFrontendAccess(user)`: Check if user owns any tokens with frontend access
+- `addressHasBackendAccess(user)`: Check if user owns any tokens with backend access
+- `addressHasBlogCreatorAccess(user)`: Check if user owns any tokens with blog creator access
+- `addressHasAdminAccess(user)`: Check if user owns any tokens with admin access
+- `addressHasMarketplaceSellAccess(user)`: Check if user owns any tokens with marketplace selling access
+- `getUserTokens(user)`: Get all token IDs owned by a user
+- `getUserPermissions(user)`: Get all tokens and their permissions for a user
+- `getAuthorizedManagers()`: Get list of all authorized managers
+- `isAuthorizedManager(manager)`: Check if an address is authorized to manage permissions
+- `exists(tokenId)`: Check if a token exists
+- `getNextTokenId()`: Get the next token ID that will be minted
+
 ## Setup
 
 1. Install dependencies:
@@ -146,6 +209,9 @@ npm run deploy
 
 # Deploy CyberdyneProducts contract  
 npx hardhat run scripts/deploy-products.js --network localhost
+
+# Deploy CyberdyneAccessNFT contract
+npx hardhat run scripts/deploy-access-nft.js --network localhost
 ```
 
 ## Testing
@@ -179,6 +245,20 @@ The CyberdyneProducts contract includes comprehensive tests covering:
 - UUID generation and uniqueness
 - Data integrity after deletions
 - Edge cases and error handling
+
+### CyberdyneAccessNFT Contract Tests
+The CyberdyneAccessNFT contract includes comprehensive tests covering:
+- Contract deployment and initialization
+- Manager authorization and deauthorization
+- NFT minting (single and batch operations)
+- Permission management and updates
+- Access control for permission modifications
+- Token-based and address-based access checking
+- Custom metadata handling and updates
+- Contract ownership transfer functionality
+- ERC721Enumerable compliance
+- Token transfers and permission persistence
+- Edge cases and utility functions
 
 Run tests with:
 ```bash
@@ -216,6 +296,9 @@ npm run deploy:base-sepolia
 
 # Deploy CyberdyneProducts contract
 npx hardhat run scripts/deploy-products.js --network base-sepolia
+
+# Deploy CyberdyneAccessNFT contract
+npx hardhat run scripts/deploy-access-nft.js --network base-sepolia
 ```
 
 **Deploy to Base Mainnet:**
@@ -225,6 +308,9 @@ npm run deploy:base-mainnet
 
 # Deploy CyberdyneProducts contract
 npx hardhat run scripts/deploy-products.js --network base-mainnet
+
+# Deploy CyberdyneAccessNFT contract
+npx hardhat run scripts/deploy-access-nft.js --network base-mainnet
 ```
 
 **Verify contracts on BaseScan:**
@@ -324,6 +410,86 @@ await productsContract.deleteProduct(productUuid);
 await productsContract.transferContractOwnership("0x5678..."); // New owner address
 ```
 
+### CyberdyneAccessNFT Contract
+
+```javascript
+// Deploy the NFT contract with name, symbol, and base URI
+const CyberdyneAccessNFT = await ethers.getContractFactory("CyberdyneAccessNFT");
+const accessNFT = await CyberdyneAccessNFT.deploy(
+  "Cyberdyne Access Pass",
+  "CYBACC", 
+  "https://api.cyberdyne.xyz/metadata/"
+);
+
+// Owner can authorize managers to update permissions
+await accessNFT.authorizeManager("0x1234..."); // Manager address
+
+// Owner can mint NFTs with specific permissions
+const mintTx = await accessNFT.mint(
+  "0x5678...", // recipient address
+  true,  // learning materials access
+  false, // frontend servers access  
+  true,  // backend servers access
+  false, // blog creator access
+  false, // admin access
+  true,  // marketplace selling access
+  "custom-metadata-uri" // custom metadata URI
+);
+
+// Get the token ID from the event
+const receipt = await mintTx.wait();
+const event = receipt.logs.find(log => log.eventName === "NFTMinted");
+const tokenId = event.args.tokenId;
+
+// Authorized managers can update permissions after minting
+await accessNFT.connect(manager).updatePermissions(
+  tokenId,
+  false, // disable learning access
+  true,  // enable frontend access
+  true,  // keep backend access
+  true,  // enable blog creator access
+  false, // disable admin access
+  false  // disable marketplace selling access
+);
+
+// Batch mint multiple NFTs
+const recipients = ["0x1111...", "0x2222..."];
+const learning = [true, false];
+const frontend = [false, true]; 
+const backend = [true, false];
+const blogCreator = [false, true];
+const admin = [false, false];
+const canSellMarketplace = [true, false];
+const uris = ["uri1", "uri2"];
+
+const tokenIds = await accessNFT.batchMint(recipients, learning, frontend, backend, blogCreator, admin, canSellMarketplace, uris);
+
+// Check individual token permissions
+const hasLearning = await accessNFT.hasLearningAccess(tokenId);
+const hasFrontend = await accessNFT.hasFrontendAccess(tokenId);
+const hasBackend = await accessNFT.hasBackendAccess(tokenId);
+const hasBlogCreator = await accessNFT.hasBlogCreatorAccess(tokenId);
+const hasAdmin = await accessNFT.hasAdminAccess(tokenId);
+const hasMarketplace = await accessNFT.hasMarketplaceSellAccess(tokenId);
+
+// Check if an address has any tokens with specific access
+const userHasLearning = await accessNFT.addressHasLearningAccess("0x5678...");
+const userHasFrontend = await accessNFT.addressHasFrontendAccess("0x5678...");
+const userHasBackend = await accessNFT.addressHasBackendAccess("0x5678...");
+const userHasBlogCreator = await accessNFT.addressHasBlogCreatorAccess("0x5678...");
+const userHasAdmin = await accessNFT.addressHasAdminAccess("0x5678...");
+const userHasMarketplace = await accessNFT.addressHasMarketplaceSellAccess("0x5678...");
+
+// Get all tokens and permissions for a user
+const [userTokenIds, permissions] = await accessNFT.getUserPermissions("0x5678...");
+
+// Update custom metadata for a token
+await accessNFT.connect(manager).updateMetadata(tokenId, "new-metadata-uri");
+
+// Transfer contract ownership (new owner automatically becomes authorized manager)
+await accessNFT.transferContractOwnership("0x9999..."); // New owner address
+```
+
 ## Security Considerations
 
 - **Access Control**: Only contract owner can create categories and manage creator authorization
@@ -336,6 +502,17 @@ await productsContract.transferContractOwnership("0x5678..."); // New owner addr
 - **Input Validation**: Prevents empty required fields and invalid parameters
 - **Data Integrity**: Deleted materials are properly removed from all arrays and counts
 - **OpenZeppelin Integration**: Uses battle-tested Ownable contract for access control
+
+### CyberdyneAccessNFT Security
+- **🛡️ Centralized Permission Control**: NFT holders cannot modify their own access permissions - only authorized managers can update access rights
+- **Manager Authorization**: Only contract owner can authorize/deauthorize permission managers
+- **Owner Protection**: Contract owner cannot be deauthorized from managing permissions
+- **Access Persistence**: Permissions remain with tokens even after transfers between addresses
+- **Batch Security**: All batch operations include proper validation and atomic execution
+- **ERC721 Compliance**: Follows OpenZeppelin ERC721 and ERC721Enumerable standards
+- **Manager Tracking**: Complete audit trail of who can modify permissions
+- **Zero Address Protection**: Prevents operations on invalid addresses
+- **Token Existence Validation**: All permission operations validate token existence
 
 ## IPFS Integration
 

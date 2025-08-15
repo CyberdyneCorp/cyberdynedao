@@ -47,6 +47,9 @@ async function main() {
     true,  // learningMaterials access
     true,  // frontendServers access
     true,  // backendServers access
+    true,  // blogCreator access
+    true,  // admin access
+    true,  // canSellMarketplace access
     "https://api.cyberdyne.xyz/metadata/admin.json" // custom metadata URI
   );
   const receipt1 = await nftTx1.wait();
@@ -57,12 +60,18 @@ async function main() {
   console.log("  Learning Access:", event1.args.learningMaterials);
   console.log("  Frontend Access:", event1.args.frontendServers);
   console.log("  Backend Access:", event1.args.backendServers);
+  console.log("  Blog Creator Access:", event1.args.blogCreator);
+  console.log("  Admin Access:", event1.args.admin);
+  console.log("  Marketplace Sell Access:", event1.args.canSellMarketplace);
 
   const nftTx2 = await cyberdyneAccessNFT.mint(
     "0x742d35Cc6A0cDB8b5E5A4B5b5e5d2b9a8A5a4B5b", // example address
     true,  // learningMaterials access
     false, // frontendServers access
     false, // backendServers access
+    false, // blogCreator access
+    false, // admin access
+    false, // canSellMarketplace access
     "https://api.cyberdyne.xyz/metadata/student.json" // custom metadata URI
   );
   const receipt2 = await nftTx2.wait();
@@ -73,12 +82,18 @@ async function main() {
   console.log("  Learning Access:", event2.args.learningMaterials);
   console.log("  Frontend Access:", event2.args.frontendServers);
   console.log("  Backend Access:", event2.args.backendServers);
+  console.log("  Blog Creator Access:", event2.args.blogCreator);
+  console.log("  Admin Access:", event2.args.admin);
+  console.log("  Marketplace Sell Access:", event2.args.canSellMarketplace);
 
   const nftTx3 = await cyberdyneAccessNFT.mint(
     "0x123d35Cc6A0cDB8b5E5A4B5b5e5d2b9a8A5a4B5c", // example address
     false, // learningMaterials access
     true,  // frontendServers access
     true,  // backendServers access
+    true,  // blogCreator access
+    false, // admin access
+    true,  // canSellMarketplace access
     "https://api.cyberdyne.xyz/metadata/developer.json" // custom metadata URI
   );
   const receipt3 = await nftTx3.wait();
@@ -89,6 +104,9 @@ async function main() {
   console.log("  Learning Access:", event3.args.learningMaterials);
   console.log("  Frontend Access:", event3.args.frontendServers);
   console.log("  Backend Access:", event3.args.backendServers);
+  console.log("  Blog Creator Access:", event3.args.blogCreator);
+  console.log("  Admin Access:", event3.args.admin);
+  console.log("  Marketplace Sell Access:", event3.args.canSellMarketplace);
 
   // Display final state
   const finalTotalSupply = await cyberdyneAccessNFT.totalSupply();
@@ -102,6 +120,9 @@ async function main() {
     learningMaterials: token1Permissions.learningMaterials,
     frontendServers: token1Permissions.frontendServers,
     backendServers: token1Permissions.backendServers,
+    blogCreator: token1Permissions.blogCreator,
+    admin: token1Permissions.admin,
+    canSellMarketplace: token1Permissions.canSellMarketplace,
     issuedAt: new Date(Number(token1Permissions.issuedAt) * 1000).toISOString(),
     metadataURI: token1Permissions.metadataURI
   });
@@ -110,7 +131,10 @@ async function main() {
   const deployerHasLearning = await cyberdyneAccessNFT.addressHasLearningAccess(deployer.address);
   const deployerHasFrontend = await cyberdyneAccessNFT.addressHasFrontendAccess(deployer.address);
   const deployerHasBackend = await cyberdyneAccessNFT.addressHasBackendAccess(deployer.address);
-  console.log(`Deployer access - Learning: ${deployerHasLearning}, Frontend: ${deployerHasFrontend}, Backend: ${deployerHasBackend}`);
+  const deployerHasBlogCreator = await cyberdyneAccessNFT.addressHasBlogCreatorAccess(deployer.address);
+  const deployerHasAdmin = await cyberdyneAccessNFT.addressHasAdminAccess(deployer.address);
+  const deployerHasMarketplace = await cyberdyneAccessNFT.addressHasMarketplaceSellAccess(deployer.address);
+  console.log(`Deployer access - Learning: ${deployerHasLearning}, Frontend: ${deployerHasFrontend}, Backend: ${deployerHasBackend}, Blog Creator: ${deployerHasBlogCreator}, Admin: ${deployerHasAdmin}, Marketplace: ${deployerHasMarketplace}`);
   */
 
   console.log("\n✅ Deployment completed successfully!");
@@ -126,7 +150,7 @@ async function main() {
   console.log("2. Authorize additional managers using authorizeManager function (owner only)");
   console.log("3. Mint access NFTs using the mint function (owner only)");
   console.log("4. Update permissions using updatePermissions function (authorized managers)");
-  console.log("5. Check access using hasLearningAccess, hasFrontendAccess, hasBackendAccess");
+  console.log("5. Check access using hasLearningAccess, hasFrontendAccess, hasBackendAccess, hasBlogCreatorAccess, hasAdminAccess, hasMarketplaceSellAccess");
   console.log("6. Query user tokens using getUserTokens and getUserPermissions");
   console.log("7. Update metadata using updateMetadata function (authorized managers)");
   console.log("8. Transfer contract ownership using transferContractOwnership (owner only)");
