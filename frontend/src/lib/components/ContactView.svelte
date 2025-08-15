@@ -43,10 +43,10 @@
 
 <div class="flex flex-col h-full bg-black text-retro-green font-mono overflow-y-auto" style="background-color: #000 !important; color: #00ff00 !important;">
 	<!-- Retro Header -->
-	<div class="p-4 border-b-2" style="background: linear-gradient(to right, #00aa00, #00ff00); border-color: #00ff00;">
+	<div class="p-2 border-b-2" style="background: linear-gradient(to right, #00aa00, #00ff00); border-color: #00ff00;">
 		<div class="text-center">
-			<div class="text-4xl mb-2 animate-pulse" style="color: #88ff88;">◉ CONTACT CYBERDYNE ◉</div>
-			<div class="text-sm tracking-wider" style="color: #ccffcc;">[ SECURE COMMUNICATION CHANNELS ACTIVE ]</div>
+			<div class="text-2xl mb-1 animate-pulse" style="color: #88ff88;">◉ CONTACT CYBERDYNE ◉</div>
+			<div class="text-xs tracking-wider" style="color: #ccffcc;">[ SECURE COMMUNICATION CHANNELS ACTIVE ]</div>
 		</div>
 	</div>
 
@@ -61,14 +61,14 @@
 		</div>
 
 		<!-- Main Content -->
-		<div class="relative z-10 flex items-center justify-center min-h-full p-4">
+		<div class="relative z-10 flex items-center justify-center min-h-full p-2">
 			<div class="w-full max-w-4xl">
 				<!-- Terminal-style intro -->
-				<div class="text-center mb-6">
-					<div class="mb-2" style="color: #88ff88;">
-						<span class="text-base">></span> INITIALIZING CONTACT PROTOCOLS...
+				<div class="text-center mb-3">
+					<div class="mb-1" style="color: #88ff88;">
+						<span class="text-sm">></span> INITIALIZING CONTACT PROTOCOLS...
 					</div>
-					<div class="text-sm mb-2" style="color: #00ff00;">SELECT YOUR PREFERRED COMMUNICATION METHOD</div>
+					<div class="text-xs mb-1" style="color: #00ff00;">SELECT YOUR PREFERRED COMMUNICATION METHOD</div>
 					<div class="text-xs" style="color: #66dd66;">[ ALL CHANNELS ENCRYPTED AND MONITORED ]</div>
 				</div>
 
