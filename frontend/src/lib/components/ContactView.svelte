@@ -41,7 +41,7 @@
 	}
 </script>
 
-<div class="flex flex-col h-full bg-black text-retro-green font-mono overflow-y-auto" style="background-color: #000 !important; color: #00ff00 !important;">
+<div class="flex flex-col h-full bg-black text-retro-green font-mono overflow-y-auto" style="background-color: #000 !important; color: #00ff00 !important; -webkit-overflow-scrolling: touch; scroll-behavior: smooth;">
 	<!-- Retro Header -->
 	<div class="p-2 border-b-2" style="background: linear-gradient(to right, #00aa00, #00ff00); border-color: #00ff00;">
 		<div class="text-center">
@@ -73,7 +73,7 @@
 				</div>
 
 				<!-- Contact Cards Grid -->
-				<div class="grid grid-cols-2 gap-4 mb-6">
+				<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
 					{#each contactMethods as method}
 						<div class="group">
 							<!-- Outer glow container -->
@@ -173,12 +173,12 @@
 				</div>
 
 				<!-- System Info -->
-				<div class="text-center">
+				<div class="text-center pb-4">
 					<div class="inline-block rounded-lg p-3" style="background: linear-gradient(to right, rgba(0, 255, 0, 0.1), rgba(136, 255, 136, 0.1)); border: 1px solid rgba(0, 255, 0, 0.3); box-shadow: 0 0 8px rgba(0, 255, 0, 0.2);">
 						<div class="font-bold mb-2 tracking-wider text-xs" style="color: #88ff88;">
 							[ CYBERDYNE SYSTEMS ACTIVE ]
 						</div>
-						<div class="grid grid-cols-3 gap-4 text-xs">
+						<div class="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 text-xs">
 							<div class="text-center">
 								<div class="mb-1" style="color: #00ff00;">◈</div>
 								<div style="color: #66dd66;">WEB3 EXPERTS</div>
