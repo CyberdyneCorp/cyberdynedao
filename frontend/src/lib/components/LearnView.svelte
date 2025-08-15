@@ -229,6 +229,7 @@
 							class:ring-2={selectedModule?.id === module.id}
 							class:ring-blue-400={selectedModule?.id === module.id}
 							on:click={() => selectModule(module)}
+							on:keydown={(e) => e.key === 'Enter' && selectModule(module)}
 							role="button"
 							tabindex="0"
 						>
@@ -258,6 +259,7 @@
 							class:ring-2={selectedPath?.id === path.id}
 							class:ring-blue-400={selectedPath?.id === path.id}
 							on:click={() => selectPath(path)}
+							on:keydown={(e) => e.key === 'Enter' && selectPath(path)}
 							role="button"
 							tabindex="0"
 						>
@@ -277,25 +279,25 @@
 					<div class="bg-white rounded border border-gray-200 p-2">
 						<h3 class="font-mono font-bold text-xs mb-1">📚 Documentation</h3>
 						<ul class="space-y-0.5 text-xs">
-							<li><a href="#" class="text-blue-600 hover:underline">Cosmos SDK Docs</a></li>
-							<li><a href="#" class="text-blue-600 hover:underline">Solidity Documentation</a></li>
-							<li><a href="#" class="text-blue-600 hover:underline">Web3.js Guide</a></li>
+							<li><a href="https://docs.cosmos.network/" class="text-blue-600 hover:underline">Cosmos SDK Docs</a></li>
+							<li><a href="https://docs.soliditylang.org/" class="text-blue-600 hover:underline">Solidity Documentation</a></li>
+							<li><a href="https://web3js.readthedocs.io/" class="text-blue-600 hover:underline">Web3.js Guide</a></li>
 						</ul>
 					</div>
 					<div class="bg-white rounded border border-gray-200 p-2">
 						<h3 class="font-mono font-bold text-xs mb-1">🛠️ Tools</h3>
 						<ul class="space-y-0.5 text-xs">
-							<li><a href="#" class="text-blue-600 hover:underline">Remix IDE</a></li>
-							<li><a href="#" class="text-blue-600 hover:underline">Hardhat Framework</a></li>
-							<li><a href="#" class="text-blue-600 hover:underline">MetaMask</a></li>
+							<li><a href="https://remix.ethereum.org/" class="text-blue-600 hover:underline">Remix IDE</a></li>
+							<li><a href="https://hardhat.org/" class="text-blue-600 hover:underline">Hardhat Framework</a></li>
+							<li><a href="https://metamask.io/" class="text-blue-600 hover:underline">MetaMask</a></li>
 						</ul>
 					</div>
 					<div class="bg-white rounded border border-gray-200 p-2">
 						<h3 class="font-mono font-bold text-xs mb-1">🌐 Communities</h3>
 						<ul class="space-y-0.5 text-xs">
-							<li><a href="#" class="text-blue-600 hover:underline">Cyberdyne Discord</a></li>
-							<li><a href="#" class="text-blue-600 hover:underline">Developer Forum</a></li>
-							<li><a href="#" class="text-blue-600 hover:underline">Weekly Dev Calls</a></li>
+							<li><button class="text-blue-600 hover:underline text-left" disabled>Cyberdyne Discord (Coming Soon)</button></li>
+							<li><button class="text-blue-600 hover:underline text-left" disabled>Developer Forum (Coming Soon)</button></li>
+							<li><button class="text-blue-600 hover:underline text-left" disabled>Weekly Dev Calls (Coming Soon)</button></li>
 						</ul>
 					</div>
 				</div>

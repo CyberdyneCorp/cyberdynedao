@@ -68,7 +68,7 @@
 		</div>
 		<!-- Desktop Icons positioned on main area -->
 		<div class="absolute left-8 z-10 sm:left-4 main-icons">
-			<div class="icon-grid grid grid-cols-2 sm:grid-cols-3">
+			<div class="icon-grid grid grid-cols-2 sm:grid-cols-3 gap-4">
 				{#each navItems as item}
 					<div class="flex flex-col items-center">
 						<button
@@ -76,9 +76,9 @@
 							on:click={() => handleItemClick(item)}
 							title={item.name}
 						>
-							<img src={item.icon} alt={item.name} class="w-24 h-24 md:w-24 md:h-24 sm:w-20 sm:h-20" />
+							<img src={item.icon} alt={item.name} class="w-20 h-20 md:w-20 md:h-20 sm:w-20 sm:h-20" />
 						</button>
-						<span class="nav-label text-white text-base md:text-base sm:text-xs font-mono text-center px-2 py-0.5 sm:px-1 sm:py-0 rounded mt-4 sm:mt-1 break-words max-w-20 sm:max-w-16">
+						<span class="nav-label text-white text-sm md:text-sm sm:text-xs font-mono text-center px-2 py-0.5 sm:px-1 sm:py-0 rounded mt-2 sm:mt-1 break-words max-w-20 sm:max-w-16">
 							<span class="sm:hidden">{item.name}</span>
 							<span class="hidden sm:inline">{item.mobileLabel || item.name}</span>
 						</span>
@@ -95,7 +95,7 @@
 					on:click={() => createWindow('cart', `Your Bag (${cartCount})`)}
 					title="Your Bag"
 				>
-					<img src="/assets/cart.svg" alt="Cart" class="w-24 h-24 md:w-24 md:h-24 sm:w-20 sm:h-20" />
+					<img src="/assets/cart.svg" alt="Cart" class="w-20 h-20 md:w-20 md:h-20 sm:w-20 sm:h-20" />
 					{#if cartCount > 0}
 						<div class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
 							{cartCount}
@@ -130,6 +130,24 @@
 	
 	.cart-icon {
 		top: 120px;
+	}
+	
+	/* Desktop icon size adjustments for better fitting */
+	@media (min-width: 769px) {
+		.icon-grid {
+			gap: 1rem !important;
+			max-width: 400px;
+		}
+		
+		.sidebar-icon {
+			width: 80px;
+			height: 80px;
+		}
+		
+		.nav-label {
+			margin-top: 0.5rem;
+			font-size: 0.875rem;
+		}
 	}
 	
 	/* Mobile responsive styles for main page */
@@ -278,12 +296,6 @@
 			font-weight: bold !important;
 		}
 		
-		/* Override any conflicting styles */
-		.desktop-icons .nav-label {
-			display: block !important;
-			visibility: visible !important;
-			opacity: 1 !important;
-		}
 		
 		.icon-grid .nav-label {
 			display: block !important;
@@ -299,12 +311,6 @@
 			padding: 1px 3px !important;
 		}
 		
-		/* Override any conflicting styles */
-		.desktop-icons .nav-label {
-			display: block !important;
-			visibility: visible !important;
-			opacity: 1 !important;
-		}
 		
 		.icon-grid .nav-label {
 			display: block !important;

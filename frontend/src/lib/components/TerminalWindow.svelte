@@ -145,35 +145,4 @@
 		}
 	}
 	
-	/* Improve readability for content views */
-	.window-content p {
-		margin-bottom: 0.75rem;
-		line-height: 1.6;
-	}
-	
-	.window-content h1,
-	.window-content h2,
-	.window-content h3 {
-		margin-bottom: 0.5rem;
-		line-height: 1.3;
-	}
-	
-	@media (max-width: 768px) {
-		.window-content p {
-			font-size: 14px;
-			line-height: 1.5;
-		}
-		
-		.window-content h1 {
-			font-size: 18px;
-		}
-		
-		.window-content h2 {
-			font-size: 16px;
-		}
-		
-		.window-content h3 {
-			font-size: 15px;
-		}
-	}
 </style>

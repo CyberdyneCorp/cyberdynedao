@@ -324,6 +324,7 @@
 								class:ring-2={selectedItem?.id === item.id}
 								class:ring-orange-400={selectedItem?.id === item.id}
 								on:click={() => selectItem(item)}
+								on:keydown={(e) => e.key === 'Enter' && selectItem(item)}
 								role="button"
 								tabindex="0"
 							>
@@ -352,6 +353,7 @@
 							class:ring-2={selectedItem?.id === item.id}
 							class:ring-orange-400={selectedItem?.id === item.id}
 							on:click={() => selectItem(item)}
+							on:keydown={(e) => e.key === 'Enter' && selectItem(item)}
 							role="button"
 							tabindex="0"
 						>

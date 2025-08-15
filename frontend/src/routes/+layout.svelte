@@ -7,7 +7,7 @@
     import TopBar from '$lib/components/TopBar.svelte';
 
 	let { children } = $props();
-	let isMobile = false;
+	let isMobile = $state(false);
 	
 	onMount(() => {
 		isMobile = isMobileDevice();

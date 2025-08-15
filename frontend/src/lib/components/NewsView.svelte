@@ -19,7 +19,7 @@
 		count: number;
 	}
 
-	export let isMobile: boolean = false;
+	export const isMobile: boolean = false;
 
 	const blogPosts: BlogPost[] = [
 		{
@@ -210,6 +210,7 @@
 								class:ring-2={selectedPost?.id === post.id}
 								class:ring-blue-400={selectedPost?.id === post.id}
 								on:click={() => selectPost(post)}
+								on:keydown={(e) => e.key === 'Enter' && selectPost(post)}
 								role="button"
 								tabindex="0"
 							>
@@ -236,6 +237,7 @@
 							class:ring-2={selectedPost?.id === post.id}
 							class:ring-blue-400={selectedPost?.id === post.id}
 							on:click={() => selectPost(post)}
+							on:keydown={(e) => e.key === 'Enter' && selectPost(post)}
 							role="button"
 							tabindex="0"
 						>

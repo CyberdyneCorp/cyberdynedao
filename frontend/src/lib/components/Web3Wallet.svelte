@@ -251,10 +251,10 @@
 <div class="web3-wallet">
 	<!-- Connection Modal -->
 	{#if showConnectionModal}
-		<div class="connection-modal-overlay" on:click={closeConnectionModal}>
-			<div class="connection-modal" on:click|stopPropagation>
+		<div class="connection-modal-overlay" on:click={closeConnectionModal} on:keydown={(e) => e.key === 'Escape' && closeConnectionModal()} role="button" tabindex="0">
+			<div class="connection-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && closeConnectionModal()} role="dialog" aria-labelledby="modal-title" tabindex="-1">
 				<div class="modal-header">
-					<h2 class="modal-title">🖥️ CONNECT WALLET</h2>
+					<h2 id="modal-title" class="modal-title">🖥️ CONNECT WALLET</h2>
 					<button on:click={closeConnectionModal} class="close-btn">✕</button>
 				</div>
 				
@@ -634,33 +634,6 @@
 		color: #ffffff;
 	}
 
-	.wallet-type {
-		font-size: 9px;
-		color: #e5e7eb;
-	}
-
-	.wallet-balance {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-	}
-
-	.balance-amount {
-		font-weight: bold;
-		color: #ffffff;
-		font-size: 11px;
-	}
-
-	.expand-icon {
-		font-size: 10px;
-		color: #e5e7eb;
-	}
-
-	.wallet-address {
-		font-size: 10px;
-		color: #e5e7eb;
-		font-family: monospace;
-	}
 
 	/* Wallet Details */
 	.wallet-details {
