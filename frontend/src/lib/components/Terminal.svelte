@@ -47,6 +47,11 @@
 		// Clear input and scroll
 		terminalInput = '';
 		scrollToBottom();
+		
+		// Maintain focus after DOM update
+		setTimeout(() => {
+			focusInput();
+		}, 10);
 	}
 	
 	function scrollToBottom() {
@@ -60,6 +65,8 @@
 	
 	function handleKeyDown(event: KeyboardEvent) {
 		if (event.key === 'Enter') {
+			event.preventDefault();
+			event.stopPropagation();
 			handleSubmit();
 		}
 	}
