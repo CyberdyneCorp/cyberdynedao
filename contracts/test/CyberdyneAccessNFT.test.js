@@ -1,5 +1,6 @@
-const { expect } = require("chai");
-const { ethers } = require("hardhat");
+import { expect } from "chai";
+import hre from "hardhat";
+const { ethers } = hre;
 
 describe("CyberdyneAccessNFT", function () {
   let CyberdyneAccessNFT;
@@ -314,17 +315,17 @@ describe("CyberdyneAccessNFT", function () {
       expect(await cyberdyneAccessNFT.hasMarketplaceSellAccess(3)).to.be.false;
     });
 
-    it("Should check access by string type", async function () {
-      expect(await cyberdyneAccessNFT.hasAccess(1, "learning")).to.be.true;
-      expect(await cyberdyneAccessNFT.hasAccess(1, "frontend")).to.be.false;
-      expect(await cyberdyneAccessNFT.hasAccess(1, "backend")).to.be.true;
-      expect(await cyberdyneAccessNFT.hasAccess(1, "blogCreator")).to.be.false;
-      expect(await cyberdyneAccessNFT.hasAccess(1, "admin")).to.be.false;
-      expect(await cyberdyneAccessNFT.hasAccess(1, "marketplace")).to.be.false;
-      expect(await cyberdyneAccessNFT.hasAccess(2, "blogCreator")).to.be.true;
-      expect(await cyberdyneAccessNFT.hasAccess(2, "marketplace")).to.be.true;
-      expect(await cyberdyneAccessNFT.hasAccess(3, "admin")).to.be.true;
-      expect(await cyberdyneAccessNFT.hasAccess(1, "invalid")).to.be.false;
+    it("Should check access by enum type", async function () {
+      // AccessType enum values: LEARNING=0, FRONTEND=1, BACKEND=2, BLOG_CREATOR=3, ADMIN=4, MARKETPLACE=5
+      expect(await cyberdyneAccessNFT.hasAccess(1, 0)).to.be.true;   // LEARNING
+      expect(await cyberdyneAccessNFT.hasAccess(1, 1)).to.be.false;  // FRONTEND
+      expect(await cyberdyneAccessNFT.hasAccess(1, 2)).to.be.true;   // BACKEND
+      expect(await cyberdyneAccessNFT.hasAccess(1, 3)).to.be.false;  // BLOG_CREATOR
+      expect(await cyberdyneAccessNFT.hasAccess(1, 4)).to.be.false;  // ADMIN
+      expect(await cyberdyneAccessNFT.hasAccess(1, 5)).to.be.false;  // MARKETPLACE
+      expect(await cyberdyneAccessNFT.hasAccess(2, 3)).to.be.true;   // BLOG_CREATOR
+      expect(await cyberdyneAccessNFT.hasAccess(2, 5)).to.be.true;   // MARKETPLACE
+      expect(await cyberdyneAccessNFT.hasAccess(3, 4)).to.be.true;   // ADMIN
     });
 
     it("Should check address-based access correctly", async function () {
@@ -516,6 +517,112 @@ describe("CyberdyneAccessNFT", function () {
       
       const permissions = await cyberdyneAccessNFT.getTokenPermissions(1);
       expect(permissions.learningMaterials).to.be.false;
+      expect(permissions.frontendServers).to.be.true;
+    });
+  });
+
+  describe("Pause Functionality", function () {
+    beforeEach(async function () {
+      await cyberdyneAccessNFT.mint(user1.address, true, false, true, false, false, false, "uri1");
+      await cyberdyneAccessNFT.authorizeManager(manager1.address);
+    });
+
+    it("Should start unpaused", async function () {
+      expect(await cyberdyneAccessNFT.paused()).to.be.false;
+    });
+
+    it("Should allow owner to pause contract", async function () {
+      await cyberdyneAccessNFT.pause();
+      expect(await cyberdyneAccessNFT.paused()).to.be.true;
+    });
+
+    it("Should allow owner to unpause contract", async function () {
+      await cyberdyneAccessNFT.pause();
+      await cyberdyneAccessNFT.unpause();
+      expect(await cyberdyneAccessNFT.paused()).to.be.false;
+    });
+
+    it("Should not allow non-owner to pause contract", async function () {
+      await expect(
+        cyberdyneAccessNFT.connect(manager1).pause()
+      ).to.be.revertedWithCustomError(cyberdyneAccessNFT, "OwnableUnauthorizedAccount");
+    });
+
+    it("Should not allow non-owner to unpause contract", async function () {
+      await cyberdyneAccessNFT.pause();
+      await expect(
+        cyberdyneAccessNFT.connect(manager1).unpause()
+      ).to.be.revertedWithCustomError(cyberdyneAccessNFT, "OwnableUnauthorizedAccount");
+    });
+
+    it("Should prevent minting when paused", async function () {
+      await cyberdyneAccessNFT.pause();
+      await expect(
+        cyberdyneAccessNFT.mint(user2.address, true, false, false, false, false, false, "uri2")
+      ).to.be.revertedWithCustomError(cyberdyneAccessNFT, "EnforcedPause");
+    });
+
+    it("Should prevent batch minting when paused", async function () {
+      await cyberdyneAccessNFT.pause();
+      await expect(
+        cyberdyneAccessNFT.batchMint(
+          [user2.address], [true], [false], [false], [false], [false], [false], ["uri2"]
+        )
+      ).to.be.revertedWithCustomError(cyberdyneAccessNFT, "EnforcedPause");
+    });
+
+    it("Should prevent permission updates when paused", async function () {
+      await cyberdyneAccessNFT.pause();
+      await expect(
+        cyberdyneAccessNFT.connect(manager1).updatePermissions(1, false, true, false, false, false, false)
+      ).to.be.revertedWithCustomError(cyberdyneAccessNFT, "EnforcedPause");
+    });
+
+    it("Should prevent metadata updates when paused", async function () {
+      await cyberdyneAccessNFT.pause();
+      await expect(
+        cyberdyneAccessNFT.connect(manager1).updateMetadata(1, "new-uri")
+      ).to.be.revertedWithCustomError(cyberdyneAccessNFT, "EnforcedPause");
+    });
+
+    it("Should prevent batch permission updates when paused", async function () {
+      await cyberdyneAccessNFT.pause();
+      await expect(
+        cyberdyneAccessNFT.connect(manager1).batchUpdatePermissions(
+          [1], [false], [true], [false], [false], [false], [false]
+        )
+      ).to.be.revertedWithCustomError(cyberdyneAccessNFT, "EnforcedPause");
+    });
+
+    it("Should prevent token transfers when paused", async function () {
+      await cyberdyneAccessNFT.pause();
+      await expect(
+        cyberdyneAccessNFT.connect(user1).transferFrom(user1.address, user2.address, 1)
+      ).to.be.revertedWithCustomError(cyberdyneAccessNFT, "EnforcedPause");
+    });
+
+    it("Should allow read operations when paused", async function () {
+      await cyberdyneAccessNFT.pause();
+      
+      // These should all work when paused
+      expect(await cyberdyneAccessNFT.hasLearningAccess(1)).to.be.true;
+      expect(await cyberdyneAccessNFT.getTokenPermissions(1)).to.not.be.undefined;
+      expect(await cyberdyneAccessNFT.getUserTokens(user1.address)).to.deep.equal([1n]);
+      expect(await cyberdyneAccessNFT.ownerOf(1)).to.equal(user1.address);
+      expect(await cyberdyneAccessNFT.totalSupply()).to.equal(1);
+    });
+
+    it("Should resume normal operations after unpause", async function () {
+      await cyberdyneAccessNFT.pause();
+      await cyberdyneAccessNFT.unpause();
+      
+      // Should be able to mint again
+      await cyberdyneAccessNFT.mint(user2.address, false, true, false, false, false, false, "uri2");
+      expect(await cyberdyneAccessNFT.totalSupply()).to.equal(2);
+      
+      // Should be able to update permissions again
+      await cyberdyneAccessNFT.connect(manager1).updatePermissions(1, false, true, false, false, false, false);
+      const permissions = await cyberdyneAccessNFT.getTokenPermissions(1);
       expect(permissions.frontendServers).to.be.true;
     });
   });

@@ -5,9 +5,19 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
-contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable {
+contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable, Pausable {
     using Strings for uint256;
+
+    enum AccessType {
+        LEARNING,
+        FRONTEND,
+        BACKEND,
+        BLOG_CREATOR,
+        ADMIN,
+        MARKETPLACE
+    }
 
     struct AccessPermissions {
         bool learningMaterials;    // Access to training materials
@@ -130,7 +140,7 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable {
         bool admin,
         bool canSellMarketplace,
         string memory metadataURI
-    ) external onlyOwner returns (uint256) {
+    ) external onlyOwner whenNotPaused returns (uint256) {
         require(to != address(0), "Cannot mint to zero address");
         
         uint256 tokenId = _nextTokenId;
@@ -164,7 +174,7 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable {
         bool[] memory admin,
         bool[] memory canSellMarketplace,
         string[] memory metadataURIs
-    ) external onlyOwner returns (uint256[] memory) {
+    ) external onlyOwner whenNotPaused returns (uint256[] memory) {
         require(recipients.length > 0, "No recipients provided");
         require(
             recipients.length == learningMaterials.length &&
@@ -215,7 +225,7 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable {
         bool blogCreator,
         bool admin,
         bool canSellMarketplace
-    ) external onlyAuthorizedManager tokenExists(tokenId) {
+    ) external onlyAuthorizedManager tokenExists(tokenId) whenNotPaused {
         AccessPermissions storage permissions = tokenPermissions[tokenId];
         
         permissions.learningMaterials = learningMaterials;
@@ -232,7 +242,7 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable {
     function updateMetadata(
         uint256 tokenId,
         string memory metadataURI
-    ) external onlyAuthorizedManager tokenExists(tokenId) {
+    ) external onlyAuthorizedManager tokenExists(tokenId) whenNotPaused {
         tokenPermissions[tokenId].metadataURI = metadataURI;
         tokenPermissions[tokenId].lastUpdated = block.timestamp;
         
@@ -247,7 +257,7 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable {
         bool[] memory blogCreator,
         bool[] memory admin,
         bool[] memory canSellMarketplace
-    ) external onlyAuthorizedManager {
+    ) external onlyAuthorizedManager whenNotPaused {
         require(tokenIds.length > 0, "No token IDs provided");
         require(
             tokenIds.length == learningMaterials.length &&
@@ -301,20 +311,20 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable {
         return tokenPermissions[tokenId].canSellMarketplace;
     }
 
-    function hasAccess(uint256 tokenId, string memory accessType) external view tokenExists(tokenId) returns (bool) {
+    function hasAccess(uint256 tokenId, AccessType accessType) external view tokenExists(tokenId) returns (bool) {
         AccessPermissions memory permissions = tokenPermissions[tokenId];
         
-        if (keccak256(abi.encodePacked(accessType)) == keccak256(abi.encodePacked("learning"))) {
+        if (accessType == AccessType.LEARNING) {
             return permissions.learningMaterials;
-        } else if (keccak256(abi.encodePacked(accessType)) == keccak256(abi.encodePacked("frontend"))) {
+        } else if (accessType == AccessType.FRONTEND) {
             return permissions.frontendServers;
-        } else if (keccak256(abi.encodePacked(accessType)) == keccak256(abi.encodePacked("backend"))) {
+        } else if (accessType == AccessType.BACKEND) {
             return permissions.backendServers;
-        } else if (keccak256(abi.encodePacked(accessType)) == keccak256(abi.encodePacked("blogCreator"))) {
+        } else if (accessType == AccessType.BLOG_CREATOR) {
             return permissions.blogCreator;
-        } else if (keccak256(abi.encodePacked(accessType)) == keccak256(abi.encodePacked("admin"))) {
+        } else if (accessType == AccessType.ADMIN) {
             return permissions.admin;
-        } else if (keccak256(abi.encodePacked(accessType)) == keccak256(abi.encodePacked("marketplace"))) {
+        } else if (accessType == AccessType.MARKETPLACE) {
             return permissions.canSellMarketplace;
         }
         
@@ -474,6 +484,7 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable {
     function _update(address to, uint256 tokenId, address auth)
         internal
         override(ERC721, ERC721Enumerable)
+        whenNotPaused
         returns (address)
     {
         return super._update(to, tokenId, auth);
@@ -506,5 +517,14 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable {
 
     function getNextTokenId() external view returns (uint256) {
         return _nextTokenId;
+    }
+
+    // Pause functions
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
     }
 }

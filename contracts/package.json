@@ -19,7 +19,6 @@
   ],
   "author": "",
   "license": "MIT",
-  "type": "commonjs",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "chai": "^4.3.7",
@@ -29,5 +28,6 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.0.0"
-  }
+  },
+  "type": "module"
 }

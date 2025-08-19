@@ -1,6 +1,7 @@
-const { expect } = require("chai");
-const { ethers } = require("hardhat");
-const { loadFixture } = require("@nomicfoundation/hardhat-toolbox/network-helpers");
+import { expect } from "chai";
+import hre from "hardhat";
+import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers.js";
+const { ethers } = hre;
 
 describe("TrainingMaterials", function () {
   // Test data
