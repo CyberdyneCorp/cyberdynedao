@@ -497,6 +497,8 @@ describe("CyberdyneAccessNFT", function () {
       expect(await cyberdyneAccessNFT.supportsInterface("0x80ac58cd")).to.be.true;
       // ERC721Enumerable interface  
       expect(await cyberdyneAccessNFT.supportsInterface("0x780e9d63")).to.be.true;
+      // ERC4906 interface
+      expect(await cyberdyneAccessNFT.supportsInterface("0x49064906")).to.be.true;
       // Invalid interface
       expect(await cyberdyneAccessNFT.supportsInterface("0x12345678")).to.be.false;
     });
@@ -624,6 +626,62 @@ describe("CyberdyneAccessNFT", function () {
       await cyberdyneAccessNFT.connect(manager1).updatePermissions(1, false, true, false, false, false, false);
       const permissions = await cyberdyneAccessNFT.getTokenPermissions(1);
       expect(permissions.frontendServers).to.be.true;
+    });
+  });
+
+  describe("ERC-4906 Metadata Update Events", function () {
+    beforeEach(async function () {
+      await cyberdyneAccessNFT.authorizeManager(manager1.address);
+    });
+
+    it("Should emit MetadataUpdate on mint", async function () {
+      await expect(
+        cyberdyneAccessNFT.mint(user1.address, true, false, false, false, false, false, "uri1")
+      ).to.emit(cyberdyneAccessNFT, "MetadataUpdate").withArgs(1);
+    });
+
+    it("Should emit BatchMetadataUpdate on batch mint", async function () {
+      await expect(
+        cyberdyneAccessNFT.batchMint(
+          [user1.address, user2.address], [true, false], [false, true], [false, false], [false, false], [false, false], [false, false], ["uri1", "uri2"]
+        )
+      ).to.emit(cyberdyneAccessNFT, "BatchMetadataUpdate").withArgs(1, 2);
+    });
+
+    it("Should emit MetadataUpdate on metadata update", async function () {
+      await cyberdyneAccessNFT.mint(user1.address, true, false, false, false, false, false, "uri1");
+      
+      await expect(
+        cyberdyneAccessNFT.connect(manager1).updateMetadata(1, "new-uri")
+      ).to.emit(cyberdyneAccessNFT, "MetadataUpdate").withArgs(1);
+    });
+
+    it("Should emit BatchMetadataUpdate on setBaseURI", async function () {
+      // Mint some tokens first
+      await cyberdyneAccessNFT.mint(user1.address, true, false, false, false, false, false, "");
+      await cyberdyneAccessNFT.mint(user2.address, false, true, false, false, false, false, "");
+      
+      await expect(
+        cyberdyneAccessNFT.setBaseURI("https://new-base-uri.com/")
+      ).to.emit(cyberdyneAccessNFT, "BatchMetadataUpdate").withArgs(1, 2);
+    });
+
+    it("Should not emit BatchMetadataUpdate on setBaseURI when no tokens exist", async function () {
+      await expect(
+        cyberdyneAccessNFT.setBaseURI("https://new-base-uri.com/")
+      ).to.not.emit(cyberdyneAccessNFT, "BatchMetadataUpdate");
+    });
+
+    it("Should emit proper events for single token batch mint", async function () {
+      await expect(
+        cyberdyneAccessNFT.batchMint(
+          [user1.address], [true], [false], [false], [false], [false], [false], ["uri1"]
+        )
+      ).to.emit(cyberdyneAccessNFT, "BatchMetadataUpdate").withArgs(1, 1);
+    });
+
+    it("Should support ERC4906 interface detection", async function () {
+      expect(await cyberdyneAccessNFT.supportsInterface("0x49064906")).to.be.true;
     });
   });
 });

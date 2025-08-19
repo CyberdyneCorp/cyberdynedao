@@ -6,8 +6,10 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/interfaces/IERC4906.sol";
+import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
-contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable, Pausable {
+contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable, Pausable, IERC4906 {
     using Strings for uint256;
 
     enum AccessType {
@@ -146,8 +148,7 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable, Pausable {
         uint256 tokenId = _nextTokenId;
         _nextTokenId++;
         
-        _safeMint(to, tokenId);
-        
+        // Set permissions before external call to prevent reentrancy
         tokenPermissions[tokenId] = AccessPermissions({
             learningMaterials: learningMaterials,
             frontendServers: frontendServers,
@@ -160,7 +161,10 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable, Pausable {
             metadataURI: metadataURI
         });
         
+        _safeMint(to, tokenId);
+        
         emit NFTMinted(tokenId, to, learningMaterials, frontendServers, backendServers, blogCreator, admin, canSellMarketplace);
+        emit MetadataUpdate(tokenId);
         
         return tokenId;
     }
@@ -195,8 +199,7 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable, Pausable {
             uint256 tokenId = _nextTokenId;
             _nextTokenId++;
             
-            _safeMint(recipients[i], tokenId);
-            
+            // Set permissions before external call to prevent reentrancy
             tokenPermissions[tokenId] = AccessPermissions({
                 learningMaterials: learningMaterials[i],
                 frontendServers: frontendServers[i],
@@ -209,8 +212,15 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable, Pausable {
                 metadataURI: metadataURIs[i]
             });
             
+            _safeMint(recipients[i], tokenId);
+            
             emit NFTMinted(tokenId, recipients[i], learningMaterials[i], frontendServers[i], backendServers[i], blogCreator[i], admin[i], canSellMarketplace[i]);
             tokenIds[i] = tokenId;
+        }
+        
+        // Emit batch metadata update for all newly minted tokens
+        if (tokenIds.length > 0) {
+            emit BatchMetadataUpdate(tokenIds[0], tokenIds[tokenIds.length - 1]);
         }
         
         return tokenIds;
@@ -247,6 +257,7 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable, Pausable {
         tokenPermissions[tokenId].lastUpdated = block.timestamp;
         
         emit MetadataUpdated(tokenId, metadataURI, msg.sender);
+        emit MetadataUpdate(tokenId);
     }
 
     function batchUpdatePermissions(
@@ -463,6 +474,12 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable, Pausable {
 
     function setBaseURI(string memory baseURI) external onlyOwner {
         _baseTokenURI = baseURI;
+        
+        // Emit batch metadata update for all existing tokens (1 to current supply)
+        uint256 currentSupply = totalSupply();
+        if (currentSupply > 0) {
+            emit BatchMetadataUpdate(1, currentSupply);
+        }
     }
 
     // Transfer contract ownership and ensure new owner is authorized
@@ -500,16 +517,13 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable, Pausable {
     function supportsInterface(bytes4 interfaceId)
         public
         view
-        override(ERC721, ERC721Enumerable)
+        override(ERC721, ERC721Enumerable, IERC165)
         returns (bool)
     {
-        return super.supportsInterface(interfaceId);
+        return interfaceId == bytes4(0x49064906) || super.supportsInterface(interfaceId);
     }
 
     // Utility functions
-    function totalSupply() public view override returns (uint256) {
-        return _nextTokenId - 1;
-    }
 
     function exists(uint256 tokenId) external view returns (bool) {
         return _ownerOf(tokenId) != address(0);
