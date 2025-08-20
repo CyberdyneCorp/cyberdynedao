@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, onMount } from 'svelte';
 	import type { NFTTraits } from '$lib/web3/contracts';
 	
 	export let isVisible = false;
@@ -7,6 +7,8 @@
 	export let walletAddress = '';
 	
 	const dispatch = createEventDispatcher();
+	let svgContent = '';
+	let isLoadingSvg = false;
 	
 	function closeTerminal() {
 		isVisible = false;
@@ -20,7 +22,10 @@
 	}
 	
 	function generateNFTUrl(): string {
-		if (!userTraits || !walletAddress) return '';
+		if (!userTraits || !walletAddress) {
+			// Return base SVG URL for testing
+			return '/assets/cyberdyne_nft_enhanced.svg';
+		}
 		
 		// Format date as YYYY-MM-DD
 		const today = new Date();
@@ -103,17 +108,22 @@
 					<div class="terminal-line">
 						<span class="output-text">Rendering certificate...</span>
 					</div>
+					<div class="terminal-line">
+						<span class="output-info">→ URL: {nftUrl}</span>
+					</div>
 				</div>
 				
 				<!-- NFT Display -->
 				<div class="nft-display">
 					{#if nftUrl}
-						<iframe
-							src={nftUrl}
+						<object
+							data={nftUrl}
+							type="image/svg+xml"
 							title="Cyberdyne Access NFT"
 							class="nft-frame"
-							sandbox="allow-scripts"
-						></iframe>
+						>
+							<img src={nftUrl} alt="Cyberdyne Access NFT" class="nft-frame" />
+						</object>
 					{/if}
 				</div>
 				
