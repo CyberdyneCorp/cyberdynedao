@@ -276,7 +276,7 @@ describe("CyberdyneProducts", function () {
           ethers.parseUnits("199.99", 6),
           "QmUnauthorizedHash"
         )
-      ).to.be.revertedWith("Only owner or creator can modify this product");
+      ).to.be.revertedWith("Only owner or authorized creator can modify this product");
     });
 
     it("Should allow toggling product status", async function () {
@@ -315,10 +315,10 @@ describe("CyberdyneProducts", function () {
       expect(product.categoryId).to.equal(newCategoryId);
 
       // Verify product moved from default category to new category
-      const defaultCategoryProducts = await cyberdyneProducts.getProductsByCategory(defaultCategoryId);
+      const defaultCategoryProducts = await cyberdyneProducts.getAllProductsByCategory(defaultCategoryId);
       expect(defaultCategoryProducts.length).to.equal(0);
 
-      const newCategoryProducts = await cyberdyneProducts.getProductsByCategory(newCategoryId);
+      const newCategoryProducts = await cyberdyneProducts.getAllProductsByCategory(newCategoryId);
       expect(newCategoryProducts.length).to.equal(1);
       expect(newCategoryProducts[0].uuid).to.equal(productUuid);
     });
@@ -372,10 +372,10 @@ describe("CyberdyneProducts", function () {
 
 
     it("Should return products by creator", async function () {
-      const creator1Products = await cyberdyneProducts.getProductsByCreator(creator1.address);
+      const creator1Products = await cyberdyneProducts.getAllProductsByCreator(creator1.address);
       expect(creator1Products.length).to.equal(2);
 
-      const creator2Products = await cyberdyneProducts.getProductsByCreator(creator2.address);
+      const creator2Products = await cyberdyneProducts.getAllProductsByCreator(creator2.address);
       expect(creator2Products.length).to.equal(1);
     });
 
@@ -391,15 +391,15 @@ describe("CyberdyneProducts", function () {
       // Deactivate one product
       await cyberdyneProducts.connect(creator1).toggleProductStatus(firstProductUuid);
       
-      const activeProducts = await cyberdyneProducts.getActiveProducts();
+      const activeProducts = await cyberdyneProducts.getAllActiveProducts();
       expect(activeProducts.length).to.equal(2);
     });
 
     it("Should return products by category", async function () {
-      const defaultCategoryProducts = await cyberdyneProducts.getProductsByCategory(defaultCategoryId);
+      const defaultCategoryProducts = await cyberdyneProducts.getAllProductsByCategory(defaultCategoryId);
       expect(defaultCategoryProducts.length).to.equal(2);
       
-      const premiumCategoryProducts = await cyberdyneProducts.getProductsByCategory(secondCategoryId);
+      const premiumCategoryProducts = await cyberdyneProducts.getAllProductsByCategory(secondCategoryId);
       expect(premiumCategoryProducts.length).to.equal(1);
       expect(premiumCategoryProducts[0].title).to.equal("Product Premium");
     });
@@ -411,7 +411,7 @@ describe("CyberdyneProducts", function () {
 
     it("Should not allow querying invalid category", async function () {
       await expect(
-        cyberdyneProducts.getProductsByCategory(999)
+        cyberdyneProducts.getAllProductsByCategory(999)
       ).to.be.revertedWith("Category does not exist");
       
       await expect(
@@ -461,7 +461,7 @@ describe("CyberdyneProducts", function () {
     });
 
     it("Should handle empty product arrays", async function () {
-      const unauthorizedProducts = await cyberdyneProducts.getProductsByCreator(unauthorized.address);
+      const unauthorizedProducts = await cyberdyneProducts.getAllProductsByCreator(unauthorized.address);
       expect(unauthorizedProducts.length).to.equal(0);
     });
 

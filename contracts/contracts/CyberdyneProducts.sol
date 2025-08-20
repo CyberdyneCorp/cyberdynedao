@@ -36,6 +36,12 @@ contract CyberdyneProducts is Ownable {
     string[] public allProductUuids;
     address[] public authorizedCreatorsList; // Array to track all authorized creators
 
+    // Index mappings for O(1) array operations
+    mapping(string => uint256) private allIndex;                          // uuid -> index in allProductUuids
+    mapping(uint256 => mapping(string => uint256)) private catIndex;      // catId, uuid -> index in categoryProducts[catId]
+    mapping(address => mapping(string => uint256)) private creatorIndex;  // creator, uuid -> index in productsByCreator[creator]
+    mapping(address => uint256) private authIndex;                        // creator -> index in authorizedCreatorsList
+
     // Events
     event CategoryCreated(uint256 indexed categoryId, string name, string description);
     event ProductCreated(
@@ -62,14 +68,13 @@ contract CyberdyneProducts is Ownable {
     event ProductDeleted(string indexed uuid, address indexed deletedBy, address indexed creator);
     event CreatorAuthorized(address indexed creator, address indexed authorizedBy);
     event CreatorDeauthorized(address indexed creator, address indexed deauthorizedBy);
-    event ContractOwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     constructor() Ownable(msg.sender) {
         nextCategoryId = 1;
         
         // Automatically authorize the contract owner
         authorizedCreators[msg.sender] = true;
-        authorizedCreatorsList.push(msg.sender);
+        _pushAuth(msg.sender);
     }
 
     // Modifiers
@@ -83,15 +88,85 @@ contract CyberdyneProducts is Ownable {
         _;
     }
 
-    modifier onlyOwnerOrCreator(string memory uuid) {
+    modifier onlyOwnerOrAuthorizedCreatorOf(string memory uuid) {
         require(products[uuid].exists, "Product does not exist");
         require(
-            msg.sender == owner() || msg.sender == products[uuid].creator,
-            "Only owner or creator can modify this product"
+            msg.sender == owner() ||
+            (authorizedCreators[msg.sender] && msg.sender == products[uuid].creator),
+            "Only owner or authorized creator can modify this product"
         );
         _;
     }
 
+
+    // O(1) Array manipulation helper functions
+    function _pushAll(string memory u) private {
+        allIndex[u] = allProductUuids.length;
+        allProductUuids.push(u);
+    }
+    
+    function _removeAll(string memory u) private {
+        uint256 i = allIndex[u];
+        uint256 last = allProductUuids.length - 1;
+        if (i != last) {
+            string memory moved = allProductUuids[last];
+            allProductUuids[i] = moved;
+            allIndex[moved] = i;
+        }
+        allProductUuids.pop();
+        delete allIndex[u];
+    }
+
+    function _pushCat(uint256 c, string memory u) private {
+        catIndex[c][u] = categoryProducts[c].length;
+        categoryProducts[c].push(u);
+    }
+    
+    function _removeCat(uint256 c, string memory u) private {
+        uint256 i = catIndex[c][u];
+        uint256 last = categoryProducts[c].length - 1;
+        if (i != last) {
+            string memory moved = categoryProducts[c][last];
+            categoryProducts[c][i] = moved;
+            catIndex[c][moved] = i;
+        }
+        categoryProducts[c].pop();
+        delete catIndex[c][u];
+    }
+
+    function _pushCreator(address a, string memory u) private {
+        creatorIndex[a][u] = productsByCreator[a].length;
+        productsByCreator[a].push(u);
+    }
+    
+    function _removeCreator(address a, string memory u) private {
+        uint256 i = creatorIndex[a][u];
+        uint256 last = productsByCreator[a].length - 1;
+        if (i != last) {
+            string memory moved = productsByCreator[a][last];
+            productsByCreator[a][i] = moved;
+            creatorIndex[a][moved] = i;
+        }
+        productsByCreator[a].pop();
+        delete creatorIndex[a][u];
+    }
+
+    function _pushAuth(address a) private {
+        authIndex[a] = authorizedCreatorsList.length;
+        authorizedCreatorsList.push(a);
+    }
+    
+    function _removeAuth(address a) private {
+        uint256 i = authIndex[a];
+        uint256 last = authorizedCreatorsList.length - 1;
+        if (i != last) {
+            address moved = authorizedCreatorsList[last];
+            authorizedCreatorsList[i] = moved;
+            authIndex[moved] = i;
+        }
+        authorizedCreatorsList.pop();
+        delete authIndex[a];
+    }
 
     // Helper function to generate UUID based on block data and title
     function generateUuid(string memory _title) internal view returns (string memory) {
@@ -134,7 +209,7 @@ contract CyberdyneProducts is Ownable {
         require(!authorizedCreators[_creator], "Creator already authorized");
         
         authorizedCreators[_creator] = true;
-        authorizedCreatorsList.push(_creator);
+        _pushAuth(_creator);
         
         emit CreatorAuthorized(_creator, msg.sender);
     }
@@ -145,15 +220,7 @@ contract CyberdyneProducts is Ownable {
         require(_creator != owner(), "Cannot deauthorize contract owner");
         
         authorizedCreators[_creator] = false;
-        
-        // Remove from array (find and replace with last element)
-        for (uint256 i = 0; i < authorizedCreatorsList.length; i++) {
-            if (authorizedCreatorsList[i] == _creator) {
-                authorizedCreatorsList[i] = authorizedCreatorsList[authorizedCreatorsList.length - 1];
-                authorizedCreatorsList.pop();
-                break;
-            }
-        }
+        _removeAuth(_creator);
         
         emit CreatorDeauthorized(_creator, msg.sender);
     }
@@ -217,9 +284,9 @@ contract CyberdyneProducts is Ownable {
             exists: true
         });
 
-        categoryProducts[_categoryId].push(_uuid);
-        productsByCreator[msg.sender].push(_uuid);
-        allProductUuids.push(_uuid);
+        _pushCat(_categoryId, _uuid);
+        _pushCreator(msg.sender, _uuid);
+        _pushAll(_uuid);
 
         emit ProductCreated(_uuid, _title, _categoryId, _priceUSDC, _ipfsLocation, msg.sender);
         
@@ -233,7 +300,7 @@ contract CyberdyneProducts is Ownable {
         uint256 _categoryId,
         uint256 _priceUSDC,
         string memory _ipfsLocation
-    ) external onlyOwnerOrCreator(_uuid) validCategory(_categoryId) {
+    ) external onlyOwnerOrAuthorizedCreatorOf(_uuid) validCategory(_categoryId) {
         require(bytes(_title).length > 0, "Title cannot be empty");
         require(_priceUSDC > 0, "Price must be greater than 0");
         require(bytes(_ipfsLocation).length > 0, "IPFS location cannot be empty");
@@ -243,18 +310,8 @@ contract CyberdyneProducts is Ownable {
         
         // If category is changing, update category mappings
         if (oldCategoryId != _categoryId) {
-            // Remove from old category
-            string[] storage oldCategoryProds = categoryProducts[oldCategoryId];
-            for (uint256 i = 0; i < oldCategoryProds.length; i++) {
-                if (keccak256(abi.encodePacked(oldCategoryProds[i])) == keccak256(abi.encodePacked(_uuid))) {
-                    oldCategoryProds[i] = oldCategoryProds[oldCategoryProds.length - 1];
-                    oldCategoryProds.pop();
-                    break;
-                }
-            }
-            
-            // Add to new category
-            categoryProducts[_categoryId].push(_uuid);
+            _removeCat(oldCategoryId, _uuid);
+            _pushCat(_categoryId, _uuid);
         }
         
         product.title = _title;
@@ -267,7 +324,7 @@ contract CyberdyneProducts is Ownable {
     }
 
     // Toggle product active status (owner or creator only)
-    function toggleProductStatus(string memory _uuid) external onlyOwnerOrCreator(_uuid) {
+    function toggleProductStatus(string memory _uuid) external onlyOwnerOrAuthorizedCreatorOf(_uuid) {
         Product storage product = products[_uuid];
         product.isActive = !product.isActive;
         product.updatedAt = block.timestamp;
@@ -276,7 +333,7 @@ contract CyberdyneProducts is Ownable {
     }
 
     // Delete product (owner or creator only)
-    function deleteProduct(string memory _uuid) external onlyOwnerOrCreator(_uuid) {
+    function deleteProduct(string memory _uuid) external onlyOwnerOrAuthorizedCreatorOf(_uuid) {
         Product storage product = products[_uuid];
         uint256 categoryId = product.categoryId;
         address creator = product.creator;
@@ -284,34 +341,10 @@ contract CyberdyneProducts is Ownable {
         // Mark as deleted (set exists to false)
         product.exists = false;
         
-        // Remove from category products array
-        string[] storage categoryProds = categoryProducts[categoryId];
-        for (uint256 i = 0; i < categoryProds.length; i++) {
-            if (keccak256(abi.encodePacked(categoryProds[i])) == keccak256(abi.encodePacked(_uuid))) {
-                categoryProds[i] = categoryProds[categoryProds.length - 1];
-                categoryProds.pop();
-                break;
-            }
-        }
-        
-        // Remove from creator products array
-        string[] storage creatorProducts = productsByCreator[creator];
-        for (uint256 i = 0; i < creatorProducts.length; i++) {
-            if (keccak256(abi.encodePacked(creatorProducts[i])) == keccak256(abi.encodePacked(_uuid))) {
-                creatorProducts[i] = creatorProducts[creatorProducts.length - 1];
-                creatorProducts.pop();
-                break;
-            }
-        }
-        
-        // Remove from all products array
-        for (uint256 i = 0; i < allProductUuids.length; i++) {
-            if (keccak256(abi.encodePacked(allProductUuids[i])) == keccak256(abi.encodePacked(_uuid))) {
-                allProductUuids[i] = allProductUuids[allProductUuids.length - 1];
-                allProductUuids.pop();
-                break;
-            }
-        }
+        // Remove from all arrays using O(1) operations
+        _removeCat(categoryId, _uuid);
+        _removeCreator(creator, _uuid);
+        _removeAll(_uuid);
         
         emit ProductDeleted(_uuid, msg.sender, creator);
     }
@@ -321,18 +354,14 @@ contract CyberdyneProducts is Ownable {
         require(_newOwner != address(0), "New owner cannot be zero address");
         require(_newOwner != owner(), "New owner cannot be the same as current owner");
         
-        address previousOwner = owner();
-        
         // Authorize new owner if not already authorized
         if (!authorizedCreators[_newOwner]) {
             authorizedCreators[_newOwner] = true;
-            authorizedCreatorsList.push(_newOwner);
+            _pushAuth(_newOwner); // use the O(1) helper so authIndex is set
         }
         
         // Transfer ownership using OpenZeppelin's function
         _transferOwnership(_newOwner);
-        
-        emit ContractOwnershipTransferred(previousOwner, _newOwner);
     }
 
     // View functions
@@ -345,7 +374,7 @@ contract CyberdyneProducts is Ownable {
         return products[_uuid];
     }
 
-    function getProductsByCategory(uint256 _categoryId) 
+    function getAllProductsByCategory(uint256 _categoryId) 
         external 
         view 
         validCategory(_categoryId) 
@@ -391,7 +420,7 @@ contract CyberdyneProducts is Ownable {
     }
 
 
-    function getProductsByCreator(address _creator) external view returns (Product[] memory) {
+    function getAllProductsByCreator(address _creator) external view returns (Product[] memory) {
         string[] memory uuids = productsByCreator[_creator];
         Product[] memory creatorProducts = new Product[](uuids.length);
         
@@ -412,7 +441,7 @@ contract CyberdyneProducts is Ownable {
         return out;
     }
 
-    function getActiveProducts() external view returns (Product[] memory) {
+    function getAllActiveProducts() external view returns (Product[] memory) {
         // First count active products
         uint256 activeCount = 0;
         for (uint256 i = 0; i < allProductUuids.length; i++) {
@@ -461,5 +490,79 @@ contract CyberdyneProducts is Ownable {
 
     function categoryExists(uint256 _categoryId) external view returns (bool) {
         return categories[_categoryId].exists;
+    }
+
+    // Paginated getters to prevent DoS-by-size for large datasets
+    function getProducts(uint256 offset, uint256 limit) external view returns (Product[] memory) {
+        uint256 n = allProductUuids.length;
+        if (offset >= n) return new Product[](0);
+        uint256 end = offset + limit; 
+        if (end > n) end = n;
+        Product[] memory out = new Product[](end - offset);
+        for (uint256 i = offset; i < end; ) {
+            out[i - offset] = products[allProductUuids[i]];
+            unchecked { ++i; }
+        }
+        return out;
+    }
+
+    function getActiveProductsPaginated(uint256 offset, uint256 limit) external view returns (Product[] memory) {
+        // First collect active product indices
+        uint256[] memory activeIndices = new uint256[](allProductUuids.length);
+        uint256 activeCount = 0;
+        
+        for (uint256 i = 0; i < allProductUuids.length; i++) {
+            if (products[allProductUuids[i]].isActive) {
+                activeIndices[activeCount] = i;
+                activeCount++;
+            }
+        }
+        
+        // Apply pagination to active products
+        if (offset >= activeCount) return new Product[](0);
+        uint256 end = offset + limit;
+        if (end > activeCount) end = activeCount;
+        
+        Product[] memory out = new Product[](end - offset);
+        for (uint256 i = offset; i < end; ) {
+            out[i - offset] = products[allProductUuids[activeIndices[i]]];
+            unchecked { ++i; }
+        }
+        return out;
+    }
+
+    function getProductsByCategory(uint256 categoryId, uint256 offset, uint256 limit) 
+        external 
+        view 
+        validCategory(categoryId) 
+        returns (Product[] memory) 
+    {
+        string[] memory categoryUuids = categoryProducts[categoryId];
+        uint256 n = categoryUuids.length;
+        if (offset >= n) return new Product[](0);
+        uint256 end = offset + limit;
+        if (end > n) end = n;
+        
+        Product[] memory out = new Product[](end - offset);
+        for (uint256 i = offset; i < end; ) {
+            out[i - offset] = products[categoryUuids[i]];
+            unchecked { ++i; }
+        }
+        return out;
+    }
+
+    function getProductsByCreator(address creator, uint256 offset, uint256 limit) external view returns (Product[] memory) {
+        string[] memory creatorUuids = productsByCreator[creator];
+        uint256 n = creatorUuids.length;
+        if (offset >= n) return new Product[](0);
+        uint256 end = offset + limit;
+        if (end > n) end = n;
+        
+        Product[] memory out = new Product[](end - offset);
+        for (uint256 i = offset; i < end; ) {
+            out[i - offset] = products[creatorUuids[i]];
+            unchecked { ++i; }
+        }
+        return out;
     }
 }
