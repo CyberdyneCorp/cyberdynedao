@@ -1,4 +1,5 @@
-const hre = require("hardhat");
+import hre from "hardhat";
+import fs from 'fs';
 
 async function main() {
   console.log("Starting TrainingMaterials contract deployment...");
@@ -120,7 +121,6 @@ async function main() {
   console.log("8. Transfer contract ownership using transferContractOwnership (owner only)");
 
   // Save deployment info to a file
-  const fs = require('fs');
   const deploymentInfo = {
     contractAddress: contractAddress,
     network: hre.network.name,
