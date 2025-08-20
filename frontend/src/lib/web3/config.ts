@@ -1,10 +1,21 @@
 import { ethers } from 'ethers';
 
 // Get environment variables using import.meta.env
+console.log('🔧 Config: Loading environment variables...');
+console.log('🌐 Available env vars:', Object.keys(import.meta.env).filter(key => key.startsWith('VITE_')));
+
 const VITE_INFURA_ENDPOINT = import.meta.env.VITE_INFURA_ENDPOINT;
 const VITE_CHAIN_ID = import.meta.env.VITE_CHAIN_ID;
 const VITE_NETWORK_NAME = import.meta.env.VITE_NETWORK_NAME;
 const VITE_NATIVE_CURRENCY = import.meta.env.VITE_NATIVE_CURRENCY;
+
+console.log('📋 Environment configuration:', {
+	VITE_INFURA_ENDPOINT: VITE_INFURA_ENDPOINT ? '✅ Set' : '❌ Missing',
+	VITE_CHAIN_ID: VITE_CHAIN_ID || '❌ Missing',
+	VITE_NETWORK_NAME: VITE_NETWORK_NAME || '❌ Missing',
+	VITE_NATIVE_CURRENCY: VITE_NATIVE_CURRENCY || '❌ Missing',
+	VITE_CYBERDYNE_ACCESS_NFT_ADDRESS: import.meta.env.VITE_CYBERDYNE_ACCESS_NFT_ADDRESS || '❌ Missing'
+});
 
 export interface NetworkConfig {
 	chainId: number;
