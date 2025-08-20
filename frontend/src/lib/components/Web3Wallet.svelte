@@ -5,6 +5,8 @@
 	import { walletInfo, isWalletConnected, formatAddress, formatBalance, getNetworkName } from '../stores/appKitStore';
 	import { completeWalletDisconnect } from '../utils/walletDisconnect';
 	import { userTraits, hasAnyAccess, isLoadingTraits, getActiveTraits, accessNFTActions } from '../stores/accessNFTStore';
+	import { walletInfo as web3WalletInfo } from '../stores/web3Store';
+	import NFTTerminal from './NFTTerminal.svelte';
 	
 	let walletConnected = false;
 	let isLoading = false;
@@ -14,6 +16,7 @@
 
 	let showDetails = false;
 	let showConnectionModal = false;
+	let showNFTTerminal = false;
 
 	// Subscribe to WalletConnect state
 	let walletConnectConnected = false;
@@ -88,6 +91,17 @@
 				walletConnected = true;
 				connectionType = 'web3auth';
 				console.log('Web3Auth login successful:', user);
+				
+				// Update global web3Store so accessNFTStore can detect the connection
+				console.log('🔗 Updating global web3Store with Web3Auth connection...');
+				web3WalletInfo.set({
+					address: user.address,
+					balance: user.balance,
+					chainId: 8453, // Base network
+					isConnected: true
+				});
+				console.log('✅ Global web3Store updated with Web3Auth user data');
+				
 				errorMessage = ''; // Clear any previous errors
 			}
 		} catch (error) {
@@ -155,6 +169,14 @@
 		errorMessage = '';
 	}
 
+	function openNFTTerminal() {
+		showNFTTerminal = true;
+	}
+
+	function closeNFTTerminal() {
+		showNFTTerminal = false;
+	}
+
 	async function checkAuthStatus() {
 		console.log('🔍 Web3Wallet: Checking authentication status...');
 		console.log('🔍 Web3Wallet: Current component state before check:', {
@@ -172,6 +194,16 @@
 				currentUser = user;
 				walletConnected = true;
 				connectionType = 'web3auth';
+				
+				// Update global web3Store so accessNFTStore can detect the restored connection
+				console.log('🔗 Updating global web3Store with restored Web3Auth session...');
+				web3WalletInfo.set({
+					address: user.address,
+					balance: user.balance,
+					chainId: 8453, // Base network
+					isConnected: true
+				});
+				console.log('✅ Global web3Store updated with restored Web3Auth session');
 				
 				console.log('✅ Web3Wallet: User session restored successfully:', {
 					email: user.userInfo.email,
@@ -380,11 +412,18 @@
 								</div>
 							{:else if $hasAnyAccess && $userTraits}
 								<div class="detail-row traits-section">
-									<span class="detail-label">ACCESS TRAITS:</span>
+									<span class="detail-label">ACCESS TRAITS NFT:</span>
 									<div class="traits-container">
 										{#each getActiveTraits($userTraits) as trait}
 											<span class="trait-badge">{trait}</span>
 										{/each}
+										<button 
+											class="nft-view-btn" 
+											on:click={openNFTTerminal}
+											title="View NFT Certificate"
+										>
+											📜 VIEW NFT
+										</button>
 									</div>
 								</div>
 							{:else if $userTraits === null}
@@ -407,6 +446,15 @@
 			</div>
 		</div>
 	{/if}
+
+	<!-- NFT Terminal Modal -->
+	<NFTTerminal 
+		bind:isVisible={showNFTTerminal}
+		userTraits={$userTraits}
+		walletAddress={connectionType === 'web3auth' ? currentUser?.address || '' : 
+		               connectionType === 'walletconnect' ? walletConnectInfo?.address || '' : ''}
+		on:close={closeNFTTerminal}
+	/>
 </div>
 
 <style>
@@ -743,6 +791,31 @@
 	.no-access {
 		color: #ff8080;
 		font-style: italic;
+	}
+
+	.nft-view-btn {
+		background: rgba(0, 255, 0, 0.2);
+		border: 1px solid #00ff00;
+		color: #00ff00;
+		padding: 6px 12px;
+		border-radius: 12px;
+		font-size: 9px;
+		font-weight: bold;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		font-family: inherit;
+		white-space: nowrap;
+		margin-left: 8px;
+	}
+
+	.nft-view-btn:hover {
+		background: rgba(0, 255, 0, 0.3);
+		box-shadow: 0 0 8px rgba(0, 255, 0, 0.4);
+		transform: translateY(-1px);
+	}
+
+	.nft-view-btn:active {
+		transform: translateY(0);
 	}
 
 	.disconnect-btn {
