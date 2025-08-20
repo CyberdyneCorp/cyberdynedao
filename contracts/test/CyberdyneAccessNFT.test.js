@@ -424,19 +424,26 @@ describe("CyberdyneAccessNFT", function () {
       expect(tokenURI).to.equal("custom-metadata-uri");
     });
 
-    it("Should return base URI when no custom URI is set", async function () {
+    it("Should return dynamic JSON when no custom URI is set", async function () {
       await cyberdyneAccessNFT.mint(user2.address, false, true, false, false, false, false, "");
       const tokenURI = await cyberdyneAccessNFT.tokenURI(2);
-      expect(tokenURI).to.equal(BASE_URI + "2");
+      expect(tokenURI).to.include("data:application/json;base64,");
     });
 
-    it("Should allow owner to update base URI", async function () {
+    it("Should generate dynamic JSON with updated base URI", async function () {
       const newBaseURI = "https://new-api.cyberdyne.xyz/metadata/";
       await cyberdyneAccessNFT.setBaseURI(newBaseURI);
       
       await cyberdyneAccessNFT.mint(user2.address, false, true, false, false, false, false, "");
       const tokenURI = await cyberdyneAccessNFT.tokenURI(2);
-      expect(tokenURI).to.equal(newBaseURI + "2");
+      expect(tokenURI).to.include("data:application/json;base64,");
+      
+      // Decode and verify the JSON contains the new base URI
+      const base64Data = tokenURI.replace("data:application/json;base64,", "");
+      const jsonString = Buffer.from(base64Data, 'base64').toString('utf8');
+      const metadata = JSON.parse(jsonString);
+      expect(metadata.image).to.include(newBaseURI);
+      expect(metadata.animation_url).to.include(newBaseURI);
     });
 
     it("Should update metadata URI correctly", async function () {
@@ -447,6 +454,55 @@ describe("CyberdyneAccessNFT", function () {
       
       const tokenURI = await cyberdyneAccessNFT.tokenURI(tokenId);
       expect(tokenURI).to.equal(newURI);
+    });
+
+    it("Should generate complete dynamic JSON metadata and print it", async function () {
+      // Mint a token with specific permissions for testing
+      await cyberdyneAccessNFT.mint(user2.address, true, false, true, true, false, true, "");
+      const tokenURI = await cyberdyneAccessNFT.tokenURI(2);
+      
+      // Verify it's a data URI
+      expect(tokenURI).to.include("data:application/json;base64,");
+      
+      // Decode the JSON
+      const base64Data = tokenURI.replace("data:application/json;base64,", "");
+      const jsonString = Buffer.from(base64Data, 'base64').toString('utf8');
+      const metadata = JSON.parse(jsonString);
+      
+      // Print the complete JSON for inspection
+      console.log("\n=== COMPLETE DYNAMIC JSON METADATA ===");
+      console.log(JSON.stringify(metadata, null, 2));
+      console.log("=== END METADATA ===\n");
+      
+      // Verify all required fields exist
+      expect(metadata.name).to.equal("Cyberdyne Access NFT #2");
+      expect(metadata.description).to.equal("NFT de acesso com traits on-chain.");
+      expect(metadata.image).to.include("nft/nft_access.png");
+      expect(metadata.animation_url).to.include("nft_access_svg?token_id=2");
+      expect(metadata.attributes).to.be.an('array');
+      expect(metadata.attributes).to.have.length(6);
+      
+      // Verify specific traits match the minted permissions
+      const learningTrait = metadata.attributes.find(attr => attr.trait_type === "Learning");
+      expect(learningTrait.value).to.equal(true);
+      
+      const frontendTrait = metadata.attributes.find(attr => attr.trait_type === "Frontend");
+      expect(frontendTrait.value).to.equal(false);
+      
+      const backendTrait = metadata.attributes.find(attr => attr.trait_type === "Backend");
+      expect(backendTrait.value).to.equal(true);
+      
+      const blogTrait = metadata.attributes.find(attr => attr.trait_type === "Blog Creator");
+      expect(blogTrait.value).to.equal(true);
+      
+      const adminTrait = metadata.attributes.find(attr => attr.trait_type === "Admin");
+      expect(adminTrait.value).to.equal(false);
+      
+      const marketplaceTrait = metadata.attributes.find(attr => attr.trait_type === "Marketplace");
+      expect(marketplaceTrait.value).to.equal(true);
+      
+      // Verify animation URL contains the correct API endpoint
+      expect(metadata.animation_url).to.include("nft_access_svg?token_id=2");
     });
   });
 

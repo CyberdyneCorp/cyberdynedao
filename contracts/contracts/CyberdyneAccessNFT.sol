@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/interfaces/IERC4906.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import "@openzeppelin/contracts/utils/Base64.sol";
 
 contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable, Pausable, IERC4906 {
     using Strings for uint256;
@@ -449,23 +450,57 @@ contract CyberdyneAccessNFT is ERC721, ERC721Enumerable, Ownable, Pausable, IERC
     }
 
     // Token URI functions
-    function tokenURI(uint256 tokenId) 
-        public 
-        view 
-        override 
-        tokenExists(tokenId) 
-        returns (string memory) 
-    {
-        string memory customURI = tokenPermissions[tokenId].metadataURI;
+    function _generateDynamicMetadata(uint256 tokenId) internal view returns (string memory) {
+        AccessPermissions memory p = tokenPermissions[tokenId];
         
+        return string(
+            abi.encodePacked(
+                '{',
+                    '"name":"Cyberdyne Access NFT #', tokenId.toString(), '",',
+                    '"description":"NFT de acesso com traits on-chain.",',
+                    '"image":"', _baseTokenURI, 'nft/nft_access.png",',
+                    '"animation_url":"', _baseTokenURI, 'nft_access_svg?token_id=',tokenId.toString(), '",',
+                    _generateAttributes(p),
+                '}'
+            )
+        );
+    }
+
+    function _generateAttributes(AccessPermissions memory p) internal pure returns (string memory) {
+        return string(
+            abi.encodePacked(
+                '"attributes":[',
+                    '{"trait_type":"Learning","value":',  (p.learningMaterials ? "true" : "false"), '},',
+                    '{"trait_type":"Frontend","value":',  (p.frontendServers   ? "true" : "false"), '},',
+                    '{"trait_type":"Backend","value":',   (p.backendServers    ? "true" : "false"), '},',
+                    '{"trait_type":"Blog Creator","value":', (p.blogCreator    ? "true" : "false"), '},',
+                    '{"trait_type":"Admin","value":',     (p.admin             ? "true" : "false"), '},',
+                    '{"trait_type":"Marketplace","value":', (p.canSellMarketplace ? "true" : "false"), '}',
+                ']'
+            )
+        );
+    }
+
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        override
+        tokenExists(tokenId)
+        returns (string memory)
+    {
+        // 1) Prioriza metadata externa se estiver definida (compatibilidade com seu fluxo atual)
+        string memory customURI = tokenPermissions[tokenId].metadataURI;
         if (bytes(customURI).length > 0) {
             return customURI;
         }
-        
-        string memory baseURI = _baseURI();
-        return bytes(baseURI).length > 0 
-            ? string(abi.encodePacked(baseURI, tokenId.toString()))
-            : "";
+
+        // 2) Gera JSON on-chain dinâmico
+        return string(
+            abi.encodePacked(
+                "data:application/json;base64,",
+                Base64.encode(bytes(_generateDynamicMetadata(tokenId)))
+            )
+        );
     }
 
     function _baseURI() internal view override returns (string memory) {
