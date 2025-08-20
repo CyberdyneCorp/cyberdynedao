@@ -43,7 +43,7 @@ async function main() {
   // Try to load existing deployments
   try {
     const productsDeployment = require(`../deployments/CyberdyneProducts-${hre.network.name}.json`);
-    productsAddress = productsDeployment.address;
+    productsAddress = productsDeployment.contractAddress;
     console.log("Using existing CyberdyneProducts at:", productsAddress);
   } catch (error) {
     console.log("\n📦 Deploying CyberdyneProducts...");
@@ -57,7 +57,7 @@ async function main() {
 
   try {
     const accessDeployment = require(`../deployments/CyberdyneAccessNFT-${hre.network.name}.json`);
-    accessNFTAddress = accessDeployment.address;
+    accessNFTAddress = accessDeployment.contractAddress;
     console.log("Using existing CyberdyneAccessNFT at:", accessNFTAddress);
   } catch (error) {
     console.log("\n🎫 Deploying CyberdyneAccessNFT...");
@@ -99,7 +99,7 @@ async function main() {
 
   // Save deployment info
   const deploymentInfo = {
-    address: marketplaceAddress,
+    contractAddress: marketplaceAddress,
     deployer: deployer.address,
     deploymentBlock: await ethers.provider.getBlockNumber(),
     deploymentTime: new Date().toISOString(),

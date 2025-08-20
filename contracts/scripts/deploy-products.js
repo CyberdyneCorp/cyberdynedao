@@ -26,7 +26,7 @@ async function main() {
   console.log("Owner matches deployer:", owner === deployer.address);
 
   // Display initial state
-  const totalProducts = await cyberdyneProducts.totalProducts();
+  const totalProducts = await cyberdyneProducts.getTotalProductCount();
   console.log("Initial totalProducts:", totalProducts.toString());
   
   // Display authorization info
@@ -103,7 +103,7 @@ async function main() {
   console.log("1. Verify the contract on Etherscan (if deploying to mainnet/testnet)");
   console.log("2. Authorize additional creators using authorizeCreator function (owner only)");
   console.log("3. Create products using the createProduct function (authorized creators only)");
-  console.log("4. Query products by creator using getProductsByCreator");
+  console.log("4. Query products by creator using getAllProductsByCreator or getProductsByCreator (paginated)");
   console.log("5. Update products using updateProduct (owner or creator only)");
   console.log("6. Toggle product status using toggleProductStatus (owner or creator only)");
   console.log("7. Delete products using deleteProduct (owner or creator only)");
