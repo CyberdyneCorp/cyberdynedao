@@ -130,6 +130,24 @@ async function main() {
     JSON.stringify(deploymentInfo, null, 2)
   );
   console.log(`\n💾 Deployment info saved to deployments/CyberdyneProducts-${hre.network.name}.json`);
+
+  // Auto-verify on testnets and mainnet (not local)
+  if (hre.network.name !== "hardhat" && hre.network.name !== "localhost") {
+    console.log("\n🔍 Starting automatic contract verification...");
+    try {
+      await hre.run("verify:verify", {
+        address: contractAddress,
+        constructorArguments: [],
+      });
+      console.log("✅ Contract verified successfully on BaseScan!");
+      console.log(`🔗 View on BaseScan: https://basescan.org/address/${contractAddress}`);
+    } catch (error) {
+      console.log("⚠️ Verification failed (this is normal if already verified):");
+      console.log(error.message);
+      console.log(`\n🔧 Manual verification command:`);
+      console.log(`npx hardhat verify --network ${hre.network.name} ${contractAddress}`);
+    }
+  }
 }
 
 main()
