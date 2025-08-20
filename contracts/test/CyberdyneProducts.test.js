@@ -33,7 +33,7 @@ describe("CyberdyneProducts", function () {
     });
 
     it("Should initialize with zero products", async function () {
-      expect(await cyberdyneProducts.totalProducts()).to.equal(0);
+      expect(await cyberdyneProducts.getTotalProductCount()).to.equal(0);
     });
 
     it("Should initialize with nextCategoryId as 1", async function () {
@@ -205,7 +205,7 @@ describe("CyberdyneProducts", function () {
         "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdA"
       );
 
-      expect(await cyberdyneProducts.totalProducts()).to.equal(1);
+      expect(await cyberdyneProducts.getTotalProductCount()).to.equal(1);
     });
 
     it("Should not allow creating product with invalid category", async function () {
@@ -330,7 +330,7 @@ describe("CyberdyneProducts", function () {
         cyberdyneProducts.getProduct(productUuid)
       ).to.be.revertedWith("Product does not exist");
 
-      expect(await cyberdyneProducts.totalProducts()).to.equal(0);
+      expect(await cyberdyneProducts.getTotalProductCount()).to.equal(0);
     });
   });
 

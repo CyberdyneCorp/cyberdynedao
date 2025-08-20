@@ -33,7 +33,6 @@ contract CyberdyneProducts is Ownable {
     mapping(address => bool) public authorizedCreators; // Whitelist of addresses that can create products
     
     uint256 public nextCategoryId;
-    uint256 public totalProducts;
     string[] public allProductUuids;
     address[] public authorizedCreatorsList; // Array to track all authorized creators
 
@@ -67,7 +66,6 @@ contract CyberdyneProducts is Ownable {
 
     constructor() Ownable(msg.sender) {
         nextCategoryId = 1;
-        totalProducts = 0;
         
         // Automatically authorize the contract owner
         authorizedCreators[msg.sender] = true;
@@ -98,34 +96,34 @@ contract CyberdyneProducts is Ownable {
     // Helper function to generate UUID based on block data and title
     function generateUuid(string memory _title) internal view returns (string memory) {
         bytes32 hash = keccak256(abi.encodePacked(
-            block.timestamp,
-            block.prevrandao,
-            block.number,
             msg.sender,
             _title,
-            totalProducts
+            allProductUuids.length, // replaces totalProducts
+            blockhash(block.number - 1) // changing salt for better uniqueness
         ));
         
-        // Convert to hex string and take first 32 characters for UUID-like format
+        // Convert to hex string in standard UUID format: 8-4-4-4-12
         return string(abi.encodePacked(
-            _toHexString(uint256(hash) >> 128, 16),
-            "-",
-            _toHexString(uint256(hash >> 96) & 0xFFFF, 4),
-            "-",
-            _toHexString(uint256(hash >> 80) & 0xFFFF, 4),
-            "-",
-            _toHexString(uint256(hash >> 64) & 0xFFFF, 4),
-            "-",
-            _toHexString(uint256(hash >> 16) & 0xFFFFFFFFFFFF, 12)
+            _toHexString(uint256(hash) >> 224, 8), "-",
+            _toHexString(uint256(uint16(uint256(hash) >> 208)), 4), "-",
+            _toHexString(uint256(uint16(uint256(hash) >> 192)), 4), "-",
+            _toHexString(uint256(uint16(uint256(hash) >> 176)), 4), "-",
+            _toHexString(uint256(uint48(uint256(hash) >> 128)), 12)
         ));
+    }
+
+    // Helper function to convert hex nibble to character
+    function _hexNibble(uint8 nib) private pure returns (bytes1) {
+        return bytes1(nib + (nib < 10 ? 48 : 87));
     }
 
     // Helper function to convert uint to hex string
     function _toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
         bytes memory buffer = new bytes(length);
-        for (uint256 i = length; i > 0; i--) {
-            buffer[i - 1] = bytes1(uint8(value & 0xf) + (value & 0xf < 10 ? 48 : 87));
+        for (uint256 i = length; i > 0; ) {
+            buffer[i - 1] = _hexNibble(uint8(value & 0x0f));
             value >>= 4;
+            unchecked { --i; }
         }
         return string(buffer);
     }
@@ -222,7 +220,6 @@ contract CyberdyneProducts is Ownable {
         categoryProducts[_categoryId].push(_uuid);
         productsByCreator[msg.sender].push(_uuid);
         allProductUuids.push(_uuid);
-        totalProducts++;
 
         emit ProductCreated(_uuid, _title, _categoryId, _priceUSDC, _ipfsLocation, msg.sender);
         
@@ -316,9 +313,6 @@ contract CyberdyneProducts is Ownable {
             }
         }
         
-        // Decrease total count
-        totalProducts--;
-        
         emit ProductDeleted(_uuid, msg.sender, creator);
     }
 
@@ -409,13 +403,13 @@ contract CyberdyneProducts is Ownable {
     }
 
     function getAllProducts() external view returns (Product[] memory) {
-        Product[] memory allProducts = new Product[](totalProducts);
-        
-        for (uint256 i = 0; i < allProductUuids.length; i++) {
-            allProducts[i] = products[allProductUuids[i]];
+        uint256 n = allProductUuids.length;
+        Product[] memory out = new Product[](n);
+        for (uint256 i = 0; i < n; ) {
+            out[i] = products[allProductUuids[i]];
+            unchecked { ++i; }
         }
-        
-        return allProducts;
+        return out;
     }
 
     function getActiveProducts() external view returns (Product[] memory) {
@@ -449,6 +443,10 @@ contract CyberdyneProducts is Ownable {
 
     function getCreatorProductCount(address _creator) external view returns (uint256) {
         return productsByCreator[_creator].length;
+    }
+
+    function getTotalProductCount() external view returns (uint256) {
+        return allProductUuids.length;
     }
 
     function getActiveProductCount() external view returns (uint256) {
