@@ -14,8 +14,10 @@ console.log('📋 Environment configuration:', {
 	VITE_CHAIN_ID: VITE_CHAIN_ID || '❌ Missing',
 	VITE_NETWORK_NAME: VITE_NETWORK_NAME || '❌ Missing',
 	VITE_NATIVE_CURRENCY: VITE_NATIVE_CURRENCY || '❌ Missing',
-	VITE_CYBERDYNE_ACCESS_NFT_ADDRESS: import.meta.env.VITE_CYBERDYNE_ACCESS_NFT_ADDRESS || '❌ Missing'
+	VITE_CYBERDYNE_ACCESS_NFT_ADDRESS: import.meta.env.VITE_CYBERDYNE_ACCESS_NFT_ADDRESS ? '✅ Set' : '❌ Missing'
 });
+
+console.log('🔍 Raw VITE_CYBERDYNE_ACCESS_NFT_ADDRESS:', import.meta.env.VITE_CYBERDYNE_ACCESS_NFT_ADDRESS);
 
 export interface NetworkConfig {
 	chainId: number;

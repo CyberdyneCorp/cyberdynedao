@@ -5,7 +5,6 @@ export default defineConfig({
 	plugins: [sveltekit()],
 	define: {
 		global: 'globalThis',
-		'process.env': {},
 	},
 	resolve: {
 		alias: {
