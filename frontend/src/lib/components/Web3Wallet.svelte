@@ -4,6 +4,7 @@
 	import { appKitService } from '../web3/appKitService';
 	import { walletInfo, isWalletConnected, formatAddress, formatBalance, getNetworkName } from '../stores/appKitStore';
 	import { completeWalletDisconnect } from '../utils/walletDisconnect';
+	import { userTraits, hasAnyAccess, isLoadingTraits, getActiveTraits, accessNFTActions } from '../stores/accessNFTStore';
 	
 	let walletConnected = false;
 	let isLoading = false;
@@ -370,6 +371,28 @@
 									<span class="detail-value">{currentUser?.userInfo.name || 'Not provided'}</span>
 								</div>
 							{/if}
+							
+							<!-- Access Traits Section -->
+							{#if $isLoadingTraits}
+								<div class="detail-row">
+									<span class="detail-label">ACCESS:</span>
+									<span class="detail-value loading">Loading traits...</span>
+								</div>
+							{:else if $hasAnyAccess && $userTraits}
+								<div class="detail-row traits-section">
+									<span class="detail-label">ACCESS TRAITS:</span>
+									<div class="traits-container">
+										{#each getActiveTraits($userTraits) as trait}
+											<span class="trait-badge">{trait}</span>
+										{/each}
+									</div>
+								</div>
+							{:else if $userTraits === null}
+								<div class="detail-row">
+									<span class="detail-label">ACCESS:</span>
+									<span class="detail-value no-access">No Access NFT</span>
+								</div>
+							{/if}
 						</div>
 						<div class="wallet-actions">
 							<button 
@@ -684,6 +707,42 @@
 		max-width: 200px;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+
+	/* Access Traits Styles */
+	.traits-section {
+		flex-direction: column;
+		align-items: flex-start !important;
+		gap: 8px;
+	}
+
+	.traits-container {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+		width: 100%;
+	}
+
+	.trait-badge {
+		background: rgba(0, 255, 0, 0.2);
+		border: 1px solid #00ff00;
+		color: #00ff00;
+		padding: 4px 8px;
+		border-radius: 12px;
+		font-size: 9px;
+		font-weight: bold;
+		text-transform: uppercase;
+		white-space: nowrap;
+	}
+
+	.loading {
+		color: #80ff80;
+		font-style: italic;
+	}
+
+	.no-access {
+		color: #ff8080;
+		font-style: italic;
 	}
 
 	.disconnect-btn {

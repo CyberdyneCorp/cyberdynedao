@@ -191,3 +191,179 @@ export const BASE_TOKENS = {
 } as const;
 
 export type BaseTokenSymbol = keyof typeof BASE_TOKENS;
+
+// CyberdyneAccessNFT ABI
+export const CYBERDYNE_ACCESS_NFT_ABI = [
+	'function balanceOf(address owner) view returns (uint256)',
+	'function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)',
+	'function getUserTokens(address user) view returns (uint256[])',
+	'function getUserPermissions(address user) view returns (uint256[] tokenIds, tuple(bool learningMaterials, bool frontendServers, bool backendServers, bool blogCreator, bool admin, bool canSellMarketplace, uint256 issuedAt, uint256 lastUpdated, string metadataURI)[] permissions)',
+	'function getTokenPermissions(uint256 tokenId) view returns (tuple(bool learningMaterials, bool frontendServers, bool backendServers, bool blogCreator, bool admin, bool canSellMarketplace, uint256 issuedAt, uint256 lastUpdated, string metadataURI))',
+	'function tokenURI(uint256 tokenId) view returns (string)',
+	'function addressHasLearningAccess(address user) view returns (bool)',
+	'function addressHasFrontendAccess(address user) view returns (bool)',
+	'function addressHasBackendAccess(address user) view returns (bool)',
+	'function addressHasBlogCreatorAccess(address user) view returns (bool)',
+	'function addressHasAdminAccess(address user) view returns (bool)',
+	'function addressHasMarketplaceSellAccess(address user) view returns (bool)'
+];
+
+// Access NFT Types
+export interface AccessPermissions {
+	learningMaterials: boolean;
+	frontendServers: boolean;
+	backendServers: boolean;
+	blogCreator: boolean;
+	admin: boolean;
+	canSellMarketplace: boolean;
+	issuedAt: bigint;
+	lastUpdated: bigint;
+	metadataURI: string;
+}
+
+export interface UserNFTData {
+	tokenIds: bigint[];
+	permissions: AccessPermissions[];
+}
+
+export interface NFTTraits {
+	Learning: boolean;
+	Frontend: boolean;
+	Backend: boolean;
+	'Blog Creator': boolean;
+	Admin: boolean;
+	Marketplace: boolean;
+}
+
+export class CyberdyneAccessNFTManager {
+	private contractAddress: string;
+
+	constructor(contractAddress: string) {
+		this.contractAddress = contractAddress;
+	}
+
+	private getContract(withSigner = false) {
+		const signerOrProvider = withSigner ? walletManager.getSigner() : provider;
+		return new ethers.Contract(this.contractAddress, CYBERDYNE_ACCESS_NFT_ABI, signerOrProvider);
+	}
+
+	async getUserTokens(userAddress: string): Promise<bigint[]> {
+		try {
+			const contract = this.getContract();
+			return await contract.getUserTokens(userAddress);
+		} catch (error) {
+			console.error('Error fetching user tokens:', error);
+			return [];
+		}
+	}
+
+	async getUserPermissions(userAddress: string): Promise<UserNFTData | null> {
+		try {
+			const contract = this.getContract();
+			const [tokenIds, permissions] = await contract.getUserPermissions(userAddress);
+			return { tokenIds, permissions };
+		} catch (error) {
+			console.error('Error fetching user permissions:', error);
+			return null;
+		}
+	}
+
+	async getTokenURI(tokenId: bigint): Promise<string> {
+		try {
+			const contract = this.getContract();
+			return await contract.tokenURI(tokenId);
+		} catch (error) {
+			console.error('Error fetching token URI:', error);
+			return '';
+		}
+	}
+
+	async parseTokenMetadata(tokenURI: string): Promise<NFTTraits | null> {
+		try {
+			let metadataJSON: any;
+
+			if (tokenURI.startsWith('data:application/json;base64,')) {
+				const base64Data = tokenURI.replace('data:application/json;base64,', '');
+				const decodedData = atob(base64Data);
+				metadataJSON = JSON.parse(decodedData);
+			} else if (tokenURI.startsWith('http')) {
+				const response = await fetch(tokenURI);
+				metadataJSON = await response.json();
+			} else {
+				console.error('Unsupported token URI format:', tokenURI);
+				return null;
+			}
+
+			if (!metadataJSON.attributes) {
+				return null;
+			}
+
+			const traits: NFTTraits = {
+				Learning: false,
+				Frontend: false,
+				Backend: false,
+				'Blog Creator': false,
+				Admin: false,
+				Marketplace: false
+			};
+
+			metadataJSON.attributes.forEach((attr: any) => {
+				const traitType = attr.trait_type;
+				const value = attr.value === true || attr.value === 'true';
+				
+				if (traitType in traits) {
+					(traits as any)[traitType] = value;
+				}
+			});
+
+			return traits;
+		} catch (error) {
+			console.error('Error parsing token metadata:', error);
+			return null;
+		}
+	}
+
+	async getUserTraits(userAddress: string): Promise<NFTTraits | null> {
+		try {
+			const userData = await this.getUserPermissions(userAddress);
+			if (!userData || userData.tokenIds.length === 0) {
+				return null;
+			}
+
+			const combinedTraits: NFTTraits = {
+				Learning: false,
+				Frontend: false,
+				Backend: false,
+				'Blog Creator': false,
+				Admin: false,
+				Marketplace: false
+			};
+
+			for (let i = 0; i < userData.tokenIds.length; i++) {
+				const permissions = userData.permissions[i];
+				combinedTraits.Learning = combinedTraits.Learning || permissions.learningMaterials;
+				combinedTraits.Frontend = combinedTraits.Frontend || permissions.frontendServers;
+				combinedTraits.Backend = combinedTraits.Backend || permissions.backendServers;
+				combinedTraits['Blog Creator'] = combinedTraits['Blog Creator'] || permissions.blogCreator;
+				combinedTraits.Admin = combinedTraits.Admin || permissions.admin;
+				combinedTraits.Marketplace = combinedTraits.Marketplace || permissions.canSellMarketplace;
+			}
+
+			return combinedTraits;
+		} catch (error) {
+			console.error('Error fetching user traits:', error);
+			return null;
+		}
+	}
+
+	async hasAnyAccess(userAddress: string): Promise<boolean> {
+		try {
+			const contract = this.getContract();
+			const balance = await contract.balanceOf(userAddress);
+			return balance > 0n;
+		} catch (error) {
+			console.error('Error checking access:', error);
+			return false;
+		}
+	}
+}

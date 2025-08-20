@@ -52,6 +52,8 @@ retro-terminal/
 - **Base Network**: Configured for Base mainnet with Infura RPC
 - **Real-time Balance**: Live ETH balance display and updates
 - **Professional Wallet UI**: Clean connected state with expandable details
+- **Access NFT Integration**: Automatic trait checking for CyberdyneAccessNFT holders
+- **Real-time Permissions**: Dynamic access control based on NFT ownership
 
 ### 🛠️ Technical
 - **TypeScript**: Full type safety throughout the application
@@ -67,6 +69,8 @@ retro-terminal/
 - **USDC Pricing**: Native USDC pricing with 6 decimal precision
 - **Category Management**: Organized content categorization
 - **Deletion Control**: Owner and creator deletion permissions
+- **Access NFT Contract**: Six-tier permission system for DAO access control
+- **Dynamic Metadata**: On-chain traits with real-time permission checking
 - **Base Network Ready**: Deployed on Base mainnet and Sepolia testnet
 
 ## 🚀 Development
@@ -148,6 +152,9 @@ VITE_REOWN_APP_NAME=Cyberdyne DAO Terminal
 VITE_REOWN_APP_DESCRIPTION=Retro terminal interface for DAO operations
 VITE_REOWN_APP_URL=https://your-domain.com
 VITE_REOWN_APP_ICON=https://your-domain.com/assets/cyberdyne_logo.svg
+
+# CyberdyneAccessNFT Contract (Required for access control)
+VITE_CYBERDYNE_ACCESS_NFT_ADDRESS=your_deployed_access_nft_contract_address
 ```
 
 ### Getting API Keys
@@ -189,6 +196,8 @@ VITE_REOWN_APP_ICON=https://your-domain.com/assets/cyberdyne_logo.svg
 - **Expandable Details**: Click to view wallet information
 - **Clean Design**: Semi-transparent black background with green accents
 - **User Information**: Address, balance, email, name, and disconnect option
+- **Access Traits Display**: Real-time NFT permission badges in wallet details
+- **Dynamic Access Control**: Automatic trait checking and visual feedback
 
 ## 🐳 Docker Deployment
 
@@ -271,10 +280,11 @@ frontend/
 │   │   ├── web3/                # Web3 integration
 │   │   │   ├── web3AuthService.ts   # Web3Auth service
 │   │   │   ├── config.ts            # Network configuration
-│   │   │   └── contracts.ts         # Smart contract helpers
+│   │   │   └── contracts.ts         # Smart contract helpers & CyberdyneAccessNFT manager
 │   │   ├── stores/              # Svelte stores
 │   │   │   ├── windowStore.ts       # Window management
-│   │   │   └── web3Store.ts         # Web3 state management
+│   │   │   ├── web3Store.ts         # Web3 state management
+│   │   │   └── accessNFTStore.ts    # Access NFT trait management
 │   │   ├── constants/           # App constants
 │   │   │   ├── navigation.ts        # Navigation menu items
 │   │   │   └── asciiLogo.ts         # ASCII art constants
@@ -354,6 +364,8 @@ frontend/
 - ✅ **IPFS Integration**: Decentralized storage for training content
 - ✅ **Creator Authorization**: Whitelist system for content management
 - ✅ **Contract Optimization**: 17.2KB size (70% of 24KB limit) with 52 passing tests
+- ✅ **Access NFT Integration**: Real-time trait checking with dynamic wallet UI updates
+- ✅ **Permission Display**: Visual access badges in wallet details interface
 
 ## 📋 Development Status
 
@@ -365,6 +377,8 @@ frontend/
 - 🟢 **Smart Contracts**: Complete training materials system with 52 passing tests
 - 🟢 **Base Network Configuration**: Ready for mainnet and testnet deployment
 - 🟢 **Contract Security**: OpenZeppelin integration with comprehensive access controls
+- 🟢 **Access NFT System**: Dynamic trait checking with real-time UI integration
+- 🟢 **Permission Management**: Automated access control based on NFT ownership
 
 ## 🚀 Get Started
 

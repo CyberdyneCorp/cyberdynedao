@@ -28,6 +28,9 @@ A comprehensive Solidity smart contract system for managing training materials a
 - **Batch Operations**: Mint and update multiple NFTs efficiently
 - **Custom Metadata**: Individual metadata URIs per token with update capability
 - **Address-Based Checking**: Check if user owns tokens with specific access
+- **Dynamic Metadata**: On-chain traits with Base64-encoded JSON metadata generation
+- **Frontend Integration**: Real-time trait checking with automatic wallet UI updates
+- **ERC-4906 Support**: Metadata update events for enhanced frontend compatibility
 - **🛡️ Centralized Control**: NFT holders cannot modify their own permissions - only authorized managers can update access rights (this is intentional for maintaining DAO control over access)
 
 ## Contract Structure
@@ -182,6 +185,8 @@ A comprehensive Solidity smart contract system for managing training materials a
 - `isAuthorizedManager(manager)`: Check if an address is authorized to manage permissions
 - `exists(tokenId)`: Check if a token exists
 - `getNextTokenId()`: Get the next token ID that will be minted
+- `tokenURI(tokenId)`: Get token metadata URI (supports both custom URIs and dynamic on-chain generation)
+- `supportsInterface(interfaceId)`: Check supported interfaces including ERC-4906
 
 ## Setup
 
@@ -648,6 +653,46 @@ npx hardhat verify --network base-sepolia 0x1234567890abcdef1234567890abcdef1234
 # 4. Visit BaseScan to view verified contract
 # https://sepolia.basescan.org/address/0x1234567890abcdef1234567890abcdef12345678
 ```
+
+## Frontend Integration
+
+### CyberdyneAccessNFT Frontend Features
+
+The frontend automatically integrates with the CyberdyneAccessNFT contract to provide:
+
+- **Real-time Trait Checking**: Automatically checks user's NFT permissions when wallet connects
+- **Dynamic UI Updates**: Wallet interface displays active access traits as visual badges
+- **Permission-Based Access Control**: Frontend can restrict features based on NFT ownership
+- **Metadata Parsing**: Supports both on-chain Base64 metadata and external URI metadata
+- **Reactive State Management**: Svelte stores for efficient trait state management
+
+### Frontend Configuration
+
+Add the contract address to your frontend environment:
+
+```bash
+# In frontend/.env
+VITE_CYBERDYNE_ACCESS_NFT_ADDRESS=0x1234567890abcdef1234567890abcdef12345678
+```
+
+### Trait Display Features
+
+- **Learning Materials**: Green badge for educational content access
+- **Frontend Servers**: Badge for frontend development server access  
+- **Backend Servers**: Badge for backend development server access
+- **Blog Creator**: Badge for content creation permissions
+- **Admin**: Badge for administrative access
+- **Marketplace**: Badge for marketplace selling permissions
+
+### Implementation Details
+
+The frontend integration includes:
+
+1. **CyberdyneAccessNFTManager Class**: TypeScript class for contract interaction
+2. **AccessNFT Store**: Svelte store for reactive trait management
+3. **Wallet Integration**: Automatic trait checking on wallet connection
+4. **UI Components**: Visual trait badges in wallet details panel
+5. **Error Handling**: Comprehensive error states and loading indicators
 
 ## License
 

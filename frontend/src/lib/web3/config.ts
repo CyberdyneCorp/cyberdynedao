@@ -47,6 +47,7 @@ export const CONTRACT_ADDRESSES = {
 	// Add your contract addresses here
 	// Example: USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
 	// Example: WETH: '0x4200000000000000000000000000000000000006'
+	CYBERDYNE_ACCESS_NFT: import.meta.env.VITE_CYBERDYNE_ACCESS_NFT_ADDRESS || ''
 };
 
 // Gas estimation helpers
