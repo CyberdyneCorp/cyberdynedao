@@ -9,6 +9,7 @@ describe("CyberdyneProducts", function () {
   let creator1;
   let creator2;
   let unauthorized;
+  let defaultCategoryId;
 
   beforeEach(async function () {
     // Get signers
@@ -18,6 +19,12 @@ describe("CyberdyneProducts", function () {
     CyberdyneProducts = await ethers.getContractFactory("CyberdyneProducts");
     cyberdyneProducts = await CyberdyneProducts.deploy();
     await cyberdyneProducts.waitForDeployment();
+    
+    // Create a default category for testing
+    const tx = await cyberdyneProducts.createCategory("Default Category", "Default category for testing");
+    const receipt = await tx.wait();
+    const event = receipt.logs.find(log => log.eventName === "CategoryCreated");
+    defaultCategoryId = event.args.categoryId;
   });
 
   describe("Deployment", function () {
@@ -29,9 +36,70 @@ describe("CyberdyneProducts", function () {
       expect(await cyberdyneProducts.totalProducts()).to.equal(0);
     });
 
+    it("Should initialize with nextCategoryId as 1", async function () {
+      expect(await cyberdyneProducts.nextCategoryId()).to.be.greaterThan(1);
+    });
+
 
     it("Should authorize owner as creator", async function () {
       expect(await cyberdyneProducts.isAuthorizedCreator(owner.address)).to.be.true;
+    });
+  });
+
+  describe("Category Management", function () {
+    it("Should allow authorized creators to create categories", async function () {
+      await cyberdyneProducts.authorizeCreator(creator1.address);
+      
+      const tx = await cyberdyneProducts.connect(creator1).createCategory(
+        "Software Tools",
+        "Various software development tools"
+      );
+      
+      const receipt = await tx.wait();
+      const event = receipt.logs.find(log => log.eventName === "CategoryCreated");
+      
+      expect(event.args.name).to.equal("Software Tools");
+      expect(event.args.categoryId).to.be.greaterThan(0);
+    });
+
+    it("Should not allow unauthorized creators to create categories", async function () {
+      await expect(
+        cyberdyneProducts.connect(unauthorized).createCategory(
+          "Unauthorized Category",
+          "This should fail"
+        )
+      ).to.be.revertedWith("Not authorized to create products");
+    });
+
+    it("Should not allow empty category name", async function () {
+      await expect(
+        cyberdyneProducts.createCategory("", "Empty name test")
+      ).to.be.revertedWith("Category name cannot be empty");
+    });
+
+    it("Should return category information", async function () {
+      const category = await cyberdyneProducts.getCategory(defaultCategoryId);
+      expect(category.name).to.equal("Default Category");
+      expect(category.description).to.equal("Default category for testing");
+      expect(category.exists).to.be.true;
+    });
+
+    it("Should return all categories", async function () {
+      await cyberdyneProducts.createCategory("Test Category 2", "Second test category");
+      
+      const categories = await cyberdyneProducts.getAllCategories();
+      expect(categories.length).to.be.greaterThanOrEqual(2);
+    });
+
+    it("Should check if category exists", async function () {
+      expect(await cyberdyneProducts.categoryExists(defaultCategoryId)).to.be.true;
+      expect(await cyberdyneProducts.categoryExists(999)).to.be.false;
+    });
+
+    it("Should not allow getting non-existent category", async function () {
+      await expect(
+        cyberdyneProducts.getCategory(999)
+      ).to.be.revertedWith("Category does not exist");
     });
   });
 
@@ -81,6 +149,7 @@ describe("CyberdyneProducts", function () {
     it("Should allow authorized creators to create products", async function () {
       const tx = await cyberdyneProducts.connect(creator1).createProduct(
         "Trade4Me Pro",
+        defaultCategoryId,
         ethers.parseUnits("99.99", 6),
         "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdA"
       );
@@ -89,6 +158,7 @@ describe("CyberdyneProducts", function () {
       const event = receipt.logs.find(log => log.eventName === "ProductCreated");
       
       expect(event.args.title).to.equal("Trade4Me Pro");
+      expect(event.args.categoryId).to.equal(defaultCategoryId);
       expect(event.args.priceUSDC).to.equal(ethers.parseUnits("99.99", 6));
       expect(event.args.creator).to.equal(creator1.address);
     });
@@ -97,6 +167,7 @@ describe("CyberdyneProducts", function () {
       await expect(
         cyberdyneProducts.connect(unauthorized).createProduct(
           "Unauthorized Product",
+          defaultCategoryId,
           ethers.parseUnits("50.00", 6),
           "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdA"
         )
@@ -108,6 +179,7 @@ describe("CyberdyneProducts", function () {
       await expect(
         cyberdyneProducts.connect(creator1).createProduct(
           "",
+          defaultCategoryId,
           ethers.parseUnits("50.00", 6),
           "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdA"
         )
@@ -118,6 +190,7 @@ describe("CyberdyneProducts", function () {
       await expect(
         cyberdyneProducts.connect(creator1).createProduct(
           "Free Product",
+          defaultCategoryId,
           0,
           "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdA"
         )
@@ -127,11 +200,23 @@ describe("CyberdyneProducts", function () {
     it("Should increment total products", async function () {
       await cyberdyneProducts.connect(creator1).createProduct(
         "Product 1",
+        defaultCategoryId,
         ethers.parseUnits("50.00", 6),
         "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdA"
       );
 
       expect(await cyberdyneProducts.totalProducts()).to.equal(1);
+    });
+
+    it("Should not allow creating product with invalid category", async function () {
+      await expect(
+        cyberdyneProducts.connect(creator1).createProduct(
+          "Invalid Category Product",
+          999, // Invalid category ID
+          ethers.parseUnits("50.00", 6),
+          "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdA"
+        )
+      ).to.be.revertedWith("Category does not exist");
     });
   });
 
@@ -143,6 +228,7 @@ describe("CyberdyneProducts", function () {
       
       const tx = await cyberdyneProducts.connect(creator1).createProduct(
         "Test Product",
+        defaultCategoryId,
         ethers.parseUnits("99.99", 6),
         "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdA"
       );
@@ -156,12 +242,14 @@ describe("CyberdyneProducts", function () {
       await cyberdyneProducts.connect(creator1).updateProduct(
         productUuid,
         "Updated Product",
+        defaultCategoryId,
         ethers.parseUnits("149.99", 6),
         "QmNewIPFSHash"
       );
 
       const product = await cyberdyneProducts.getProduct(productUuid);
       expect(product.title).to.equal("Updated Product");
+      expect(product.categoryId).to.equal(defaultCategoryId);
       expect(product.priceUSDC).to.equal(ethers.parseUnits("149.99", 6));
       expect(product.ipfsLocation).to.equal("QmNewIPFSHash");
     });
@@ -170,6 +258,7 @@ describe("CyberdyneProducts", function () {
       await cyberdyneProducts.connect(owner).updateProduct(
         productUuid,
         "Owner Updated",
+        defaultCategoryId,
         ethers.parseUnits("199.99", 6),
         "QmOwnerIPFSHash"
       );
@@ -183,6 +272,7 @@ describe("CyberdyneProducts", function () {
         cyberdyneProducts.connect(unauthorized).updateProduct(
           productUuid,
           "Unauthorized Update",
+          defaultCategoryId,
           ethers.parseUnits("199.99", 6),
           "QmUnauthorizedHash"
         )
@@ -205,6 +295,34 @@ describe("CyberdyneProducts", function () {
       expect(product.isActive).to.be.true;
     });
 
+    it("Should allow updating product category", async function () {
+      // Create a second category first
+      const tx = await cyberdyneProducts.createCategory("New Category", "Updated category");
+      const receipt = await tx.wait();
+      const event = receipt.logs.find(log => log.eventName === "CategoryCreated");
+      const newCategoryId = event.args.categoryId;
+
+      // Update product to new category
+      await cyberdyneProducts.connect(creator1).updateProduct(
+        productUuid,
+        "Updated Product",
+        newCategoryId,
+        ethers.parseUnits("149.99", 6),
+        "QmNewIPFSHash"
+      );
+
+      const product = await cyberdyneProducts.getProduct(productUuid);
+      expect(product.categoryId).to.equal(newCategoryId);
+
+      // Verify product moved from default category to new category
+      const defaultCategoryProducts = await cyberdyneProducts.getProductsByCategory(defaultCategoryId);
+      expect(defaultCategoryProducts.length).to.equal(0);
+
+      const newCategoryProducts = await cyberdyneProducts.getProductsByCategory(newCategoryId);
+      expect(newCategoryProducts.length).to.equal(1);
+      expect(newCategoryProducts[0].uuid).to.equal(productUuid);
+    });
+
     it("Should allow deleting product", async function () {
       await cyberdyneProducts.connect(creator1).deleteProduct(productUuid);
       
@@ -217,25 +335,36 @@ describe("CyberdyneProducts", function () {
   });
 
   describe("Product Queries", function () {
+    let secondCategoryId;
+    
     beforeEach(async function () {
       await cyberdyneProducts.authorizeCreator(creator1.address);
       await cyberdyneProducts.authorizeCreator(creator2.address);
 
-      // Create different products
+      // Create a second category
+      const tx = await cyberdyneProducts.createCategory("Premium Tools", "Premium software tools");
+      const receipt = await tx.wait();
+      const event = receipt.logs.find(log => log.eventName === "CategoryCreated");
+      secondCategoryId = event.args.categoryId;
+
+      // Create different products in different categories
       await cyberdyneProducts.connect(creator1).createProduct(
         "Product Pro",
+        defaultCategoryId,
         ethers.parseUnits("99.99", 6),
         "QmHash1"
       );
 
       await cyberdyneProducts.connect(creator1).createProduct(
         "Product Premium",
+        secondCategoryId,
         ethers.parseUnits("149.99", 6),
         "QmHash2"
       );
 
       await cyberdyneProducts.connect(creator2).createProduct(
         "Product Basic",
+        defaultCategoryId,
         ethers.parseUnits("49.99", 6),
         "QmHash3"
       );
@@ -264,6 +393,30 @@ describe("CyberdyneProducts", function () {
       
       const activeProducts = await cyberdyneProducts.getActiveProducts();
       expect(activeProducts.length).to.equal(2);
+    });
+
+    it("Should return products by category", async function () {
+      const defaultCategoryProducts = await cyberdyneProducts.getProductsByCategory(defaultCategoryId);
+      expect(defaultCategoryProducts.length).to.equal(2);
+      
+      const premiumCategoryProducts = await cyberdyneProducts.getProductsByCategory(secondCategoryId);
+      expect(premiumCategoryProducts.length).to.equal(1);
+      expect(premiumCategoryProducts[0].title).to.equal("Product Premium");
+    });
+
+    it("Should return category product count", async function () {
+      expect(await cyberdyneProducts.getCategoryProductCount(defaultCategoryId)).to.equal(2);
+      expect(await cyberdyneProducts.getCategoryProductCount(secondCategoryId)).to.equal(1);
+    });
+
+    it("Should not allow querying invalid category", async function () {
+      await expect(
+        cyberdyneProducts.getProductsByCategory(999)
+      ).to.be.revertedWith("Category does not exist");
+      
+      await expect(
+        cyberdyneProducts.getCategoryProductCount(999)
+      ).to.be.revertedWith("Category does not exist");
     });
 
     it("Should return correct counts", async function () {
@@ -315,12 +468,14 @@ describe("CyberdyneProducts", function () {
     it("Should generate unique UUIDs", async function () {
       const tx1 = await cyberdyneProducts.connect(creator1).createProduct(
         "Product 1",
+        defaultCategoryId,
         ethers.parseUnits("50.00", 6),
         "QmHash1"
       );
 
       const tx2 = await cyberdyneProducts.connect(creator1).createProduct(
         "Product 2",
+        defaultCategoryId,
         ethers.parseUnits("60.00", 6),
         "QmHash2"
       );

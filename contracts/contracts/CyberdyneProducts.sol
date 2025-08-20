@@ -7,6 +7,7 @@ contract CyberdyneProducts is Ownable {
     struct Product {
         string uuid;
         string title;
+        uint256 categoryId;
         uint256 priceUSDC; // Price in USDC (6 decimals)
         string ipfsLocation; // IPFS hash for additional content
         address creator; // Address that created this product
@@ -16,19 +17,32 @@ contract CyberdyneProducts is Ownable {
         bool exists;
     }
 
+    struct Category {
+        uint256 id;
+        string name;
+        string description;
+        uint256 createdAt;
+        bool exists;
+    }
+
     // State variables
+    mapping(uint256 => Category) public categories;
     mapping(string => Product) public products; // uuid => Product
+    mapping(uint256 => string[]) public categoryProducts; // categoryId => uuid[]
     mapping(address => string[]) public productsByCreator; // creator => uuid[]
     mapping(address => bool) public authorizedCreators; // Whitelist of addresses that can create products
     
+    uint256 public nextCategoryId;
     uint256 public totalProducts;
     string[] public allProductUuids;
     address[] public authorizedCreatorsList; // Array to track all authorized creators
 
     // Events
+    event CategoryCreated(uint256 indexed categoryId, string name, string description);
     event ProductCreated(
         string uuid,
         string title,
+        uint256 indexed categoryId,
         uint256 priceUSDC,
         string ipfsLocation,
         address indexed creator
@@ -36,6 +50,7 @@ contract CyberdyneProducts is Ownable {
     event ProductUpdated(
         string indexed uuid,
         string title,
+        uint256 indexed categoryId,
         uint256 priceUSDC,
         string ipfsLocation,
         address indexed updatedBy
@@ -51,6 +66,7 @@ contract CyberdyneProducts is Ownable {
     event ContractOwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     constructor() Ownable(msg.sender) {
+        nextCategoryId = 1;
         totalProducts = 0;
         
         // Automatically authorize the contract owner
@@ -59,6 +75,11 @@ contract CyberdyneProducts is Ownable {
     }
 
     // Modifiers
+    modifier validCategory(uint256 categoryId) {
+        require(categories[categoryId].exists, "Category does not exist");
+        _;
+    }
+
     modifier onlyAuthorizedCreator() {
         require(authorizedCreators[msg.sender], "Not authorized to create products");
         _;
@@ -148,12 +169,35 @@ contract CyberdyneProducts is Ownable {
     }
 
 
+    // Category management functions (owner or authorized creators)
+    function createCategory(
+        string memory _name,
+        string memory _description
+    ) external onlyAuthorizedCreator returns (uint256) {
+        require(bytes(_name).length > 0, "Category name cannot be empty");
+        
+        uint256 categoryId = nextCategoryId;
+        categories[categoryId] = Category({
+            id: categoryId,
+            name: _name,
+            description: _description,
+            createdAt: block.timestamp,
+            exists: true
+        });
+        
+        nextCategoryId++;
+        
+        emit CategoryCreated(categoryId, _name, _description);
+        return categoryId;
+    }
+
     // Product management functions (authorized creators only)
     function createProduct(
         string memory _title,
+        uint256 _categoryId,
         uint256 _priceUSDC,
         string memory _ipfsLocation
-    ) external onlyAuthorizedCreator returns (string memory) {
+    ) external onlyAuthorizedCreator validCategory(_categoryId) returns (string memory) {
         require(bytes(_title).length > 0, "Title cannot be empty");
         require(_priceUSDC > 0, "Price must be greater than 0");
         require(bytes(_ipfsLocation).length > 0, "IPFS location cannot be empty");
@@ -165,6 +209,7 @@ contract CyberdyneProducts is Ownable {
         products[_uuid] = Product({
             uuid: _uuid,
             title: _title,
+            categoryId: _categoryId,
             priceUSDC: _priceUSDC,
             ipfsLocation: _ipfsLocation,
             creator: msg.sender,
@@ -174,11 +219,12 @@ contract CyberdyneProducts is Ownable {
             exists: true
         });
 
+        categoryProducts[_categoryId].push(_uuid);
         productsByCreator[msg.sender].push(_uuid);
         allProductUuids.push(_uuid);
         totalProducts++;
 
-        emit ProductCreated(_uuid, _title, _priceUSDC, _ipfsLocation, msg.sender);
+        emit ProductCreated(_uuid, _title, _categoryId, _priceUSDC, _ipfsLocation, msg.sender);
         
         return _uuid;
     }
@@ -187,20 +233,40 @@ contract CyberdyneProducts is Ownable {
     function updateProduct(
         string memory _uuid,
         string memory _title,
+        uint256 _categoryId,
         uint256 _priceUSDC,
         string memory _ipfsLocation
-    ) external onlyOwnerOrCreator(_uuid) {
+    ) external onlyOwnerOrCreator(_uuid) validCategory(_categoryId) {
         require(bytes(_title).length > 0, "Title cannot be empty");
         require(_priceUSDC > 0, "Price must be greater than 0");
         require(bytes(_ipfsLocation).length > 0, "IPFS location cannot be empty");
 
         Product storage product = products[_uuid];
+        uint256 oldCategoryId = product.categoryId;
+        
+        // If category is changing, update category mappings
+        if (oldCategoryId != _categoryId) {
+            // Remove from old category
+            string[] storage oldCategoryProds = categoryProducts[oldCategoryId];
+            for (uint256 i = 0; i < oldCategoryProds.length; i++) {
+                if (keccak256(abi.encodePacked(oldCategoryProds[i])) == keccak256(abi.encodePacked(_uuid))) {
+                    oldCategoryProds[i] = oldCategoryProds[oldCategoryProds.length - 1];
+                    oldCategoryProds.pop();
+                    break;
+                }
+            }
+            
+            // Add to new category
+            categoryProducts[_categoryId].push(_uuid);
+        }
+        
         product.title = _title;
+        product.categoryId = _categoryId;
         product.priceUSDC = _priceUSDC;
         product.ipfsLocation = _ipfsLocation;
         product.updatedAt = block.timestamp;
 
-        emit ProductUpdated(_uuid, _title, _priceUSDC, _ipfsLocation, msg.sender);
+        emit ProductUpdated(_uuid, _title, _categoryId, _priceUSDC, _ipfsLocation, msg.sender);
     }
 
     // Toggle product active status (owner or creator only)
@@ -215,10 +281,21 @@ contract CyberdyneProducts is Ownable {
     // Delete product (owner or creator only)
     function deleteProduct(string memory _uuid) external onlyOwnerOrCreator(_uuid) {
         Product storage product = products[_uuid];
+        uint256 categoryId = product.categoryId;
         address creator = product.creator;
         
         // Mark as deleted (set exists to false)
         product.exists = false;
+        
+        // Remove from category products array
+        string[] storage categoryProds = categoryProducts[categoryId];
+        for (uint256 i = 0; i < categoryProds.length; i++) {
+            if (keccak256(abi.encodePacked(categoryProds[i])) == keccak256(abi.encodePacked(_uuid))) {
+                categoryProds[i] = categoryProds[categoryProds.length - 1];
+                categoryProds.pop();
+                break;
+            }
+        }
         
         // Remove from creator products array
         string[] storage creatorProducts = productsByCreator[creator];
@@ -265,9 +342,58 @@ contract CyberdyneProducts is Ownable {
     }
 
     // View functions
+    function getCategory(uint256 _categoryId) external view validCategory(_categoryId) returns (Category memory) {
+        return categories[_categoryId];
+    }
+
     function getProduct(string memory _uuid) external view returns (Product memory) {
         require(products[_uuid].exists, "Product does not exist");
         return products[_uuid];
+    }
+
+    function getProductsByCategory(uint256 _categoryId) 
+        external 
+        view 
+        validCategory(_categoryId) 
+        returns (Product[] memory) 
+    {
+        string[] memory uuids = categoryProducts[_categoryId];
+        Product[] memory categoryProds = new Product[](uuids.length);
+        
+        for (uint256 i = 0; i < uuids.length; i++) {
+            categoryProds[i] = products[uuids[i]];
+        }
+        
+        return categoryProds;
+    }
+
+    function getCategoryProductCount(uint256 _categoryId) 
+        external 
+        view 
+        validCategory(_categoryId) 
+        returns (uint256) 
+    {
+        return categoryProducts[_categoryId].length;
+    }
+
+    function getAllCategories() external view returns (Category[] memory) {
+        Category[] memory allCategories = new Category[](nextCategoryId - 1);
+        uint256 index = 0;
+        
+        for (uint256 i = 1; i < nextCategoryId; i++) {
+            if (categories[i].exists) {
+                allCategories[index] = categories[i];
+                index++;
+            }
+        }
+        
+        // Resize array to actual count
+        Category[] memory result = new Category[](index);
+        for (uint256 i = 0; i < index; i++) {
+            result[i] = allCategories[i];
+        }
+        
+        return result;
     }
 
 
@@ -333,5 +459,9 @@ contract CyberdyneProducts is Ownable {
             }
         }
         return activeCount;
+    }
+
+    function categoryExists(uint256 _categoryId) external view returns (bool) {
+        return categories[_categoryId].exists;
     }
 }
