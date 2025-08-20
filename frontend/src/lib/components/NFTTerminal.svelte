@@ -237,7 +237,7 @@
 
 	.terminal-output {
 		padding: 16px;
-		padding-right: 320px; /* Make room for NFT */
+		padding-right: 420px; /* Make room for larger NFT */
 		color: #00ff00;
 		font-size: 14px;
 		line-height: 1.4;
@@ -276,8 +276,8 @@
 		position: absolute;
 		top: 16px;
 		right: 16px;
-		width: 300px;
-		height: 380px;
+		width: 400px;
+		height: 480px;
 		background: #0a0a0a;
 		border: 2px solid #00ff00;
 		border-radius: 8px;
@@ -297,7 +297,7 @@
 
 	.terminal-input {
 		padding: 16px;
-		padding-right: 320px; /* Make room for NFT */
+		padding-right: 420px; /* Make room for larger NFT */
 		border-top: 1px solid #333;
 		display: flex;
 		align-items: center;
