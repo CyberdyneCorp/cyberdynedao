@@ -79,6 +79,20 @@
 			
 			<!-- Terminal Content -->
 			<div class="terminal-content">
+				<!-- NFT Display - Top Right -->
+				<div class="nft-display">
+					{#if nftUrl}
+						<object
+							data={nftUrl}
+							type="image/svg+xml"
+							title="Cyberdyne Access NFT"
+							class="nft-frame"
+						>
+							<img src={nftUrl} alt="Cyberdyne Access NFT" class="nft-frame" />
+						</object>
+					{/if}
+				</div>
+
 				<div class="terminal-output">
 					<div class="terminal-line">
 						<span class="prompt">cyberdyne@access:~$</span> 
@@ -111,20 +125,6 @@
 					<div class="terminal-line">
 						<span class="output-info">→ URL: {nftUrl}</span>
 					</div>
-				</div>
-				
-				<!-- NFT Display -->
-				<div class="nft-display">
-					{#if nftUrl}
-						<object
-							data={nftUrl}
-							type="image/svg+xml"
-							title="Cyberdyne Access NFT"
-							class="nft-frame"
-						>
-							<img src={nftUrl} alt="Cyberdyne Access NFT" class="nft-frame" />
-						</object>
-					{/if}
 				</div>
 				
 				<!-- Terminal Input -->
@@ -232,14 +232,18 @@
 		flex-direction: column;
 		overflow: hidden;
 		background: #000;
+		position: relative;
 	}
 
 	.terminal-output {
 		padding: 16px;
+		padding-right: 320px; /* Make room for NFT */
 		color: #00ff00;
 		font-size: 14px;
 		line-height: 1.4;
 		flex-shrink: 0;
+		flex: 1;
+		overflow-y: auto;
 	}
 
 	.terminal-line {
@@ -269,29 +273,31 @@
 	}
 
 	.nft-display {
-		flex: 1;
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		padding: 16px;
+		position: absolute;
+		top: 16px;
+		right: 16px;
+		width: 300px;
+		height: 380px;
 		background: #0a0a0a;
-		border-top: 1px solid #333;
-		overflow: hidden;
+		border: 2px solid #00ff00;
+		border-radius: 8px;
+		padding: 8px;
+		z-index: 10;
+		box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
 	}
 
 	.nft-frame {
 		width: 100%;
 		height: 100%;
-		max-width: 500px;
-		max-height: 600px;
-		border: 2px solid #00ff00;
-		border-radius: 8px;
+		border: 1px solid #00ff00;
+		border-radius: 6px;
 		background: #000;
-		box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+		box-shadow: inset 0 0 10px rgba(0, 255, 0, 0.1);
 	}
 
 	.terminal-input {
 		padding: 16px;
+		padding-right: 320px; /* Make room for NFT */
 		border-top: 1px solid #333;
 		display: flex;
 		align-items: center;
@@ -323,6 +329,20 @@
 
 		.terminal-output {
 			font-size: 12px;
+			padding-right: 16px; /* Remove NFT spacing on mobile */
+		}
+
+		.terminal-input {
+			padding-right: 16px; /* Remove NFT spacing on mobile */
+		}
+
+		.nft-display {
+			position: relative;
+			top: unset;
+			right: unset;
+			width: 100%;
+			height: 200px;
+			margin: 16px 0;
 		}
 	}
 </style>
