@@ -13,7 +13,7 @@ contract CyberdyneMarketplace is Ownable, ReentrancyGuard {
 
     struct Listing {
         uint256 listingId;
-        uint256 productId;
+        uint64 productId;
         address seller;
         uint256 priceUSDC;
         bool isActive;
@@ -24,7 +24,7 @@ contract CyberdyneMarketplace is Ownable, ReentrancyGuard {
     struct Sale {
         uint256 saleId;
         uint256 listingId;
-        uint256 productId;
+        uint64 productId;
         address seller;
         address buyer;
         uint256 priceUSDC;
@@ -39,7 +39,7 @@ contract CyberdyneMarketplace is Ownable, ReentrancyGuard {
     CyberdyneAccessNFT public immutable accessNFT;
 
     mapping(uint256 => Listing) public listings;
-    mapping(uint256 => uint256) public productToListing; // productId => listingId
+    mapping(uint64 => uint256) public productToListing; // productId => listingId
     mapping(address => uint256[]) public sellerListings;
     mapping(uint256 => Sale) public sales;
     mapping(address => uint256[]) public buyerSales;
@@ -57,25 +57,25 @@ contract CyberdyneMarketplace is Ownable, ReentrancyGuard {
     // Events
     event ProductListed(
         uint256 indexed listingId,
-        uint256 indexed productId,
+        uint64 indexed productId,
         address indexed seller,
         uint256 priceUSDC
     );
     event ProductUnlisted(
         uint256 indexed listingId,
-        uint256 indexed productId,
+        uint64 indexed productId,
         address indexed seller
     );
     event ProductPriceUpdated(
         uint256 indexed listingId,
-        uint256 indexed productId,
+        uint64 indexed productId,
         uint256 oldPrice,
         uint256 newPrice
     );
     event ProductSold(
         uint256 indexed saleId,
         uint256 indexed listingId,
-        uint256 indexed productId,
+        uint64 indexed productId,
         address seller,
         address buyer,
         uint256 priceUSDC,
@@ -134,7 +134,7 @@ contract CyberdyneMarketplace is Ownable, ReentrancyGuard {
     }
 
     // Listing functions
-    function listProduct(uint256 productId) external onlyActiveSeller nonReentrant {
+    function listProduct(uint64 productId) external onlyActiveSeller nonReentrant {
         require(cyberdyneProducts.productExists(productId), "Product does not exist");
         require(productToListing[productId] == 0, "Product already listed");
 
@@ -285,7 +285,7 @@ contract CyberdyneMarketplace is Ownable, ReentrancyGuard {
         return activeListings;
     }
 
-    function getActiveListingsByCategory(uint256 categoryId) external view returns (Listing[] memory) {
+    function getActiveListingsByCategory(uint64 categoryId) external view returns (Listing[] memory) {
         uint256 count = 0;
         
         // First pass: count matching listings
@@ -359,7 +359,7 @@ contract CyberdyneMarketplace is Ownable, ReentrancyGuard {
         return activeListingIds.length;
     }
 
-    function isProductListed(uint256 productId) external view returns (bool) {
+    function isProductListed(uint64 productId) external view returns (bool) {
         return productToListing[productId] != 0 && listings[productToListing[productId]].isActive;
     }
 

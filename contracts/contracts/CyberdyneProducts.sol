@@ -5,11 +5,11 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract CyberdyneProducts is Ownable {
     struct Product {
-        uint256 id;              // Simple incremental ID instead of UUID string
-        string title;
-        uint256 categoryId;
+        uint64 id;              // Simple incremental ID instead of UUID string
+        bytes32 title;
+        uint64 categoryId;
         uint256 priceUSDC;       // Price in USDC (6 decimals)
-        string ipfsLocation;     // IPFS hash for additional content
+        string metadataURI;      // URI for additional metadata content
         address creator;         // Address that created this product
         uint256 createdAt;
         uint256 updatedAt;
@@ -18,55 +18,55 @@ contract CyberdyneProducts is Ownable {
     }
 
     struct Category {
-        uint256 id;
-        string name;
+        uint64 id;
+        bytes32 name;
         string description;
         uint256 createdAt;
         bool exists;
     }
 
-    // Simplified state variables - using uint256 instead of string
-    mapping(uint256 => Category) public categories;
-    mapping(uint256 => Product) public products;           // id => Product (much simpler!)
-    mapping(uint256 => uint256[]) public categoryProducts; // categoryId => productId[]
-    mapping(address => uint256[]) public productsByCreator; // creator => productId[]
+    // Simplified state variables - using uint64 instead of string
+    mapping(uint64 => Category) public categories;
+    mapping(uint64 => Product) public products;           // id => Product (much simpler!)
+    mapping(uint64 => uint64[]) public categoryProducts; // categoryId => productId[]
+    mapping(address => uint64[]) public productsByCreator; // creator => productId[]
     mapping(address => bool) public authorizedCreators;
     
-    uint256 public nextCategoryId;
-    uint256 public nextProductId;                          // Simple counter instead of UUID generation
-    uint256[] public allProductIds;                        // uint256[] instead of string[]
+    uint64 public nextCategoryId;
+    uint64 public nextProductId;                          // Simple counter instead of UUID generation
+    uint64[] public allProductIds;                        // uint64[] instead of string[]
     address[] public authorizedCreatorsList;
 
     // Much simpler index mappings - no nested string mappings!
-    mapping(uint256 => uint256) private allIndex;                    // productId -> index in allProductIds
-    mapping(uint256 => mapping(uint256 => uint256)) private catIndex; // catId, productId -> index
-    mapping(address => mapping(uint256 => uint256)) private creatorIndex; // creator, productId -> index
+    mapping(uint64 => uint256) private allIndex;                    // productId -> index in allProductIds
+    mapping(uint64 => mapping(uint64 => uint256)) private catIndex; // catId, productId -> index
+    mapping(address => mapping(uint64 => uint256)) private creatorIndex; // creator, productId -> index
     mapping(address => uint256) private authIndex;
 
     // Simplified events
-    event CategoryCreated(uint256 indexed categoryId, string name, string description);
+    event CategoryCreated(uint64 indexed categoryId, string name, string description);
     event ProductCreated(
-        uint256 indexed productId,  // uint256 instead of string
+        uint64 indexed productId,  // uint64 instead of string
         string title,
-        uint256 indexed categoryId,
+        uint64 indexed categoryId,
         uint256 priceUSDC,
-        string ipfsLocation,
+        string metadataURI,
         address indexed creator
     );
     event ProductUpdated(
-        uint256 indexed productId,  // uint256 instead of string
+        uint64 indexed productId,  // uint64 instead of string
         string title,
-        uint256 indexed categoryId,
+        uint64 indexed categoryId,
         uint256 priceUSDC,
-        string ipfsLocation,
+        string metadataURI,
         address indexed updatedBy
     );
     event ProductStatusChanged(
-        uint256 indexed productId,  // uint256 instead of string
+        uint64 indexed productId,  // uint64 instead of string
         bool isActive,
         address indexed changedBy
     );
-    event ProductDeleted(uint256 indexed productId, address indexed deletedBy, address indexed creator);
+    event ProductDeleted(uint64 indexed productId, address indexed deletedBy, address indexed creator);
     event CreatorAuthorized(address indexed creator, address indexed authorizedBy);
     event CreatorDeauthorized(address indexed creator, address indexed deauthorizedBy);
 
@@ -79,8 +79,32 @@ contract CyberdyneProducts is Ownable {
         _pushAuth(msg.sender);
     }
 
+    // Helper functions for string <-> bytes32 conversion
+    function stringToBytes32(string memory source) internal pure returns (bytes32 result) {
+        bytes memory tempEmptyStringTest = bytes(source);
+        if (tempEmptyStringTest.length == 0) {
+            return 0x0;
+        }
+        assembly {
+            result := mload(add(source, 32))
+        }
+    }
+
+    function bytes32ToString(bytes32 source) internal pure returns (string memory result) {
+        uint8 length = 0;
+        while (length < 32 && source[length] != 0) {
+            length++;
+        }
+        assembly {
+            result := mload(0x40)
+            mstore(0x40, add(result, 0x40))
+            mstore(result, length)
+            mstore(add(result, 0x20), source)
+        }
+    }
+
     // Simplified modifiers
-    modifier validCategory(uint256 categoryId) {
+    modifier validCategory(uint64 categoryId) {
         require(categories[categoryId].exists, "Category does not exist");
         _;
     }
@@ -90,7 +114,7 @@ contract CyberdyneProducts is Ownable {
         _;
     }
 
-    modifier onlyOwnerOrAuthorizedCreatorOf(uint256 productId) {  // uint256 instead of string
+    modifier onlyOwnerOrAuthorizedCreatorOf(uint64 productId) {  // uint64 instead of string
         require(products[productId].exists, "Product does not exist");
         require(
             msg.sender == owner() ||
@@ -134,13 +158,14 @@ contract CyberdyneProducts is Ownable {
     function createCategory(
         string memory _name,
         string memory _description
-    ) external onlyAuthorizedCreator returns (uint256) {
+    ) external onlyAuthorizedCreator returns (uint64) {
         require(bytes(_name).length > 0, "Category name cannot be empty");
+        require(bytes(_name).length <= 32, "Category name too long (max 32 bytes)");
         
-        uint256 categoryId = nextCategoryId;
+        uint64 categoryId = nextCategoryId;
         categories[categoryId] = Category({
             id: categoryId,
-            name: _name,
+            name: stringToBytes32(_name),
             description: _description,
             createdAt: block.timestamp,
             exists: true
@@ -155,23 +180,24 @@ contract CyberdyneProducts is Ownable {
     // MUCH simpler product creation - no UUID generation!
     function createProduct(
         string memory _title,
-        uint256 _categoryId,
+        uint64 _categoryId,
         uint256 _priceUSDC,
-        string memory _ipfsLocation
-    ) external onlyAuthorizedCreator validCategory(_categoryId) returns (uint256) {
+        string memory _metadataURI
+    ) external onlyAuthorizedCreator validCategory(_categoryId) returns (uint64) {
         require(bytes(_title).length > 0, "Title cannot be empty");
+        require(bytes(_title).length <= 32, "Title too long (max 32 bytes)");
         require(_priceUSDC > 0, "Price must be greater than 0");
-        require(bytes(_ipfsLocation).length > 0, "IPFS location cannot be empty");
+        require(bytes(_metadataURI).length > 0, "Metadata URI cannot be empty");
 
-        uint256 productId = nextProductId;  // Simply increment!
+        uint64 productId = nextProductId;  // Simply increment!
         nextProductId++;
 
         products[productId] = Product({
             id: productId,
-            title: _title,
+            title: stringToBytes32(_title),
             categoryId: _categoryId,
             priceUSDC: _priceUSDC,
-            ipfsLocation: _ipfsLocation,
+            metadataURI: _metadataURI,
             creator: msg.sender,
             createdAt: block.timestamp,
             updatedAt: block.timestamp,
@@ -183,25 +209,26 @@ contract CyberdyneProducts is Ownable {
         _pushCreator(msg.sender, productId);
         _pushAll(productId);
 
-        emit ProductCreated(productId, _title, _categoryId, _priceUSDC, _ipfsLocation, msg.sender);
+        emit ProductCreated(productId, _title, _categoryId, _priceUSDC, _metadataURI, msg.sender);
         
         return productId;
     }
 
     // Update product (owner or creator only)
     function updateProduct(
-        uint256 _productId,  // uint256 instead of string
+        uint64 _productId,  // uint64 instead of string
         string memory _title,
-        uint256 _categoryId,
+        uint64 _categoryId,
         uint256 _priceUSDC,
-        string memory _ipfsLocation
+        string memory _metadataURI
     ) external onlyOwnerOrAuthorizedCreatorOf(_productId) validCategory(_categoryId) {
         require(bytes(_title).length > 0, "Title cannot be empty");
+        require(bytes(_title).length <= 32, "Title too long (max 32 bytes)");
         require(_priceUSDC > 0, "Price must be greater than 0");
-        require(bytes(_ipfsLocation).length > 0, "IPFS location cannot be empty");
+        require(bytes(_metadataURI).length > 0, "Metadata URI cannot be empty");
 
         Product storage product = products[_productId];
-        uint256 oldCategoryId = product.categoryId;
+        uint64 oldCategoryId = product.categoryId;
         
         // If category is changing, update category mappings
         if (oldCategoryId != _categoryId) {
@@ -209,16 +236,16 @@ contract CyberdyneProducts is Ownable {
             _pushCat(_categoryId, _productId);
         }
         
-        product.title = _title;
+        product.title = stringToBytes32(_title);
         product.categoryId = _categoryId;
         product.priceUSDC = _priceUSDC;
-        product.ipfsLocation = _ipfsLocation;
+        product.metadataURI = _metadataURI;
         product.updatedAt = block.timestamp;
 
-        emit ProductUpdated(_productId, _title, _categoryId, _priceUSDC, _ipfsLocation, msg.sender);
+        emit ProductUpdated(_productId, _title, _categoryId, _priceUSDC, _metadataURI, msg.sender);
     }
 
-    function toggleProductStatus(uint256 _productId) external onlyOwnerOrAuthorizedCreatorOf(_productId) {
+    function toggleProductStatus(uint64 _productId) external onlyOwnerOrAuthorizedCreatorOf(_productId) {
         Product storage product = products[_productId];
         product.isActive = !product.isActive;
         product.updatedAt = block.timestamp;
@@ -226,9 +253,9 @@ contract CyberdyneProducts is Ownable {
         emit ProductStatusChanged(_productId, product.isActive, msg.sender);
     }
 
-    function deleteProduct(uint256 _productId) external onlyOwnerOrAuthorizedCreatorOf(_productId) {
+    function deleteProduct(uint64 _productId) external onlyOwnerOrAuthorizedCreatorOf(_productId) {
         Product storage product = products[_productId];
-        uint256 categoryId = product.categoryId;
+        uint64 categoryId = product.categoryId;
         address creator = product.creator;
         
         // Mark as deleted (set exists to false)
@@ -243,11 +270,11 @@ contract CyberdyneProducts is Ownable {
     }
 
     // View functions
-    function getCategory(uint256 _categoryId) external view validCategory(_categoryId) returns (Category memory) {
+    function getCategory(uint64 _categoryId) external view validCategory(_categoryId) returns (Category memory) {
         return categories[_categoryId];
     }
 
-    function getProduct(uint256 _productId) external view returns (Product memory) {
+    function getProduct(uint64 _productId) external view returns (Product memory) {
         require(products[_productId].exists, "Product does not exist");
         return products[_productId];
     }
@@ -256,18 +283,18 @@ contract CyberdyneProducts is Ownable {
         return allProductIds.length;
     }
 
-    function productExists(uint256 _productId) external view returns (bool) {
+    function productExists(uint64 _productId) external view returns (bool) {
         return products[_productId].exists;
     }
 
-    function categoryExists(uint256 _categoryId) external view returns (bool) {
+    function categoryExists(uint64 _categoryId) external view returns (bool) {
         return categories[_categoryId].exists;
     }
 
     // Additional view functions for API compatibility
     function getAllCategories() external view returns (Category[] memory) {
         uint256 count = 0;
-        for (uint256 i = 1; i < nextCategoryId; i++) {
+        for (uint64 i = 1; i < nextCategoryId; i++) {
             if (categories[i].exists) {
                 count++;
             }
@@ -275,7 +302,7 @@ contract CyberdyneProducts is Ownable {
         
         Category[] memory allCategories = new Category[](count);
         uint256 index = 0;
-        for (uint256 i = 1; i < nextCategoryId; i++) {
+        for (uint64 i = 1; i < nextCategoryId; i++) {
             if (categories[i].exists) {
                 allCategories[index] = categories[i];
                 index++;
@@ -313,8 +340,8 @@ contract CyberdyneProducts is Ownable {
         return activeProducts;
     }
 
-    function getAllProductsByCategory(uint256 _categoryId) external view validCategory(_categoryId) returns (Product[] memory) {
-        uint256[] memory categoryProductIds = categoryProducts[_categoryId];
+    function getAllProductsByCategory(uint64 _categoryId) external view validCategory(_categoryId) returns (Product[] memory) {
+        uint64[] memory categoryProductIds = categoryProducts[_categoryId];
         Product[] memory categoryProductsArray = new Product[](categoryProductIds.length);
         
         for (uint256 i = 0; i < categoryProductIds.length; i++) {
@@ -325,7 +352,7 @@ contract CyberdyneProducts is Ownable {
     }
 
     function getAllProductsByCreator(address _creator) external view returns (Product[] memory) {
-        uint256[] memory creatorProductIds = productsByCreator[_creator];
+        uint64[] memory creatorProductIds = productsByCreator[_creator];
         Product[] memory creatorProductsArray = new Product[](creatorProductIds.length);
         
         for (uint256 i = 0; i < creatorProductIds.length; i++) {
@@ -335,7 +362,7 @@ contract CyberdyneProducts is Ownable {
         return creatorProductsArray;
     }
 
-    function getCategoryProductCount(uint256 _categoryId) external view validCategory(_categoryId) returns (uint256) {
+    function getCategoryProductCount(uint64 _categoryId) external view validCategory(_categoryId) returns (uint256) {
         return categoryProducts[_categoryId].length;
     }
 
@@ -389,7 +416,7 @@ contract CyberdyneProducts is Ownable {
     function getProductsByCreator(address creator, uint256 offset, uint256 limit) external view returns (Product[] memory) {
         require(limit > 0, "Limit must be greater than 0");
         
-        uint256[] memory creatorProductIds = productsByCreator[creator];
+        uint64[] memory creatorProductIds = productsByCreator[creator];
         uint256 totalProducts = creatorProductIds.length;
         
         if (offset >= totalProducts) {
@@ -407,10 +434,10 @@ contract CyberdyneProducts is Ownable {
         return paginatedProducts;
     }
 
-    function getProductsByCategory(uint256 categoryId, uint256 offset, uint256 limit) external view validCategory(categoryId) returns (Product[] memory) {
+    function getProductsByCategory(uint64 categoryId, uint256 offset, uint256 limit) external view validCategory(categoryId) returns (Product[] memory) {
         require(limit > 0, "Limit must be greater than 0");
         
-        uint256[] memory categoryProductIds = categoryProducts[categoryId];
+        uint64[] memory categoryProductIds = categoryProducts[categoryId];
         uint256 totalProducts = categoryProductIds.length;
         
         if (offset >= totalProducts) {
@@ -432,7 +459,7 @@ contract CyberdyneProducts is Ownable {
         require(limit > 0, "Limit must be greater than 0");
         
         // First, count active products and collect their IDs
-        uint256[] memory activeProductIds = new uint256[](allProductIds.length);
+        uint64[] memory activeProductIds = new uint64[](allProductIds.length);
         uint256 activeCount = 0;
         
         for (uint256 i = 0; i < allProductIds.length; i++) {
@@ -458,16 +485,16 @@ contract CyberdyneProducts is Ownable {
     }
 
     // MUCH simpler O(1) array operations - no string manipulation!
-    function _pushAll(uint256 productId) private {
+    function _pushAll(uint64 productId) private {
         allIndex[productId] = allProductIds.length;
         allProductIds.push(productId);
     }
     
-    function _removeAll(uint256 productId) private {
+    function _removeAll(uint64 productId) private {
         uint256 i = allIndex[productId];
         uint256 last = allProductIds.length - 1;
         if (i != last) {
-            uint256 moved = allProductIds[last];
+            uint64 moved = allProductIds[last];
             allProductIds[i] = moved;
             allIndex[moved] = i;
         }
@@ -475,16 +502,16 @@ contract CyberdyneProducts is Ownable {
         delete allIndex[productId];
     }
 
-    function _pushCat(uint256 categoryId, uint256 productId) private {
+    function _pushCat(uint64 categoryId, uint64 productId) private {
         catIndex[categoryId][productId] = categoryProducts[categoryId].length;
         categoryProducts[categoryId].push(productId);
     }
     
-    function _removeCat(uint256 categoryId, uint256 productId) private {
+    function _removeCat(uint64 categoryId, uint64 productId) private {
         uint256 i = catIndex[categoryId][productId];
         uint256 last = categoryProducts[categoryId].length - 1;
         if (i != last) {
-            uint256 moved = categoryProducts[categoryId][last];
+            uint64 moved = categoryProducts[categoryId][last];
             categoryProducts[categoryId][i] = moved;
             catIndex[categoryId][moved] = i;
         }
@@ -492,16 +519,16 @@ contract CyberdyneProducts is Ownable {
         delete catIndex[categoryId][productId];
     }
 
-    function _pushCreator(address creator, uint256 productId) private {
+    function _pushCreator(address creator, uint64 productId) private {
         creatorIndex[creator][productId] = productsByCreator[creator].length;
         productsByCreator[creator].push(productId);
     }
     
-    function _removeCreator(address creator, uint256 productId) private {
+    function _removeCreator(address creator, uint64 productId) private {
         uint256 i = creatorIndex[creator][productId];
         uint256 last = productsByCreator[creator].length - 1;
         if (i != last) {
-            uint256 moved = productsByCreator[creator][last];
+            uint64 moved = productsByCreator[creator][last];
             productsByCreator[creator][i] = moved;
             creatorIndex[creator][moved] = i;
         }
@@ -524,5 +551,15 @@ contract CyberdyneProducts is Ownable {
         }
         authorizedCreatorsList.pop();
         delete authIndex[creator];
+    }
+
+    // Helper functions to get string versions of stored bytes32 data
+    function getCategoryName(uint64 _categoryId) external view validCategory(_categoryId) returns (string memory) {
+        return bytes32ToString(categories[_categoryId].name);
+    }
+
+    function getProductTitle(uint64 _productId) external view returns (string memory) {
+        require(products[_productId].exists, "Product does not exist");
+        return bytes32ToString(products[_productId].title);
     }
 }

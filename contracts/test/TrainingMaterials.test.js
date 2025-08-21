@@ -3,6 +3,11 @@ import hre from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers.js";
 const { ethers } = hre;
 
+// Helper function to convert bytes32 to string
+function bytes32ToString(bytes32) {
+  return ethers.decodeBytes32String(bytes32);
+}
+
 describe("TrainingMaterials", function () {
   // Test data
   const CATEGORY_NAME = "Blockchain Fundamentals";
@@ -222,7 +227,7 @@ describe("TrainingMaterials", function () {
 
         const category = await contract.getCategory(1);
         expect(category.id).to.equal(1);
-        expect(category.name).to.equal(CATEGORY_NAME);
+        expect(bytes32ToString(category.name)).to.equal(CATEGORY_NAME);
         expect(category.description).to.equal(CATEGORY_DESCRIPTION);
         expect(category.exists).to.be.true;
       });
@@ -260,7 +265,7 @@ describe("TrainingMaterials", function () {
         await contract.createCategory(CATEGORY_NAME, CATEGORY_DESCRIPTION);
         
         const category = await contract.getCategory(1);
-        expect(category.name).to.equal(CATEGORY_NAME);
+        expect(bytes32ToString(category.name)).to.equal(CATEGORY_NAME);
         expect(category.description).to.equal(CATEGORY_DESCRIPTION);
         expect(category.exists).to.be.true;
       });
@@ -282,9 +287,9 @@ describe("TrainingMaterials", function () {
 
         const categories = await contract.getAllCategories();
         expect(categories.length).to.equal(3);
-        expect(categories[0].name).to.equal("Category 1");
-        expect(categories[1].name).to.equal("Category 2");
-        expect(categories[2].name).to.equal("Category 3");
+        expect(bytes32ToString(categories[0].name)).to.equal("Category 1");
+        expect(bytes32ToString(categories[1].name)).to.equal("Category 2");
+        expect(bytes32ToString(categories[2].name)).to.equal("Category 3");
       });
 
       it("Should check if category exists", async function () {
@@ -311,11 +316,8 @@ describe("TrainingMaterials", function () {
         
         const tx = await contract.createTrainingMaterial(
           MATERIAL_TITLE,
-          MATERIAL_DESCRIPTION,
           1,
-          MATERIAL_IMAGE_IPFS,
           MATERIAL_CONTENT_IPFS,
-          MATERIAL_CONTEXT_IPFS,
           MATERIAL_PRICE_USDC
         );
         
@@ -328,12 +330,9 @@ describe("TrainingMaterials", function () {
 
         const material = await contract.getTrainingMaterial(generatedMaterialId);
         expect(material.id).to.equal(generatedMaterialId);
-        expect(material.title).to.equal(MATERIAL_TITLE);
-        expect(material.description).to.equal(MATERIAL_DESCRIPTION);
+        expect(bytes32ToString(material.title)).to.equal(MATERIAL_TITLE);
         expect(material.categoryId).to.equal(1);
-        expect(material.imageIPFS).to.equal(MATERIAL_IMAGE_IPFS);
-        expect(material.contentIPFS).to.equal(MATERIAL_CONTENT_IPFS);
-        expect(material.contextFileIPFS).to.equal(MATERIAL_CONTEXT_IPFS);
+        expect(material.metadataURI).to.equal(MATERIAL_CONTENT_IPFS);
         expect(material.priceUSDC).to.equal(MATERIAL_PRICE_USDC);
         expect(material.creator).to.equal(owner.address);
         expect(material.exists).to.be.true;
@@ -346,11 +345,8 @@ describe("TrainingMaterials", function () {
         
         await contract.createTrainingMaterial(
           MATERIAL_TITLE,
-          MATERIAL_DESCRIPTION,
           1,
-          MATERIAL_IMAGE_IPFS,
           MATERIAL_CONTENT_IPFS,
-          MATERIAL_CONTEXT_IPFS,
           MATERIAL_PRICE_USDC
         );
 
@@ -363,11 +359,8 @@ describe("TrainingMaterials", function () {
         await expect(
           contract.connect(otherAccount).createTrainingMaterial(
             MATERIAL_TITLE,
-            MATERIAL_DESCRIPTION,
             1,
-            MATERIAL_IMAGE_IPFS,
             MATERIAL_CONTENT_IPFS,
-            MATERIAL_CONTEXT_IPFS,
             MATERIAL_PRICE_USDC
           )
         ).to.be.revertedWith("Not authorized to create training materials");
@@ -381,11 +374,8 @@ describe("TrainingMaterials", function () {
         
         const tx = await contract.connect(authorizedCreator).createTrainingMaterial(
           MATERIAL_TITLE,
-          MATERIAL_DESCRIPTION,
           1,
-          MATERIAL_IMAGE_IPFS,
           MATERIAL_CONTENT_IPFS,
-          MATERIAL_CONTEXT_IPFS,
           MATERIAL_PRICE_USDC
         );
         
@@ -395,7 +385,7 @@ describe("TrainingMaterials", function () {
         
         const material = await contract.getTrainingMaterial(generatedMaterialId);
         expect(material.creator).to.equal(authorizedCreator.address);
-        expect(material.title).to.equal(MATERIAL_TITLE);
+        expect(bytes32ToString(material.title)).to.equal(MATERIAL_TITLE);
       });
 
       it("Should revert if category does not exist", async function () {
@@ -404,11 +394,8 @@ describe("TrainingMaterials", function () {
         await expect(
           contract.createTrainingMaterial(
             MATERIAL_TITLE,
-            MATERIAL_DESCRIPTION,
             999, // Non-existent category
-            MATERIAL_IMAGE_IPFS,
             MATERIAL_CONTENT_IPFS,
-            MATERIAL_CONTEXT_IPFS,
             MATERIAL_PRICE_USDC
           )
         ).to.be.revertedWith("Category does not exist");
@@ -419,21 +406,15 @@ describe("TrainingMaterials", function () {
         
         const tx1 = await contract.createTrainingMaterial(
           "First Material",
-          MATERIAL_DESCRIPTION,
           1,
-          MATERIAL_IMAGE_IPFS,
           MATERIAL_CONTENT_IPFS,
-          MATERIAL_CONTEXT_IPFS,
           MATERIAL_PRICE_USDC
         );
         
         const tx2 = await contract.createTrainingMaterial(
           "Second Material",
-          MATERIAL_DESCRIPTION,
           1,
-          MATERIAL_IMAGE_IPFS,
           MATERIAL_CONTENT_IPFS,
-          MATERIAL_CONTEXT_IPFS,
           ethers.parseUnits("19.99", 6) // Different price
         );
         
@@ -456,11 +437,8 @@ describe("TrainingMaterials", function () {
         
         const tx = await contract.createTrainingMaterial(
           MATERIAL_TITLE,
-          MATERIAL_DESCRIPTION,
           1,
-          MATERIAL_IMAGE_IPFS,
           MATERIAL_CONTENT_IPFS,
-          MATERIAL_CONTEXT_IPFS,
           MATERIAL_PRICE_USDC
         );
         
@@ -479,90 +457,36 @@ describe("TrainingMaterials", function () {
         await expect(
           contract.createTrainingMaterial(
             "", // Empty title
-            MATERIAL_DESCRIPTION,
             1,
-            MATERIAL_IMAGE_IPFS,
             MATERIAL_CONTENT_IPFS,
-            MATERIAL_CONTEXT_IPFS,
             MATERIAL_PRICE_USDC
           )
         ).to.be.revertedWith("Title cannot be empty");
       });
 
-      it("Should revert if description is empty", async function () {
+
+
+      it("Should revert if metadata URI is empty", async function () {
         const { contract } = await loadFixture(deployWithCategoryFixture);
         
         await expect(
           contract.createTrainingMaterial(
             MATERIAL_TITLE,
-            "", // Empty description
             1,
-            MATERIAL_IMAGE_IPFS,
-            MATERIAL_CONTENT_IPFS,
-            MATERIAL_CONTEXT_IPFS,
+            "", // Empty metadata URI
             MATERIAL_PRICE_USDC
           )
-        ).to.be.revertedWith("Description cannot be empty");
+        ).to.be.revertedWith("Metadata URI cannot be empty");
       });
 
-      it("Should revert if image IPFS is empty", async function () {
-        const { contract } = await loadFixture(deployWithCategoryFixture);
-        
-        await expect(
-          contract.createTrainingMaterial(
-            MATERIAL_TITLE,
-            MATERIAL_DESCRIPTION,
-            1,
-            "", // Empty image IPFS
-            MATERIAL_CONTENT_IPFS,
-            MATERIAL_CONTEXT_IPFS,
-            MATERIAL_PRICE_USDC
-          )
-        ).to.be.revertedWith("Image IPFS hash cannot be empty");
-      });
-
-      it("Should revert if content IPFS is empty", async function () {
-        const { contract } = await loadFixture(deployWithCategoryFixture);
-        
-        await expect(
-          contract.createTrainingMaterial(
-            MATERIAL_TITLE,
-            MATERIAL_DESCRIPTION,
-            1,
-            MATERIAL_IMAGE_IPFS,
-            "", // Empty content IPFS
-            MATERIAL_CONTEXT_IPFS,
-            MATERIAL_PRICE_USDC
-          )
-        ).to.be.revertedWith("Content IPFS hash cannot be empty");
-      });
-
-      it("Should revert if context file IPFS is empty", async function () {
-        const { contract } = await loadFixture(deployWithCategoryFixture);
-        
-        await expect(
-          contract.createTrainingMaterial(
-            MATERIAL_TITLE,
-            MATERIAL_DESCRIPTION,
-            1,
-            MATERIAL_IMAGE_IPFS,
-            MATERIAL_CONTENT_IPFS,
-            "", // Empty context file IPFS
-            MATERIAL_PRICE_USDC
-          )
-        ).to.be.revertedWith("Context file IPFS hash cannot be empty");
-      });
 
       it("Should accept zero price for free materials", async function () {
         const { contract } = await loadFixture(deployWithCategoryFixture);
         
         const tx = await contract.createTrainingMaterial(
           "Free Material",
-          MATERIAL_DESCRIPTION,
           1,
-          MATERIAL_IMAGE_IPFS,
           MATERIAL_CONTENT_IPFS,
-          MATERIAL_CONTEXT_IPFS,
           0 // Free material
         );
         
@@ -581,11 +505,8 @@ describe("TrainingMaterials", function () {
         
         const tx = await contract.createTrainingMaterial(
           MATERIAL_TITLE,
-          MATERIAL_DESCRIPTION,
           1,
-          MATERIAL_IMAGE_IPFS,
           MATERIAL_CONTENT_IPFS,
-          MATERIAL_CONTEXT_IPFS,
           priceInUSDC
         );
         
@@ -609,11 +530,8 @@ describe("TrainingMaterials", function () {
         
         const tx = await contract.connect(authorizedCreator).createTrainingMaterial(
           "Test Material",
-          "Test Description",
           1,
-          "test-image",
           "test-content",
-          "test-context",
           ethers.parseUnits("10.99", 6)
         );
         
@@ -673,11 +591,8 @@ describe("TrainingMaterials", function () {
         // Create another material in the same category
         const tx2 = await contract.createTrainingMaterial(
           "Second Material",
-          "Second Description",
           1,
-          "second-image",
-          "second-content", 
-          "second-context",
+          "second-content",
           ethers.parseUnits("5.99", 6)
         );
         
@@ -693,7 +608,7 @@ describe("TrainingMaterials", function () {
         // Verify the remaining material is still there
         const categoryMaterials = await contract.getTrainingMaterialsByCategory(1);
         expect(categoryMaterials.length).to.equal(1);
-        expect(categoryMaterials[0].title).to.equal("Second Material");
+        expect(bytes32ToString(categoryMaterials[0].title)).to.equal("Second Material");
       });
     });
 
@@ -708,31 +623,22 @@ describe("TrainingMaterials", function () {
         // Create materials in different categories
         const tx1 = await contract.createTrainingMaterial(
           "Material 1",
-          "Description 1",
           1,
-          "ipfs-image-1",
           "ipfs-content-1",
-          "ipfs-context-1",
           ethers.parseUnits("9.99", 6)
         );
         
         const tx2 = await contract.createTrainingMaterial(
           "Material 2",
-          "Description 2",
           1,
-          "ipfs-image-2",
           "ipfs-content-2",
-          "ipfs-context-2",
           ethers.parseUnits("19.99", 6)
         );
         
         const tx3 = await contract.createTrainingMaterial(
           "Material 3",
-          "Description 3",
           2,
-          "ipfs-image-3",
           "ipfs-content-3",
-          "ipfs-context-3",
           ethers.parseUnits("49.99", 6)
         );
         
@@ -816,11 +722,8 @@ describe("TrainingMaterials", function () {
         // Create a material with the new creator
         await contract.connect(authorizedCreator).createTrainingMaterial(
           "Creator Material",
-          "Material by authorized creator",
           1,
-          "ipfs-image-creator",
           "ipfs-content-creator",
-          "ipfs-context-creator",
           ethers.parseUnits("25.99", 6)
         );
         
@@ -831,7 +734,7 @@ describe("TrainingMaterials", function () {
         // Check materials by authorized creator (should have 1)
         const creatorMaterials = await contract.getTrainingMaterialsByCreator(authorizedCreator.address);
         expect(creatorMaterials.length).to.equal(1);
-        expect(creatorMaterials[0].title).to.equal("Creator Material");
+        expect(bytes32ToString(creatorMaterials[0].title)).to.equal("Creator Material");
         expect(creatorMaterials[0].creator).to.equal(authorizedCreator.address);
       });
 
@@ -843,17 +746,15 @@ describe("TrainingMaterials", function () {
         
         await contract.connect(authorizedCreator).createTrainingMaterial(
           "Creator Material 1",
-          "Description 1",
           1,
-          "ipfs1", "ipfs1", "ipfs1",
+          "ipfs1",
           ethers.parseUnits("10.00", 6)
         );
         
         await contract.connect(authorizedCreator).createTrainingMaterial(
           "Creator Material 2",
-          "Description 2",
           1,
-          "ipfs2", "ipfs2", "ipfs2",
+          "ipfs2",
           ethers.parseUnits("20.00", 6)
         );
         
@@ -873,10 +774,10 @@ describe("TrainingMaterials", function () {
       await contract.createCategory("Advanced", "Advanced level content");
       
       // Create materials in each category
-      await contract.createTrainingMaterial("Beginner 1", "Desc", 1, "img1", "content1", "context1", ethers.parseUnits("5.99", 6));
-      await contract.createTrainingMaterial("Beginner 2", "Desc", 1, "img2", "content2", "context2", ethers.parseUnits("7.99", 6));
-      await contract.createTrainingMaterial("Intermediate 1", "Desc", 2, "img3", "content3", "context3", ethers.parseUnits("15.99", 6));
-      await contract.createTrainingMaterial("Advanced 1", "Desc", 3, "img4", "content4", "context4", ethers.parseUnits("29.99", 6));
+      await contract.createTrainingMaterial("Beginner 1", 1, "content1", ethers.parseUnits("5.99", 6));
+      await contract.createTrainingMaterial("Beginner 2", 1, "content2", ethers.parseUnits("7.99", 6));
+      await contract.createTrainingMaterial("Intermediate 1", 2, "content3", ethers.parseUnits("15.99", 6));
+      await contract.createTrainingMaterial("Advanced 1", 3, "content4", ethers.parseUnits("29.99", 6));
       
       // Verify counts
       expect(await contract.getTotalMaterialCount()).to.equal(4);
@@ -894,8 +795,8 @@ describe("TrainingMaterials", function () {
       
       // Verify each material has all required fields
       for (const material of allMaterials) {
-        expect(material.contextFileIPFS).to.be.a('string');
-        expect(material.contextFileIPFS.length).to.be.greaterThan(0);
+        expect(material.metadataURI).to.be.a('string');
+        expect(material.metadataURI.length).to.be.greaterThan(0);
         expect(material.priceUSDC).to.be.a('bigint');
         expect(material.priceUSDC).to.be.greaterThan(0);
         expect(material.creator).to.be.a('string');

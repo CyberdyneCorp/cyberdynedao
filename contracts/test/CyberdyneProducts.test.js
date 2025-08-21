@@ -2,6 +2,11 @@ import { expect } from "chai";
 import hre from "hardhat";
 const { ethers } = hre;
 
+// Helper function to convert bytes32 to string
+function bytes32ToString(bytes32) {
+  return ethers.decodeBytes32String(bytes32);
+}
+
 describe("CyberdyneProducts", function () {
   let CyberdyneProducts;
   let cyberdyneProducts;
@@ -80,7 +85,7 @@ describe("CyberdyneProducts", function () {
 
     it("Should return category information", async function () {
       const category = await cyberdyneProducts.getCategory(defaultCategoryId);
-      expect(category.name).to.equal("Default Category");
+      expect(bytes32ToString(category.name)).to.equal("Default Category");
       expect(category.description).to.equal("Default category for testing");
       expect(category.exists).to.be.true;
     });
@@ -249,10 +254,10 @@ describe("CyberdyneProducts", function () {
       );
 
       const product = await cyberdyneProducts.getProduct(productId);
-      expect(product.title).to.equal("Updated Product");
+      expect(bytes32ToString(product.title)).to.equal("Updated Product");
       expect(product.categoryId).to.equal(defaultCategoryId);
       expect(product.priceUSDC).to.equal(ethers.parseUnits("149.99", 6));
-      expect(product.ipfsLocation).to.equal("QmNewIPFSHash");
+      expect(product.metadataURI).to.equal("QmNewIPFSHash");
     });
 
     it("Should allow owner to update any product", async function () {
@@ -265,7 +270,7 @@ describe("CyberdyneProducts", function () {
       );
 
       const product = await cyberdyneProducts.getProduct(productId);
-      expect(product.title).to.equal("Owner Updated");
+      expect(bytes32ToString(product.title)).to.equal("Owner Updated");
     });
 
     it("Should not allow unauthorized users to update product", async function () {
@@ -402,7 +407,7 @@ describe("CyberdyneProducts", function () {
       
       const premiumCategoryProducts = await cyberdyneProducts.getAllProductsByCategory(secondCategoryId);
       expect(premiumCategoryProducts.length).to.equal(1);
-      expect(premiumCategoryProducts[0].title).to.equal("Product Premium");
+      expect(bytes32ToString(premiumCategoryProducts[0].title)).to.equal("Product Premium");
     });
 
     it("Should return category product count", async function () {

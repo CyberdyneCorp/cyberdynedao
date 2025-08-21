@@ -2,6 +2,11 @@ import { expect } from "chai";
 import hre from "hardhat";
 const { ethers } = hre;
 
+// Helper function to convert bytes32 to string
+function bytes32ToString(bytes32) {
+  return ethers.decodeBytes32String(bytes32);
+}
+
 describe("CyberdyneMarketplace", function () {
   let CyberdyneMarketplace, CyberdyneProducts, CyberdyneAccessNFT, MockUSDC;
   let marketplace, products, accessNFT, usdcToken;
@@ -316,8 +321,8 @@ describe("CyberdyneMarketplace", function () {
     it("Should return all categories from products contract", async function () {
       const categories = await marketplace.getAllCategories();
       expect(categories.length).to.equal(2); // Electronics and Software categories
-      expect(categories[0].name).to.equal("Electronics");
-      expect(categories[1].name).to.equal("Software");
+      expect(bytes32ToString(categories[0].name)).to.equal("Electronics");
+      expect(bytes32ToString(categories[1].name)).to.equal("Software");
     });
 
     it("Should return seller listings", async function () {

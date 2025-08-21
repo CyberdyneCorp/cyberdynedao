@@ -2,6 +2,11 @@ import { expect } from "chai";
 import hre from "hardhat";
 const { ethers } = hre;
 
+// Helper function to convert bytes32 to string
+function bytes32ToString(bytes32) {
+  return ethers.decodeBytes32String(bytes32);
+}
+
 describe("Deauthorization Semantics Tests", function () {
   let CyberdyneProducts;
   let products;
@@ -43,7 +48,7 @@ describe("Deauthorization Semantics Tests", function () {
     );
 
     const product = await products.getProduct(productId);
-    expect(product.title).to.equal("Updated Product");
+    expect(bytes32ToString(product.title)).to.equal("Updated Product");
     expect(product.priceUSDC).to.equal(ethers.parseUnits("150", 6));
   });
 
@@ -100,7 +105,7 @@ describe("Deauthorization Semantics Tests", function () {
     );
 
     const product = await products.getProduct(productId);
-    expect(product.title).to.equal("Owner Updated Product");
+    expect(bytes32ToString(product.title)).to.equal("Owner Updated Product");
     expect(product.priceUSDC).to.equal(ethers.parseUnits("250", 6));
   });
 
@@ -147,6 +152,6 @@ describe("Deauthorization Semantics Tests", function () {
     );
 
     const product = await products.getProduct(productId);
-    expect(product.title).to.equal("Re-authorized Update");
+    expect(bytes32ToString(product.title)).to.equal("Re-authorized Update");
   });
 });

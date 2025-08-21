@@ -5,13 +5,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract TrainingMaterials is Ownable {
     struct TrainingMaterial {
-        uint256 id;
-        string title;
-        string description;
-        uint256 categoryId;
-        string imageIPFS;
-        string contentIPFS;
-        string contextFileIPFS;
+        uint64 id;
+        bytes32 title;
+        uint64 categoryId;
+        string metadataURI;
         uint256 priceUSDC; // Price in USDC (6 decimals)
         address creator; // Address that created this material
         uint256 createdAt;
@@ -19,39 +16,37 @@ contract TrainingMaterials is Ownable {
     }
 
     struct Category {
-        uint256 id;
-        string name;
+        uint64 id;
+        bytes32 name;
         string description;
         uint256 createdAt;
         bool exists;
     }
 
     // State variables
-    mapping(uint256 => Category) public categories;
-    mapping(uint256 => TrainingMaterial) public trainingMaterials; // id => TrainingMaterial
-    mapping(uint256 => uint256[]) public categoryMaterials; // categoryId => materialId[]
+    mapping(uint64 => Category) public categories;
+    mapping(uint64 => TrainingMaterial) public trainingMaterials; // id => TrainingMaterial
+    mapping(uint64 => uint64[]) public categoryMaterials; // categoryId => materialId[]
     mapping(address => bool) public authorizedCreators; // Whitelist of addresses that can create materials
     
-    uint256 public nextCategoryId;
-    uint256 public nextMaterialId;
-    uint256[] public allMaterialIds;
+    uint64 public nextCategoryId;
+    uint64 public nextMaterialId;
+    uint64[] public allMaterialIds;
     address[] public authorizedCreatorsList; // Array to track all authorized creators
 
     // Events
-    event CategoryCreated(uint256 indexed categoryId, string name, string description);
+    event CategoryCreated(uint64 indexed categoryId, string name, string description);
     event TrainingMaterialCreated(
-        uint256 indexed materialId,
+        uint64 indexed materialId,
         string title,
-        uint256 indexed categoryId,
-        string imageIPFS,
-        string contentIPFS,
-        string contextFileIPFS,
+        uint64 indexed categoryId,
+        string metadataURI,
         uint256 priceUSDC,
         address indexed creator
     );
     event CreatorAuthorized(address indexed creator, address indexed authorizedBy);
     event CreatorDeauthorized(address indexed creator, address indexed deauthorizedBy);
-    event TrainingMaterialDeleted(uint256 indexed materialId, address indexed deletedBy, address indexed creator);
+    event TrainingMaterialDeleted(uint64 indexed materialId, address indexed deletedBy, address indexed creator);
     event ContractOwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     constructor() Ownable(msg.sender) {
@@ -63,8 +58,32 @@ contract TrainingMaterials is Ownable {
         authorizedCreatorsList.push(msg.sender);
     }
 
+    // Helper functions for string <-> bytes32 conversion
+    function stringToBytes32(string memory source) internal pure returns (bytes32 result) {
+        bytes memory tempEmptyStringTest = bytes(source);
+        if (tempEmptyStringTest.length == 0) {
+            return 0x0;
+        }
+        assembly {
+            result := mload(add(source, 32))
+        }
+    }
+
+    function bytes32ToString(bytes32 source) internal pure returns (string memory result) {
+        uint8 length = 0;
+        while (length < 32 && source[length] != 0) {
+            length++;
+        }
+        assembly {
+            result := mload(0x40)
+            mstore(0x40, add(result, 0x40))
+            mstore(result, length)
+            mstore(add(result, 0x20), source)
+        }
+    }
+
     // Modifiers
-    modifier validCategory(uint256 categoryId) {
+    modifier validCategory(uint64 categoryId) {
         require(categories[categoryId].exists, "Category does not exist");
         _;
     }
@@ -74,7 +93,7 @@ contract TrainingMaterials is Ownable {
         _;
     }
 
-    modifier onlyOwnerOrCreator(uint256 materialId) {
+    modifier onlyOwnerOrCreator(uint64 materialId) {
         require(trainingMaterials[materialId].exists, "Training material does not exist");
         require(
             msg.sender == owner() || msg.sender == trainingMaterials[materialId].creator,
@@ -84,19 +103,19 @@ contract TrainingMaterials is Ownable {
     }
 
     // State mapping helpers for O(1) array operations
-    mapping(uint256 => uint256) private allIndex; // materialId -> index in allMaterialIds
-    mapping(uint256 => mapping(uint256 => uint256)) private catIndex; // categoryId, materialId -> index
+    mapping(uint64 => uint256) private allIndex; // materialId -> index in allMaterialIds
+    mapping(uint64 => mapping(uint64 => uint256)) private catIndex; // categoryId, materialId -> index
     
-    function _pushAll(uint256 materialId) private {
+    function _pushAll(uint64 materialId) private {
         allIndex[materialId] = allMaterialIds.length;
         allMaterialIds.push(materialId);
     }
     
-    function _removeAll(uint256 materialId) private {
+    function _removeAll(uint64 materialId) private {
         uint256 i = allIndex[materialId];
         uint256 last = allMaterialIds.length - 1;
         if (i != last) {
-            uint256 moved = allMaterialIds[last];
+            uint64 moved = allMaterialIds[last];
             allMaterialIds[i] = moved;
             allIndex[moved] = i;
         }
@@ -104,16 +123,16 @@ contract TrainingMaterials is Ownable {
         delete allIndex[materialId];
     }
     
-    function _pushCat(uint256 categoryId, uint256 materialId) private {
+    function _pushCat(uint64 categoryId, uint64 materialId) private {
         catIndex[categoryId][materialId] = categoryMaterials[categoryId].length;
         categoryMaterials[categoryId].push(materialId);
     }
     
-    function _removeCat(uint256 categoryId, uint256 materialId) private {
+    function _removeCat(uint64 categoryId, uint64 materialId) private {
         uint256 i = catIndex[categoryId][materialId];
         uint256 last = categoryMaterials[categoryId].length - 1;
         if (i != last) {
-            uint256 moved = categoryMaterials[categoryId][last];
+            uint64 moved = categoryMaterials[categoryId][last];
             categoryMaterials[categoryId][i] = moved;
             catIndex[categoryId][moved] = i;
         }
@@ -167,13 +186,14 @@ contract TrainingMaterials is Ownable {
     function createCategory(
         string memory _name,
         string memory _description
-    ) external onlyOwner returns (uint256) {
+    ) external onlyOwner returns (uint64) {
         require(bytes(_name).length > 0, "Category name cannot be empty");
+        require(bytes(_name).length <= 32, "Category name too long (max 32 bytes)");
         
-        uint256 categoryId = nextCategoryId;
+        uint64 categoryId = nextCategoryId;
         categories[categoryId] = Category({
             id: categoryId,
-            name: _name,
+            name: stringToBytes32(_name),
             description: _description,
             createdAt: block.timestamp,
             exists: true
@@ -188,30 +208,22 @@ contract TrainingMaterials is Ownable {
     // Training material management functions (authorized creators only)
     function createTrainingMaterial(
         string memory _title,
-        string memory _description,
-        uint256 _categoryId,
-        string memory _imageIPFS,
-        string memory _contentIPFS,
-        string memory _contextFileIPFS,
+        uint64 _categoryId,
+        string memory _metadataURI,
         uint256 _priceUSDC
-    ) external onlyAuthorizedCreator validCategory(_categoryId) returns (uint256) {
+    ) external onlyAuthorizedCreator validCategory(_categoryId) returns (uint64) {
         require(bytes(_title).length > 0, "Title cannot be empty");
-        require(bytes(_description).length > 0, "Description cannot be empty");
-        require(bytes(_imageIPFS).length > 0, "Image IPFS hash cannot be empty");
-        require(bytes(_contentIPFS).length > 0, "Content IPFS hash cannot be empty");
-        require(bytes(_contextFileIPFS).length > 0, "Context file IPFS hash cannot be empty");
+        require(bytes(_title).length <= 32, "Title too long (max 32 bytes)");
+        require(bytes(_metadataURI).length > 0, "Metadata URI cannot be empty");
 
-        uint256 materialId = nextMaterialId;
+        uint64 materialId = nextMaterialId;
         nextMaterialId++;
 
         trainingMaterials[materialId] = TrainingMaterial({
             id: materialId,
-            title: _title,
-            description: _description,
+            title: stringToBytes32(_title),
             categoryId: _categoryId,
-            imageIPFS: _imageIPFS,
-            contentIPFS: _contentIPFS,
-            contextFileIPFS: _contextFileIPFS,
+            metadataURI: _metadataURI,
             priceUSDC: _priceUSDC,
             creator: msg.sender,
             createdAt: block.timestamp,
@@ -221,15 +233,15 @@ contract TrainingMaterials is Ownable {
         _pushCat(_categoryId, materialId);
         _pushAll(materialId);
 
-        emit TrainingMaterialCreated(materialId, _title, _categoryId, _imageIPFS, _contentIPFS, _contextFileIPFS, _priceUSDC, msg.sender);
+        emit TrainingMaterialCreated(materialId, _title, _categoryId, _metadataURI, _priceUSDC, msg.sender);
         
         return materialId;
     }
 
     // Delete training material (owner or creator only)
-    function deleteTrainingMaterial(uint256 _materialId) external onlyOwnerOrCreator(_materialId) {
+    function deleteTrainingMaterial(uint64 _materialId) external onlyOwnerOrCreator(_materialId) {
         TrainingMaterial storage material = trainingMaterials[_materialId];
-        uint256 categoryId = material.categoryId;
+        uint64 categoryId = material.categoryId;
         address creator = material.creator;
         
         // Mark as deleted (set exists to false)
@@ -262,22 +274,22 @@ contract TrainingMaterials is Ownable {
     }
 
     // View functions
-    function getCategory(uint256 _categoryId) external view validCategory(_categoryId) returns (Category memory) {
+    function getCategory(uint64 _categoryId) external view validCategory(_categoryId) returns (Category memory) {
         return categories[_categoryId];
     }
 
-    function getTrainingMaterial(uint256 _materialId) external view returns (TrainingMaterial memory) {
+    function getTrainingMaterial(uint64 _materialId) external view returns (TrainingMaterial memory) {
         require(trainingMaterials[_materialId].exists, "Training material does not exist");
         return trainingMaterials[_materialId];
     }
 
-    function getTrainingMaterialsByCategory(uint256 _categoryId) 
+    function getTrainingMaterialsByCategory(uint64 _categoryId) 
         external 
         view 
         validCategory(_categoryId) 
         returns (TrainingMaterial[] memory) 
     {
-        uint256[] memory materialIds = categoryMaterials[_categoryId];
+        uint64[] memory materialIds = categoryMaterials[_categoryId];
         TrainingMaterial[] memory materials = new TrainingMaterial[](materialIds.length);
         
         for (uint256 i = 0; i < materialIds.length; i++) {
@@ -287,7 +299,7 @@ contract TrainingMaterials is Ownable {
         return materials;
     }
 
-    function getCategoryMaterialCount(uint256 _categoryId) 
+    function getCategoryMaterialCount(uint64 _categoryId) 
         external 
         view 
         validCategory(_categoryId) 
@@ -300,7 +312,7 @@ contract TrainingMaterials is Ownable {
         Category[] memory allCategories = new Category[](nextCategoryId - 1);
         uint256 index = 0;
         
-        for (uint256 i = 1; i < nextCategoryId; i++) {
+        for (uint64 i = 1; i < nextCategoryId; i++) {
             if (categories[i].exists) {
                 allCategories[index] = categories[i];
                 index++;
@@ -326,11 +338,11 @@ contract TrainingMaterials is Ownable {
         return materials;
     }
 
-    function categoryExists(uint256 _categoryId) external view returns (bool) {
+    function categoryExists(uint64 _categoryId) external view returns (bool) {
         return categories[_categoryId].exists;
     }
 
-    function trainingMaterialExists(uint256 _materialId) external view returns (bool) {
+    function trainingMaterialExists(uint64 _materialId) external view returns (bool) {
         return trainingMaterials[_materialId].exists;
     }
 
@@ -371,5 +383,15 @@ contract TrainingMaterials is Ownable {
     
     function getTotalMaterialCount() external view returns (uint256) {
         return allMaterialIds.length;
+    }
+
+    // Helper functions to get string versions of stored bytes32 data
+    function getCategoryName(uint64 _categoryId) external view validCategory(_categoryId) returns (string memory) {
+        return bytes32ToString(categories[_categoryId].name);
+    }
+
+    function getTrainingMaterialTitle(uint64 _materialId) external view returns (string memory) {
+        require(trainingMaterials[_materialId].exists, "Training material does not exist");
+        return bytes32ToString(trainingMaterials[_materialId].title);
     }
 }
