@@ -32,7 +32,7 @@ describe("TrainingMaterials", function () {
     it("Should initialize with correct default values", async function () {
       const { contract, owner } = await loadFixture(deployTrainingMaterialsFixture);
       expect(await contract.nextCategoryId()).to.equal(1);
-      expect(await contract.totalMaterials()).to.equal(0);
+      expect(await contract.getTotalMaterialCount()).to.equal(0);
       
       // Owner should be automatically authorized
       expect(await contract.isAuthorizedCreator(owner.address)).to.be.true;
@@ -321,13 +321,13 @@ describe("TrainingMaterials", function () {
         
         const receipt = await tx.wait();
         const event = receipt.logs.find(log => log.eventName === "TrainingMaterialCreated");
-        const generatedUuid = event.args.uuid;
+        const generatedMaterialId = event.args.materialId;
         
-        expect(generatedUuid).to.be.a('string');
-        expect(generatedUuid.length).to.be.greaterThan(0);
+        expect(generatedMaterialId).to.be.a('bigint');
+        expect(generatedMaterialId).to.be.greaterThan(0);
 
-        const material = await contract.getTrainingMaterial(generatedUuid);
-        expect(material.uuid).to.equal(generatedUuid);
+        const material = await contract.getTrainingMaterial(generatedMaterialId);
+        expect(material.id).to.equal(generatedMaterialId);
         expect(material.title).to.equal(MATERIAL_TITLE);
         expect(material.description).to.equal(MATERIAL_DESCRIPTION);
         expect(material.categoryId).to.equal(1);
@@ -342,7 +342,7 @@ describe("TrainingMaterials", function () {
       it("Should increment total materials count", async function () {
         const { contract } = await loadFixture(deployWithCategoryFixture);
         
-        expect(await contract.totalMaterials()).to.equal(0);
+        expect(await contract.getTotalMaterialCount()).to.equal(0);
         
         await contract.createTrainingMaterial(
           MATERIAL_TITLE,
@@ -354,7 +354,7 @@ describe("TrainingMaterials", function () {
           MATERIAL_PRICE_USDC
         );
 
-        expect(await contract.totalMaterials()).to.equal(1);
+        expect(await contract.getTotalMaterialCount()).to.equal(1);
       });
 
       it("Should revert if non-authorized user tries to create training material", async function () {
@@ -391,9 +391,9 @@ describe("TrainingMaterials", function () {
         
         const receipt = await tx.wait();
         const event = receipt.logs.find(log => log.eventName === "TrainingMaterialCreated");
-        const generatedUuid = event.args.uuid;
+        const generatedMaterialId = event.args.materialId;
         
-        const material = await contract.getTrainingMaterial(generatedUuid);
+        const material = await contract.getTrainingMaterial(generatedMaterialId);
         expect(material.creator).to.equal(authorizedCreator.address);
         expect(material.title).to.equal(MATERIAL_TITLE);
       });
@@ -414,7 +414,7 @@ describe("TrainingMaterials", function () {
         ).to.be.revertedWith("Category does not exist");
       });
 
-      it("Should generate unique UUIDs for different materials", async function () {
+      it("Should generate unique IDs for different materials", async function () {
         const { contract } = await loadFixture(deployWithCategoryFixture);
         
         const tx1 = await contract.createTrainingMaterial(
@@ -443,15 +443,15 @@ describe("TrainingMaterials", function () {
         const event1 = receipt1.logs.find(log => log.eventName === "TrainingMaterialCreated");
         const event2 = receipt2.logs.find(log => log.eventName === "TrainingMaterialCreated");
         
-        const uuid1 = event1.args.uuid;
-        const uuid2 = event2.args.uuid;
+        const materialId1 = event1.args.materialId;
+        const materialId2 = event2.args.materialId;
         
-        expect(uuid1).to.not.equal(uuid2);
-        expect(uuid1).to.be.a('string');
-        expect(uuid2).to.be.a('string');
+        expect(materialId1).to.not.equal(materialId2);
+        expect(materialId1).to.be.a('bigint');
+        expect(materialId2).to.be.a('bigint');
       });
 
-      it("Should return the generated UUID", async function () {
+      it("Should return the generated material ID", async function () {
         const { contract } = await loadFixture(deployWithCategoryFixture);
         
         const tx = await contract.createTrainingMaterial(
@@ -466,10 +466,11 @@ describe("TrainingMaterials", function () {
         
         const receipt = await tx.wait();
         const event = receipt.logs.find(log => log.eventName === "TrainingMaterialCreated");
-        const generatedUuid = event.args.uuid;
+        const generatedMaterialId = event.args.materialId;
         
-        // Verify the UUID follows a UUID-like format (has dashes)
-        expect(generatedUuid).to.match(/^[a-f0-9]{16}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/);
+        // Verify the material ID is a positive number
+        expect(generatedMaterialId).to.be.a('bigint');
+        expect(generatedMaterialId).to.be.greaterThan(0);
       });
 
       it("Should revert if title is empty", async function () {
@@ -567,9 +568,9 @@ describe("TrainingMaterials", function () {
         
         const receipt = await tx.wait();
         const event = receipt.logs.find(log => log.eventName === "TrainingMaterialCreated");
-        const generatedUuid = event.args.uuid;
+        const generatedMaterialId = event.args.materialId;
         
-        const material = await contract.getTrainingMaterial(generatedUuid);
+        const material = await contract.getTrainingMaterial(generatedMaterialId);
         expect(material.priceUSDC).to.equal(0);
       });
 
@@ -590,9 +591,9 @@ describe("TrainingMaterials", function () {
         
         const receipt = await tx.wait();
         const event = receipt.logs.find(log => log.eventName === "TrainingMaterialCreated");
-        const generatedUuid = event.args.uuid;
+        const generatedMaterialId = event.args.materialId;
         
-        const material = await contract.getTrainingMaterial(generatedUuid);
+        const material = await contract.getTrainingMaterial(generatedMaterialId);
         expect(material.priceUSDC).to.equal(priceInUSDC);
         expect(ethers.formatUnits(material.priceUSDC, 6)).to.equal("99.99");
       });
@@ -618,43 +619,43 @@ describe("TrainingMaterials", function () {
         
         const receipt = await tx.wait();
         const event = receipt.logs.find(log => log.eventName === "TrainingMaterialCreated");
-        fixture.testUuid = event.args.uuid;
+        fixture.testMaterialId = event.args.materialId;
         
         return fixture;
       }
 
       it("Should allow owner to delete any training material", async function () {
-        const { contract, owner, authorizedCreator, testUuid } = await loadFixture(deployWithMaterialFixture);
+        const { contract, owner, authorizedCreator, testMaterialId } = await loadFixture(deployWithMaterialFixture);
         
-        expect(await contract.totalMaterials()).to.equal(1);
-        expect(await contract.trainingMaterialExists(testUuid)).to.be.true;
+        expect(await contract.getTotalMaterialCount()).to.equal(1);
+        expect(await contract.trainingMaterialExists(testMaterialId)).to.be.true;
         
-        await expect(contract.deleteTrainingMaterial(testUuid))
+        await expect(contract.deleteTrainingMaterial(testMaterialId))
           .to.emit(contract, "TrainingMaterialDeleted")
-          .withArgs(testUuid, owner.address, authorizedCreator.address);
+          .withArgs(testMaterialId, owner.address, authorizedCreator.address);
         
-        expect(await contract.totalMaterials()).to.equal(0);
-        expect(await contract.trainingMaterialExists(testUuid)).to.be.false;
+        expect(await contract.getTotalMaterialCount()).to.equal(0);
+        expect(await contract.trainingMaterialExists(testMaterialId)).to.be.false;
       });
 
       it("Should allow creator to delete their own training material", async function () {
-        const { contract, authorizedCreator, testUuid } = await loadFixture(deployWithMaterialFixture);
+        const { contract, authorizedCreator, testMaterialId } = await loadFixture(deployWithMaterialFixture);
         
-        expect(await contract.totalMaterials()).to.equal(1);
+        expect(await contract.getTotalMaterialCount()).to.equal(1);
         
-        await expect(contract.connect(authorizedCreator).deleteTrainingMaterial(testUuid))
+        await expect(contract.connect(authorizedCreator).deleteTrainingMaterial(testMaterialId))
           .to.emit(contract, "TrainingMaterialDeleted")
-          .withArgs(testUuid, authorizedCreator.address, authorizedCreator.address);
+          .withArgs(testMaterialId, authorizedCreator.address, authorizedCreator.address);
         
-        expect(await contract.totalMaterials()).to.equal(0);
-        expect(await contract.trainingMaterialExists(testUuid)).to.be.false;
+        expect(await contract.getTotalMaterialCount()).to.equal(0);
+        expect(await contract.trainingMaterialExists(testMaterialId)).to.be.false;
       });
 
       it("Should not allow unauthorized users to delete training material", async function () {
-        const { contract, otherAccount, testUuid } = await loadFixture(deployWithMaterialFixture);
+        const { contract, otherAccount, testMaterialId } = await loadFixture(deployWithMaterialFixture);
         
         await expect(
-          contract.connect(otherAccount).deleteTrainingMaterial(testUuid)
+          contract.connect(otherAccount).deleteTrainingMaterial(testMaterialId)
         ).to.be.revertedWith("Only owner or creator can delete this material");
       });
 
@@ -662,12 +663,12 @@ describe("TrainingMaterials", function () {
         const { contract } = await loadFixture(deployWithMaterialFixture);
         
         await expect(
-          contract.deleteTrainingMaterial("non-existent-uuid")
+          contract.deleteTrainingMaterial(999)
         ).to.be.revertedWith("Training material does not exist");
       });
 
       it("Should properly update category and total counts after deletion", async function () {
-        const { contract, owner, testUuid } = await loadFixture(deployWithMaterialFixture);
+        const { contract, owner, testMaterialId } = await loadFixture(deployWithMaterialFixture);
         
         // Create another material in the same category
         const tx2 = await contract.createTrainingMaterial(
@@ -680,13 +681,13 @@ describe("TrainingMaterials", function () {
           ethers.parseUnits("5.99", 6)
         );
         
-        expect(await contract.totalMaterials()).to.equal(2);
+        expect(await contract.getTotalMaterialCount()).to.equal(2);
         expect(await contract.getCategoryMaterialCount(1)).to.equal(2);
         
         // Delete first material
-        await contract.deleteTrainingMaterial(testUuid);
+        await contract.deleteTrainingMaterial(testMaterialId);
         
-        expect(await contract.totalMaterials()).to.equal(1);
+        expect(await contract.getTotalMaterialCount()).to.equal(1);
         expect(await contract.getCategoryMaterialCount(1)).to.equal(1);
         
         // Verify the remaining material is still there
@@ -744,15 +745,15 @@ describe("TrainingMaterials", function () {
         const event2 = receipt2.logs.find(log => log.eventName === "TrainingMaterialCreated");
         const event3 = receipt3.logs.find(log => log.eventName === "TrainingMaterialCreated");
         
-        fixture.uuid1 = event1.args.uuid;
-        fixture.uuid2 = event2.args.uuid;
-        fixture.uuid3 = event3.args.uuid;
+        fixture.materialId1 = event1.args.materialId;
+        fixture.materialId2 = event2.args.materialId;
+        fixture.materialId3 = event3.args.materialId;
         
         return fixture;
       }
 
       it("Should return training materials by category", async function () {
-        const { contract, uuid1, uuid2, uuid3 } = await loadFixture(deployWithMaterialsFixture);
+        const { contract, materialId1, materialId2, materialId3 } = await loadFixture(deployWithMaterialsFixture);
         
         const category1Materials = await contract.getTrainingMaterialsByCategory(1);
         const category2Materials = await contract.getTrainingMaterialsByCategory(2);
@@ -760,9 +761,9 @@ describe("TrainingMaterials", function () {
         expect(category1Materials.length).to.equal(2);
         expect(category2Materials.length).to.equal(1);
         
-        expect(category1Materials[0].uuid).to.equal(uuid1);
-        expect(category1Materials[1].uuid).to.equal(uuid2);
-        expect(category2Materials[0].uuid).to.equal(uuid3);
+        expect(category1Materials[0].id).to.equal(materialId1);
+        expect(category1Materials[1].id).to.equal(materialId2);
+        expect(category2Materials[0].id).to.equal(materialId3);
       });
 
       it("Should return category material count", async function () {
@@ -773,28 +774,28 @@ describe("TrainingMaterials", function () {
       });
 
       it("Should return all training materials", async function () {
-        const { contract, uuid1, uuid2, uuid3 } = await loadFixture(deployWithMaterialsFixture);
+        const { contract, materialId1, materialId2, materialId3 } = await loadFixture(deployWithMaterialsFixture);
         
         const allMaterials = await contract.getAllTrainingMaterials();
         expect(allMaterials.length).to.equal(3);
         
-        expect(allMaterials[0].uuid).to.equal(uuid1);
-        expect(allMaterials[1].uuid).to.equal(uuid2);
-        expect(allMaterials[2].uuid).to.equal(uuid3);
+        expect(allMaterials[0].id).to.equal(materialId1);
+        expect(allMaterials[1].id).to.equal(materialId2);
+        expect(allMaterials[2].id).to.equal(materialId3);
       });
 
       it("Should check if training material exists", async function () {
-        const { contract, uuid1 } = await loadFixture(deployWithMaterialsFixture);
+        const { contract, materialId1 } = await loadFixture(deployWithMaterialsFixture);
         
-        expect(await contract.trainingMaterialExists(uuid1)).to.be.true;
-        expect(await contract.trainingMaterialExists("non-existent-uuid")).to.be.false;
+        expect(await contract.trainingMaterialExists(materialId1)).to.be.true;
+        expect(await contract.trainingMaterialExists(999)).to.be.false;
       });
 
       it("Should revert when querying non-existent training material", async function () {
         const { contract } = await loadFixture(deployWithMaterialsFixture);
         
         await expect(
-          contract.getTrainingMaterial("non-existent-uuid")
+          contract.getTrainingMaterial(999)
         ).to.be.revertedWith("Training material does not exist");
       });
 
@@ -878,7 +879,7 @@ describe("TrainingMaterials", function () {
       await contract.createTrainingMaterial("Advanced 1", "Desc", 3, "img4", "content4", "context4", ethers.parseUnits("29.99", 6));
       
       // Verify counts
-      expect(await contract.totalMaterials()).to.equal(4);
+      expect(await contract.getTotalMaterialCount()).to.equal(4);
       expect(await contract.getCategoryMaterialCount(1)).to.equal(2);
       expect(await contract.getCategoryMaterialCount(2)).to.equal(1);
       expect(await contract.getCategoryMaterialCount(3)).to.equal(1);

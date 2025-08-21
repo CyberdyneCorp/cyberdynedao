@@ -91,7 +91,7 @@ describe("CyberdyneMarketplace", function () {
   });
 
   describe("Product Listing", function () {
-    let productUuid;
+    let productId;
 
     beforeEach(async function () {
       // Create a product
@@ -102,46 +102,46 @@ describe("CyberdyneMarketplace", function () {
         "QmTestIPFS"
       );
       const receipt1 = await tx1.wait();
-      productUuid = receipt1.logs[0].args.uuid;
+      productId = receipt1.logs[0].args.productId;
     });
 
     it("Should allow authorized seller to list product", async function () {
-      const tx = await marketplace.connect(seller).listProduct(productUuid);
+      const tx = await marketplace.connect(seller).listProduct(productId);
       const receipt = await tx.wait();
       
       expect(receipt.logs).to.not.be.empty;
       expect(await marketplace.getActiveListingsCount()).to.equal(1);
-      expect(await marketplace.isProductListed(productUuid)).to.be.true;
+      expect(await marketplace.isProductListed(productId)).to.be.true;
     });
 
     it("Should reject listing from unauthorized user", async function () {
       await expect(
-        marketplace.connect(unauthorized).listProduct(productUuid)
+        marketplace.connect(unauthorized).listProduct(productId)
       ).to.be.revertedWith("Not authorized to sell on marketplace");
     });
 
     it("Should reject listing non-existent product", async function () {
       await expect(
-        marketplace.connect(seller).listProduct("non-existent-uuid")
+        marketplace.connect(seller).listProduct(999)
       ).to.be.revertedWith("Product does not exist");
     });
 
     it("Should reject duplicate listing", async function () {
-      await marketplace.connect(seller).listProduct(productUuid);
+      await marketplace.connect(seller).listProduct(productId);
       
       await expect(
-        marketplace.connect(seller).listProduct(productUuid)
+        marketplace.connect(seller).listProduct(productId)
       ).to.be.revertedWith("Product already listed");
     });
 
     it("Should allow owner to list products", async function () {
-      await marketplace.connect(owner).listProduct(productUuid);
-      expect(await marketplace.isProductListed(productUuid)).to.be.true;
+      await marketplace.connect(owner).listProduct(productId);
+      expect(await marketplace.isProductListed(productId)).to.be.true;
     });
   });
 
   describe("Listing Management", function () {
-    let listingId, productUuid;
+    let listingId, productId;
 
     beforeEach(async function () {
       // Create and list a product
@@ -152,9 +152,9 @@ describe("CyberdyneMarketplace", function () {
         "QmTestIPFS"
       );
       const receipt1 = await tx1.wait();
-      productUuid = receipt1.logs[0].args.uuid;
+      productId = receipt1.logs[0].args.productId;
 
-      const tx2 = await marketplace.connect(seller).listProduct(productUuid);
+      const tx2 = await marketplace.connect(seller).listProduct(productId);
       const receipt2 = await tx2.wait();
       listingId = receipt2.logs[0].args.listingId;
     });
@@ -171,7 +171,7 @@ describe("CyberdyneMarketplace", function () {
     it("Should allow seller to unlist product", async function () {
       await marketplace.connect(seller).unlistProduct(listingId);
       
-      expect(await marketplace.isProductListed(productUuid)).to.be.false;
+      expect(await marketplace.isProductListed(productId)).to.be.false;
       expect(await marketplace.getActiveListingsCount()).to.equal(0);
     });
 
@@ -189,7 +189,7 @@ describe("CyberdyneMarketplace", function () {
   });
 
   describe("Product Purchase", function () {
-    let listingId, productUuid;
+    let listingId, productId;
 
     beforeEach(async function () {
       // Create and list a product
@@ -200,9 +200,9 @@ describe("CyberdyneMarketplace", function () {
         "QmTestIPFS"
       );
       const receipt1 = await tx1.wait();
-      productUuid = receipt1.logs[0].args.uuid;
+      productId = receipt1.logs[0].args.productId;
 
-      const tx2 = await marketplace.connect(seller).listProduct(productUuid);
+      const tx2 = await marketplace.connect(seller).listProduct(productId);
       const receipt2 = await tx2.wait();
       listingId = receipt2.logs[0].args.listingId;
     });
@@ -229,7 +229,7 @@ describe("CyberdyneMarketplace", function () {
     it("Should remove listing after purchase", async function () {
       await marketplace.connect(buyer).purchaseProduct(listingId);
       
-      expect(await marketplace.isProductListed(productUuid)).to.be.false;
+      expect(await marketplace.isProductListed(productId)).to.be.false;
       expect(await marketplace.getActiveListingsCount()).to.equal(0);
     });
 
@@ -270,16 +270,16 @@ describe("CyberdyneMarketplace", function () {
   });
 
   describe("View Functions", function () {
-    let productListingId, productUuid;
-    let product2Uuid, product2ListingId;
+    let productListingId, productId;
+    let product2Id, product2ListingId;
 
     beforeEach(async function () {
       // Create products in different categories
       const tx1 = await products.connect(seller).createProduct("Product 1", 1, PRODUCT_PRICE, "QmTest1");
       const receipt1 = await tx1.wait();
-      productUuid = receipt1.logs[0].args.uuid;
+      productId = receipt1.logs[0].args.productId;
       
-      const tx2 = await marketplace.connect(seller).listProduct(productUuid);
+      const tx2 = await marketplace.connect(seller).listProduct(productId);
       const receipt2 = await tx2.wait();
       productListingId = receipt2.logs[0].args.listingId;
 
@@ -288,9 +288,9 @@ describe("CyberdyneMarketplace", function () {
       
       const tx3 = await products.connect(seller).createProduct("Product 2", 2, PRODUCT_PRICE, "QmTest2");
       const receipt3 = await tx3.wait();
-      product2Uuid = receipt3.logs[0].args.uuid;
+      product2Id = receipt3.logs[0].args.productId;
       
-      const tx4 = await marketplace.connect(seller).listProduct(product2Uuid);
+      const tx4 = await marketplace.connect(seller).listProduct(product2Id);
       const receipt4 = await tx4.wait();
       product2ListingId = receipt4.logs[0].args.listingId;
     });
@@ -379,23 +379,23 @@ describe("CyberdyneMarketplace", function () {
       
       const tx = await products.connect(seller).createProduct("Test", 1, PRODUCT_PRICE, "QmTest");
       const receipt = await tx.wait();
-      const uuid = receipt.logs[0].args.uuid;
+      const productId = receipt.logs[0].args.productId;
       
       await expect(
-        marketplace.connect(seller).listProduct(uuid)
+        marketplace.connect(seller).listProduct(productId)
       ).to.be.revertedWith("Marketplace is not active");
     });
   });
 
   describe("Emergency Functions", function () {
-    let listingId, productUuid;
+    let listingId, productId;
 
     beforeEach(async function () {
       const tx1 = await products.connect(seller).createProduct("Test", 1, PRODUCT_PRICE, "QmTest");
       const receipt1 = await tx1.wait();
-      productUuid = receipt1.logs[0].args.uuid;
+      productId = receipt1.logs[0].args.productId;
       
-      const tx2 = await marketplace.connect(seller).listProduct(productUuid);
+      const tx2 = await marketplace.connect(seller).listProduct(productId);
       const receipt2 = await tx2.wait();
       listingId = receipt2.logs[0].args.listingId;
     });
@@ -403,7 +403,7 @@ describe("CyberdyneMarketplace", function () {
     it("Should allow owner to emergency unlist", async function () {
       await marketplace.connect(owner).emergencyUnlistProduct(listingId);
       
-      expect(await marketplace.isProductListed(productUuid)).to.be.false;
+      expect(await marketplace.isProductListed(productId)).to.be.false;
       expect(await marketplace.getActiveListingsCount()).to.equal(0);
     });
 

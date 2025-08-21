@@ -13,7 +13,7 @@ contract CyberdyneMarketplace is Ownable, ReentrancyGuard {
 
     struct Listing {
         uint256 listingId;
-        string productUuid;
+        uint256 productId;
         address seller;
         uint256 priceUSDC;
         bool isActive;
@@ -24,7 +24,7 @@ contract CyberdyneMarketplace is Ownable, ReentrancyGuard {
     struct Sale {
         uint256 saleId;
         uint256 listingId;
-        string productUuid;
+        uint256 productId;
         address seller;
         address buyer;
         uint256 priceUSDC;
@@ -39,7 +39,7 @@ contract CyberdyneMarketplace is Ownable, ReentrancyGuard {
     CyberdyneAccessNFT public immutable accessNFT;
 
     mapping(uint256 => Listing) public listings;
-    mapping(string => uint256) public productToListing; // productUuid => listingId
+    mapping(uint256 => uint256) public productToListing; // productId => listingId
     mapping(address => uint256[]) public sellerListings;
     mapping(uint256 => Sale) public sales;
     mapping(address => uint256[]) public buyerSales;
@@ -57,25 +57,25 @@ contract CyberdyneMarketplace is Ownable, ReentrancyGuard {
     // Events
     event ProductListed(
         uint256 indexed listingId,
-        string productUuid,
+        uint256 indexed productId,
         address indexed seller,
         uint256 priceUSDC
     );
     event ProductUnlisted(
         uint256 indexed listingId,
-        string productUuid,
+        uint256 indexed productId,
         address indexed seller
     );
     event ProductPriceUpdated(
         uint256 indexed listingId,
-        string productUuid,
+        uint256 indexed productId,
         uint256 oldPrice,
         uint256 newPrice
     );
     event ProductSold(
         uint256 indexed saleId,
         uint256 indexed listingId,
-        string productUuid,
+        uint256 indexed productId,
         address seller,
         address buyer,
         uint256 priceUSDC,
@@ -134,12 +134,12 @@ contract CyberdyneMarketplace is Ownable, ReentrancyGuard {
     }
 
     // Listing functions
-    function listProduct(string memory productUuid) external onlyActiveSeller nonReentrant {
-        require(cyberdyneProducts.productExists(productUuid), "Product does not exist");
-        require(productToListing[productUuid] == 0, "Product already listed");
+    function listProduct(uint256 productId) external onlyActiveSeller nonReentrant {
+        require(cyberdyneProducts.productExists(productId), "Product does not exist");
+        require(productToListing[productId] == 0, "Product already listed");
 
         // Get product details from the contract
-        CyberdyneProducts.Product memory product = cyberdyneProducts.getProduct(productUuid);
+        CyberdyneProducts.Product memory product = cyberdyneProducts.getProduct(productId);
         require(product.isActive, "Product is not active");
         require(
             product.creator == msg.sender || 
@@ -152,7 +152,7 @@ contract CyberdyneMarketplace is Ownable, ReentrancyGuard {
         
         listings[listingId] = Listing({
             listingId: listingId,
-            productUuid: productUuid,
+            productId: productId,
             seller: msg.sender,
             priceUSDC: product.priceUSDC,
             isActive: true,
@@ -160,14 +160,14 @@ contract CyberdyneMarketplace is Ownable, ReentrancyGuard {
             updatedAt: block.timestamp
         });
 
-        productToListing[productUuid] = listingId;
+        productToListing[productId] = listingId;
         sellerListings[msg.sender].push(listingId);
         
         // Add to active listings
         listingIndexes[listingId] = activeListingIds.length;
         activeListingIds.push(listingId);
 
-        emit ProductListed(listingId, productUuid, msg.sender, product.priceUSDC);
+        emit ProductListed(listingId, productId, msg.sender, product.priceUSDC);
     }
 
     function unlistProduct(uint256 listingId) external validListing(listingId) nonReentrant {
@@ -183,12 +183,12 @@ contract CyberdyneMarketplace is Ownable, ReentrancyGuard {
         listing.updatedAt = block.timestamp;
         
         // Remove from productToListing mapping
-        delete productToListing[listing.productUuid];
+        delete productToListing[listing.productId];
         
         // Remove from active listings
         _removeFromActiveListings(listingId);
 
-        emit ProductUnlisted(listingId, listing.productUuid, listing.seller);
+        emit ProductUnlisted(listingId, listing.productId, listing.seller);
     }
 
     function updateListingPrice(uint256 listingId, uint256 newPriceUSDC) external validListing(listingId) nonReentrant {
@@ -205,7 +205,7 @@ contract CyberdyneMarketplace is Ownable, ReentrancyGuard {
         listing.priceUSDC = newPriceUSDC;
         listing.updatedAt = block.timestamp;
 
-        emit ProductPriceUpdated(listingId, listing.productUuid, oldPrice, newPriceUSDC);
+        emit ProductPriceUpdated(listingId, listing.productId, oldPrice, newPriceUSDC);
     }
 
     // Purchase functions
@@ -232,7 +232,7 @@ contract CyberdyneMarketplace is Ownable, ReentrancyGuard {
         sales[saleId] = Sale({
             saleId: saleId,
             listingId: listingId,
-            productUuid: listing.productUuid,
+            productId: listing.productId,
             seller: listing.seller,
             buyer: msg.sender,
             priceUSDC: totalPrice,
@@ -248,10 +248,10 @@ contract CyberdyneMarketplace is Ownable, ReentrancyGuard {
         // Remove listing (product is sold)
         listing.isActive = false;
         listing.updatedAt = block.timestamp;
-        delete productToListing[listing.productUuid];
+        delete productToListing[listing.productId];
         _removeFromActiveListings(listingId);
 
-        emit ProductSold(saleId, listingId, listing.productUuid, listing.seller, msg.sender, totalPrice, marketplaceFee, sellerAmount);
+        emit ProductSold(saleId, listingId, listing.productId, listing.seller, msg.sender, totalPrice, marketplaceFee, sellerAmount);
     }
 
     // Internal helper functions
@@ -293,7 +293,7 @@ contract CyberdyneMarketplace is Ownable, ReentrancyGuard {
             uint256 listingId = activeListingIds[i];
             Listing memory listing = listings[listingId];
             
-            CyberdyneProducts.Product memory product = cyberdyneProducts.getProduct(listing.productUuid);
+            CyberdyneProducts.Product memory product = cyberdyneProducts.getProduct(listing.productId);
             if (product.categoryId == categoryId) {
                 count++;
             }
@@ -307,7 +307,7 @@ contract CyberdyneMarketplace is Ownable, ReentrancyGuard {
             uint256 listingId = activeListingIds[i];
             Listing memory listing = listings[listingId];
             
-            CyberdyneProducts.Product memory product = cyberdyneProducts.getProduct(listing.productUuid);
+            CyberdyneProducts.Product memory product = cyberdyneProducts.getProduct(listing.productId);
             if (product.categoryId == categoryId) {
                 categoryListings[index] = listing;
                 index++;
@@ -359,8 +359,8 @@ contract CyberdyneMarketplace is Ownable, ReentrancyGuard {
         return activeListingIds.length;
     }
 
-    function isProductListed(string memory productUuid) external view returns (bool) {
-        return productToListing[productUuid] != 0 && listings[productToListing[productUuid]].isActive;
+    function isProductListed(uint256 productId) external view returns (bool) {
+        return productToListing[productId] != 0 && listings[productToListing[productId]].isActive;
     }
 
     function getAllCategories() external view returns (CyberdyneProducts.Category[] memory) {
@@ -399,9 +399,9 @@ contract CyberdyneMarketplace is Ownable, ReentrancyGuard {
         listing.isActive = false;
         listing.updatedAt = block.timestamp;
         
-        delete productToListing[listing.productUuid];
+        delete productToListing[listing.productId];
         _removeFromActiveListings(listingId);
         
-        emit ProductUnlisted(listingId, listing.productUuid, listing.seller);
+        emit ProductUnlisted(listingId, listing.productId, listing.seller);
     }
 }

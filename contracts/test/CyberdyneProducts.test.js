@@ -10,6 +10,7 @@ describe("CyberdyneProducts", function () {
   let creator2;
   let unauthorized;
   let defaultCategoryId;
+  let secondCategoryId;
 
   beforeEach(async function () {
     // Get signers
@@ -221,7 +222,7 @@ describe("CyberdyneProducts", function () {
   });
 
   describe("Product Management", function () {
-    let productUuid;
+    let productId;
 
     beforeEach(async function () {
       await cyberdyneProducts.authorizeCreator(creator1.address);
@@ -235,19 +236,19 @@ describe("CyberdyneProducts", function () {
 
       const receipt = await tx.wait();
       const event = receipt.logs.find(log => log.eventName === "ProductCreated");
-      productUuid = event.args.uuid;
+      productId = event.args.productId;
     });
 
     it("Should allow creator to update product", async function () {
       await cyberdyneProducts.connect(creator1).updateProduct(
-        productUuid,
+        productId,
         "Updated Product",
         defaultCategoryId,
         ethers.parseUnits("149.99", 6),
         "QmNewIPFSHash"
       );
 
-      const product = await cyberdyneProducts.getProduct(productUuid);
+      const product = await cyberdyneProducts.getProduct(productId);
       expect(product.title).to.equal("Updated Product");
       expect(product.categoryId).to.equal(defaultCategoryId);
       expect(product.priceUSDC).to.equal(ethers.parseUnits("149.99", 6));
@@ -256,21 +257,21 @@ describe("CyberdyneProducts", function () {
 
     it("Should allow owner to update any product", async function () {
       await cyberdyneProducts.connect(owner).updateProduct(
-        productUuid,
+        productId,
         "Owner Updated",
         defaultCategoryId,
         ethers.parseUnits("199.99", 6),
         "QmOwnerIPFSHash"
       );
 
-      const product = await cyberdyneProducts.getProduct(productUuid);
+      const product = await cyberdyneProducts.getProduct(productId);
       expect(product.title).to.equal("Owner Updated");
     });
 
     it("Should not allow unauthorized users to update product", async function () {
       await expect(
         cyberdyneProducts.connect(unauthorized).updateProduct(
-          productUuid,
+          productId,
           "Unauthorized Update",
           defaultCategoryId,
           ethers.parseUnits("199.99", 6),
@@ -281,17 +282,17 @@ describe("CyberdyneProducts", function () {
 
     it("Should allow toggling product status", async function () {
       // Product should be active by default
-      let product = await cyberdyneProducts.getProduct(productUuid);
+      let product = await cyberdyneProducts.getProduct(productId);
       expect(product.isActive).to.be.true;
 
       // Toggle to inactive
-      await cyberdyneProducts.connect(creator1).toggleProductStatus(productUuid);
-      product = await cyberdyneProducts.getProduct(productUuid);
+      await cyberdyneProducts.connect(creator1).toggleProductStatus(productId);
+      product = await cyberdyneProducts.getProduct(productId);
       expect(product.isActive).to.be.false;
 
       // Toggle back to active
-      await cyberdyneProducts.connect(creator1).toggleProductStatus(productUuid);
-      product = await cyberdyneProducts.getProduct(productUuid);
+      await cyberdyneProducts.connect(creator1).toggleProductStatus(productId);
+      product = await cyberdyneProducts.getProduct(productId);
       expect(product.isActive).to.be.true;
     });
 
@@ -304,14 +305,14 @@ describe("CyberdyneProducts", function () {
 
       // Update product to new category
       await cyberdyneProducts.connect(creator1).updateProduct(
-        productUuid,
+        productId,
         "Updated Product",
         newCategoryId,
         ethers.parseUnits("149.99", 6),
         "QmNewIPFSHash"
       );
 
-      const product = await cyberdyneProducts.getProduct(productUuid);
+      const product = await cyberdyneProducts.getProduct(productId);
       expect(product.categoryId).to.equal(newCategoryId);
 
       // Verify product moved from default category to new category
@@ -320,14 +321,14 @@ describe("CyberdyneProducts", function () {
 
       const newCategoryProducts = await cyberdyneProducts.getAllProductsByCategory(newCategoryId);
       expect(newCategoryProducts.length).to.equal(1);
-      expect(newCategoryProducts[0].uuid).to.equal(productUuid);
+      expect(newCategoryProducts[0].id).to.equal(productId);
     });
 
     it("Should allow deleting product", async function () {
-      await cyberdyneProducts.connect(creator1).deleteProduct(productUuid);
+      await cyberdyneProducts.connect(creator1).deleteProduct(productId);
       
       await expect(
-        cyberdyneProducts.getProduct(productUuid)
+        cyberdyneProducts.getProduct(productId)
       ).to.be.revertedWith("Product does not exist");
 
       expect(await cyberdyneProducts.getTotalProductCount()).to.equal(0);
@@ -386,10 +387,10 @@ describe("CyberdyneProducts", function () {
 
     it("Should return active products only", async function () {
       const allProducts = await cyberdyneProducts.getAllProducts();
-      const firstProductUuid = allProducts[0].uuid;
+      const firstProductId = allProducts[0].id;
       
       // Deactivate one product
-      await cyberdyneProducts.connect(creator1).toggleProductStatus(firstProductUuid);
+      await cyberdyneProducts.connect(creator1).toggleProductStatus(firstProductId);
       
       const activeProducts = await cyberdyneProducts.getAllActiveProducts();
       expect(activeProducts.length).to.equal(2);
@@ -454,10 +455,10 @@ describe("CyberdyneProducts", function () {
 
     it("Should handle non-existent product queries", async function () {
       await expect(
-        cyberdyneProducts.getProduct("non-existent-uuid")
+        cyberdyneProducts.getProduct(999)
       ).to.be.revertedWith("Product does not exist");
 
-      expect(await cyberdyneProducts.productExists("non-existent-uuid")).to.be.false;
+      expect(await cyberdyneProducts.productExists(999)).to.be.false;
     });
 
     it("Should handle empty product arrays", async function () {
@@ -465,7 +466,7 @@ describe("CyberdyneProducts", function () {
       expect(unauthorizedProducts.length).to.equal(0);
     });
 
-    it("Should generate unique UUIDs", async function () {
+    it("Should generate unique IDs", async function () {
       const tx1 = await cyberdyneProducts.connect(creator1).createProduct(
         "Product 1",
         defaultCategoryId,
@@ -486,7 +487,7 @@ describe("CyberdyneProducts", function () {
       const event1 = receipt1.logs.find(log => log.eventName === "ProductCreated");
       const event2 = receipt2.logs.find(log => log.eventName === "ProductCreated");
 
-      expect(event1.args.uuid).to.not.equal(event2.args.uuid);
+      expect(event1.args.productId).to.not.equal(event2.args.productId);
     });
   });
 });

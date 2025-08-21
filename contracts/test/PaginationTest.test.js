@@ -22,7 +22,7 @@ describe("Pagination Functions Tests", function () {
 
   it("Should return paginated products correctly", async function () {
     // Create 5 products
-    const productUuids = [];
+    const productIds = [];
     for (let i = 0; i < 5; i++) {
       const tx = await products.connect(creator).createProduct(
         `Product ${i}`,
@@ -31,7 +31,7 @@ describe("Pagination Functions Tests", function () {
         `QmTestIPFS${i}`
       );
       const receipt = await tx.wait();
-      productUuids.push(receipt.logs[0].args.uuid);
+      productIds.push(receipt.logs[0].args.productId);
     }
 
     // Test pagination
@@ -111,7 +111,7 @@ describe("Pagination Functions Tests", function () {
 
   it("Should return paginated active products only", async function () {
     // Create 3 products
-    const productUuids = [];
+    const productIds = [];
     for (let i = 0; i < 3; i++) {
       const tx = await products.connect(creator).createProduct(
         `Product ${i}`,
@@ -120,11 +120,11 @@ describe("Pagination Functions Tests", function () {
         `QmTestIPFS${i}`
       );
       const receipt = await tx.wait();
-      productUuids.push(receipt.logs[0].args.uuid);
+      productIds.push(receipt.logs[0].args.productId);
     }
 
     // Deactivate middle product
-    await products.connect(creator).toggleProductStatus(productUuids[1]);
+    await products.connect(creator).toggleProductStatus(productIds[1]);
 
     const activePage = await products.getActiveProductsPaginated(0, 5);
     expect(activePage.length).to.equal(2); // Only 2 active products

@@ -14,6 +14,9 @@ export default {
       },
       viaIR: true
     }
+  },sourcify: {
+    // Doesn't need an API key
+    enabled: true
   },
   networks: {
     hardhat: {
@@ -45,16 +48,13 @@ export default {
     }
   },
   etherscan: {
-    apiKey: {
-      "base-mainnet": process.env.BASESCAN_API_KEY || "",
-      "base-sepolia": process.env.BASESCAN_API_KEY || ""
-    },
+    apiKey: process.env.BASESCAN_API_KEY || "",
     customChains: [
       {
         network: "base-mainnet",
         chainId: 8453,
         urls: {
-          apiURL: "https://api.basescan.org/api",
+          apiURL: "https://api.basescan.org/v2/api",
           browserURL: "https://basescan.org"
         }
       },
@@ -62,7 +62,7 @@ export default {
         network: "base-sepolia",
         chainId: 84532,
         urls: {
-          apiURL: "https://api-sepolia.basescan.org/api",
+          apiURL: "https://api-sepolia.basescan.org/v2/api",
           browserURL: "https://sepolia.basescan.org"
         }
       }

@@ -6,7 +6,7 @@ describe("Deauthorization Semantics Tests", function () {
   let CyberdyneProducts;
   let products;
   let owner, creator1, creator2;
-  let productUuid;
+  let productId;
 
   beforeEach(async function () {
     [owner, creator1, creator2] = await ethers.getSigners();
@@ -29,20 +29,20 @@ describe("Deauthorization Semantics Tests", function () {
       "QmTestIPFS"
     );
     const receipt = await tx.wait();
-    productUuid = receipt.logs[0].args.uuid;
+    productId = receipt.logs[0].args.productId;
   });
 
   it("Should allow authorized creator to modify their own product", async function () {
     // Creator1 should be able to update their product
     await products.connect(creator1).updateProduct(
-      productUuid,
+      productId,
       "Updated Product",
       1,
       ethers.parseUnits("150", 6),
       "QmUpdatedIPFS"
     );
 
-    const product = await products.getProduct(productUuid);
+    const product = await products.getProduct(productId);
     expect(product.title).to.equal("Updated Product");
     expect(product.priceUSDC).to.equal(ethers.parseUnits("150", 6));
   });
@@ -54,7 +54,7 @@ describe("Deauthorization Semantics Tests", function () {
     // Creator1 should no longer be able to update their product
     await expect(
       products.connect(creator1).updateProduct(
-        productUuid,
+        productId,
         "Should Fail Update",
         1,
         ethers.parseUnits("200", 6),
@@ -64,12 +64,12 @@ describe("Deauthorization Semantics Tests", function () {
 
     // Creator1 should no longer be able to toggle product status
     await expect(
-      products.connect(creator1).toggleProductStatus(productUuid)
+      products.connect(creator1).toggleProductStatus(productId)
     ).to.be.revertedWith("Only owner or authorized creator can modify this product");
 
     // Creator1 should no longer be able to delete their product
     await expect(
-      products.connect(creator1).deleteProduct(productUuid)
+      products.connect(creator1).deleteProduct(productId)
     ).to.be.revertedWith("Only owner or authorized creator can modify this product");
   });
 
@@ -77,7 +77,7 @@ describe("Deauthorization Semantics Tests", function () {
     // Creator2 should not be able to modify creator1's product
     await expect(
       products.connect(creator2).updateProduct(
-        productUuid,
+        productId,
         "Unauthorized Update",
         1,
         ethers.parseUnits("300", 6),
@@ -92,14 +92,14 @@ describe("Deauthorization Semantics Tests", function () {
 
     // Owner should still be able to modify the product
     await products.connect(owner).updateProduct(
-      productUuid,
+      productId,
       "Owner Updated Product",
       1,
       ethers.parseUnits("250", 6),
       "QmOwnerIPFS"
     );
 
-    const product = await products.getProduct(productUuid);
+    const product = await products.getProduct(productId);
     expect(product.title).to.equal("Owner Updated Product");
     expect(product.priceUSDC).to.equal(ethers.parseUnits("250", 6));
   });
@@ -126,7 +126,7 @@ describe("Deauthorization Semantics Tests", function () {
     // Verify they can't modify
     await expect(
       products.connect(creator1).updateProduct(
-        productUuid,
+        productId,
         "Should Fail",
         1,
         ethers.parseUnits("200", 6),
@@ -139,14 +139,14 @@ describe("Deauthorization Semantics Tests", function () {
 
     // Now they should be able to modify their product again
     await products.connect(creator1).updateProduct(
-      productUuid,
+      productId,
       "Re-authorized Update",
       1,
       ethers.parseUnits("300", 6),
       "QmReauthIPFS"
     );
 
-    const product = await products.getProduct(productUuid);
+    const product = await products.getProduct(productId);
     expect(product.title).to.equal("Re-authorized Update");
   });
 });

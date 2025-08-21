@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract TrainingMaterials is Ownable {
     struct TrainingMaterial {
-        string uuid;
+        uint256 id;
         string title;
         string description;
         uint256 categoryId;
@@ -28,19 +28,19 @@ contract TrainingMaterials is Ownable {
 
     // State variables
     mapping(uint256 => Category) public categories;
-    mapping(string => TrainingMaterial) public trainingMaterials; // uuid => TrainingMaterial
-    mapping(uint256 => string[]) public categoryMaterials; // categoryId => uuid[]
+    mapping(uint256 => TrainingMaterial) public trainingMaterials; // id => TrainingMaterial
+    mapping(uint256 => uint256[]) public categoryMaterials; // categoryId => materialId[]
     mapping(address => bool) public authorizedCreators; // Whitelist of addresses that can create materials
     
     uint256 public nextCategoryId;
-    uint256 public totalMaterials;
-    string[] public allMaterialUuids;
+    uint256 public nextMaterialId;
+    uint256[] public allMaterialIds;
     address[] public authorizedCreatorsList; // Array to track all authorized creators
 
     // Events
     event CategoryCreated(uint256 indexed categoryId, string name, string description);
     event TrainingMaterialCreated(
-        string uuid,
+        uint256 indexed materialId,
         string title,
         uint256 indexed categoryId,
         string imageIPFS,
@@ -51,12 +51,12 @@ contract TrainingMaterials is Ownable {
     );
     event CreatorAuthorized(address indexed creator, address indexed authorizedBy);
     event CreatorDeauthorized(address indexed creator, address indexed deauthorizedBy);
-    event TrainingMaterialDeleted(string indexed uuid, address indexed deletedBy, address indexed creator);
+    event TrainingMaterialDeleted(uint256 indexed materialId, address indexed deletedBy, address indexed creator);
     event ContractOwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     constructor() Ownable(msg.sender) {
         nextCategoryId = 1;
-        totalMaterials = 0;
+        nextMaterialId = 1;
         
         // Automatically authorize the contract owner
         authorizedCreators[msg.sender] = true;
@@ -74,48 +74,51 @@ contract TrainingMaterials is Ownable {
         _;
     }
 
-    modifier onlyOwnerOrCreator(string memory uuid) {
-        require(trainingMaterials[uuid].exists, "Training material does not exist");
+    modifier onlyOwnerOrCreator(uint256 materialId) {
+        require(trainingMaterials[materialId].exists, "Training material does not exist");
         require(
-            msg.sender == owner() || msg.sender == trainingMaterials[uuid].creator,
+            msg.sender == owner() || msg.sender == trainingMaterials[materialId].creator,
             "Only owner or creator can delete this material"
         );
         _;
     }
 
-    // Helper function to generate UUID based on block data and title
-    function generateUuid(string memory _title) internal view returns (string memory) {
-        bytes32 hash = keccak256(abi.encodePacked(
-            block.timestamp,
-            block.prevrandao,
-            block.number,
-            msg.sender,
-            _title,
-            totalMaterials
-        ));
-        
-        // Convert to hex string and take first 32 characters for UUID-like format
-        return string(abi.encodePacked(
-            _toHexString(uint256(hash) >> 128, 16),
-            "-",
-            _toHexString(uint256(hash >> 96) & 0xFFFF, 4),
-            "-",
-            _toHexString(uint256(hash >> 80) & 0xFFFF, 4),
-            "-",
-            _toHexString(uint256(hash >> 64) & 0xFFFF, 4),
-            "-",
-            _toHexString(uint256(hash >> 16) & 0xFFFFFFFFFFFF, 12)
-        ));
+    // State mapping helpers for O(1) array operations
+    mapping(uint256 => uint256) private allIndex; // materialId -> index in allMaterialIds
+    mapping(uint256 => mapping(uint256 => uint256)) private catIndex; // categoryId, materialId -> index
+    
+    function _pushAll(uint256 materialId) private {
+        allIndex[materialId] = allMaterialIds.length;
+        allMaterialIds.push(materialId);
     }
-
-    // Helper function to convert uint to hex string
-    function _toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
-        bytes memory buffer = new bytes(length);
-        for (uint256 i = length; i > 0; i--) {
-            buffer[i - 1] = bytes1(uint8(value & 0xf) + (value & 0xf < 10 ? 48 : 87));
-            value >>= 4;
+    
+    function _removeAll(uint256 materialId) private {
+        uint256 i = allIndex[materialId];
+        uint256 last = allMaterialIds.length - 1;
+        if (i != last) {
+            uint256 moved = allMaterialIds[last];
+            allMaterialIds[i] = moved;
+            allIndex[moved] = i;
         }
-        return string(buffer);
+        allMaterialIds.pop();
+        delete allIndex[materialId];
+    }
+    
+    function _pushCat(uint256 categoryId, uint256 materialId) private {
+        catIndex[categoryId][materialId] = categoryMaterials[categoryId].length;
+        categoryMaterials[categoryId].push(materialId);
+    }
+    
+    function _removeCat(uint256 categoryId, uint256 materialId) private {
+        uint256 i = catIndex[categoryId][materialId];
+        uint256 last = categoryMaterials[categoryId].length - 1;
+        if (i != last) {
+            uint256 moved = categoryMaterials[categoryId][last];
+            categoryMaterials[categoryId][i] = moved;
+            catIndex[categoryId][moved] = i;
+        }
+        categoryMaterials[categoryId].pop();
+        delete catIndex[categoryId][materialId];
     }
 
     // Creator whitelist management functions (owner only)
@@ -191,19 +194,18 @@ contract TrainingMaterials is Ownable {
         string memory _contentIPFS,
         string memory _contextFileIPFS,
         uint256 _priceUSDC
-    ) external onlyAuthorizedCreator validCategory(_categoryId) returns (string memory) {
+    ) external onlyAuthorizedCreator validCategory(_categoryId) returns (uint256) {
         require(bytes(_title).length > 0, "Title cannot be empty");
         require(bytes(_description).length > 0, "Description cannot be empty");
         require(bytes(_imageIPFS).length > 0, "Image IPFS hash cannot be empty");
         require(bytes(_contentIPFS).length > 0, "Content IPFS hash cannot be empty");
         require(bytes(_contextFileIPFS).length > 0, "Context file IPFS hash cannot be empty");
 
-        // Generate UUID based on current block and title
-        string memory _uuid = generateUuid(_title);
-        require(!trainingMaterials[_uuid].exists, "Generated UUID already exists (very unlikely)");
+        uint256 materialId = nextMaterialId;
+        nextMaterialId++;
 
-        trainingMaterials[_uuid] = TrainingMaterial({
-            uuid: _uuid,
+        trainingMaterials[materialId] = TrainingMaterial({
+            id: materialId,
             title: _title,
             description: _description,
             categoryId: _categoryId,
@@ -216,49 +218,28 @@ contract TrainingMaterials is Ownable {
             exists: true
         });
 
-        categoryMaterials[_categoryId].push(_uuid);
-        allMaterialUuids.push(_uuid);
-        totalMaterials++;
+        _pushCat(_categoryId, materialId);
+        _pushAll(materialId);
 
-        emit TrainingMaterialCreated(_uuid, _title, _categoryId, _imageIPFS, _contentIPFS, _contextFileIPFS, _priceUSDC, msg.sender);
+        emit TrainingMaterialCreated(materialId, _title, _categoryId, _imageIPFS, _contentIPFS, _contextFileIPFS, _priceUSDC, msg.sender);
         
-        return _uuid;
+        return materialId;
     }
 
     // Delete training material (owner or creator only)
-    function deleteTrainingMaterial(string memory _uuid) external onlyOwnerOrCreator(_uuid) {
-        TrainingMaterial storage material = trainingMaterials[_uuid];
+    function deleteTrainingMaterial(uint256 _materialId) external onlyOwnerOrCreator(_materialId) {
+        TrainingMaterial storage material = trainingMaterials[_materialId];
         uint256 categoryId = material.categoryId;
         address creator = material.creator;
         
         // Mark as deleted (set exists to false)
         material.exists = false;
         
-        // Remove from category materials array
-        string[] storage categoryMats = categoryMaterials[categoryId];
-        for (uint256 i = 0; i < categoryMats.length; i++) {
-            if (keccak256(abi.encodePacked(categoryMats[i])) == keccak256(abi.encodePacked(_uuid))) {
-                // Replace with last element and pop
-                categoryMats[i] = categoryMats[categoryMats.length - 1];
-                categoryMats.pop();
-                break;
-            }
-        }
+        // Remove from arrays using O(1) operations
+        _removeCat(categoryId, _materialId);
+        _removeAll(_materialId);
         
-        // Remove from all materials array
-        for (uint256 i = 0; i < allMaterialUuids.length; i++) {
-            if (keccak256(abi.encodePacked(allMaterialUuids[i])) == keccak256(abi.encodePacked(_uuid))) {
-                // Replace with last element and pop
-                allMaterialUuids[i] = allMaterialUuids[allMaterialUuids.length - 1];
-                allMaterialUuids.pop();
-                break;
-            }
-        }
-        
-        // Decrease total count
-        totalMaterials--;
-        
-        emit TrainingMaterialDeleted(_uuid, msg.sender, creator);
+        emit TrainingMaterialDeleted(_materialId, msg.sender, creator);
     }
 
     // Transfer contract ownership and ensure new owner is authorized
@@ -285,9 +266,9 @@ contract TrainingMaterials is Ownable {
         return categories[_categoryId];
     }
 
-    function getTrainingMaterial(string memory _uuid) external view returns (TrainingMaterial memory) {
-        require(trainingMaterials[_uuid].exists, "Training material does not exist");
-        return trainingMaterials[_uuid];
+    function getTrainingMaterial(uint256 _materialId) external view returns (TrainingMaterial memory) {
+        require(trainingMaterials[_materialId].exists, "Training material does not exist");
+        return trainingMaterials[_materialId];
     }
 
     function getTrainingMaterialsByCategory(uint256 _categoryId) 
@@ -296,11 +277,11 @@ contract TrainingMaterials is Ownable {
         validCategory(_categoryId) 
         returns (TrainingMaterial[] memory) 
     {
-        string[] memory uuids = categoryMaterials[_categoryId];
-        TrainingMaterial[] memory materials = new TrainingMaterial[](uuids.length);
+        uint256[] memory materialIds = categoryMaterials[_categoryId];
+        TrainingMaterial[] memory materials = new TrainingMaterial[](materialIds.length);
         
-        for (uint256 i = 0; i < uuids.length; i++) {
-            materials[i] = trainingMaterials[uuids[i]];
+        for (uint256 i = 0; i < materialIds.length; i++) {
+            materials[i] = trainingMaterials[materialIds[i]];
         }
         
         return materials;
@@ -336,10 +317,10 @@ contract TrainingMaterials is Ownable {
     }
 
     function getAllTrainingMaterials() external view returns (TrainingMaterial[] memory) {
-        TrainingMaterial[] memory materials = new TrainingMaterial[](totalMaterials);
+        TrainingMaterial[] memory materials = new TrainingMaterial[](allMaterialIds.length);
         
-        for (uint256 i = 0; i < allMaterialUuids.length; i++) {
-            materials[i] = trainingMaterials[allMaterialUuids[i]];
+        for (uint256 i = 0; i < allMaterialIds.length; i++) {
+            materials[i] = trainingMaterials[allMaterialIds[i]];
         }
         
         return materials;
@@ -349,16 +330,16 @@ contract TrainingMaterials is Ownable {
         return categories[_categoryId].exists;
     }
 
-    function trainingMaterialExists(string memory _uuid) external view returns (bool) {
-        return trainingMaterials[_uuid].exists;
+    function trainingMaterialExists(uint256 _materialId) external view returns (bool) {
+        return trainingMaterials[_materialId].exists;
     }
 
     // Get training materials by creator
     function getTrainingMaterialsByCreator(address _creator) external view returns (TrainingMaterial[] memory) {
         // First count materials by this creator
         uint256 count = 0;
-        for (uint256 i = 0; i < allMaterialUuids.length; i++) {
-            if (trainingMaterials[allMaterialUuids[i]].creator == _creator) {
+        for (uint256 i = 0; i < allMaterialIds.length; i++) {
+            if (trainingMaterials[allMaterialIds[i]].creator == _creator) {
                 count++;
             }
         }
@@ -368,9 +349,9 @@ contract TrainingMaterials is Ownable {
         uint256 index = 0;
         
         // Fill array with materials by creator
-        for (uint256 i = 0; i < allMaterialUuids.length; i++) {
-            if (trainingMaterials[allMaterialUuids[i]].creator == _creator) {
-                materials[index] = trainingMaterials[allMaterialUuids[i]];
+        for (uint256 i = 0; i < allMaterialIds.length; i++) {
+            if (trainingMaterials[allMaterialIds[i]].creator == _creator) {
+                materials[index] = trainingMaterials[allMaterialIds[i]];
                 index++;
             }
         }
@@ -380,11 +361,15 @@ contract TrainingMaterials is Ownable {
 
     function getCreatorMaterialCount(address _creator) external view returns (uint256) {
         uint256 count = 0;
-        for (uint256 i = 0; i < allMaterialUuids.length; i++) {
-            if (trainingMaterials[allMaterialUuids[i]].creator == _creator) {
+        for (uint256 i = 0; i < allMaterialIds.length; i++) {
+            if (trainingMaterials[allMaterialIds[i]].creator == _creator) {
                 count++;
             }
         }
         return count;
+    }
+    
+    function getTotalMaterialCount() external view returns (uint256) {
+        return allMaterialIds.length;
     }
 }

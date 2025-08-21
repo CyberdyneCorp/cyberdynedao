@@ -1,37 +1,54 @@
 import hre from "hardhat";
-import fs from 'fs';
+import fs from "fs";
 
 async function main() {
-  console.log("Starting CyberdyneProducts contract deployment...");
+  console.log("🚀 Starting CyberdyneProducts contract deployment...");
 
-  // Get the deployer account
+  // Get deployer
   const [deployer] = await hre.ethers.getSigners();
-  console.log("Deploying contracts with the account:", deployer.address);
-  console.log("Account balance:", hre.ethers.formatEther(await hre.ethers.provider.getBalance(deployer.address)));
+  const balance = await hre.ethers.provider.getBalance(deployer.address);
+  console.log("Deployer:", deployer.address);
+  console.log("Balance:", hre.ethers.formatEther(balance), "ETH");
 
-  // Deploy the contract
+  if (balance < hre.ethers.parseEther("0.001")) {
+    console.warn("⚠️ Low balance — deployment may fail due to lack of gas.");
+  }
+
+  // Contract factory
   const CyberdyneProducts = await hre.ethers.getContractFactory("CyberdyneProducts");
-  console.log("Deploying CyberdyneProducts contract...");
-  
+
+  console.log("📦 Deploying contract...");
   const cyberdyneProducts = await CyberdyneProducts.deploy();
-  await cyberdyneProducts.waitForDeployment();
 
+  const deployTx = cyberdyneProducts.deploymentTransaction();
+  console.log("Deploy tx hash:", deployTx?.hash);
+
+  // Wait for tx receipt
+  const receipt = await deployTx.wait();
+  console.log("Tx mined in block:", receipt.blockNumber);
+  console.log("Gas used:", receipt.gasUsed.toString(), "status:", receipt.status);
+
+  // Contract address
   const contractAddress = await cyberdyneProducts.getAddress();
-  console.log("CyberdyneProducts contract deployed to:", contractAddress);
+  console.log("Deployed at:", contractAddress);
 
-  // Verify the owner
+  // Verify bytecode exists
+  const code = await hre.ethers.provider.getCode(contractAddress);
+  if (code === "0x") {
+    throw new Error(`❌ No bytecode found at ${contractAddress}. Deployment failed.`);
+  }
+  console.log("✅ Bytecode found, length:", code.length);
+
+  // Now safe to interact
   const owner = await cyberdyneProducts.owner();
-  console.log("Contract owner:", owner);
-  console.log("Deployer address:", deployer.address);
-  console.log("Owner matches deployer:", owner === deployer.address);
+  console.log("Owner (from contract):", owner);
+  console.log("Matches deployer:", owner.toLowerCase() === deployer.address.toLowerCase());
 
-  // Display initial state
   const totalProducts = await cyberdyneProducts.getTotalProductCount();
   console.log("Initial totalProducts:", totalProducts.toString());
-  
-  // Display authorization info
-  const authorizedCreators = await cyberdyneProducts.getAuthorizedCreators();
-  console.log("Authorized creators:", authorizedCreators);
+
+  const authorized = await cyberdyneProducts.getAuthorizedCreators();
+  console.log("Authorized creators:", authorized);
 
   // Create some sample products (optional - uncomment if needed)
   /*
@@ -109,51 +126,42 @@ async function main() {
   console.log("7. Delete products using deleteProduct (owner or creator only)");
   console.log("8. Transfer contract ownership using transferContractOwnership (owner only)");
 
-  // Save deployment info to a file
-  
-  // Ensure deployments directory exists
-  if (!fs.existsSync('deployments')) {
-    fs.mkdirSync('deployments');
+  // Save deployment info
+  if (!fs.existsSync("deployments")) {
+    fs.mkdirSync("deployments");
   }
-  
-  const deploymentInfo = {
-    contractAddress: contractAddress,
-    network: hre.network.name,
+  const info = {
+    contract: "CyberdyneProducts",
+    address: contractAddress,
     deployer: deployer.address,
-    owner: owner,
-    deploymentTime: new Date().toISOString(),
-    blockNumber: await hre.ethers.provider.getBlockNumber()
+    network: hre.network.name,
+    blockNumber: receipt.blockNumber,
+    timestamp: new Date().toISOString(),
   };
-
   fs.writeFileSync(
     `deployments/CyberdyneProducts-${hre.network.name}.json`,
-    JSON.stringify(deploymentInfo, null, 2)
+    JSON.stringify(info, null, 2)
   );
-  console.log(`\n💾 Deployment info saved to deployments/CyberdyneProducts-${hre.network.name}.json`);
+  console.log("💾 Deployment info saved.");
 
-  // Auto-verify on testnets and mainnet (not local)
-  if (hre.network.name !== "hardhat" && hre.network.name !== "localhost") {
-    console.log("\n🔍 Starting automatic contract verification...");
+  // Auto verify (only for non-local networks)
+  if (!["hardhat", "localhost"].includes(hre.network.name)) {
+    console.log("🔍 Starting automatic verification...");
     try {
       await hre.run("verify:verify", {
         address: contractAddress,
         constructorArguments: [],
       });
-      console.log("✅ Contract verified successfully on BaseScan!");
-      console.log(`🔗 View on BaseScan: https://basescan.org/address/${contractAddress}`);
-    } catch (error) {
-      console.log("⚠️ Verification failed (this is normal if already verified):");
-      console.log(error.message);
-      console.log(`\n🔧 Manual verification command:`);
-      console.log(`npx hardhat verify --network ${hre.network.name} ${contractAddress}`);
+      console.log("✅ Verified on Basescan!");
+      console.log(`🔗 Explorer: https://basescan.org/address/${contractAddress}`);
+    } catch (err) {
+      console.warn("⚠️ Verification failed:", err.message);
+      console.log(`Run manually:\n npx hardhat verify --network ${hre.network.name} ${contractAddress}`);
     }
   }
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error("❌ Deployment failed:");
-    console.error(error);
-    process.exit(1);
-  });
+main().catch((err) => {
+  console.error("❌ Deployment failed:", err);
+  process.exit(1);
+});
