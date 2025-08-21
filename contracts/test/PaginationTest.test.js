@@ -49,11 +49,11 @@ describe("Pagination Functions Tests", function () {
     expect(page3.length).to.equal(1);
 
     // Verify correct products are returned
-    expect(bytes32ToString(page1[0].title)).to.equal("Product 0");
-    expect(bytes32ToString(page1[1].title)).to.equal("Product 1");
-    expect(bytes32ToString(page2[0].title)).to.equal("Product 2");
-    expect(bytes32ToString(page2[1].title)).to.equal("Product 3");
-    expect(bytes32ToString(page3[0].title)).to.equal("Product 4");
+    expect(page1[0].title).to.equal("Product 0");
+    expect(page1[1].title).to.equal("Product 1");
+    expect(page2[0].title).to.equal("Product 2");
+    expect(page2[1].title).to.equal("Product 3");
+    expect(page3[0].title).to.equal("Product 4");
   });
 
   it("Should handle out-of-bounds pagination gracefully", async function () {

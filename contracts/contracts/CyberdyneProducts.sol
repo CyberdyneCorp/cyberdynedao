@@ -25,6 +25,29 @@ contract CyberdyneProducts is Ownable {
         bool exists;
     }
 
+    // Struct for returning categories with string names
+    struct CategoryInfo {
+        uint64 id;
+        string name;
+        string description;
+        uint256 createdAt;
+        bool exists;
+    }
+
+    // Struct for returning products with string titles
+    struct ProductInfo {
+        uint64 id;
+        string title;
+        uint64 categoryId;
+        uint256 priceUSDC;
+        string metadataURI;
+        address creator;
+        uint256 createdAt;
+        uint256 updatedAt;
+        bool isActive;
+        bool exists;
+    }
+
     // Simplified state variables - using uint64 instead of string
     mapping(uint64 => Category) public categories;
     mapping(uint64 => Product) public products;           // id => Product (much simpler!)
@@ -101,6 +124,22 @@ contract CyberdyneProducts is Ownable {
             mstore(result, length)
             mstore(add(result, 0x20), source)
         }
+    }
+
+    // Helper function to convert Product to ProductInfo
+    function _productToProductInfo(Product storage product) internal view returns (ProductInfo memory) {
+        return ProductInfo({
+            id: product.id,
+            title: bytes32ToString(product.title),
+            categoryId: product.categoryId,
+            priceUSDC: product.priceUSDC,
+            metadataURI: product.metadataURI,
+            creator: product.creator,
+            createdAt: product.createdAt,
+            updatedAt: product.updatedAt,
+            isActive: product.isActive,
+            exists: product.exists
+        });
     }
 
     // Simplified modifiers
@@ -292,7 +331,7 @@ contract CyberdyneProducts is Ownable {
     }
 
     // Additional view functions for API compatibility
-    function getAllCategories() external view returns (Category[] memory) {
+    function getAllCategories() external view returns (CategoryInfo[] memory) {
         uint256 count = 0;
         for (uint64 i = 1; i < nextCategoryId; i++) {
             if (categories[i].exists) {
@@ -300,11 +339,18 @@ contract CyberdyneProducts is Ownable {
             }
         }
         
-        Category[] memory allCategories = new Category[](count);
+        CategoryInfo[] memory allCategories = new CategoryInfo[](count);
         uint256 index = 0;
         for (uint64 i = 1; i < nextCategoryId; i++) {
             if (categories[i].exists) {
-                allCategories[index] = categories[i];
+                Category storage cat = categories[i];
+                allCategories[index] = CategoryInfo({
+                    id: cat.id,
+                    name: bytes32ToString(cat.name),
+                    description: cat.description,
+                    createdAt: cat.createdAt,
+                    exists: cat.exists
+                });
                 index++;
             }
         }
@@ -312,10 +358,10 @@ contract CyberdyneProducts is Ownable {
         return allCategories;
     }
 
-    function getAllProducts() external view returns (Product[] memory) {
-        Product[] memory allProducts = new Product[](allProductIds.length);
+    function getAllProducts() external view returns (ProductInfo[] memory) {
+        ProductInfo[] memory allProducts = new ProductInfo[](allProductIds.length);
         for (uint256 i = 0; i < allProductIds.length; i++) {
-            allProducts[i] = products[allProductIds[i]];
+            allProducts[i] = _productToProductInfo(products[allProductIds[i]]);
         }
         return allProducts;
     }
@@ -340,23 +386,23 @@ contract CyberdyneProducts is Ownable {
         return activeProducts;
     }
 
-    function getAllProductsByCategory(uint64 _categoryId) external view validCategory(_categoryId) returns (Product[] memory) {
+    function getAllProductsByCategory(uint64 _categoryId) external view validCategory(_categoryId) returns (ProductInfo[] memory) {
         uint64[] memory categoryProductIds = categoryProducts[_categoryId];
-        Product[] memory categoryProductsArray = new Product[](categoryProductIds.length);
+        ProductInfo[] memory categoryProductsArray = new ProductInfo[](categoryProductIds.length);
         
         for (uint256 i = 0; i < categoryProductIds.length; i++) {
-            categoryProductsArray[i] = products[categoryProductIds[i]];
+            categoryProductsArray[i] = _productToProductInfo(products[categoryProductIds[i]]);
         }
         
         return categoryProductsArray;
     }
 
-    function getAllProductsByCreator(address _creator) external view returns (Product[] memory) {
+    function getAllProductsByCreator(address _creator) external view returns (ProductInfo[] memory) {
         uint64[] memory creatorProductIds = productsByCreator[_creator];
-        Product[] memory creatorProductsArray = new Product[](creatorProductIds.length);
+        ProductInfo[] memory creatorProductsArray = new ProductInfo[](creatorProductIds.length);
         
         for (uint256 i = 0; i < creatorProductIds.length; i++) {
-            creatorProductsArray[i] = products[creatorProductIds[i]];
+            creatorProductsArray[i] = _productToProductInfo(products[creatorProductIds[i]]);
         }
         
         return creatorProductsArray;
@@ -394,68 +440,68 @@ contract CyberdyneProducts is Ownable {
     }
 
     // Pagination functions
-    function getProducts(uint256 offset, uint256 limit) external view returns (Product[] memory) {
+    function getProducts(uint256 offset, uint256 limit) external view returns (ProductInfo[] memory) {
         require(limit > 0, "Limit must be greater than 0");
         
         uint256 totalProducts = allProductIds.length;
         if (offset >= totalProducts) {
-            return new Product[](0);
+            return new ProductInfo[](0);
         }
         
         uint256 remainingProducts = totalProducts - offset;
         uint256 actualLimit = limit > remainingProducts ? remainingProducts : limit;
         
-        Product[] memory paginatedProducts = new Product[](actualLimit);
+        ProductInfo[] memory paginatedProducts = new ProductInfo[](actualLimit);
         for (uint256 i = 0; i < actualLimit; i++) {
-            paginatedProducts[i] = products[allProductIds[offset + i]];
+            paginatedProducts[i] = _productToProductInfo(products[allProductIds[offset + i]]);
         }
         
         return paginatedProducts;
     }
 
-    function getProductsByCreator(address creator, uint256 offset, uint256 limit) external view returns (Product[] memory) {
+    function getProductsByCreator(address creator, uint256 offset, uint256 limit) external view returns (ProductInfo[] memory) {
         require(limit > 0, "Limit must be greater than 0");
         
         uint64[] memory creatorProductIds = productsByCreator[creator];
         uint256 totalProducts = creatorProductIds.length;
         
         if (offset >= totalProducts) {
-            return new Product[](0);
+            return new ProductInfo[](0);
         }
         
         uint256 remainingProducts = totalProducts - offset;
         uint256 actualLimit = limit > remainingProducts ? remainingProducts : limit;
         
-        Product[] memory paginatedProducts = new Product[](actualLimit);
+        ProductInfo[] memory paginatedProducts = new ProductInfo[](actualLimit);
         for (uint256 i = 0; i < actualLimit; i++) {
-            paginatedProducts[i] = products[creatorProductIds[offset + i]];
+            paginatedProducts[i] = _productToProductInfo(products[creatorProductIds[offset + i]]);
         }
         
         return paginatedProducts;
     }
 
-    function getProductsByCategory(uint64 categoryId, uint256 offset, uint256 limit) external view validCategory(categoryId) returns (Product[] memory) {
+    function getProductsByCategory(uint64 categoryId, uint256 offset, uint256 limit) external view validCategory(categoryId) returns (ProductInfo[] memory) {
         require(limit > 0, "Limit must be greater than 0");
         
         uint64[] memory categoryProductIds = categoryProducts[categoryId];
         uint256 totalProducts = categoryProductIds.length;
         
         if (offset >= totalProducts) {
-            return new Product[](0);
+            return new ProductInfo[](0);
         }
         
         uint256 remainingProducts = totalProducts - offset;
         uint256 actualLimit = limit > remainingProducts ? remainingProducts : limit;
         
-        Product[] memory paginatedProducts = new Product[](actualLimit);
+        ProductInfo[] memory paginatedProducts = new ProductInfo[](actualLimit);
         for (uint256 i = 0; i < actualLimit; i++) {
-            paginatedProducts[i] = products[categoryProductIds[offset + i]];
+            paginatedProducts[i] = _productToProductInfo(products[categoryProductIds[offset + i]]);
         }
         
         return paginatedProducts;
     }
 
-    function getActiveProductsPaginated(uint256 offset, uint256 limit) external view returns (Product[] memory) {
+    function getActiveProductsPaginated(uint256 offset, uint256 limit) external view returns (ProductInfo[] memory) {
         require(limit > 0, "Limit must be greater than 0");
         
         // First, count active products and collect their IDs
@@ -470,15 +516,15 @@ contract CyberdyneProducts is Ownable {
         }
         
         if (offset >= activeCount) {
-            return new Product[](0);
+            return new ProductInfo[](0);
         }
         
         uint256 remainingProducts = activeCount - offset;
         uint256 actualLimit = limit > remainingProducts ? remainingProducts : limit;
         
-        Product[] memory paginatedProducts = new Product[](actualLimit);
+        ProductInfo[] memory paginatedProducts = new ProductInfo[](actualLimit);
         for (uint256 i = 0; i < actualLimit; i++) {
-            paginatedProducts[i] = products[activeProductIds[offset + i]];
+            paginatedProducts[i] = _productToProductInfo(products[activeProductIds[offset + i]]);
         }
         
         return paginatedProducts;

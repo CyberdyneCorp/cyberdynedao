@@ -407,7 +407,7 @@ describe("CyberdyneProducts", function () {
       
       const premiumCategoryProducts = await cyberdyneProducts.getAllProductsByCategory(secondCategoryId);
       expect(premiumCategoryProducts.length).to.equal(1);
-      expect(bytes32ToString(premiumCategoryProducts[0].title)).to.equal("Product Premium");
+      expect(premiumCategoryProducts[0].title).to.equal("Product Premium");
     });
 
     it("Should return category product count", async function () {

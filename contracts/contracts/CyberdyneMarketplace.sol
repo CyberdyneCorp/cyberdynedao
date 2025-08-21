@@ -363,7 +363,7 @@ contract CyberdyneMarketplace is Ownable, ReentrancyGuard {
         return productToListing[productId] != 0 && listings[productToListing[productId]].isActive;
     }
 
-    function getAllCategories() external view returns (CyberdyneProducts.Category[] memory) {
+    function getAllCategories() external view returns (CyberdyneProducts.CategoryInfo[] memory) {
         return cyberdyneProducts.getAllCategories();
     }
 

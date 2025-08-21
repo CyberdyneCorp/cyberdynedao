@@ -287,9 +287,9 @@ describe("TrainingMaterials", function () {
 
         const categories = await contract.getAllCategories();
         expect(categories.length).to.equal(3);
-        expect(bytes32ToString(categories[0].name)).to.equal("Category 1");
-        expect(bytes32ToString(categories[1].name)).to.equal("Category 2");
-        expect(bytes32ToString(categories[2].name)).to.equal("Category 3");
+        expect(categories[0].name).to.equal("Category 1");
+        expect(categories[1].name).to.equal("Category 2");
+        expect(categories[2].name).to.equal("Category 3");
       });
 
       it("Should check if category exists", async function () {

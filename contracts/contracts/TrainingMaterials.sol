@@ -23,6 +23,15 @@ contract TrainingMaterials is Ownable {
         bool exists;
     }
 
+    // Struct for returning categories with string names
+    struct CategoryInfo {
+        uint64 id;
+        string name;
+        string description;
+        uint256 createdAt;
+        bool exists;
+    }
+
     // State variables
     mapping(uint64 => Category) public categories;
     mapping(uint64 => TrainingMaterial) public trainingMaterials; // id => TrainingMaterial
@@ -308,19 +317,26 @@ contract TrainingMaterials is Ownable {
         return categoryMaterials[_categoryId].length;
     }
 
-    function getAllCategories() external view returns (Category[] memory) {
-        Category[] memory allCategories = new Category[](nextCategoryId - 1);
+    function getAllCategories() external view returns (CategoryInfo[] memory) {
+        CategoryInfo[] memory allCategories = new CategoryInfo[](nextCategoryId - 1);
         uint256 index = 0;
         
         for (uint64 i = 1; i < nextCategoryId; i++) {
             if (categories[i].exists) {
-                allCategories[index] = categories[i];
+                Category storage cat = categories[i];
+                allCategories[index] = CategoryInfo({
+                    id: cat.id,
+                    name: bytes32ToString(cat.name),
+                    description: cat.description,
+                    createdAt: cat.createdAt,
+                    exists: cat.exists
+                });
                 index++;
             }
         }
         
         // Resize array to actual count
-        Category[] memory result = new Category[](index);
+        CategoryInfo[] memory result = new CategoryInfo[](index);
         for (uint256 i = 0; i < index; i++) {
             result[i] = allCategories[i];
         }
