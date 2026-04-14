@@ -7,7 +7,7 @@ import { UI_CONSTANTS } from '$lib/constants/app';
 
 export function usePagination<T>(
 	items: Readable<T[]>,
-	pageSize = UI_CONSTANTS.DEFAULT_PAGE_SIZE
+	pageSize: number = UI_CONSTANTS.DEFAULT_PAGE_SIZE
 ) {
 	const currentPage = writable(1);
 	const itemsPerPage = writable(pageSize);

@@ -1,55 +1,28 @@
 <script lang="ts">
-	export let cartItems: any[] = [];
+	import { cart } from '$lib/viewmodels/cartViewModel';
+	import { formatMarketplacePrice as formatPrice } from '$lib/viewmodels/shopViewModel';
 
-	interface CartItem {
-		id: string;
-		title: string;
-		description?: string;
-		category?: string;
-		price: number;
-		duration?: string;
-		image: string;
-		quantity?: number;
+	const items = cart.items;
+	const count = cart.count;
+	const total = cart.total;
+
+	function onQuantityChange(id: string, event: Event) {
+		const value = parseInt((event.currentTarget as HTMLSelectElement).value, 10);
+		cart.updateQuantity(id, value);
 	}
-
-	function removeFromCart(index: number) {
-		cartItems = cartItems.filter((_, i) => i !== index);
-	}
-
-	function updateQuantity(index: number, quantity: number) {
-		cartItems = cartItems.map((item, i) => 
-			i === index ? { ...item, quantity } : item
-		);
-	}
-
-	function clearCart() {
-		cartItems = [];
-	}
-
-	function formatPrice(price: number) {
-		return price >= 1000 ? `$${(price / 1000).toFixed(1)}k` : `$${price}`;
-	}
-
-	function getItemTotal(item: CartItem) {
-		return item.price * (item.quantity || 1);
-	}
-
-	$: total = cartItems.reduce((sum, item) => sum + getItemTotal(item), 0);
-	$: itemCount = cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
 </script>
 
 <div class="flex flex-col h-full bg-white overflow-y-auto">
-	<!-- Header -->
 	<div class="bg-gradient-to-r from-green-600 to-emerald-600 p-2 border-b-2 border-black">
 		<h1 class="text-sm font-bold font-mono flex items-center gap-2 text-black">
 			<span class="text-lg">🛒</span>
-			YOUR BAG ({itemCount})
+			YOUR BAG ({$count})
 		</h1>
 		<p class="font-mono text-xs text-black">Review your items • Complete your purchase</p>
 	</div>
-	
+
 	<div class="flex-1 p-2">
-		{#if cartItems.length === 0}
+		{#if $items.length === 0}
 			<div class="text-center py-8">
 				<div class="text-4xl mb-3">🛒</div>
 				<h3 class="font-mono font-bold text-sm text-gray-800 mb-2">Your bag is empty</h3>
@@ -70,33 +43,22 @@
 				</div>
 			</div>
 		{:else}
-			<!-- Cart Items -->
 			<div class="space-y-2 mb-4">
-				{#each cartItems as item, index}
+				{#each $items as item (item.id)}
 					<div class="bg-gray-50 rounded border border-gray-200 p-2">
 						<div class="flex items-start gap-2">
-							<img 
-								src={item.image} 
-								alt={item.title} 
-								class="w-10 h-10 object-cover rounded border border-gray-300 flex-shrink-0" 
-							/>
+							{#if item.icon}
+								<img src={item.icon} alt={item.name} class="w-10 h-10 object-cover rounded border border-gray-300 flex-shrink-0" />
+							{/if}
 							<div class="flex-1 min-w-0">
-								<h4 class="font-mono font-bold text-xs leading-tight mb-1">{item.title}</h4>
-								{#if item.category}
-									<span class="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded font-mono">
-										{item.category}
-									</span>
-								{/if}
-								{#if item.duration}
-									<span class="text-xs text-gray-500 font-mono ml-1">• {item.duration}</span>
-								{/if}
+								<h4 class="font-mono font-bold text-xs leading-tight mb-1">{item.name}</h4>
 								<div class="flex items-center justify-between mt-1">
 									<span class="text-xs font-mono font-bold text-gray-800">{formatPrice(item.price)}</span>
 									<div class="flex items-center gap-1">
-										<select 
+										<select
 											class="text-xs border border-gray-300 rounded px-1 py-0.5 font-mono"
 											value={item.quantity || 1}
-											on:change={(e) => updateQuantity(index, parseInt(e.target.value))}
+											on:change={(e) => onQuantityChange(item.id, e)}
 										>
 											<option value="1">1</option>
 											<option value="2">2</option>
@@ -104,9 +66,9 @@
 											<option value="4">4</option>
 											<option value="5">5</option>
 										</select>
-										<button 
+										<button
 											class="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded hover:bg-red-200 transition-colors"
-											on:click={() => removeFromCart(index)}
+											on:click={() => cart.removeItem(item.id)}
 											title="Remove item"
 										>
 											🗑️
@@ -119,12 +81,11 @@
 				{/each}
 			</div>
 
-			<!-- Summary -->
 			<div class="border-t border-gray-200 pt-3">
 				<div class="space-y-1 mb-3">
 					<div class="flex justify-between text-xs font-mono">
-						<span class="text-gray-600">Subtotal ({itemCount} items)</span>
-						<span class="font-bold">{formatPrice(total)}</span>
+						<span class="text-gray-600">Subtotal ({$count} items)</span>
+						<span class="font-bold">{formatPrice($total)}</span>
 					</div>
 					<div class="flex justify-between text-xs font-mono">
 						<span class="text-gray-600">Processing Fee</span>
@@ -135,15 +96,14 @@
 						<span class="text-green-600 font-bold">Included</span>
 					</div>
 				</div>
-				
+
 				<div class="border-t border-gray-200 pt-2 mb-3">
 					<div class="flex justify-between text-sm font-mono font-bold">
 						<span>Total</span>
-						<span class="text-green-600">{formatPrice(total)}</span>
+						<span class="text-green-600">{formatPrice($total)}</span>
 					</div>
 				</div>
 
-				<!-- Actions -->
 				<div class="space-y-2">
 					<button class="w-full bg-green-600 text-white py-2 px-3 rounded font-mono text-xs font-bold hover:bg-green-700 transition-colors">
 						💳 Checkout Now
@@ -152,16 +112,15 @@
 						<button class="flex-1 border border-gray-300 text-gray-700 py-1.5 px-2 rounded font-mono text-xs hover:bg-gray-50 transition-colors">
 							💬 Contact Sales
 						</button>
-						<button 
+						<button
 							class="flex-1 border border-red-300 text-red-700 py-1.5 px-2 rounded font-mono text-xs hover:bg-red-50 transition-colors"
-							on:click={clearCart}
+							on:click={() => cart.clear()}
 						>
 							🗑️ Clear All
 						</button>
 					</div>
 				</div>
 
-				<!-- Security Info -->
 				<div class="mt-3 bg-gray-50 rounded border border-gray-200 p-2">
 					<div class="flex items-center gap-1 mb-1">
 						<span class="text-xs">🔒</span>
@@ -177,4 +136,3 @@
 		{/if}
 	</div>
 </div>
-

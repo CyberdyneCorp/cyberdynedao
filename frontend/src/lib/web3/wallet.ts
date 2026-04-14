@@ -184,5 +184,4 @@ export const walletManager = new WalletManager();
 // Utility functions
 export { formatAddress, formatBalance };
 
-// Types
-export type { WalletInfo };
+// WalletInfo is already exported as an interface at declaration.

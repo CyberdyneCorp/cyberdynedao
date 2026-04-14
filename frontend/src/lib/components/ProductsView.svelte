@@ -1,5 +1,13 @@
 <script lang="ts">
-	// Products view component
+	import { productSuite } from '$lib/data/products';
+
+	const paletteClasses = {
+		blue: { card: 'from-blue-50 to-blue-100 border-blue-200', icon: 'bg-blue-500', title: 'text-blue-800', feat: 'text-blue-700' },
+		green: { card: 'from-green-50 to-green-100 border-green-200', icon: 'bg-green-500', title: 'text-green-800', feat: 'text-green-700' },
+		purple: { card: 'from-purple-50 to-purple-100 border-purple-200', icon: 'bg-purple-500', title: 'text-purple-800', feat: 'text-purple-700' },
+		orange: { card: 'from-orange-50 to-orange-100 border-orange-200', icon: 'bg-orange-500', title: 'text-orange-800', feat: 'text-orange-700' },
+		red: { card: 'from-red-50 to-red-100 border-red-200', icon: 'bg-red-500', title: 'text-red-800', feat: 'text-red-700' }
+	} as const;
 </script>
 
 <div class="products-container">
@@ -11,129 +19,35 @@
 	</div>
 
 	<div class="products-grid grid grid-cols-1 md:grid-cols-2 gap-6">
-		<!-- Trade4Me -->
-		<div class="product-card bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-lg border-2 border-blue-200">
-			<div class="flex items-center mb-4">
-				<div class="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center mr-4">
-					<span class="text-2xl">📈</span>
+		{#each productSuite as product}
+			{@const p = paletteClasses[product.palette]}
+			<div class="product-card bg-gradient-to-br {p.card} p-6 rounded-lg border-2" class:md:col-span-2={product.fullWidth}>
+				<div class="flex items-center mb-4">
+					<div class="w-12 h-12 {p.icon} rounded-lg flex items-center justify-center mr-4">
+						<span class="text-2xl">{product.icon}</span>
+					</div>
+					<h2 class="text-2xl font-mono font-bold {p.title}">{product.name}</h2>
 				</div>
-				<h2 class="text-2xl font-mono font-bold text-blue-800">Trade4Me</h2>
-			</div>
-			<p class="text-gray-700 mb-4">
-				Advanced algorithmic trading platform powered by AI. Execute trades with precision, 
-				analyze market trends in real-time, and maximize your investment potential with our 
-				intelligent trading algorithms.
-			</p>
-			<div class="features">
-				<h3 class="font-semibold text-blue-700 mb-2">Key Features:</h3>
-				<ul class="text-sm text-gray-600 space-y-1">
-					<li>• AI-powered market analysis</li>
-					<li>• Real-time portfolio optimization</li>
-					<li>• Risk management algorithms</li>
-					<li>• Multi-asset trading support</li>
-				</ul>
-			</div>
-		</div>
-
-		<!-- Liquidity4Me -->
-		<div class="product-card bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg border-2 border-green-200">
-			<div class="flex items-center mb-4">
-				<div class="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center mr-4">
-					<span class="text-2xl">💧</span>
-				</div>
-				<h2 class="text-2xl font-mono font-bold text-green-800">Liquidity4Me</h2>
-			</div>
-			<p class="text-gray-700 mb-4">
-				Revolutionary liquidity mining and yield farming platform. Optimize your DeFi returns 
-				through automated liquidity provision strategies across multiple protocols and chains.
-			</p>
-			<div class="features">
-				<h3 class="font-semibold text-green-700 mb-2">Key Features:</h3>
-				<ul class="text-sm text-gray-600 space-y-1">
-					<li>• Cross-chain liquidity optimization</li>
-					<li>• Automated yield farming</li>
-					<li>• Impermanent loss protection</li>
-					<li>• Smart contract audited</li>
-				</ul>
-			</div>
-		</div>
-
-		<!-- Surf4Me -->
-		<div class="product-card bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-lg border-2 border-purple-200">
-			<div class="flex items-center mb-4">
-				<div class="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center mr-4">
-					<span class="text-2xl">🏄</span>
-				</div>
-				<h2 class="text-2xl font-mono font-bold text-purple-800">Surf4Me</h2>
-			</div>
-			<p class="text-gray-700 mb-4">
-				Next-generation web3 browsing experience with built-in privacy protection, 
-				decentralized content discovery, and seamless interaction with blockchain applications.
-			</p>
-			<div class="features">
-				<h3 class="font-semibold text-purple-700 mb-2">Key Features:</h3>
-				<ul class="text-sm text-gray-600 space-y-1">
-					<li>• Privacy-first browsing</li>
-					<li>• Integrated DApp discovery</li>
-					<li>• Decentralized identity management</li>
-					<li>• Built-in crypto wallet</li>
-				</ul>
-			</div>
-		</div>
-
-		<!-- Budget4Me -->
-		<div class="product-card bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-lg border-2 border-orange-200">
-			<div class="flex items-center mb-4">
-				<div class="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center mr-4">
-					<span class="text-2xl">💰</span>
-				</div>
-				<h2 class="text-2xl font-mono font-bold text-orange-800">Budget4Me</h2>
-			</div>
-			<p class="text-gray-700 mb-4">
-				Intelligent personal finance management system with AI-powered budgeting, 
-				expense tracking, and financial goal optimization for the modern digital lifestyle.
-			</p>
-			<div class="features">
-				<h3 class="font-semibold text-orange-700 mb-2">Key Features:</h3>
-				<ul class="text-sm text-gray-600 space-y-1">
-					<li>• AI budgeting recommendations</li>
-					<li>• Automated expense categorization</li>
-					<li>• Goal-based saving strategies</li>
-					<li>• Multi-currency support</li>
-				</ul>
-			</div>
-		</div>
-
-		<!-- bHealthy -->
-		<div class="product-card bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-lg border-2 border-red-200 md:col-span-2">
-			<div class="flex items-center mb-4">
-				<div class="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center mr-4">
-					<span class="text-2xl">❤️</span>
-				</div>
-				<h2 class="text-2xl font-mono font-bold text-red-800">bHealthy</h2>
-			</div>
-			<p class="text-gray-700 mb-4">
-				Comprehensive blockchain-based health management platform that puts you in control 
-				of your health data while connecting you with healthcare providers and wellness programs.
-			</p>
-			<div class="features">
-				<h3 class="font-semibold text-red-700 mb-2">Key Features:</h3>
-				<div class="grid md:grid-cols-2 gap-4">
-					<ul class="text-sm text-gray-600 space-y-1">
-						<li>• Secure health data storage</li>
-						<li>• AI health insights</li>
-						<li>• Telemedicine integration</li>
-						<li>• Fitness tracking & rewards</li>
-					</ul>
-					<ul class="text-sm text-gray-600 space-y-1">
-						<li>• Medication reminders</li>
-						<li>• Health NFT achievements</li>
-						<li>• Provider network access</li>
-						<li>• Anonymous health research</li>
-					</ul>
+				<p class="text-gray-700 mb-4">{product.description}</p>
+				<div class="features">
+					<h3 class="font-semibold {p.feat} mb-2">Key Features:</h3>
+					{#if product.extraFeatures}
+						<div class="grid md:grid-cols-2 gap-4">
+							<ul class="text-sm text-gray-600 space-y-1">
+								{#each product.features as f}<li>• {f}</li>{/each}
+							</ul>
+							<ul class="text-sm text-gray-600 space-y-1">
+								{#each product.extraFeatures as f}<li>• {f}</li>{/each}
+							</ul>
+						</div>
+					{:else}
+						<ul class="text-sm text-gray-600 space-y-1">
+							{#each product.features as f}<li>• {f}</li>{/each}
+						</ul>
+					{/if}
 				</div>
 			</div>
-		</div>
+		{/each}
 	</div>
 
 	<div class="cta-section mt-8 text-center">
@@ -147,18 +61,7 @@
 </div>
 
 <style>
-	.products-container {
-		max-width: 1200px;
-		margin: 0 auto;
-		padding: 20px;
-	}
-	
-	.product-card {
-		transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-	}
-	
-	.product-card:hover {
-		transform: translateY(-4px);
-		box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-	}
+	.products-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+	.product-card { transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; }
+	.product-card:hover { transform: translateY(-4px); box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15); }
 </style>

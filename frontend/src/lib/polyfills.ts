@@ -14,16 +14,18 @@ export const polyfillsReady = browser ? (async () => {
     console.log('[POLYFILLS] bufferModule.default:', bufferModule.default);
     
     // Try to get Buffer from different possible exports
-    let Buffer = null;
-    
-    if (bufferModule.Buffer) {
-      Buffer = bufferModule.Buffer;
+    type BufferLike = { from: (...args: unknown[]) => unknown; prototype: unknown } & ((...args: unknown[]) => unknown);
+    const mod = bufferModule as unknown as { Buffer?: BufferLike; default?: BufferLike & { Buffer?: BufferLike } };
+    let Buffer: BufferLike | null = null;
+
+    if (mod.Buffer) {
+      Buffer = mod.Buffer;
       console.log('[POLYFILLS] Using bufferModule.Buffer');
-    } else if (bufferModule.default && bufferModule.default.Buffer) {
-      Buffer = bufferModule.default.Buffer;
+    } else if (mod.default && mod.default.Buffer) {
+      Buffer = mod.default.Buffer;
       console.log('[POLYFILLS] Using bufferModule.default.Buffer');
-    } else if (typeof bufferModule.default === 'function') {
-      Buffer = bufferModule.default;
+    } else if (typeof mod.default === 'function') {
+      Buffer = mod.default;
       console.log('[POLYFILLS] Using bufferModule.default as function');
     } else {
       console.error('[POLYFILLS] Could not find Buffer in module:', bufferModule);
@@ -73,8 +75,9 @@ export const polyfillsReady = browser ? (async () => {
       console.log('[POLYFILLS] Array test successful:', testBuffer3);
       
     } catch (testError) {
+      const msg = testError instanceof Error ? testError.message : String(testError);
       console.error('[POLYFILLS] Buffer functionality test failed:', testError);
-      throw new Error(`Buffer polyfill is not functioning correctly: ${testError.message}`);
+      throw new Error(`Buffer polyfill is not functioning correctly: ${msg}`);
     }
     
     // Make polyfills available globally using multiple strategies
@@ -107,9 +110,9 @@ export const polyfillsReady = browser ? (async () => {
     
     // Verify the global assignments worked
     console.log('[POLYFILLS] Verifying global assignments...');
-    console.log('[POLYFILLS] globalThis.Buffer:', typeof globalThis.Buffer, globalThis.Buffer?.from ? '✓' : '✗');
-    console.log('[POLYFILLS] window.Buffer:', typeof window?.Buffer, (window as any)?.Buffer?.from ? '✓' : '✗');
-    console.log('[POLYFILLS] globalThis.process:', typeof globalThis.process ? '✓' : '✗');
+    console.log('[POLYFILLS] globalThis.Buffer:', typeof globalThis.Buffer, typeof globalThis.Buffer?.from === 'function' ? '✓' : '✗');
+    console.log('[POLYFILLS] window.Buffer:', typeof (window as { Buffer?: unknown }).Buffer, (window as { Buffer?: { from?: unknown } })?.Buffer?.from ? '✓' : '✗');
+    console.log('[POLYFILLS] globalThis.process:', typeof (globalThis as { process?: unknown }).process !== 'undefined' ? '✓' : '✗');
     
     // Test that we can access Buffer from globalThis
     try {

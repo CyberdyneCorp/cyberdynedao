@@ -5,10 +5,9 @@
     import TerminalWindow from './TerminalWindow.svelte';
 
 	export let window: WindowState;
-	import type { CartItem } from '$lib/types/cart';
-	
-	export let cartItems: CartItem[] = [];
-	export let onAddToCart: ((item: CartItem) => void) | undefined = undefined;
+	import type { MarketplaceItem } from '$lib/types/components';
+
+	export let onAddToCart: ((item: MarketplaceItem) => void) | undefined = undefined;
 
 	let windowElement: HTMLDivElement;
 	let titleBarElement: HTMLDivElement;
@@ -216,7 +215,6 @@
 			title={window.title}
 			showCart={window.content === 'cart'}
 			currentView={window.content}
-			bind:cartItems
 			{onAddToCart}
 			embedded={true}
 		/>

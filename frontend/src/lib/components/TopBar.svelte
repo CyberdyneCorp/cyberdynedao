@@ -8,11 +8,15 @@
 	let menuContainer: HTMLElement;
 	let menuButton: HTMLElement;
 	
-	function toggleMenu(event) {
+	function toggleMenu(event: Event) {
 		event?.preventDefault();
 		event?.stopPropagation();
-		console.log('Toggle menu clicked, showMenu:', showMenu);
 		showMenu = !showMenu;
+	}
+
+	function setButtonBackground(event: Event, background: string) {
+		const target = event.currentTarget as HTMLButtonElement | null;
+		if (target) target.style.background = background;
 	}
 	
 	function closeMenu() {
@@ -59,8 +63,8 @@
         bind:this={menuButton}
         class="flex items-center gap-3 sm:gap-2 px-4 sm:px-2 py-2 sm:py-1 rounded-lg transition-all duration-200 cursor-pointer"
         style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); backdrop-filter: blur(10px);"
-        on:mouseenter={(e) => e.target.style.background = 'rgba(255,255,255,0.25)'}
-        on:mouseleave={(e) => e.target.style.background = 'rgba(255,255,255,0.15)'}
+        on:mouseenter={(e) => setButtonBackground(e, 'rgba(255,255,255,0.25)')}
+        on:mouseleave={(e) => setButtonBackground(e, 'rgba(255,255,255,0.15)')}
         on:click={toggleMenu}
     >
         <div class="w-10 h-10 sm:w-6 sm:h-6 flex items-center justify-center">

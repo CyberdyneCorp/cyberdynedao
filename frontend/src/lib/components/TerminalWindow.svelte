@@ -12,11 +12,12 @@
 	import LearnView from './LearnView.svelte';
 	import ContactView from './ContactView.svelte';
 	
+	import type { MarketplaceItem } from '$lib/types/components';
+
 	export const title: string = 'Terminal';
 	export let showCart: boolean = false;
-	export let cartItems: any[] = [];
 	export let currentView: string = 'read';
-	export let onAddToCart: ((item: any) => void) | undefined = undefined;
+	export let onAddToCart: ((item: MarketplaceItem) => void) | undefined = undefined;
 	export let embedded: boolean = false;
 	export let isMobile: boolean = false;
 </script>
@@ -24,7 +25,7 @@
 {#if embedded}
 	<div class="window-content" class:terminal-content={currentView === 'terminal'} class:mobile={isMobile}>
 		{#if showCart}
-			<CartView bind:cartItems />
+			<CartView />
 		{:else if currentView === 'terminal'}
 			<Terminal />
 		{:else if currentView === 'investments'}
@@ -53,7 +54,7 @@
 	<div class="retro-window flex-1 mx-4 my-4 overflow-hidden" class:mobile={isMobile}>
 		<div class="bg-white p-4 h-full overflow-y-auto">
 			{#if showCart}
-				<CartView bind:cartItems />
+				<CartView />
 			{:else if currentView === 'terminal'}
 				<Terminal />
 			{:else if currentView === 'investments'}

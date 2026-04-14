@@ -204,13 +204,14 @@ class Web3AuthService {
         }
       }
     } catch (error) {
+      const err = error as { message?: string; code?: string | number };
       console.error("Error initializing Web3Auth:", error);
       console.error("Error details:", {
-        message: error.message,
-        code: error.code,
+        message: err?.message,
+        code: err?.code,
         details: error
       });
-      
+
       this.initPromise = null; // Reset promise on failure
       throw this.createError(
         "Failed to initialize Web3Auth",
@@ -284,20 +285,21 @@ class Web3AuthService {
 
       return user;
     } catch (error) {
+      const err = error as { message?: string; code?: string | number; name?: string; cause?: unknown; stack?: string };
       console.error("Error during Web3Auth login:", error);
       console.error("Error details:", {
-        message: error.message,
-        code: error.code,
-        name: error.name,
-        cause: error.cause,
-        stack: error.stack
+        message: err?.message,
+        code: err?.code,
+        name: err?.name,
+        cause: err?.cause,
+        stack: err?.stack
       });
       
       // Reset provider on login failure
       this.provider = null;
       
       throw this.createError(
-        `Login failed: ${error.message}`,
+        `Login failed: ${err?.message ?? 'Unknown error'}`,
         "LOGIN_ERROR",
         error
       );
@@ -425,7 +427,8 @@ class Web3AuthService {
       const userInfo = await web3auth.getUserInfo();
       return userInfo;
     } catch (error) {
-      console.log("Web3Auth: Error getting user info (user likely not authenticated):", error.message);
+      const msg = error instanceof Error ? error.message : String(error);
+      console.log("Web3Auth: Error getting user info (user likely not authenticated):", msg);
       return null;
     }
   }

@@ -1,57 +1,19 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { terminalCommands } from '$lib/utils/terminalCommands';
-	
-	// Terminal state
+	import { createTerminalViewModel } from '$lib/viewmodels/terminalViewModel';
+
+	const vm = createTerminalViewModel();
+	const terminalHistory = vm.history;
+	const currentUser = vm.user;
+	const currentHost = vm.host;
 	let terminalInput = '';
-	let terminalHistory: Array<{
-		type: 'input' | 'output' | 'system', 
-		text: string, 
-		timestamp?: string
-	}> = [
-		{ type: 'system', text: 'Welcome to CyberdyneOS!' },
-		{ type: 'system', text: 'For available commands, try "help".' },
-		{ type: 'system', text: `Last login: ${new Date().toLocaleDateString()}, ${new Date().toLocaleTimeString()}` },
-		{ type: 'system', text: '' }
-	];
-	
-	const currentUser = 'user';
-	const currentHost = 'CyberdyneOS';
-	
+
 	function handleSubmit() {
 		if (terminalInput.trim() === '') return;
-		
-		// Add user input to history
-		terminalHistory = [...terminalHistory, { 
-			type: 'input', 
-			text: `${currentUser}@${currentHost} $ ${terminalInput}`,
-			timestamp: new Date().toLocaleTimeString()
-		}];
-		
-		// Process command and get response
-		const response = terminalCommands.processCommand(terminalInput.trim());
-		
-		// Handle special commands
-		if (terminalInput.trim().toLowerCase() === 'clear') {
-			terminalHistory = [
-				{ type: 'system', text: 'Welcome to CyberdyneOS!' },
-				{ type: 'system', text: 'For available commands, try "help".' }
-			];
-		} else {
-			terminalHistory = [...terminalHistory, { 
-				type: 'output', 
-				text: response 
-			}];
-		}
-		
-		// Clear input and scroll
+		vm.submit(terminalInput);
 		terminalInput = '';
 		scrollToBottom();
-		
-		// Maintain focus after DOM update
-		setTimeout(() => {
-			focusInput();
-		}, 10);
+		setTimeout(() => focusInput(), 10);
 	}
 	
 	function scrollToBottom() {
@@ -102,7 +64,7 @@
 		tabindex="0"
 		aria-label="Terminal output - click to focus input"
 	>
-		{#each terminalHistory as line}
+		{#each $terminalHistory as line}
 			<div class="whitespace-pre-wrap mb-1">
 				{#if line.type === 'input'}
 					<span class="text-retro-green">{line.text}</span>

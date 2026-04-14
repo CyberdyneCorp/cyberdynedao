@@ -1,15 +1,19 @@
 <script lang="ts">
+	import { onDestroy } from 'svelte';
 	import Window from '$lib/components/Window.svelte';
 	import { windows, createWindow, toggleWindowSlide } from '$lib/stores/windowStore';
 	import { navItems } from '$lib/constants/navigation';
 	import { handleItemClick } from '$lib/utils/navigationHelpers';
 	import { CYBERDYNE_ASCII_LOGO } from '$lib/constants/asciiLogo';
-	import type { CartItem } from '$lib/types/cart';
+	import type { MarketplaceItem } from '$lib/types/components';
+	import { cart, marketplaceItemToCartItem } from '$lib/viewmodels/cartViewModel';
 
-	let cartItems: CartItem[] = [];
-	
-	function addToCart(item: CartItem) {
-		cartItems = [...cartItems, item];
+	const cartCountStore = cart.count;
+	let cartCount = 0;
+	const unsubCart = cartCountStore.subscribe(v => (cartCount = v));
+
+	function addToCart(item: MarketplaceItem) {
+		cart.addItem(marketplaceItemToCartItem(item));
 	}
 
 	function handleBackgroundClick(e: MouseEvent) {
@@ -34,7 +38,7 @@
 		}
 	}
 	
-	$: cartCount = cartItems.length;
+	onDestroy(() => unsubCart?.());
 </script>
 
 <div class="flex flex-col h-screen">
@@ -111,9 +115,8 @@
 		
 		<!-- Windows -->
 		{#each $windows as window (window.id)}
-			<Window 
+			<Window
 				{window}
-				bind:cartItems
 				onAddToCart={addToCart}
 			/>
 		{/each}

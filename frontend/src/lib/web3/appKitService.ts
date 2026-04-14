@@ -12,7 +12,10 @@
 import { createAppKit } from '@reown/appkit'
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
 import { mainnet, arbitrum, polygon, base } from '@reown/appkit/networks'
-import type { AppKit, AppKitNetwork } from '@reown/appkit'
+import type { AppKit } from '@reown/appkit'
+// AppKitNetwork is not publicly exported by @reown/appkit in the installed version;
+// use a permissive type so we stay source-compatible with future SDK versions.
+type AppKitNetwork = Parameters<typeof createAppKit>[0]['networks'][number]
 import { 
   appKitInstance, 
   appKitActions, 
@@ -111,7 +114,7 @@ class AppKitService {
         themeMode: 'dark', // Match the retro terminal theme
         themeVariables: {
           '--w3m-color-mix': '#00ff00',
-          '--w3m-color-mix-strength': 20,
+          '--w3m-color-mix-strength': '20',
           '--w3m-accent': '#00ff00',
           '--w3m-border-radius-master': '4px',
           '--w3m-font-family': '"JetBrains Mono", "IBM Plex Mono", monospace',
@@ -120,7 +123,7 @@ class AppKitService {
         }
       }
 
-      // Initialize AppKit
+      // Initialize AppKit (config shape varies across SDK versions)
       this.appKit = createAppKit({
         adapters: [this.wagmiAdapter],
         networks: config.networks,
@@ -136,7 +139,7 @@ class AppKitService {
           '4622a2b2d6af1c9844944291e5e7351a6aa24cd7b23099efac1b2fd875da31a0', // Trust Wallet
           '38f5d18bd8522c244bdd70cb4a68e0e718865155811c043f052fb9f1c51de662'  // Bitget Wallet
         ]
-      })
+      } as unknown as Parameters<typeof createAppKit>[0])
 
       // Store instance and update state
       appKitInstance.set(this.appKit)
@@ -214,7 +217,7 @@ class AppKitService {
         }
       }
 
-      this.appKit?.open({ view })
+      this.appKit?.open({ view } as Parameters<NonNullable<typeof this.appKit>['open']>[0])
       console.log(`AppKit modal opened with view: ${view}`)
 
     } catch (error) {
@@ -240,27 +243,31 @@ class AppKitService {
       return null
     }
 
-    const state = this.appKit.getState()
-    
+    // Cast to any: SDK's public state type excludes selectedAccount in some versions.
+    const state = this.appKit.getState() as unknown as {
+      selectedNetworkId?: number | string;
+      selectedAccount?: { address?: string; caipAddress?: string; balance?: string };
+    }
+
     // Extract chain ID from caipAddress if selectedNetworkId is undefined
-    let chainId = state.selectedNetworkId
+    let chainId: number | undefined = typeof state.selectedNetworkId === 'number'
+      ? state.selectedNetworkId
+      : undefined
     if (!chainId && state.selectedAccount?.caipAddress) {
-      // Parse CAIP-10 format: "eip155:42161:0x..."
       const match = state.selectedAccount.caipAddress.match(/^eip155:(\d+):/)
       if (match) {
         chainId = parseInt(match[1], 10)
       }
     }
-    
-    // Only consider connected if we have both a valid address AND chain ID
+
     const hasValidAddress = !!state.selectedAccount?.address;
     const hasValidChainId = !!chainId;
     const isFullyConnected = hasValidAddress && hasValidChainId;
-    
+
     return {
       isConnected: isFullyConnected,
       address: state.selectedAccount?.address,
-      chainId: chainId,
+      chainId,
       balance: state.selectedAccount?.balance
     }
   }
@@ -390,13 +397,19 @@ class AppKitService {
     if (!this.appKit) return
 
     // Listen to modal state changes
-    this.appKit.subscribeState((state) => {
-      console.log('AppKit full state object:', state)
+    this.appKit.subscribeState((rawState) => {
+      const state = rawState as unknown as {
+        selectedNetworkId?: number | string;
+        selectedAccount?: { address?: string; caipAddress?: string; balance?: string };
+      }
+      console.log('AppKit full state object:', rawState)
       console.log('selectedNetworkId:', state.selectedNetworkId, 'type:', typeof state.selectedNetworkId)
       console.log('selectedAccount:', state.selectedAccount)
-      
+
       // Extract chain ID from caipAddress if selectedNetworkId is undefined
-      let chainId = state.selectedNetworkId
+      let chainId: number | undefined = typeof state.selectedNetworkId === 'number'
+        ? state.selectedNetworkId
+        : undefined
       if (!chainId && state.selectedAccount?.caipAddress) {
         // Parse CAIP-10 format: "eip155:42161:0x..."
         const match = state.selectedAccount.caipAddress.match(/^eip155:(\d+):/)
@@ -414,7 +427,7 @@ class AppKitService {
       const walletInfo: WalletInfo = {
         isConnected: isFullyConnected,
         address: state.selectedAccount?.address,
-        chainId: chainId,
+        chainId,
         balance: state.selectedAccount?.balance
       }
 
@@ -432,13 +445,20 @@ class AppKitService {
     })
 
     // Listen to account changes
-    this.appKit.subscribeAccount((account) => {
-      console.log('Account changed full object:', account)
+    this.appKit.subscribeAccount((rawAccount) => {
+      const account = rawAccount as unknown as {
+        address?: string;
+        caipAddress?: string;
+        chainId?: number;
+        balance?: string;
+        isConnected?: boolean;
+      }
+      console.log('Account changed full object:', rawAccount)
       console.log('Account chainId:', account.chainId, 'type:', typeof account.chainId)
       console.log('Account address:', account.address)
       console.log('Account caipAddress:', account.caipAddress)
       console.log('Account isConnected:', account.isConnected)
-      
+
       // Extract chain ID from caipAddress if chainId is undefined
       let chainId = account.chainId
       if (!chainId && account.caipAddress) {
@@ -459,7 +479,7 @@ class AppKitService {
         const walletInfo: WalletInfo = {
           isConnected: true,
           address: account.address,
-          chainId: chainId,
+          chainId,
           balance: account.balance
         }
         console.log('Setting wallet info from account (fully connected):', walletInfo)
@@ -476,8 +496,11 @@ class AppKitService {
       }
     })
 
-    // Listen to chain changes
-    this.appKit.subscribeChainId((chainId) => {
+    // Listen to chain changes (subscribeChainId availability varies across SDK versions)
+    const appKitWithChain = this.appKit as unknown as {
+      subscribeChainId?: (cb: (chainId: number) => void) => void
+    }
+    appKitWithChain.subscribeChainId?.((chainId: number) => {
       console.log('Chain changed:', chainId, 'type:', typeof chainId)
       appKitActions.setChainId(chainId)
     })

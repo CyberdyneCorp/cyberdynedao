@@ -6,6 +6,7 @@
  * Safely get item from localStorage with JSON parsing
  */
 export function getStorageItem<T>(key: string, defaultValue: T): T {
+	/* v8 ignore next */
 	if (typeof window === 'undefined') {
 		return defaultValue;
 	}
@@ -22,6 +23,7 @@ export function getStorageItem<T>(key: string, defaultValue: T): T {
  * Safely set item to localStorage with JSON stringification
  */
 export function setStorageItem<T>(key: string, value: T): boolean {
+	/* v8 ignore next */
 	if (typeof window === 'undefined') {
 		return false;
 	}
@@ -38,6 +40,7 @@ export function setStorageItem<T>(key: string, value: T): boolean {
  * Remove item from localStorage
  */
 export function removeStorageItem(key: string): boolean {
+	/* v8 ignore next */
 	if (typeof window === 'undefined') {
 		return false;
 	}
@@ -54,6 +57,7 @@ export function removeStorageItem(key: string): boolean {
  * Clear all items from localStorage
  */
 export function clearStorage(): boolean {
+	/* v8 ignore next */
 	if (typeof window === 'undefined') {
 		return false;
 	}
@@ -70,6 +74,7 @@ export function clearStorage(): boolean {
  * Check if localStorage is available
  */
 export function isStorageAvailable(): boolean {
+	/* v8 ignore next */
 	if (typeof window === 'undefined') {
 		return false;
 	}

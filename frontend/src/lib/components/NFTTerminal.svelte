@@ -1,52 +1,25 @@
 <script lang="ts">
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { createEventDispatcher } from 'svelte';
 	import type { NFTTraits } from '$lib/web3/contracts';
-	
+	import { buildNFTUrl, truncateWalletAddress } from '$lib/viewmodels/nftTerminalViewModel';
+
 	export let isVisible = false;
 	export let userTraits: NFTTraits | null = null;
 	export let walletAddress = '';
-	
+
 	const dispatch = createEventDispatcher();
-	let svgContent = '';
-	let isLoadingSvg = false;
-	
+
 	function closeTerminal() {
 		isVisible = false;
 		dispatch('close');
 	}
-	
+
 	function handleKeydown(event: KeyboardEvent) {
-		if (event.key === 'Escape') {
-			closeTerminal();
-		}
+		if (event.key === 'Escape') closeTerminal();
 	}
-	
-	function generateNFTUrl(): string {
-		if (!userTraits || !walletAddress) {
-			// Return base SVG URL for testing
-			return '/assets/cyberdyne_nft_enhanced.svg';
-		}
-		
-		// Format date as YYYY-MM-DD
-		const today = new Date();
-		const issued = today.toISOString().split('T')[0];
-		
-		// Map traits to URL parameters
-		const params = new URLSearchParams({
-			learning: userTraits.Learning ? '1' : '0',
-			frontend: userTraits.Frontend ? '1' : '0',
-			backend: userTraits.Backend ? '1' : '0',
-			blog: userTraits['Blog Creator'] ? '1' : '0',
-			admin: userTraits.Admin ? '1' : '0',
-			market: userTraits.Marketplace ? '1' : '0',
-			issued: issued,
-			wallet: walletAddress
-		});
-		
-		return `/assets/cyberdyne_nft_enhanced.svg?${params.toString()}`;
-	}
-	
-	$: nftUrl = generateNFTUrl();
+
+	$: nftUrl = buildNFTUrl(userTraits, walletAddress);
+	$: shortWallet = truncateWalletAddress(walletAddress);
 </script>
 
 <!-- Terminal Window Modal -->
@@ -96,7 +69,7 @@
 				<div class="terminal-output">
 					<div class="terminal-line">
 						<span class="prompt">cyberdyne@access:~$</span> 
-						<span class="command">display-nft --user {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'unknown'}</span>
+						<span class="command">display-nft --user {shortWallet}</span>
 					</div>
 					<div class="terminal-line">
 						<span class="output-text">Loading NFT data...</span>
