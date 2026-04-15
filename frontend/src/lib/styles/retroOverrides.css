@@ -86,7 +86,11 @@
 }
 .cy-rwin__body {
 	background: #ffffff !important;
-	color: #000000 !important;
+	/* Don't force color here — views like Terminal intentionally set their own
+	   text colors (green on black). Inheriting #000 from here would win over
+	   their Tailwind color utilities in some cascade layer orderings. */
+	color: initial;
+	padding: 0 !important;
 }
 .cy-rwin__footer {
 	background: var(--retro-titlebar-gradient) !important;

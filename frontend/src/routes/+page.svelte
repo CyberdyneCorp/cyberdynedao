@@ -95,7 +95,7 @@
 <div class="cyberdyne-retro-shell flex flex-col h-screen w-screen overflow-hidden">
 	<!-- Top taskbar: Start button + wallet -->
 	<header
-		class="retro-topbar flex items-center justify-between px-3 py-2 border-b-4 border-black"
+		class="retro-topbar flex items-center justify-between px-6 py-3 border-b-4 border-black gap-3"
 		style="background: var(--retro-taskbar-gradient, linear-gradient(to right,#1e3a8a,#3b82f6));"
 	>
 		<StartMenu
