@@ -4,7 +4,14 @@
  * blue/indigo desktop and yellow-green accents used across the app.
  */
 :root {
-	/* Desktop / window chrome */
+	/* Library tokens actually used by retro components */
+	--color-surface-default: #ffffff;
+	--color-surface-hover: #f3f4f6;
+	--color-text-primary: #000000;
+	--color-text-inverse: #ffffff;
+	--color-action-tertiary-default: #7e22ce;
+
+	/* Desktop / window chrome (legacy) */
 	--color-bg-primary: #4338ca;
 	--color-bg-surface: #c0c0c0;
 	--color-bg-elevated: #ffffff;
@@ -21,6 +28,7 @@
 
 	/* Pixel fonts */
 	--font-mono: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
+	--font-body: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
 }
 
 /* Tame library defaults so retro components blend with existing backdrop */

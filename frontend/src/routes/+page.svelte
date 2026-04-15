@@ -46,8 +46,8 @@
 	}
 
 	const startMenuItems = [
-		{ id: 'team', label: 'Our Team', icon: '/assets/the_team.svg' },
-		{ id: 'terminal', label: 'Terminal', icon: '/assets/icon_terminal.svg' },
+		{ id: 'team', label: 'Our Team', icon: '👥' },
+		{ id: 'terminal', label: 'Terminal', icon: '💻' },
 		{ id: 'close-all', label: 'Close All Windows', icon: '❌' }
 	];
 
@@ -90,28 +90,13 @@
 		class="retro-topbar flex items-center justify-between px-3 py-2 border-b-4 border-black"
 		style="background: var(--retro-taskbar-gradient, linear-gradient(to right,#1e3a8a,#3b82f6));"
 	>
-		<div class="relative">
-			<button
-				class="retro-start-btn font-mono font-bold text-white px-3 py-1 border-2 border-black"
-				style="background: rgba(255,255,255,0.18);"
-				on:click={() => (startOpen = !startOpen)}
-				aria-expanded={startOpen}
-			>
-				<img src="/assets/icon_menu.svg" alt="" class="inline w-5 h-5 mr-2 align-middle" />
-				Start {startOpen ? '▼' : '▶'}
-			</button>
-			{#if startOpen}
-				<div class="absolute left-0 top-full mt-1 z-50">
-					<StartMenu
-						label="Menu"
-						header="Cyberdyne"
-						items={startMenuItems}
-						open={startOpen}
-						onItemSelect={onStartSelect}
-					/>
-				</div>
-			{/if}
-		</div>
+		<StartMenu
+			label="Start"
+			header="Cyberdyne"
+			items={startMenuItems}
+			bind:open={startOpen}
+			onItemSelect={onStartSelect}
+		/>
 		<div class="w-48 sm:w-32"><Web3Wallet /></div>
 	</header>
 
@@ -162,7 +147,7 @@
 		</div>
 
 		<!-- Cart icon top-right -->
-		<div class="absolute right-4 top-4 z-10">
+		<div style="position:absolute; top:16px; right:16px; z-index:10;">
 			<DesktopIcon
 				label={`Your Bag${cartCount > 0 ? ` (${cartCount})` : ''}`}
 				iconSrc="/assets/cart.svg"
