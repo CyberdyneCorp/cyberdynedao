@@ -1,57 +1,132 @@
 /**
- * Retro palette overrides for @cyberdynecorp/svelte-ui-foundation tokens.
- * Keeps the library's retro components visually matched to the existing
- * blue/indigo desktop and yellow-green accents used across the app.
+ * Retro palette overrides for @cyberdynecorp/svelte-ui-foundation tokens
+ * and @cyberdynecorp/svelte-ui-core retro components. Keeps the library
+ * visually matched to the existing blue/indigo retro desktop.
+ *
+ * All selectors are plain CSS (no Svelte :global) so the whole file is
+ * valid in app.css.
  */
+
 :root {
-	/* Library tokens actually used by retro components */
+	/* Library surface tokens used by retro components */
 	--color-surface-default: #ffffff;
+	--color-surface-raised: #e5e7eb;
 	--color-surface-hover: #f3f4f6;
 	--color-text-primary: #000000;
 	--color-text-inverse: #ffffff;
 	--color-action-tertiary-default: #7e22ce;
-
-	/* Desktop / window chrome (legacy) */
-	--color-bg-primary: #4338ca;
-	--color-bg-surface: #c0c0c0;
-	--color-bg-elevated: #ffffff;
-	--color-border-strong: #000000;
+	--color-state-error: #ef4444;
+	--color-border-subtle: #d4d4d8;
 
 	/* Accent — keep the neon-green "Connect Wallet" button */
 	--color-action-brand-default: #22c55e;
 	--color-action-brand-hover: #16a34a;
 	--color-action-brand-fg: #000000;
 
-	/* Retro window title bar gradient */
+	/* Retro blue gradient, used on title bars + taskbars */
 	--retro-titlebar-gradient: linear-gradient(to right, #1e3a8a, #3b82f6);
 	--retro-taskbar-gradient: linear-gradient(to right, #1e3a8a, #3b82f6);
 
-	/* Pixel fonts */
+	/* Fonts */
 	--font-mono: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
 	--font-body: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
 }
 
-/* Tame library defaults so retro components blend with existing backdrop */
+/* Desktop wrapper colour */
 .cyberdyne-retro-shell {
 	background: #4338ca;
 }
 
-/* Desktop icons sit on the blue desktop — force white labels for readability */
-.cyberdyne-retro-shell :global(.cy-dgrid) .cy-dicon,
-.cyberdyne-retro-shell .cy-dicon {
+/* ---- DesktopIcon ---- */
+.cy-dicon {
 	color: #ffffff;
 }
-.cyberdyne-retro-shell .cy-dicon:hover:not(:disabled) {
+.cy-dicon:hover:not(:disabled) {
 	background: rgba(255, 255, 255, 0.12);
 	border-color: rgba(255, 255, 255, 0.35);
 }
-.cyberdyne-retro-shell .cy-dicon__label {
+.cy-dicon__label {
 	background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
 	border: 1px solid #000;
 	box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
 	color: #fff;
 	font-weight: 700;
 	padding: 2px 6px;
-	font-family: var(--font-mono, 'JetBrains Mono', monospace);
+	font-family: var(--font-mono);
 	font-size: 12px;
+	border-radius: 2px;
+}
+
+/* ---- RetroWindow ---- */
+.cy-rwin {
+	background: #ffffff;
+	border: 2px solid #000;
+	box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+}
+.cy-rwin__titlebar {
+	background: var(--retro-titlebar-gradient);
+	color: #ffffff;
+	border-bottom: 2px solid #000;
+}
+.cy-rwin__title {
+	color: #ffffff;
+	font-weight: 700;
+}
+.cy-rwin__close {
+	color: #ffffff;
+}
+.cy-rwin__lines span {
+	background: rgba(255, 255, 255, 0.85);
+}
+.cy-rwin__body {
+	background: #ffffff;
+	color: #000000;
+}
+.cy-rwin__footer {
+	background: var(--retro-titlebar-gradient);
+	color: #ffffff;
+	border-top: 2px solid #000;
+}
+
+/* ---- Taskbar (bottom) ---- */
+.cy-taskbar {
+	background: var(--retro-taskbar-gradient);
+	border-color: #000;
+}
+.cy-taskbar__item {
+	background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+	color: #ffffff;
+	border-color: #000;
+}
+.cy-taskbar__item:hover {
+	background: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%);
+}
+.cy-taskbar__item--active {
+	background: #22c55e;
+	color: #000;
+}
+
+/* ---- StartMenu ---- */
+.cy-start__btn {
+	background: rgba(255, 255, 255, 0.18);
+	border-color: #000;
+	color: #ffffff;
+}
+.cy-start__btn:hover,
+.cy-start__btn--open {
+	background: rgba(255, 255, 255, 0.3);
+}
+.cy-start__label {
+	color: #ffffff;
+}
+.cy-start__menu {
+	background: #ffffff;
+	border-color: #000;
+}
+.cy-start__header {
+	background: var(--retro-titlebar-gradient);
+	color: #ffffff;
+}
+.cy-start__item {
+	color: #000000;
 }
