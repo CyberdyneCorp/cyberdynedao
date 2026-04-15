@@ -40,7 +40,16 @@
 
 	function handleDesktopBgClick(e: MouseEvent) {
 		const target = e.target as HTMLElement;
-		if (target.closest('[data-retro-window]') || target.closest('button')) return;
+		// Ignore clicks inside a RetroWindow (library class), on buttons, or on
+		// any desktop icon — only true empty-desktop clicks should slide.
+		if (
+			target.closest('.cy-rwin') ||
+			target.closest('.cy-dicon') ||
+			target.closest('.cy-start') ||
+			target.closest('.cy-taskbar') ||
+			target.closest('button')
+		)
+			return;
 		if ($windows.length > 0) toggleWindowSlide();
 	}
 
