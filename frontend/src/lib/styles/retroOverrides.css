@@ -1,14 +1,16 @@
 /**
- * Retro palette overrides for @cyberdynecorp/svelte-ui-foundation tokens
- * and @cyberdynecorp/svelte-ui-core retro components. Keeps the library
- * visually matched to the existing blue/indigo retro desktop.
+ * Retro palette overrides for @cyberdynecorp/svelte-ui-core retro components.
  *
- * All selectors are plain CSS (no Svelte :global) so the whole file is
- * valid in app.css.
+ * The library ships raw .svelte sources that get component-scoped CSS at
+ * consumer build time (e.g. .cy-rwin__titlebar.svelte-abc123). That hashed
+ * class has equal specificity (0,2,0) to a plain .cy-rwin__titlebar selector
+ * here, but the scoped rules load LATER in the bundle and win on cascade.
+ * We therefore mark the visual overrides !important so the retro skin
+ * reliably beats the library defaults.
  */
 
 :root {
-	/* Library surface tokens used by retro components */
+	/* Library surface tokens */
 	--color-surface-default: #ffffff;
 	--color-surface-raised: #e5e7eb;
 	--color-surface-hover: #f3f4f6;
@@ -18,12 +20,12 @@
 	--color-state-error: #ef4444;
 	--color-border-subtle: #d4d4d8;
 
-	/* Accent — keep the neon-green "Connect Wallet" button */
+	/* Accent — neon-green "Connect Wallet" button */
 	--color-action-brand-default: #22c55e;
 	--color-action-brand-hover: #16a34a;
 	--color-action-brand-fg: #000000;
 
-	/* Retro blue gradient, used on title bars + taskbars */
+	/* Retro blue gradient */
 	--retro-titlebar-gradient: linear-gradient(to right, #1e3a8a, #3b82f6);
 	--retro-taskbar-gradient: linear-gradient(to right, #1e3a8a, #3b82f6);
 
@@ -39,17 +41,17 @@
 
 /* ---- DesktopIcon ---- */
 .cy-dicon {
-	color: #ffffff;
+	color: #ffffff !important;
 }
 .cy-dicon:hover:not(:disabled) {
-	background: rgba(255, 255, 255, 0.12);
-	border-color: rgba(255, 255, 255, 0.35);
+	background: rgba(255, 255, 255, 0.12) !important;
+	border-color: rgba(255, 255, 255, 0.35) !important;
 }
 .cy-dicon__label {
-	background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-	border: 1px solid #000;
+	background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
+	border: 1px solid #000 !important;
 	box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
-	color: #fff;
+	color: #ffffff !important;
 	font-weight: 700;
 	padding: 2px 6px;
 	font-family: var(--font-mono);
@@ -59,74 +61,87 @@
 
 /* ---- RetroWindow ---- */
 .cy-rwin {
-	background: #ffffff;
-	border: 2px solid #000;
-	box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+	background: #ffffff !important;
+	border: 2px solid #000 !important;
+	box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5) !important;
 }
 .cy-rwin__titlebar {
-	background: var(--retro-titlebar-gradient);
-	color: #ffffff;
-	border-bottom: 2px solid #000;
+	background: var(--retro-titlebar-gradient) !important;
+	color: #ffffff !important;
+	border-bottom: 2px solid #000 !important;
 }
 .cy-rwin__title {
-	color: #ffffff;
+	color: #ffffff !important;
 	font-weight: 700;
 }
 .cy-rwin__close {
-	color: #ffffff;
+	color: #ffffff !important;
+	background: transparent !important;
+}
+.cy-rwin__close:hover {
+	background: #ef4444 !important;
 }
 .cy-rwin__lines span {
-	background: rgba(255, 255, 255, 0.85);
+	background: rgba(255, 255, 255, 0.85) !important;
 }
 .cy-rwin__body {
-	background: #ffffff;
-	color: #000000;
+	background: #ffffff !important;
+	color: #000000 !important;
 }
 .cy-rwin__footer {
-	background: var(--retro-titlebar-gradient);
-	color: #ffffff;
-	border-top: 2px solid #000;
+	background: var(--retro-titlebar-gradient) !important;
+	color: #ffffff !important;
+	border-top: 2px solid #000 !important;
+}
+.cy-rwin__status {
+	color: #ffffff !important;
 }
 
 /* ---- Taskbar (bottom) ---- */
 .cy-taskbar {
-	background: var(--retro-taskbar-gradient);
-	border-color: #000;
+	background: var(--retro-taskbar-gradient) !important;
+	border: 2px solid #000 !important;
 }
 .cy-taskbar__item {
-	background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-	color: #ffffff;
-	border-color: #000;
+	background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
+	color: #ffffff !important;
+	border: 2px solid #000 !important;
 }
 .cy-taskbar__item:hover {
-	background: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%);
+	background: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%) !important;
 }
 .cy-taskbar__item--active {
-	background: #22c55e;
-	color: #000;
+	background: #22c55e !important;
+	color: #000 !important;
 }
 
 /* ---- StartMenu ---- */
 .cy-start__btn {
-	background: rgba(255, 255, 255, 0.18);
-	border-color: #000;
-	color: #ffffff;
+	background: rgba(255, 255, 255, 0.18) !important;
+	border: 2px solid #000 !important;
+	color: #ffffff !important;
 }
 .cy-start__btn:hover,
 .cy-start__btn--open {
-	background: rgba(255, 255, 255, 0.3);
+	background: rgba(255, 255, 255, 0.3) !important;
 }
 .cy-start__label {
-	color: #ffffff;
+	color: #ffffff !important;
+}
+.cy-start__arrow {
+	color: #ffffff !important;
 }
 .cy-start__menu {
-	background: #ffffff;
-	border-color: #000;
+	background: #ffffff !important;
+	border: 2px solid #000 !important;
 }
 .cy-start__header {
-	background: var(--retro-titlebar-gradient);
-	color: #ffffff;
+	background: var(--retro-titlebar-gradient) !important;
+	color: #ffffff !important;
 }
 .cy-start__item {
-	color: #000000;
+	color: #000000 !important;
+}
+.cy-start__item:hover {
+	background: #f3f4f6 !important;
 }
