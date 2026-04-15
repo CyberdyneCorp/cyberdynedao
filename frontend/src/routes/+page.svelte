@@ -117,8 +117,16 @@
 
 	<!-- Desktop area -->
 	<main class="relative flex-1 overflow-hidden" aria-label="Desktop">
+		<!-- CRT background layer -->
+		<div class="absolute inset-0 z-0">
+			<CRTBackground color="#4338ca" showGrid showScanlines fullScreen>
+				{''}
+			</CRTBackground>
+		</div>
+
+		<!-- Background click handler + decorations -->
 		<div
-			class="absolute inset-0 z-0"
+			class="absolute inset-0 z-[1]"
 			on:click={handleDesktopBgClick}
 			on:keydown={(e) => {
 				if (e.key === 'Enter' || e.key === ' ') {
@@ -129,9 +137,7 @@
 			role="button"
 			tabindex="0"
 			aria-label="Desktop background"
-		></div>
-		<CRTBackground color="#4338ca" showGrid showScanlines fullScreen={false}>
-			<!-- Ambient background decorations -->
+		>
 			<div class="pointer-events-none absolute inset-0">
 				<div class="ascii-logo">
 					<pre class="logo-text">{CYBERDYNE_ASCII_LOGO}</pre>
@@ -140,54 +146,50 @@
 				<div class="glow-particle glow-2"></div>
 				<div class="glow-particle glow-3"></div>
 			</div>
+		</div>
 
-			<!-- Left-side app launcher grid -->
-			<div class="absolute left-4 top-4 z-10 w-[min(420px,50vw)]">
-				<DesktopGrid columns={2} gap={16} align="start" side="left" ariaLabel="Applications">
-					{#each navItems as item}
-						<DesktopIcon
-							label={isMobile && item.mobileLabel ? item.mobileLabel : item.name}
-							iconSrc={item.icon}
-							onActivate={() => openWindowFor(item.name)}
-						/>
-					{/each}
-				</DesktopGrid>
-			</div>
+		<!-- Left-side app launcher grid -->
+		<div class="absolute left-4 top-4 z-10 w-[min(420px,50vw)]">
+			<DesktopGrid columns={2} gap={16} align="start" side="left" ariaLabel="Applications">
+				{#each navItems as item}
+					<DesktopIcon
+						label={isMobile && item.mobileLabel ? item.mobileLabel : item.name}
+						iconSrc={item.icon}
+						onActivate={() => openWindowFor(item.name)}
+					/>
+				{/each}
+			</DesktopGrid>
+		</div>
 
-			<!-- Cart icon top-right -->
-			<div class="absolute right-4 top-4 z-10">
-				<DesktopIcon
-					label={`Your Bag${cartCount > 0 ? ` (${cartCount})` : ''}`}
-					iconSrc="/assets/cart.svg"
-					badge={cartCount > 0 ? cartCount : undefined}
-					onActivate={() => createWindow('cart', `Your Bag (${cartCount})`)}
-				/>
-			</div>
+		<!-- Cart icon top-right -->
+		<div class="absolute right-4 top-4 z-10">
+			<DesktopIcon
+				label={`Your Bag${cartCount > 0 ? ` (${cartCount})` : ''}`}
+				iconSrc="/assets/cart.svg"
+				badge={cartCount > 0 ? cartCount : undefined}
+				onActivate={() => createWindow('cart', `Your Bag (${cartCount})`)}
+			/>
+		</div>
 
-			<!-- Windows -->
-			{#each $windows as w (w.id)}
-				{#if !w.isSlideHidden && !w.minimized}
-					<div data-retro-window style="position:absolute; inset:0; z-index:{w.zIndex}; pointer-events:none;">
-						<div style="pointer-events:auto;">
-							<RetroWindow
-								title={w.title}
-								open
-								x={w.x}
-								y={w.y}
-								width={w.width}
-								height={w.height}
-								draggable
-								resizable
-								onClose={() => closeWindow(w.id)}
-								onFocus={() => bringToFront(w.id)}
-							>
-								<ViewRouter content={w.content} onAddToCart={addToCart} {isMobile} />
-							</RetroWindow>
-						</div>
-					</div>
-				{/if}
-			{/each}
-		</CRTBackground>
+		<!-- Windows: RetroWindow self-positions via fixed + x/y; DOM order = stacking -->
+		{#each [...$windows].sort((a, b) => a.zIndex - b.zIndex) as w (w.id)}
+			{#if !w.isSlideHidden && !w.minimized}
+				<RetroWindow
+					title={w.title}
+					open
+					x={w.x}
+					y={w.y}
+					width={w.width}
+					height={w.height}
+					draggable
+					resizable
+					onClose={() => closeWindow(w.id)}
+					onFocus={() => bringToFront(w.id)}
+				>
+					<ViewRouter content={w.content} onAddToCart={addToCart} {isMobile} />
+				</RetroWindow>
+			{/if}
+		{/each}
 	</main>
 
 	<!-- Bottom taskbar showing open windows -->
