@@ -117,14 +117,14 @@
 
 .logo-text {
 	font-family: 'JetBrains Mono', monospace;
-	font-size: 12px;
+	font-size: clamp(10px, 1.3vw, 18px);
 	line-height: 1;
 	color: #00ffff;
-	text-shadow: 
+	text-shadow:
 		0 0 12px rgba(0, 255, 255, 0.8),
 		0 0 24px rgba(0, 255, 255, 0.6),
 		0 0 36px rgba(0, 255, 255, 0.4);
-	animation: 
+	animation:
 		wavy-glow 4s ease-in-out infinite,
 		text-wave 6s ease-in-out infinite;
 	white-space: pre;
@@ -134,12 +134,12 @@
 
 @keyframes logo-breathe {
 	0%, 100% {
-		opacity: 0.08;
-		transform: translate(-50%, -50%) scale(0.95);
+		opacity: 0.22;
+		transform: translate(-50%, -50%) scale(0.98);
 	}
 	50% {
-		opacity: 0.2;
-		transform: translate(-50%, -50%) scale(1.05);
+		opacity: 0.38;
+		transform: translate(-50%, -50%) scale(1.03);
 	}
 }
 
