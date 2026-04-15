@@ -100,9 +100,22 @@
 	</header>
 
 	<!-- Desktop area -->
-	<main class="relative flex-1 overflow-hidden" aria-label="Desktop" style="background:#4338ca;">
+	<main
+		class="relative flex-1 overflow-hidden"
+		aria-label="Desktop"
+		style="background:#4338ca;"
+		on:click={handleDesktopBgClick}
+		on:keydown={(e) => {
+			if (e.key === 'Enter' || e.key === ' ') {
+				e.preventDefault();
+				if ($windows.length > 0) toggleWindowSlide();
+			}
+		}}
+		role="button"
+		tabindex="0"
+	>
 		<!-- Animated retro background (grid + glow + ASCII logo + digital rain) -->
-		<div class="pointer-events-none absolute inset-0 z-0">
+		<div style="position:absolute; inset:0; pointer-events:none; z-index:0;">
 			<div class="cyber-grid"></div>
 			<div class="glow-particle glow-1"></div>
 			<div class="glow-particle glow-2"></div>
@@ -113,21 +126,6 @@
 				<pre class="logo-text">{CYBERDYNE_ASCII_LOGO}</pre>
 			</div>
 		</div>
-
-		<!-- Background click handler (transparent, covers desktop) -->
-		<div
-			class="absolute inset-0 z-[1]"
-			on:click={handleDesktopBgClick}
-			on:keydown={(e) => {
-				if (e.key === 'Enter' || e.key === ' ') {
-					e.preventDefault();
-					if ($windows.length > 0) toggleWindowSlide();
-				}
-			}}
-			role="button"
-			tabindex="0"
-			aria-label="Desktop background"
-		></div>
 
 		<!-- Left-side app launcher grid -->
 		<div class="absolute left-4 top-4 z-10 w-[min(420px,50vw)]">
