@@ -98,6 +98,20 @@
 <style>
 	.terminal-container {
 		min-height: 200px;
+		background: #000 !important;
+		color: #00ff00 !important;
+	}
+	.terminal-container :global(.text-retro-green) {
+		color: #00ff00 !important;
+	}
+	.terminal-container :global(.text-retro-green-dark) {
+		color: #00dd00 !important;
+	}
+	.terminal-container :global(.text-retro-green-darker) {
+		color: #00aa00 !important;
+	}
+	.terminal-container :global(.border-retro-border) {
+		border-color: #166534 !important;
 	}
 	
 	.terminal-output {
