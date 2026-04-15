@@ -5,66 +5,25 @@
 		DesktopIcon,
 		RetroWindow,
 		Taskbar,
-		StartMenu
+		StartMenu,
+		ErrorBoundary
 	} from '@cyberdynecorp/svelte-ui-core';
-	import {
-		windows,
-		createWindow,
-		closeWindow,
-		bringToFront,
-		closeAllWindows,
-		toggleWindowSlide
-	} from '$lib/stores/windowStore';
-	import { navItems, viewMap } from '$lib/constants/navigation';
+	import { closeWindow, bringToFront, toggleWindowSlide } from '$lib/stores/windowStore';
+	import { navItems } from '$lib/constants/navigation';
 	import { CYBERDYNE_ASCII_LOGO } from '$lib/constants/asciiLogo';
-	import type { MarketplaceItem } from '$lib/types/components';
-	import { cart, marketplaceItemToCartItem } from '$lib/viewmodels/cartViewModel';
+	import { createShellViewModel } from '$lib/viewmodels/shellViewModel';
 	import ViewRouter from '$lib/components/ViewRouter.svelte';
 	import Web3Wallet from '$lib/components/Web3Wallet.svelte';
 	import { isMobileDevice } from '$lib/utils/mobileDetection';
 
-	let cartCount = 0;
-	const unsubCart = cart.count.subscribe((v) => (cartCount = v));
+	const shell = createShellViewModel();
+	const { windows, cartCount, startMenuItems } = shell;
+
+	let cartCountValue = 0;
+	const unsubCart = cartCount.subscribe((v) => (cartCountValue = v));
 
 	let isMobile = false;
 	let startOpen = false;
-
-	function addToCart(item: MarketplaceItem) {
-		cart.addItem(marketplaceItemToCartItem(item));
-	}
-
-	function openWindowFor(name: string) {
-		const view = viewMap[name] || name.toLowerCase();
-		createWindow(view as any, name);
-	}
-
-	function handleDesktopBgClick(e: MouseEvent) {
-		const target = e.target as HTMLElement;
-		// Ignore clicks inside a RetroWindow (library class), on buttons, or on
-		// any desktop icon — only true empty-desktop clicks should slide.
-		if (
-			target.closest('.cy-rwin') ||
-			target.closest('.cy-dicon') ||
-			target.closest('.cy-start') ||
-			target.closest('.cy-taskbar') ||
-			target.closest('button')
-		)
-			return;
-		if ($windows.length > 0) toggleWindowSlide();
-	}
-
-	const startMenuItems = [
-		{ id: 'team', label: 'Our Team', icon: '👥' },
-		{ id: 'terminal', label: 'Terminal', icon: '💻' },
-		{ id: 'close-all', label: 'Close All Windows', icon: '❌' }
-	];
-
-	function onStartSelect(id: string) {
-		startOpen = false;
-		if (id === 'terminal') createWindow('terminal', 'Terminal');
-		else if (id === 'team') openWindowFor('Team');
-		else if (id === 'close-all') closeAllWindows();
-	}
 
 	$: taskbarItems = $windows.map((w) => ({
 		id: w.id,
@@ -73,8 +32,16 @@
 		icon: undefined as string | undefined
 	}));
 
-	function onTaskbarItemClick(id: string) {
-		bringToFront(id);
+	function onStartSelect(id: string) {
+		startOpen = false;
+		shell.handleStartSelect(id);
+	}
+
+	function onSlideToggleKey(e: KeyboardEvent) {
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			if ($windows.length > 0) toggleWindowSlide();
+		}
 	}
 
 	onMount(() => {
@@ -109,20 +76,17 @@
 	</header>
 
 	<!-- Desktop area -->
-	<main
-		class="relative flex-1 overflow-hidden"
-		aria-label="Desktop"
-		style="background:#4338ca;"
-		on:click={handleDesktopBgClick}
-		on:keydown={(e) => {
-			if (e.key === 'Enter' || e.key === ' ') {
-				e.preventDefault();
-				if ($windows.length > 0) toggleWindowSlide();
-			}
-		}}
-		role="button"
-		tabindex="0"
-	>
+	<main class="relative flex-1 overflow-hidden" aria-label="Desktop" style="background:#4338ca;">
+		<!-- Dedicated accessible slide toggle covering the empty desktop -->
+		<button
+			type="button"
+			class="absolute inset-0 w-full h-full bg-transparent border-0 p-0 m-0 cursor-default"
+			aria-label="Toggle window slide"
+			on:click={shell.handleDesktopBgClick}
+			on:keydown={onSlideToggleKey}
+			style="z-index:1;"
+		></button>
+
 		<!-- Animated retro background (grid + glow + ASCII logo + digital rain) -->
 		<div style="position:absolute; inset:0; pointer-events:none; z-index:0;">
 			<div class="cyber-grid"></div>
@@ -149,7 +113,7 @@
 					<DesktopIcon
 						label={isMobile && item.mobileLabel ? item.mobileLabel : item.name}
 						iconSrc={item.icon}
-						onActivate={() => openWindowFor(item.name)}
+						onActivate={() => shell.openWindowByNavItem(item)}
 					/>
 				{/each}
 			</DesktopGrid>
@@ -158,16 +122,14 @@
 		<!-- Cart icon top-right -->
 		<div style="position:absolute; top:16px; right:16px; z-index:10;">
 			<DesktopIcon
-				label={`Your Bag${cartCount > 0 ? ` (${cartCount})` : ''}`}
+				label={`Your Bag${cartCountValue > 0 ? ` (${cartCountValue})` : ''}`}
 				iconSrc="/assets/cart.svg"
-				badge={cartCount > 0 ? cartCount : undefined}
-				onActivate={() => createWindow('cart', `Your Bag (${cartCount})`)}
+				badge={cartCountValue > 0 ? cartCountValue : undefined}
+				onActivate={() => shell.openCart()}
 			/>
 		</div>
 
-		<!-- Windows: RetroWindow self-positions via fixed + x/y; DOM order = stacking.
-		     Minimized windows hide; slide-hidden windows stay rendered but the store
-		     moves their x/y to a screen edge so they poke out (original behaviour). -->
+		<!-- Windows: each wrapped in ErrorBoundary so a broken view can't take the shell down -->
 		{#each [...$windows].sort((a, b) => a.zIndex - b.zIndex) as w (w.id)}
 			{#if !w.minimized}
 				<RetroWindow
@@ -182,7 +144,9 @@
 					onClose={() => closeWindow(w.id)}
 					onFocus={() => bringToFront(w.id)}
 				>
-					<ViewRouter content={w.content} onAddToCart={addToCart} {isMobile} />
+					<ErrorBoundary>
+						<ViewRouter content={w.content} onAddToCart={shell.addToCart} {isMobile} />
+					</ErrorBoundary>
 				</RetroWindow>
 			{/if}
 		{/each}
@@ -191,8 +155,7 @@
 	<!-- Bottom taskbar showing open windows -->
 	{#if taskbarItems.length > 0}
 		<footer class="retro-bottom-taskbar border-t-2 border-black">
-			<Taskbar items={taskbarItems} position="bottom" onItemClick={onTaskbarItemClick} ariaLabel="Open windows" />
+			<Taskbar items={taskbarItems} position="bottom" onItemClick={bringToFront} ariaLabel="Open windows" />
 		</footer>
 	{/if}
 </div>
-

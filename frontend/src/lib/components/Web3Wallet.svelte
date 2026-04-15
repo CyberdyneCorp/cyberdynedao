@@ -1,47 +1,25 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { web3AuthService } from '../web3/web3AuthService';
-	import { appKitService } from '../web3/appKitService';
 	import { walletInfo, getNetworkName } from '../stores/appKitStore';
-	import { completeWalletDisconnect } from '../utils/walletDisconnect';
 	import { userTraits, hasAnyAccess, isLoadingTraits, getActiveTraits } from '../stores/accessNFTStore';
-	import { walletInfo as web3WalletInfo } from '../stores/web3Store';
-	import { createWeb3WalletViewModel, type Web3AuthUserLike } from '$lib/viewmodels/web3WalletViewModel';
+	import {
+		createDefaultWeb3WalletViewModel,
+		bootstrapWeb3Wallet
+	} from '$lib/viewmodels/web3WalletViewModelFactory';
 	import NFTTerminal from './NFTTerminal.svelte';
-	import { ConnectWalletModal, PixelButton } from '@cyberdynecorp/svelte-ui-core';
+	import { ConnectWalletModal } from '@cyberdynecorp/svelte-ui-core';
 
 	const walletProviders = [
 		{ id: 'walletconnect', name: 'WalletConnect', description: 'Connect MetaMask, Trust Wallet & 50+ wallets', icon: '📱' },
 		{ id: 'web3auth', name: 'Continue with Google', description: 'Secure authentication via Google', icon: 'G' }
 	];
 
+	const vm = createDefaultWeb3WalletViewModel();
+
 	function onProviderSelect(id: string) {
 		if (id === 'walletconnect') vm.handleWalletConnect();
 		else if (id === 'web3auth') vm.handleWeb3AuthConnect();
 	}
-
-	const vm = createWeb3WalletViewModel({
-		connectWalletConnect: async () => {
-			const initialized = await appKitService.initialize();
-			if (!initialized) throw new Error('Failed to initialize AppKit');
-			await appKitService.openModal();
-		},
-		connectWeb3Auth: async () => {
-			const { polyfillsReady } = await import('$lib/polyfills');
-			await polyfillsReady;
-			const user = await web3AuthService.loginWithGoogle();
-			return user as Web3AuthUserLike | null;
-		},
-		disconnect: async () => {
-			const result = await completeWalletDisconnect();
-			return result;
-		},
-		checkAuthStatus: async () => {
-			const user = await web3AuthService.checkAuthStatus();
-			return user as Web3AuthUserLike | null;
-		},
-		setGlobalWeb3Info: (info) => web3WalletInfo.set(info)
-	});
 
 	const {
 		walletConnected,
@@ -67,15 +45,9 @@
 	});
 
 	onMount(async () => {
-		try {
-			const { polyfillsReady } = await import('$lib/polyfills');
-			await polyfillsReady;
-			await new Promise(resolve => setTimeout(resolve, 100));
-			await vm.checkAuthStatus();
-			appKitService.initialize().catch(() => {});
-		} catch {
-			// Initialization errors are non-fatal.
-		}
+		await bootstrapWeb3Wallet();
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		await vm.checkAuthStatus().catch(() => {});
 	});
 
 	onDestroy(() => {
