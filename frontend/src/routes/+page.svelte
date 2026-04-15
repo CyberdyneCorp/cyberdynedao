@@ -150,9 +150,11 @@
 			/>
 		</div>
 
-		<!-- Windows: RetroWindow self-positions via fixed + x/y; DOM order = stacking -->
+		<!-- Windows: RetroWindow self-positions via fixed + x/y; DOM order = stacking.
+		     Minimized windows hide; slide-hidden windows stay rendered but the store
+		     moves their x/y to a screen edge so they poke out (original behaviour). -->
 		{#each [...$windows].sort((a, b) => a.zIndex - b.zIndex) as w (w.id)}
-			{#if !w.isSlideHidden && !w.minimized}
+			{#if !w.minimized}
 				<RetroWindow
 					title={w.title}
 					open
