@@ -117,7 +117,7 @@
 
 .logo-text {
 	font-family: 'JetBrains Mono', monospace;
-	font-size: clamp(10px, 1.3vw, 18px);
+	font-size: 12px;
 	line-height: 1;
 	color: #00ffff;
 	text-shadow:
@@ -171,16 +171,13 @@
 }
 
 @keyframes text-wave {
-	0%, 100% {
-		transform: translateY(0px);
-	}
-	25% {
-		transform: translateY(-2px);
-	}
-	50% {
-		transform: translateY(-1px);
-	}
-	75% {
-		transform: translateY(-3px);
-	}
+	0%, 100% { transform: translateY(0px); }
+	25% { transform: translateY(-2px); }
+	50% { transform: translateY(-1px); }
+	75% { transform: translateY(-3px); }
+}
+
+/* Hide the ASCII logo on narrow viewports so it doesn't overflow */
+@media (max-width: 768px) {
+	.ascii-logo { display: none !important; }
 }
