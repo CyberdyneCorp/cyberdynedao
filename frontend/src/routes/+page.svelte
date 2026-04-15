@@ -137,8 +137,14 @@
 		</div>
 
 		<!-- Left-side app launcher grid -->
-		<div class="absolute left-4 top-4 z-10 w-[min(420px,50vw)]">
-			<DesktopGrid columns={2} gap={16} align="start" side="left" ariaLabel="Applications">
+		<div class="absolute left-4 top-4 z-10 w-[min(420px,60vw)]">
+			<DesktopGrid
+				columns={isMobile ? 1 : 2}
+				gap={isMobile ? 10 : 16}
+				align="start"
+				side="left"
+				ariaLabel="Applications"
+			>
 				{#each navItems as item}
 					<DesktopIcon
 						label={isMobile && item.mobileLabel ? item.mobileLabel : item.name}
