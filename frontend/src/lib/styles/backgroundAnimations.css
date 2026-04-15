@@ -116,6 +116,13 @@
 }
 
 .logo-text {
+	/* Foundation base.css styles every <pre> with a dark bg + border + padding;
+	   null those out so only the ASCII glyphs paint. */
+	background: transparent !important;
+	border: none !important;
+	border-radius: 0 !important;
+	padding: 0 !important;
+	overflow: visible !important;
 	font-family: 'JetBrains Mono', monospace;
 	font-size: 12px;
 	line-height: 1;
