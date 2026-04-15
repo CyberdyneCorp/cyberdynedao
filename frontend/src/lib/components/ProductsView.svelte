@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { PixelButton, PixelScrollArea } from '@cyberdynecorp/svelte-ui-core';
 	import { productSuite } from '$lib/data/products';
 
 	const paletteClasses = {
@@ -10,6 +11,7 @@
 	} as const;
 </script>
 
+<PixelScrollArea maxHeight="100%" ariaLabel="Product suite">
 <div class="products-container">
 	<div class="header-section mb-8">
 		<h1 class="text-3xl font-mono font-bold text-center mb-4">CyberdyneCorp Product Suite</h1>
@@ -54,11 +56,10 @@
 		<p class="text-lg text-gray-600 mb-4">
 			Ready to experience the future of digital finance and lifestyle management?
 		</p>
-		<button class="px-6 py-3 bg-blue-600 text-white font-mono font-semibold rounded-lg hover:bg-blue-700 transition-colors">
-			Explore Our Products
-		</button>
+		<PixelButton variant="solid" size="lg">Explore Our Products</PixelButton>
 	</div>
 </div>
+</PixelScrollArea>
 
 <style>
 	.products-container { max-width: 1200px; margin: 0 auto; padding: 20px; }

@@ -167,19 +167,23 @@
 			<!-- Windows -->
 			{#each $windows as w (w.id)}
 				{#if !w.isSlideHidden && !w.minimized}
-					<div data-retro-window style="position:absolute; left:{w.x}px; top:{w.y}px; z-index:{w.zIndex}; width:{w.width}px; height:{w.height}px;">
-						<RetroWindow
-							title={w.title}
-							open
-							width={w.width}
-							height={w.height}
-							draggable={false}
-							resizable={false}
-							onClose={() => closeWindow(w.id)}
-							onFocus={() => bringToFront(w.id)}
-						>
-							<ViewRouter content={w.content} onAddToCart={addToCart} {isMobile} />
-						</RetroWindow>
+					<div data-retro-window style="position:absolute; inset:0; z-index:{w.zIndex}; pointer-events:none;">
+						<div style="pointer-events:auto;">
+							<RetroWindow
+								title={w.title}
+								open
+								x={w.x}
+								y={w.y}
+								width={w.width}
+								height={w.height}
+								draggable
+								resizable
+								onClose={() => closeWindow(w.id)}
+								onFocus={() => bringToFront(w.id)}
+							>
+								<ViewRouter content={w.content} onAddToCart={addToCart} {isMobile} />
+							</RetroWindow>
+						</div>
 					</div>
 				{/if}
 			{/each}

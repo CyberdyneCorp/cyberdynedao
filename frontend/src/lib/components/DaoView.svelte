@@ -16,9 +16,10 @@
 	const timeUntilDividend = vm.timeUntilDividend;
 
 	onMount(() => vm.startCountdown());
+	import { PixelScrollArea } from '@cyberdynecorp/svelte-ui-core';
 </script>
 
-<div class="flex flex-col h-full bg-white overflow-y-auto">
+<div class="flex flex-col h-full bg-white">
 	<div class="bg-gradient-to-r from-purple-600 to-blue-600 p-3 border-b-2 border-black">
 		<h1 class="text-xl font-bold font-mono flex items-center gap-2 text-black">
 			<span class="text-2xl">⚡</span>
@@ -27,7 +28,8 @@
 		<p class="font-mono text-xs text-black">Decentralized Autonomous Organization</p>
 	</div>
 
-	<div class="flex-1 p-2 space-y-2">
+	<PixelScrollArea maxHeight="100%" ariaLabel="DAO content">
+	<div class="p-2 space-y-2">
 		<section class="grid grid-cols-2 gap-2">
 			<div class="bg-gray-50 rounded border border-gray-200 p-2">
 				<div class="flex items-center gap-2 mb-1">
@@ -154,4 +156,5 @@
 			</div>
 		</section>
 	</div>
+	</PixelScrollArea>
 </div>

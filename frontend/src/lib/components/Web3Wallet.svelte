@@ -8,6 +8,17 @@
 	import { walletInfo as web3WalletInfo } from '../stores/web3Store';
 	import { createWeb3WalletViewModel, type Web3AuthUserLike } from '$lib/viewmodels/web3WalletViewModel';
 	import NFTTerminal from './NFTTerminal.svelte';
+	import { ConnectWalletModal, PixelButton } from '@cyberdynecorp/svelte-ui-core';
+
+	const walletProviders = [
+		{ id: 'walletconnect', name: 'WalletConnect', description: 'Connect MetaMask, Trust Wallet & 50+ wallets', icon: '📱' },
+		{ id: 'web3auth', name: 'Continue with Google', description: 'Secure authentication via Google', icon: 'G' }
+	];
+
+	function onProviderSelect(id: string) {
+		if (id === 'walletconnect') vm.handleWalletConnect();
+		else if (id === 'web3auth') vm.handleWeb3AuthConnect();
+	}
 
 	const vm = createWeb3WalletViewModel({
 		connectWalletConnect: async () => {
@@ -76,38 +87,13 @@
 </script>
 
 <div class="web3-wallet">
-	{#if $showConnectionModal}
-		<div class="connection-modal-overlay" on:click={() => vm.closeConnectionModal()} on:keydown={(e) => e.key === 'Escape' && vm.closeConnectionModal()} role="button" tabindex="0">
-			<div class="connection-modal" on:click|stopPropagation on:keydown={(e) => e.key === 'Escape' && vm.closeConnectionModal()} role="dialog" aria-labelledby="modal-title" tabindex="-1">
-				<div class="modal-header">
-					<h2 id="modal-title" class="modal-title">🖥️ CONNECT WALLET</h2>
-					<button on:click={() => vm.closeConnectionModal()} class="close-btn">✕</button>
-				</div>
-				<div class="connection-options">
-					<button on:click={() => vm.handleWalletConnect()} disabled={$isLoading} class="connection-option walletconnect-option">
-						<div class="option-icon">📱</div>
-						<div class="option-content">
-							<div class="option-title">WalletConnect</div>
-							<div class="option-description">Connect MetaMask, Trust Wallet & 50+ wallets</div>
-						</div>
-					</button>
-					<button on:click={() => vm.handleWeb3AuthConnect()} disabled={$isLoading} class="connection-option web3auth-option">
-						<div class="option-icon">G</div>
-						<div class="option-content">
-							<div class="option-title">Continue with Google</div>
-							<div class="option-description">Secure authentication via Google</div>
-						</div>
-					</button>
-				</div>
-				{#if $isLoading}
-					<div class="loading-indicator">
-						<div class="loading-text">Connecting...</div>
-						<div class="loading-dots">...</div>
-					</div>
-				{/if}
-			</div>
-		</div>
-	{/if}
+	<ConnectWalletModal
+		open={$showConnectionModal}
+		title="🖥️ CONNECT WALLET"
+		providers={walletProviders}
+		onSelect={onProviderSelect}
+		onClose={() => vm.closeConnectionModal()}
+	/>
 
 	{#if $errorMessage}
 		<div class="error-banner-absolute">
@@ -213,22 +199,7 @@
 	.web3-wallet { font-family: 'JetBrains Mono', 'Courier New', monospace; color: #00ff00; background: transparent; position: relative; z-index: 5; min-height: fit-content; }
 	.wallet-connected { position: relative; }
 	.wallet-info { position: relative; z-index: 20; }
-	.connection-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-	.connection-modal { background: #000; border: 2px solid #00ff00; border-radius: 8px; padding: 24px; min-width: 400px; max-width: 90vw; box-shadow: 0 0 20px rgba(0,255,0,0.3); }
-	.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid #00ff00; padding-bottom: 12px; }
-	.modal-title { color: #00ff00; font-size: 16px; font-weight: bold; margin: 0; }
-	.close-btn { background: none; border: none; color: #00ff00; font-size: 18px; cursor: pointer; padding: 4px; border-radius: 4px; transition: all 0.2s ease; }
-	.close-btn:hover { background: #00ff00; color: #000; }
-	.connection-options { display: flex; flex-direction: column; gap: 16px; }
-	.connection-option { display: flex; align-items: center; gap: 16px; padding: 16px; background: rgba(0,255,0,0.1); border: 1px solid #00ff00; border-radius: 6px; cursor: pointer; transition: all 0.2s ease; width: 100%; text-align: left; }
-	.connection-option:hover:not(:disabled) { background: rgba(0,255,0,0.2); border-color: #40ff40; box-shadow: 0 0 10px rgba(0,255,0,0.2); }
-	.connection-option:disabled { opacity: 0.5; cursor: not-allowed; }
-	.option-icon { font-size: 24px; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(0,255,0,0.2); border: 1px solid #00ff00; }
-	.web3auth-option .option-icon { background: #4285f4; color: white; font-weight: bold; border-color: #4285f4; }
-	.option-content { flex: 1; }
-	.option-title { font-weight: bold; color: #00ff00; margin-bottom: 4px; }
-	.option-description { font-size: 12px; color: #80ff80; }
-	.connect-btn { width: 100%; padding: 8px 12px; background: #22c55e; border: 2px solid #000; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: bold; cursor: pointer; border-radius: 4px; transition: all 0.2s ease; text-align: center; box-shadow: 2px 2px 0 #000; }
+.connect-btn { width: 100%; padding: 8px 12px; background: #22c55e; border: 2px solid #000; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: bold; cursor: pointer; border-radius: 4px; transition: all 0.2s ease; text-align: center; box-shadow: 2px 2px 0 #000; }
 	.connect-btn:hover:not(:disabled) { background: #16a34a; transform: translate(1px,1px); box-shadow: 1px 1px 0 #000; }
 	.connect-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 	.error-banner-absolute { position: fixed; top: 70px; right: 20px; background: rgba(255,0,0,0.95); border: 2px solid #ff4444; border-radius: 8px; padding: 16px; z-index: 2147483647; box-shadow: 0 8px 24px rgba(0,0,0,0.4); min-width: 300px; max-width: 400px; }
@@ -255,9 +226,6 @@
 	.nft-view-btn:hover { background: rgba(0,255,0,0.3); box-shadow: 0 0 8px rgba(0,255,0,0.4); transform: translateY(-1px); }
 	.disconnect-btn { width: 100%; padding: 8px; background: rgba(255,0,0,0.1); border: 1px solid #ff4444; color: #ff4444; font-family: inherit; font-size: 12px; font-weight: bold; cursor: pointer; border-radius: 4px; transition: all 0.2s ease; }
 	.disconnect-btn:hover { background: rgba(255,0,0,0.2); box-shadow: 0 0 5px rgba(255,68,68,0.3); }
-	.loading-indicator { margin-top: 16px; text-align: center; color: #80ff80; }
-	.loading-text { font-size: 12px; margin-bottom: 8px; }
-	.loading-dots { animation: pulse 1.5s infinite; font-size: 16px; color: #00ff00; }
 	@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 	@keyframes pulse { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }
 </style>

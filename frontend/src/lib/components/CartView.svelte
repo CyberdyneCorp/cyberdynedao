@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { PixelButton, PixelScrollArea } from '@cyberdynecorp/svelte-ui-core';
 	import { cart } from '$lib/viewmodels/cartViewModel';
 	import { formatMarketplacePrice as formatPrice } from '$lib/viewmodels/shopViewModel';
 
@@ -12,7 +13,7 @@
 	}
 </script>
 
-<div class="flex flex-col h-full bg-white overflow-y-auto">
+<div class="flex flex-col h-full bg-white">
 	<div class="bg-gradient-to-r from-green-600 to-emerald-600 p-2 border-b-2 border-black">
 		<h1 class="text-sm font-bold font-mono flex items-center gap-2 text-black">
 			<span class="text-lg">🛒</span>
@@ -21,7 +22,8 @@
 		<p class="font-mono text-xs text-black">Review your items • Complete your purchase</p>
 	</div>
 
-	<div class="flex-1 p-2">
+	<PixelScrollArea maxHeight="100%" ariaLabel="Cart contents">
+	<div class="p-2">
 		{#if $items.length === 0}
 			<div class="text-center py-8">
 				<div class="text-4xl mb-3">🛒</div>
@@ -105,19 +107,10 @@
 				</div>
 
 				<div class="space-y-2">
-					<button class="w-full bg-green-600 text-white py-2 px-3 rounded font-mono text-xs font-bold hover:bg-green-700 transition-colors">
-						💳 Checkout Now
-					</button>
+					<PixelButton variant="solid" size="md" fullWidth>💳 Checkout Now</PixelButton>
 					<div class="flex gap-1">
-						<button class="flex-1 border border-gray-300 text-gray-700 py-1.5 px-2 rounded font-mono text-xs hover:bg-gray-50 transition-colors">
-							💬 Contact Sales
-						</button>
-						<button
-							class="flex-1 border border-red-300 text-red-700 py-1.5 px-2 rounded font-mono text-xs hover:bg-red-50 transition-colors"
-							on:click={() => cart.clear()}
-						>
-							🗑️ Clear All
-						</button>
+						<div class="flex-1"><PixelButton variant="outline" size="sm" fullWidth>💬 Contact Sales</PixelButton></div>
+						<div class="flex-1"><PixelButton variant="outline" size="sm" fullWidth onclick={() => cart.clear()}>🗑️ Clear All</PixelButton></div>
 					</div>
 				</div>
 
@@ -135,4 +128,5 @@
 			</div>
 		{/if}
 	</div>
+	</PixelScrollArea>
 </div>
