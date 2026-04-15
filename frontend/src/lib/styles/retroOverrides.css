@@ -1,0 +1,29 @@
+/**
+ * Retro palette overrides for @cyberdynecorp/svelte-ui-foundation tokens.
+ * Keeps the library's retro components visually matched to the existing
+ * blue/indigo desktop and yellow-green accents used across the app.
+ */
+:root {
+	/* Desktop / window chrome */
+	--color-bg-primary: #4338ca;
+	--color-bg-surface: #c0c0c0;
+	--color-bg-elevated: #ffffff;
+	--color-border-strong: #000000;
+
+	/* Accent — keep the neon-green "Connect Wallet" button */
+	--color-action-brand-default: #22c55e;
+	--color-action-brand-hover: #16a34a;
+	--color-action-brand-fg: #000000;
+
+	/* Retro window title bar gradient */
+	--retro-titlebar-gradient: linear-gradient(to right, #1e3a8a, #3b82f6);
+	--retro-taskbar-gradient: linear-gradient(to right, #1e3a8a, #3b82f6);
+
+	/* Pixel fonts */
+	--font-mono: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
+}
+
+/* Tame library defaults so retro components blend with existing backdrop */
+.cyberdyne-retro-shell {
+	background: #4338ca;
+}
