@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
 	import {
-		CRTBackground,
 		DesktopGrid,
 		DesktopIcon,
 		RetroWindow,
@@ -101,15 +100,21 @@
 	</header>
 
 	<!-- Desktop area -->
-	<main class="relative flex-1 overflow-hidden" aria-label="Desktop">
-		<!-- CRT background layer -->
-		<div class="absolute inset-0 z-0">
-			<CRTBackground color="#4338ca" showGrid showScanlines fullScreen>
-				{''}
-			</CRTBackground>
+	<main class="relative flex-1 overflow-hidden" aria-label="Desktop" style="background:#4338ca;">
+		<!-- Animated retro background (grid + glow + ASCII logo + digital rain) -->
+		<div class="pointer-events-none absolute inset-0 z-0">
+			<div class="cyber-grid"></div>
+			<div class="glow-particle glow-1"></div>
+			<div class="glow-particle glow-2"></div>
+			<div class="glow-particle glow-3"></div>
+			<div class="digital-rain rain-1"></div>
+			<div class="digital-rain rain-2"></div>
+			<div class="ascii-logo">
+				<pre class="logo-text">{CYBERDYNE_ASCII_LOGO}</pre>
+			</div>
 		</div>
 
-		<!-- Background click handler + decorations -->
+		<!-- Background click handler (transparent, covers desktop) -->
 		<div
 			class="absolute inset-0 z-[1]"
 			on:click={handleDesktopBgClick}
@@ -122,16 +127,7 @@
 			role="button"
 			tabindex="0"
 			aria-label="Desktop background"
-		>
-			<div class="pointer-events-none absolute inset-0">
-				<div class="ascii-logo">
-					<pre class="logo-text">{CYBERDYNE_ASCII_LOGO}</pre>
-				</div>
-				<div class="glow-particle glow-1"></div>
-				<div class="glow-particle glow-2"></div>
-				<div class="glow-particle glow-3"></div>
-			</div>
-		</div>
+		></div>
 
 		<!-- Left-side app launcher grid -->
 		<div class="absolute left-4 top-4 z-10 w-[min(420px,50vw)]">
@@ -185,25 +181,3 @@
 	{/if}
 </div>
 
-<style>
-	.ascii-logo {
-		position: absolute;
-		inset: 0;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		pointer-events: none;
-		opacity: 0.35;
-	}
-	.logo-text {
-		color: rgba(255, 255, 255, 0.85);
-		font-family: var(--font-mono, 'JetBrains Mono', monospace);
-		font-size: 10px;
-		line-height: 1.1;
-		white-space: pre;
-		margin: 0;
-	}
-	@media (max-width: 768px) {
-		.ascii-logo { display: none; }
-	}
-</style>
