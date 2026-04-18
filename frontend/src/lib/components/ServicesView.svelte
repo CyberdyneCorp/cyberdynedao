@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { PixelScrollArea } from '@cyberdynecorp/svelte-ui-core';
 	import { serviceSections, workflowSteps, whyCyberdynePoints } from '$lib/data/services';
 </script>
 
-<div class="flex flex-col h-full bg-white overflow-y-auto">
+<div class="flex flex-col h-full bg-white">
 	<div class="bg-gradient-to-r from-blue-600 to-cyan-600 p-3 border-b-2 border-black">
 		<h1 class="text-xl font-bold font-mono flex items-center gap-2 text-black">
 			<span class="text-2xl">⚙️</span>
@@ -11,7 +12,8 @@
 		<p class="font-mono text-xs text-black">Full-Stack Development • Backend & Frontend Servers • Decentralized Infrastructure</p>
 	</div>
 
-	<div class="flex-1 p-4 space-y-6">
+	<PixelScrollArea maxHeight="100%" ariaLabel="Services">
+	<div class="p-4 space-y-6">
 		{#each serviceSections as section}
 			<section class="bg-gradient-to-r {section.gradientFrom} {section.gradientTo} rounded border {section.borderColor} p-4">
 				<div class="flex items-center gap-2 mb-3">
@@ -72,4 +74,5 @@
 			</div>
 		</section>
 	</div>
+	</PixelScrollArea>
 </div>

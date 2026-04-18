@@ -23,21 +23,22 @@ export function createWindow(content: WindowState['content'], title: string) {
 		// Calculate screen dimensions (using browser window if available)
 		const screenWidth = (typeof globalThis !== 'undefined' && globalThis.innerWidth) ? globalThis.innerWidth : 1920;
 		const screenHeight = (typeof globalThis !== 'undefined' && globalThis.innerHeight) ? globalThis.innerHeight : 1080;
-		
+
 		let x, y, width, height;
-		
+
 		// Position cart windows in bottom right corner by default
 		if (content === 'cart') {
-			width = 350;  // Smaller width for cart
-			height = 650; // Taller height for cart
-			x = screenWidth - width - 20; // 20px from right edge
-			y = screenHeight - height - 60; // 60px from bottom edge (accounting for taskbar)
+			width = Math.min(350, Math.max(280, screenWidth - 32));
+			height = Math.min(650, screenHeight - 100);
+			x = Math.max(16, screenWidth - width - 20);
+			y = Math.max(16, screenHeight - height - 60);
 		} else {
-			// Default positioning for other windows
-			width = 800;
-			height = 600;
-			x = 100 + wins.length * 30;
-			y = 50 + wins.length * 30;
+			// Default desired size, clamped to fit viewport with sensible margins
+			width = Math.min(800, Math.max(280, screenWidth - 32));
+			height = Math.min(600, Math.max(200, screenHeight - 120));
+			const cascade = wins.length * 30;
+			x = Math.max(16, Math.min(100 + cascade, screenWidth - width - 16));
+			y = Math.max(16, Math.min(50 + cascade, screenHeight - height - 16));
 		}
 
 		const newWindow: WindowState = {

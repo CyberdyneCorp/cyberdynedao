@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { PixelButton, PixelScrollArea } from '@cyberdynecorp/svelte-ui-core';
 	import { teamMembers } from '$lib/data/team';
 
 	const paletteClasses = {
@@ -37,6 +38,7 @@
 	} as const;
 </script>
 
+<PixelScrollArea maxHeight="100%" ariaLabel="Team">
 <div class="team-container">
 	<div class="header-section mb-8">
 		<h1 class="text-3xl font-mono font-bold text-center mb-6">About Us</h1>
@@ -81,12 +83,11 @@
 			<p class="text-gray-700 mb-6 max-w-2xl mx-auto">
 				Join our community and explore the exciting worlds of Finance, Blockchain, AI, and Game Development with our expert team.
 			</p>
-			<button class="px-6 py-3 bg-blue-600 text-white font-mono font-semibold rounded-lg hover:bg-blue-700 transition-colors">
-				Get Started Today
-			</button>
+			<PixelButton variant="solid" size="lg">Get Started Today</PixelButton>
 		</div>
 	</div>
 </div>
+</PixelScrollArea>
 
 <style>
 	.team-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
