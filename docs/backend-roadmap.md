@@ -129,7 +129,7 @@ flowchart TB
     end
 
     Client --> Traefik --> Routers --> AuthMW --> UC --> Domain
-    AuthMW -. JWKS fetch (cached) .-> Auth
+    AuthMW -. introspect token via /api/v1/users/me (cached) .-> Auth
     UC --> UoW --> OutPersist --> PG
     UC --> OutStripe --> Stripe
     UC --> OutWeb3 --> Base
@@ -195,19 +195,33 @@ For each module: **purpose**, three representative endpoints, **key dependencies
 
 ### 5.1 Auth Integration (consume only)
 
-**Purpose:** Verify CyberdyneAuth JWTs (cookie or Bearer), expose `current_user` to every router, and pull org/tier claims for authorization decisions. We do not own a `users` table — the `User` entity is hydrated from JWT claims plus a per-request memoized `/users/me` call.
+**Purpose:** Verify CyberdyneAuth tokens (cookie or Bearer), expose `current_user` to every router, and pull org/tier claims for authorization decisions. We do not own a `users` table — the `User` entity is hydrated from a cached `/api/v1/users/me` lookup against the live CyberdyneAuth service.
 
-**Key endpoints:** none of our own for auth. We rely on the frontend hitting CyberdyneAuth directly. We expose:
-- `GET /api/v1/me` — proxy that returns the merged claim view (CyberdyneAuth `/users/me` + our org-level extras like enrolled paths).
-- `POST /api/v1/me/link-wallet` — passes through to CyberdyneAuth's EIP-4361 flow, recorded locally for analytics.
+**Verification model: introspection, not local JWT signature check.** CyberdyneAuth v0.1.0 does **not** expose a JWKS endpoint or any public-key material. Tokens are opaque from our perspective. The auth middleware:
+
+1. Extracts the token from either the `access_token` cookie (browser) or the `Authorization: Bearer …` header (service).
+2. Looks up `(token_hash → user)` in an in-process TTL cache (default 60s).
+3. On cache miss, calls upstream `GET https://auth.backend.coolify.cyberdynecorp.ai/api/v1/users/me` with the token; on 200 caches the response, on 401 returns 401 to the caller.
+4. Stores the resolved `User` on `request.state.user`. Anonymous endpoints still work — middleware doesn't reject missing tokens, it just leaves `user = None`.
+
+**Trade-offs to acknowledge:**
+- Every cold-cache authenticated request becomes one extra hop to CyberdyneAuth. With a 60s TTL and typical session reuse, hit rate should be >95%.
+- Our backend's authn liveness is bounded by CyberdyneAuth's liveness. **Mitigation:** if CyberdyneAuth is unreachable on cache miss, we serve cached entries beyond TTL with a `X-Auth-Stale: true` response header and a structured-log warning. Cache entries hard-expire after 10× TTL (10 min) so a compromised token isn't accepted forever.
+- We can't decode token claims ourselves (no key). Tier / role / wallet / email all come from the `/api/v1/users/me` response shape — treat that endpoint as the canonical claims source.
+
+**Key endpoints (ours):**
+- `GET /api/v1/me` — returns the merged user view (CyberdyneAuth `/api/v1/users/me` payload + our local extras like enrolled paths, order history summary).
+- `POST /api/v1/me/link-wallet` — initiates wallet linking via CyberdyneAuth's challenge/verify pair (`POST /api/v1/auth/wallet/challenge` → frontend signs → `POST /api/v1/auth/wallet/verify`). EIP-191 challenge, not SIWE / EIP-4361.
 - Internal middleware: every request resolves `request.state.user: User | None`.
 
-**Key dependencies:** CyberdyneAuth JWKS endpoint (cached 1h), `httpx` async client, `python-jose` for JWT verification.
+**Key dependencies:** `httpx` async client (single configured client with connection pool), no JWT library (we don't decode tokens locally).
 
 **Testing:**
-- Unit: hand-crafted JWTs signed with a test keypair, JWKS adapter swapped for a fake.
-- Integration: spin a `respx` mock of CyberdyneAuth `/users/me`.
+- Unit: middleware behaviour with a `FakeAuthClient` returning canned `/users/me` responses (200, 401, 500, timeout); TTL cache eviction; the stale-fallback path on upstream outage.
+- Integration: `respx` mock of `https://auth.backend.coolify.cyberdynecorp.ai/api/v1/users/me` covering valid token → user, invalid token → 401, upstream 5xx → stale-cache behaviour.
 - Coverage: 100% on `domain/auth_identity` (it's tiny — just `User`/`Claims` value objects).
+
+**Known-unknown to verify in Phase 1:** the exact `/api/v1/users/me` response shape (we know it exists; the schema isn't fully visible in the OpenAPI spec). Specifically: where roles / policies / NFT tier live — embedded in the response, or accessible only via `/api/v1/admin/users/{user_id}/{iam,nft}` (which is admin-gated). If the latter, our backend needs a service-account credential to look up tier — see Open Q 9.
 
 ### 5.2 Content & Blog
 
@@ -613,7 +627,7 @@ Run via `lint-imports` in CI; same step is a `pre-commit` hook locally.
 
 | Dep | In unit | In integration | In e2e |
 |---|---|---|---|
-| CyberdyneAuth | hand-written `FakeAuthClient` returning canned claims | `respx` mock of `/users/me`, signed JWT with test key | real staging CyberdyneAuth |
+| CyberdyneAuth | hand-written `FakeAuthClient` returning canned `/api/v1/users/me` responses | `respx` mock of `${BASE}/api/v1/users/me` covering 200 / 401 / 5xx / timeout | real staging CyberdyneAuth |
 | PostgreSQL | not used (UoW is mocked) | `testcontainers-python` Postgres | real CI Postgres |
 | Stripe | `FakeStripeGateway` port impl | `stripe.Webhook.construct_event` with canned official fixtures | Stripe test mode + Stripe CLI in nightly |
 | OpenAI | `FakeChatCompletions` returning scripted tool-call sequences | local stub server | real key, gated behind nightly job |
@@ -651,8 +665,9 @@ Follow the OrgPilot recipe — **anything baked into the build is `is_build = tr
 | `DATABASE_POOL_SIZE` | default 10 — see the Coolify trap on connection limits |
 | `DATABASE_MAX_OVERFLOW` | default 20 |
 | `CYBERDYNE_AUTH_BASE_URL` | `https://auth.backend.coolify.cyberdynecorp.ai` |
-| `CYBERDYNE_AUTH_JWKS_URL` | `${CYBERDYNE_AUTH_BASE_URL}/.well-known/jwks.json` |
-| `CYBERDYNE_AUTH_AUDIENCE` | `cyberdyne-backend` |
+| `CYBERDYNE_AUTH_INTROSPECTION_TTL_S` | per-token cache TTL for `/api/v1/users/me` lookups; default 60 |
+| `CYBERDYNE_AUTH_INTROSPECTION_HARD_TTL_S` | hard expiry for stale-cache fallback during upstream outage; default 600 |
+| `CYBERDYNE_AUTH_SERVICE_TOKEN` | optional long-lived bearer token issued to a dedicated service account, used when our backend calls CyberdyneAuth admin endpoints (e.g., NFT-tier lookup); see Open Q 9 |
 | `COOKIE_DOMAIN` | `.coolify.cyberdynecorp.ai` (for any redirect URLs we emit) |
 | `CORS_ORIGINS` | comma-sep list including `https://cyberdynecorp.ai`, dev origins |
 | `STRIPE_SECRET_KEY` | live or test; rotated quarterly |
@@ -717,7 +732,7 @@ These need a decision before the corresponding phase starts. None block Phase 1.
 6. **Blog authoring UI?** — v1 is markdown via admin POST or git import CLI. Decide whether to bolt a Tiptap-based editor onto the existing admin SPA, or to keep it API-only.
 7. **Background work scheduler choice** — `apscheduler` in-process (simple, one less moving part) vs `arq` + Redis (works across replicas). Default: `apscheduler` until the moment we run 2+ replicas, at which point switch to `arq`.
 8. **Rate limiting strategy** — `slowapi` (in-process) vs a Redis-backed token bucket. Default: `slowapi` until traffic justifies otherwise. Captcha covers the most abusive endpoint already.
-9. **Service-account identity model for the chat agent calling CyberRAG** — CyberdyneAuth supports service tokens. Decide whether the chat agent uses a single static bearer or rotates via OAuth client-credentials. Default: static bearer in env, rotated quarterly.
+9. **Service-account identity for backend-to-backend calls** — CyberdyneAuth v0.1.0 does **not** expose a client-credentials / service-account token endpoint. Realistic options: (a) register a dedicated `cyberdyne-backend@…` user, log it in once, store the resulting access_token + refresh_token in Coolify env vars, refresh on a schedule (cron job that hits `POST /api/v1/auth/refresh`); (b) push CyberdyneAuth to add a real client-credentials flow as a feature request before Phase 6 — cleanest long-term; (c) use a side-channel API key (e.g., signed-request HMAC between our backend and CyberRAG) that bypasses CyberdyneAuth entirely for service-to-service. Default: ship (a) for Phase 6 because it unblocks the chat agent, raise (b) as a feature request in CyberdyneAuth. The token lives in env var `CYBERDYNE_AUTH_SERVICE_TOKEN`.
 10. **Domain name** — `api.coolify.cyberdynecorp.ai` is the default. If we want a clean public surface for the chat endpoint (e.g., `chat.cyberdynecorp.ai`) decide before Phase 6 to avoid a CORS/cookie rebuild.
 11. **Which DAO governance contract to deploy?** — Deferred from v1; the frontend's Proposals + dividend-countdown panels stay on mock data until this lands. Realistic options: (a) OpenZeppelin Governor + TimelockController — most boring, widest ecosystem support, easy to audit; (b) Compound/Tally-style Governor — deepest existing tooling, ties UI to Tally; (c) custom contract aligned to the CBY tokenomics — most flexible, most audit surface. Companion decision: on-chain dividend windows (a `Distributor` contract emitting a `DistributionScheduled` event) vs. off-chain admin-set schedules. Decide before any frontend work depends on real proposals.
 12. **Position fee accrual: live read vs event indexing?** — Phase 5 takes the simple path — every 5 min poll uncollected fees and decode them. Historical fee earnings, APY-over-time charts, and IL math need an event indexer (Subgraph or self-hosted). Decide in Phase 7+ whether to consume Uniswap's official Subgraph for Base, ship our own minimal indexer, or skip historical analytics entirely.
