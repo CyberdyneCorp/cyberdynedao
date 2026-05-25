@@ -147,7 +147,7 @@ flowchart TB
 Only the entities that matter; no per-column ERDs.
 
 **Identity (mirrored from CyberdyneAuth, read-only here)**
-- `User` (id, email, primary_wallet, org_id, tier, claims) — never persisted; rebuilt per request from JWT + `/users/me` lookup, short-cached.
+- `AuthIdentity` (`user_id: UUID`, `email: str | None`, `organization_id: UUID | None`, `is_active: bool`) — value object, never persisted; rebuilt per request from a cached `/api/v1/users/me` lookup. Shape matches geo_dashboard's `AuthIdentity` (see §5.1). NFT tier, linked wallet, and any roles/policies are *not* on this object — they're looked up on demand by their respective use cases. Per-token `exp` and `scopes` are not available because CyberdyneAuth doesn't surface them in `/users/me`.
 
 **Content**
 - `BlogPost` (slug, title, body_md, excerpt, category_id, author_id, published_at, tags[]) — primary aggregate.
@@ -195,33 +195,54 @@ For each module: **purpose**, three representative endpoints, **key dependencies
 
 ### 5.1 Auth Integration (consume only)
 
-**Purpose:** Verify CyberdyneAuth tokens (cookie or Bearer), expose `current_user` to every router, and pull org/tier claims for authorization decisions. We do not own a `users` table — the `User` entity is hydrated from a cached `/api/v1/users/me` lookup against the live CyberdyneAuth service.
+**Purpose:** Verify CyberdyneAuth tokens (cookie or Bearer), expose `current_user` to every router, and look up org / tier on demand. We do not own a `users` table — the `AuthIdentity` value object is hydrated from a cached `/api/v1/users/me` lookup against the live CyberdyneAuth service.
+
+**Pattern lifted from `geo_dashboard`, not invented here.** Both `geo_dashboard/backend` and `orgpilot/backend` already ship this exact pattern. Copy their files as the reference impl rather than re-deriving:
+- `geo_dashboard/backend/src/geosphere_backend/domain/ports/auth_port.py` — the `AuthPort` Protocol + `InvalidTokenError` / `AuthServiceUnavailableError` distinction.
+- `geo_dashboard/backend/src/geosphere_backend/adapters/outbound/auth/cyberdyne_auth_client.py` — raw HTTP client.
+- `geo_dashboard/backend/src/geosphere_backend/adapters/outbound/auth/caching_auth_port.py` — the caching decorator (SHA-256 keys + TTL + request coalescing).
+- `orgpilot/backend/src/orgpilot/adapters/outbound/auth/amini_auth_client.py` — adds resilience (retry-with-backoff + circuit breaker) which is worth keeping. OrgPilot calls it "Amini Auth" because CyberdyneAuth is the API-compatible re-implementation; the wire protocol is identical.
 
 **Verification model: introspection, not local JWT signature check.** CyberdyneAuth v0.1.0 does **not** expose a JWKS endpoint or any public-key material. Tokens are opaque from our perspective. The auth middleware:
 
 1. Extracts the token from either the `access_token` cookie (browser) or the `Authorization: Bearer …` header (service).
-2. Looks up `(token_hash → user)` in an in-process TTL cache (default 60s).
-3. On cache miss, calls upstream `GET https://auth.backend.coolify.cyberdynecorp.ai/api/v1/users/me` with the token; on 200 caches the response, on 401 returns 401 to the caller.
-4. Stores the resolved `User` on `request.state.user`. Anonymous endpoints still work — middleware doesn't reject missing tokens, it just leaves `user = None`.
+2. Looks up `(sha256(token) → AuthIdentity)` in an in-process cache (TTL **30s**, matching geo_dashboard — long enough to absorb the frontend's polling loops, short enough to keep revocation latency bounded). **Keys are SHA-256 of the token** — never hold raw bearer tokens in the cache dict.
+3. On cache miss, calls upstream `GET ${CYBERDYNE_AUTH_BASE_URL}/api/v1/users/me` with the token. On 200 caches the response; on 401 raises `InvalidTokenError` (caller returns 401); on transport / 5xx raises `AuthServiceUnavailableError` (caller returns 503).
+4. **Failures are not cached.** Every error retries upstream next call. No stale-cache fallback — geo_dashboard explicitly chose not to bother because 30s TTL + bounded revocation latency is the right trade-off.
+5. **Request coalescing.** Multiple concurrent verifications of the same token are merged via an `asyncio.Future` leader pattern — 5 simultaneous polls with the same token make 1 upstream call, not 5. Critical for dashboard polling.
+6. Wrap the upstream client in OrgPilot-style resilience: retry-with-backoff (3 retries, 0.5–8s) on transport errors, circuit breaker (5 failures → open for 60s) to fail fast when CyberdyneAuth is down.
+7. Stores the resolved `AuthIdentity` on `request.state.user`. Anonymous endpoints still work — middleware doesn't reject missing tokens, it just leaves `user = None`.
 
-**Trade-offs to acknowledge:**
-- Every cold-cache authenticated request becomes one extra hop to CyberdyneAuth. With a 60s TTL and typical session reuse, hit rate should be >95%.
-- Our backend's authn liveness is bounded by CyberdyneAuth's liveness. **Mitigation:** if CyberdyneAuth is unreachable on cache miss, we serve cached entries beyond TTL with a `X-Auth-Stale: true` response header and a structured-log warning. Cache entries hard-expire after 10× TTL (10 min) so a compromised token isn't accepted forever.
-- We can't decode token claims ourselves (no key). Tier / role / wallet / email all come from the `/api/v1/users/me` response shape — treat that endpoint as the canonical claims source.
+**`/api/v1/users/me` response shape — known gaps (per geo_dashboard's comments):**
+- **No token `exp`** — we can't surface token lifetime to MCP clients or downstream services. `expires_at` stays `None` in our domain model.
+- **No per-token scopes** — fine-grained per-token authorization isn't modeled yet upstream. We do coarse role checks against the user profile, not the token.
+- **Single `organization_id`** — multi-org per user isn't modeled. If our backend needs richer tenancy, we maintain a local `tenant_membership` table (geo_dashboard does this).
+- **No org name** — only `organization_id` UUID. If we display org names, we cache them locally.
+- **No NFT tier** — that's behind `GET /api/v1/admin/users/{user_id}/nft`, which is admin-gated. If our backend needs tier lookup for authorization, we need a service-account credential — see Open Q 9.
+
+**`AuthIdentity` shape (matches geo_dashboard's):**
+```python
+@dataclass(frozen=True, slots=True)
+class AuthIdentity:
+    user_id: UUID
+    email: str | None
+    organization_id: UUID | None
+    is_active: bool
+```
+
+Tier / wallet / NFT data are *not* on the identity object — they're looked up on demand by their respective use cases (Web3 reader for NFT tier from chain; a separate `GET /api/v1/me/wallet` for linked wallets).
 
 **Key endpoints (ours):**
-- `GET /api/v1/me` — returns the merged user view (CyberdyneAuth `/api/v1/users/me` payload + our local extras like enrolled paths, order history summary).
-- `POST /api/v1/me/link-wallet` — initiates wallet linking via CyberdyneAuth's challenge/verify pair (`POST /api/v1/auth/wallet/challenge` → frontend signs → `POST /api/v1/auth/wallet/verify`). EIP-191 challenge, not SIWE / EIP-4361.
-- Internal middleware: every request resolves `request.state.user: User | None`.
+- `GET /api/v1/me` — returns the merged user view (CyberdyneAuth profile + our local extras like enrolled paths, order summary, linked wallet from our DB).
+- `POST /api/v1/me/link-wallet` — initiates wallet linking via CyberdyneAuth's EIP-191 challenge/verify pair (`POST /api/v1/auth/wallet/challenge` → frontend signs → `POST /api/v1/auth/wallet/verify`). Not SIWE / EIP-4361.
+- Internal middleware: every request resolves `request.state.user: AuthIdentity | None`.
 
-**Key dependencies:** `httpx` async client (single configured client with connection pool), no JWT library (we don't decode tokens locally).
+**Key dependencies:** `httpx` async client (single instance, connection pool), our local resilience helpers (retry + circuit breaker, lift from OrgPilot). No JWT library — we don't decode tokens locally.
 
 **Testing:**
-- Unit: middleware behaviour with a `FakeAuthClient` returning canned `/users/me` responses (200, 401, 500, timeout); TTL cache eviction; the stale-fallback path on upstream outage.
-- Integration: `respx` mock of `https://auth.backend.coolify.cyberdynecorp.ai/api/v1/users/me` covering valid token → user, invalid token → 401, upstream 5xx → stale-cache behaviour.
-- Coverage: 100% on `domain/auth_identity` (it's tiny — just `User`/`Claims` value objects).
-
-**Known-unknown to verify in Phase 1:** the exact `/api/v1/users/me` response shape (we know it exists; the schema isn't fully visible in the OpenAPI spec). Specifically: where roles / policies / NFT tier live — embedded in the response, or accessible only via `/api/v1/admin/users/{user_id}/{iam,nft}` (which is admin-gated). If the latter, our backend needs a service-account credential to look up tier — see Open Q 9.
+- Unit: `FakeAuthPort` returning canned `AuthIdentity` results (mirrors geo_dashboard's `tests/fakes`); cache TTL eviction; request coalescing under concurrent load; resilience behaviour (retry exhaustion, circuit-breaker open).
+- Integration: `respx` mock of `${BASE}/api/v1/users/me` covering 200 / 401 / 500 / timeout.
+- Coverage: 100% on `domain/auth_identity` (tiny — just the value object).
 
 ### 5.2 Content & Blog
 
@@ -732,7 +753,7 @@ These need a decision before the corresponding phase starts. None block Phase 1.
 6. **Blog authoring UI?** — v1 is markdown via admin POST or git import CLI. Decide whether to bolt a Tiptap-based editor onto the existing admin SPA, or to keep it API-only.
 7. **Background work scheduler choice** — `apscheduler` in-process (simple, one less moving part) vs `arq` + Redis (works across replicas). Default: `apscheduler` until the moment we run 2+ replicas, at which point switch to `arq`.
 8. **Rate limiting strategy** — `slowapi` (in-process) vs a Redis-backed token bucket. Default: `slowapi` until traffic justifies otherwise. Captcha covers the most abusive endpoint already.
-9. **Service-account identity for backend-to-backend calls** — CyberdyneAuth v0.1.0 does **not** expose a client-credentials / service-account token endpoint. Realistic options: (a) register a dedicated `cyberdyne-backend@…` user, log it in once, store the resulting access_token + refresh_token in Coolify env vars, refresh on a schedule (cron job that hits `POST /api/v1/auth/refresh`); (b) push CyberdyneAuth to add a real client-credentials flow as a feature request before Phase 6 — cleanest long-term; (c) use a side-channel API key (e.g., signed-request HMAC between our backend and CyberRAG) that bypasses CyberdyneAuth entirely for service-to-service. Default: ship (a) for Phase 6 because it unblocks the chat agent, raise (b) as a feature request in CyberdyneAuth. The token lives in env var `CYBERDYNE_AUTH_SERVICE_TOKEN`.
+9. **Service-account identity for backend-to-backend calls** — CyberdyneAuth v0.1.0 does **not** expose a client-credentials / service-account token endpoint. This is an **unsolved problem across the Cyberdyne stack** — neither geo_dashboard nor OrgPilot has a clean answer either; both currently rely on user-context tokens (the user authenticates, the backend uses the user's token to call upstream). Realistic options for our case: (a) register a dedicated `cyberdyne-backend@…` user, log it in once, store the resulting `access_token` + `refresh_token` in Coolify env vars, refresh on a schedule (cron that hits `POST /api/v1/auth/refresh`); (b) push CyberdyneAuth to add a real client-credentials flow as a feature request before Phase 6 — cleanest long-term, would unblock the whole ecosystem (this backend, OrgPilot, CyberRAG, future services); (c) use a side-channel API key (HMAC-signed requests between our backend and CyberRAG) that bypasses CyberdyneAuth entirely for service-to-service. Default: file (b) as a CyberdyneAuth issue immediately; ship (a) for Phase 6 as the interim. The interim token lives in env var `CYBERDYNE_AUTH_SERVICE_TOKEN`.
 10. **Domain name** — `api.coolify.cyberdynecorp.ai` is the default. If we want a clean public surface for the chat endpoint (e.g., `chat.cyberdynecorp.ai`) decide before Phase 6 to avoid a CORS/cookie rebuild.
 11. **Which DAO governance contract to deploy?** — Deferred from v1; the frontend's Proposals + dividend-countdown panels stay on mock data until this lands. Realistic options: (a) OpenZeppelin Governor + TimelockController — most boring, widest ecosystem support, easy to audit; (b) Compound/Tally-style Governor — deepest existing tooling, ties UI to Tally; (c) custom contract aligned to the CBY tokenomics — most flexible, most audit surface. Companion decision: on-chain dividend windows (a `Distributor` contract emitting a `DistributionScheduled` event) vs. off-chain admin-set schedules. Decide before any frontend work depends on real proposals.
 12. **Position fee accrual: live read vs event indexing?** — Phase 5 takes the simple path — every 5 min poll uncollected fees and decode them. Historical fee earnings, APY-over-time charts, and IL math need an event indexer (Subgraph or self-hosted). Decide in Phase 7+ whether to consume Uniswap's official Subgraph for Base, ship our own minimal indexer, or skip historical analytics entirely.
