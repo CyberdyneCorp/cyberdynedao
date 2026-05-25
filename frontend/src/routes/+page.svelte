@@ -1,324 +1,161 @@
 <script lang="ts">
-	import { onDestroy } from 'svelte';
-	import Window from '$lib/components/Window.svelte';
-	import { windows, createWindow, toggleWindowSlide } from '$lib/stores/windowStore';
+	import { onDestroy, onMount } from 'svelte';
+	import {
+		DesktopGrid,
+		DesktopIcon,
+		RetroWindow,
+		Taskbar,
+		StartMenu,
+		ErrorBoundary
+	} from '@cyberdynecorp/svelte-ui-core';
+	import { closeWindow, bringToFront, toggleWindowSlide } from '$lib/stores/windowStore';
 	import { navItems } from '$lib/constants/navigation';
-	import { handleItemClick } from '$lib/utils/navigationHelpers';
 	import { CYBERDYNE_ASCII_LOGO } from '$lib/constants/asciiLogo';
-	import type { MarketplaceItem } from '$lib/types/components';
-	import { cart, marketplaceItemToCartItem } from '$lib/viewmodels/cartViewModel';
+	import { createShellViewModel } from '$lib/viewmodels/shellViewModel';
+	import ViewRouter from '$lib/components/ViewRouter.svelte';
+	import Web3Wallet from '$lib/components/Web3Wallet.svelte';
+	import { isMobileDevice } from '$lib/utils/mobileDetection';
 
-	const cartCountStore = cart.count;
-	let cartCount = 0;
-	const unsubCart = cartCountStore.subscribe(v => (cartCount = v));
+	const shell = createShellViewModel();
+	const { windows, cartCount, startMenuItems } = shell;
 
-	function addToCart(item: MarketplaceItem) {
-		cart.addItem(marketplaceItemToCartItem(item));
+	let cartCountValue = 0;
+	const unsubCart = cartCount.subscribe((v) => (cartCountValue = v));
+
+	let isMobile = false;
+	let startOpen = false;
+
+	$: taskbarItems = $windows.map((w) => ({
+		id: w.id,
+		label: w.title,
+		active: !w.minimized,
+		icon: undefined as string | undefined
+	}));
+
+	function onStartSelect(id: string) {
+		startOpen = false;
+		shell.handleStartSelect(id);
 	}
 
-	function handleBackgroundClick(e: MouseEvent) {
-		// Only trigger if clicking on the background, not on windows or icons
-		const target = e.target as HTMLElement;
-		if (target.closest('.retro-window') || target.closest('.sidebar-icon') || target.closest('button')) {
-			return;
-		}
-		
-		// Only toggle if there are windows open
-		if ($windows.length > 0) {
-			toggleWindowSlide();
-		}
-	}
-
-	function handleBackgroundKeyDown(e: KeyboardEvent) {
+	function onSlideToggleKey(e: KeyboardEvent) {
 		if (e.key === 'Enter' || e.key === ' ') {
 			e.preventDefault();
-			if ($windows.length > 0) {
-				toggleWindowSlide();
-			}
+			if ($windows.length > 0) toggleWindowSlide();
 		}
 	}
-	
+
+	onMount(() => {
+		isMobile = isMobileDevice();
+		const onResize = () => (isMobile = isMobileDevice());
+		window.addEventListener('resize', onResize);
+		return () => window.removeEventListener('resize', onResize);
+	});
+
 	onDestroy(() => unsubCart?.());
 </script>
 
-<div class="flex flex-col h-screen">
-    <div 
-		class="flex-1 relative bg-retro-bg overflow-hidden" 
-		on:click={handleBackgroundClick}
-		on:keydown={handleBackgroundKeyDown}
-		role="button"
-		tabindex="0"
-		aria-label="Desktop background - click to toggle window slide"
+<svelte:head>
+	<title>CyberdyneCorp</title>
+	<link rel="icon" href="/assets/favicon.svg" />
+</svelte:head>
+
+<div class="cyberdyne-retro-shell flex flex-col h-screen w-screen overflow-hidden">
+	<!-- Top taskbar: Start button + wallet -->
+	<header
+		class="retro-topbar flex items-center justify-between px-6 py-3 border-b-4 border-black gap-3"
+		style="background: var(--retro-taskbar-gradient, linear-gradient(to right,#1e3a8a,#3b82f6));"
 	>
-		<!-- Enhanced Futuristic Background Animation -->
-		<div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; opacity: 1.2;">
-			
-			<!-- Grid Pattern -->
-			<div class="cyber-grid" style="z-index: 1;"></div>
-			
-			<!-- Floating Particles -->
-			<div class="glow-particle glow-1" style="z-index: 2;"></div>
-			<div class="glow-particle glow-2" style="z-index: 2;"></div>
-			<div class="glow-particle glow-3" style="z-index: 2;"></div>
-			
-			<!-- Digital Rain -->
-			<div class="digital-rain rain-1" style="z-index: 2;"></div>
-			<div class="digital-rain rain-2" style="z-index: 2;"></div>
-			
-			<!-- ASCII Cyberdyne Logo with Wavy Glow -->
-			<div class="ascii-logo" style="z-index: 2;">
+		<StartMenu
+			label="Start"
+			header="Cyberdyne"
+			items={startMenuItems}
+			bind:open={startOpen}
+			onItemSelect={onStartSelect}
+		/>
+		<div class="w-48 sm:w-32"><Web3Wallet /></div>
+	</header>
+
+	<!-- Desktop area -->
+	<main class="relative flex-1 overflow-hidden" aria-label="Desktop" style="background:#4338ca;">
+		<!-- Dedicated accessible slide toggle covering the empty desktop -->
+		<button
+			type="button"
+			class="absolute inset-0 w-full h-full bg-transparent border-0 p-0 m-0 cursor-default"
+			aria-label="Toggle window slide"
+			on:click={shell.handleDesktopBgClick}
+			on:keydown={onSlideToggleKey}
+			style="z-index:1;"
+		></button>
+
+		<!-- Animated retro background (grid + glow + ASCII logo + digital rain) -->
+		<div style="position:absolute; inset:0; pointer-events:none; z-index:0;">
+			<div class="cyber-grid"></div>
+			<div class="glow-particle glow-1"></div>
+			<div class="glow-particle glow-2"></div>
+			<div class="glow-particle glow-3"></div>
+			<div class="digital-rain rain-1"></div>
+			<div class="digital-rain rain-2"></div>
+			<div class="ascii-logo">
 				<pre class="logo-text">{CYBERDYNE_ASCII_LOGO}</pre>
 			</div>
 		</div>
-		<!-- Desktop Icons positioned on main area -->
-		<div class="absolute left-8 z-10 sm:left-4 main-icons">
-			<div class="icon-grid grid grid-cols-2 sm:grid-cols-3 gap-4">
+
+		<!-- Left-side app launcher grid -->
+		<div class="absolute left-4 top-4 z-10 w-[min(420px,60vw)]">
+			<DesktopGrid
+				columns={isMobile ? 1 : 2}
+				gap={isMobile ? 10 : 16}
+				align="start"
+				side="left"
+				ariaLabel="Applications"
+			>
 				{#each navItems as item}
-					<div class="flex flex-col items-center">
-						<button
-							class="sidebar-icon flex items-center justify-center cursor-pointer"
-							on:click={() => handleItemClick(item)}
-							title={item.name}
-						>
-							<img src={item.icon} alt={item.name} class="w-20 h-20 md:w-20 md:h-20 sm:w-20 sm:h-20" />
-						</button>
-						<span class="nav-label text-white text-sm md:text-sm sm:text-xs font-mono text-center px-2 py-0.5 sm:px-1 sm:py-0 rounded mt-2 sm:mt-1 break-words max-w-20 sm:max-w-16">
-							<span class="sm:hidden">{item.name}</span>
-							<span class="hidden sm:inline">{item.mobileLabel || item.name}</span>
-						</span>
-					</div>
+					<DesktopIcon
+						label={isMobile && item.mobileLabel ? item.mobileLabel : item.name}
+						iconSrc={item.icon}
+						onActivate={() => shell.openWindowByNavItem(item)}
+					/>
 				{/each}
-			</div>
+			</DesktopGrid>
 		</div>
-		
-		<!-- Cart icon in right corner at same height as other icons -->
-		<div class="absolute right-1/10 z-20 sm:right-4 cart-icon">
-			<div class="flex flex-col items-center">
-				<button
-					class="sidebar-icon flex items-center justify-center cursor-pointer relative"
-					on:click={() => createWindow('cart', `Your Bag (${cartCount})`)}
-					title="Your Bag"
-				>
-					<img src="/assets/cart.svg" alt="Cart" class="w-20 h-20 md:w-20 md:h-20 sm:w-20 sm:h-20" />
-					{#if cartCount > 0}
-						<div class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-							{cartCount}
-						</div>
-					{/if}
-				</button>
-				<span class="nav-label text-white text-base md:text-base sm:text-xs font-mono text-center px-2 py-0.5 sm:px-1 sm:py-0 rounded mt-4 sm:mt-1 break-words max-w-20 sm:max-w-16">
-					<span class="sm:hidden">Your Bag {cartCount > 0 ? `(${cartCount})` : ''}</span>
-					<span class="hidden sm:inline">Bag {cartCount > 0 ? `(${cartCount})` : ''}</span>
-				</span>
-			</div>
-		</div>
-		
-		<!-- Windows -->
-		{#each $windows as window (window.id)}
-			<Window
-				{window}
-				onAddToCart={addToCart}
+
+		<!-- Cart icon top-right -->
+		<div style="position:absolute; top:16px; right:16px; z-index:10;">
+			<DesktopIcon
+				label={`Your Bag${cartCountValue > 0 ? ` (${cartCountValue})` : ''}`}
+				iconSrc="/assets/cart.svg"
+				badge={cartCountValue > 0 ? cartCountValue : undefined}
+				onActivate={() => shell.openCart()}
 			/>
+		</div>
+
+		<!-- Windows: each wrapped in ErrorBoundary so a broken view can't take the shell down -->
+		{#each [...$windows].sort((a, b) => a.zIndex - b.zIndex) as w (w.id)}
+			{#if !w.minimized}
+				<RetroWindow
+					title={w.title}
+					open
+					x={w.x}
+					y={w.y}
+					width={w.width}
+					height={w.height}
+					draggable
+					resizable
+					onClose={() => closeWindow(w.id)}
+					onFocus={() => bringToFront(w.id)}
+				>
+					<ErrorBoundary>
+						<ViewRouter content={w.content} onAddToCart={shell.addToCart} {isMobile} />
+					</ErrorBoundary>
+				</RetroWindow>
+			{/if}
 		{/each}
-	</div>
+	</main>
+
+	<!-- Bottom taskbar showing open windows -->
+	{#if taskbarItems.length > 0}
+		<footer class="retro-bottom-taskbar border-t-2 border-black">
+			<Taskbar items={taskbarItems} position="bottom" onItemClick={bringToFront} ariaLabel="Open windows" />
+		</footer>
+	{/if}
 </div>
-
-<!-- Background animations CSS moved to /lib/styles/backgroundAnimations.css -->
-
-<style>
-	/* Desktop positioning adjustments */
-	.main-icons {
-		top: 120px;
-	}
-	
-	.cart-icon {
-		top: 120px;
-	}
-	
-	/* Desktop icon size adjustments for better fitting */
-	@media (min-width: 769px) {
-		.icon-grid {
-			gap: 1rem !important;
-			max-width: 400px;
-		}
-		
-		.sidebar-icon {
-			width: 80px;
-			height: 80px;
-		}
-		
-		.nav-label {
-			margin-top: 0.5rem;
-			font-size: 0.875rem;
-		}
-	}
-	
-	/* Mobile responsive styles for main page */
-	@media (max-width: 768px) {
-		.main-icons {
-			position: absolute !important;
-			left: 16px !important;
-			right: auto !important;
-			top: 120px !important;
-			display: flex !important;
-			justify-content: flex-start !important;
-			align-items: flex-start !important;
-			flex-direction: column !important;
-			gap: 16px !important;
-		}
-		
-		.cart-icon {
-			position: absolute !important;
-			right: 16px !important;
-			left: auto !important;
-			top: 120px !important;
-			display: flex !important;
-			justify-content: flex-end !important;
-			align-items: flex-start !important;
-			flex-direction: column !important;
-		}
-		
-		.icon-grid {
-			grid-template-columns: repeat(2, 1fr) !important;
-			gap: 24px 20px !important;
-			width: auto !important;
-			max-width: 320px !important;
-			justify-items: flex-start !important;
-			align-items: start !important;
-		}
-		
-		.icon-grid > div {
-			display: flex !important;
-			flex-direction: column !important;
-			align-items: center !important;
-			justify-content: flex-start !important;
-			width: 100% !important;
-		}
-		
-		.sidebar-icon {
-			width: 60px !important;
-			height: 60px !important;
-		}
-		
-		.sidebar-icon img {
-			width: 44px !important;
-			height: 44px !important;
-		}
-		
-		.nav-label {
-			font-size: 10px !important;
-			margin-top: 4px !important;
-			max-width: 60px !important;
-			display: block !important;
-			opacity: 1 !important;
-			visibility: visible !important;
-		}
-		
-		.ascii-logo {
-			display: none !important;
-		}
-		
-		.cyber-grid {
-			opacity: 0.3 !important;
-		}
-		
-		.glow-particle {
-			display: none !important;
-		}
-		
-		.digital-rain {
-			display: none !important;
-		}
-	}
-	
-	@media (max-width: 480px) {
-		.main-icons {
-			left: 12px !important;
-			top: 100px !important;
-		}
-		
-		.cart-icon {
-			right: 12px !important;
-			top: 100px !important;
-		}
-		
-		.icon-grid {
-			grid-template-columns: repeat(2, 1fr) !important;
-			gap: 20px 16px !important;
-			max-width: 280px !important;
-		}
-		
-		.sidebar-icon {
-			width: 52px !important;
-			height: 52px !important;
-		}
-		
-		.sidebar-icon img {
-			width: 36px !important;
-			height: 36px !important;
-		}
-		
-		.nav-label {
-			font-size: 9px !important;
-			max-width: 50px !important;
-			display: block !important;
-			opacity: 1 !important;
-			visibility: visible !important;
-		}
-	}
-	
-	/* Touch device optimizations */
-	@media (hover: none) and (pointer: coarse) {
-		.sidebar-icon {
-			min-width: 44px !important;
-			min-height: 44px !important;
-		}
-		
-		.sidebar-icon:hover {
-			transform: none !important;
-		}
-	}
-	
-	/* Ensure nav-label is always visible */
-	.nav-label {
-		display: block !important;
-		visibility: visible !important;
-		opacity: 1 !important;
-	}
-	
-	/* Mobile-specific nav-label overrides */
-	@media (max-width: 768px) {
-		.nav-label {
-			display: block !important;
-			visibility: visible !important;
-			opacity: 1 !important;
-			background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
-			border: 1px solid #000 !important;
-			box-shadow: 1px 1px 0px rgba(0,0,0,0.3) !important;
-			color: white !important;
-			font-weight: bold !important;
-		}
-		
-		
-		.icon-grid .nav-label {
-			display: block !important;
-			visibility: visible !important;
-			opacity: 1 !important;
-		}
-	}
-	
-	@media (max-width: 480px) {
-		.nav-label {
-			font-size: 9px !important;
-			max-width: 50px !important;
-			padding: 1px 3px !important;
-		}
-		
-		
-		.icon-grid .nav-label {
-			display: block !important;
-			visibility: visible !important;
-			opacity: 1 !important;
-		}
-	}
-</style>

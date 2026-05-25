@@ -39,6 +39,8 @@
 		"vitest": "^4.1.4"
 	},
 	"dependencies": {
+		"@cyberdynecorp/svelte-ui-core": "^0.2.0",
+		"@cyberdynecorp/svelte-ui-foundation": "^0.2.0",
 		"@ethersproject/contracts": "^5.8.0",
 		"@ethersproject/providers": "^5.8.0",
 		"@reown/appkit": "^1.7.19",

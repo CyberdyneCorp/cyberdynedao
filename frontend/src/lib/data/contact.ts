@@ -16,22 +16,38 @@ export interface ContactMethod {
 export const contactMethods: ContactMethod[] = [
 	{
 		id: 'whatsapp',
-		name: 'WhatsApp Bot',
+		name: 'WhatsApp',
 		icon: '💬',
-		description: 'AI support for your Web3 projects',
+		description: 'Quickest path to a human. Project enquiries, contracts, and quick technical questions.',
 		action: 'Start Chatting',
 		link: 'https://wa.me/1234567890?text=Hello%20Cyberdyne%20Team',
 		colorPalette: { solid: '#25d366', hover: '#128c7e', rgb: '37, 211, 102' },
-		tagline: '24/7 AI • INSTANT'
+		tagline: 'Usually responds within hours'
 	},
 	{
 		id: 'discord',
-		name: 'Discord Community',
+		name: 'Discord',
 		icon: '🎮',
-		description: 'Join our vibrant developer community',
+		description: 'Our open community — builders, researchers, and the curious. Drop in, lurk, ask questions.',
 		action: 'Join Server',
 		link: 'https://discord.gg/cyberdyne',
 		colorPalette: { solid: '#5865f2', hover: '#4752c4', rgb: '88, 101, 242' },
-		tagline: 'COMMUNITY • EXPERTS'
+		tagline: 'Community channel'
+	},
+	{
+		id: 'github',
+		name: 'GitHub',
+		icon: '🛠️',
+		description: 'Source for everything we ship. Open an issue, send a PR, or just browse the stack.',
+		action: 'Visit Org',
+		link: 'https://github.com/CyberdyneCorp',
+		colorPalette: { solid: '#1f2937', hover: '#000000', rgb: '31, 41, 55' },
+		tagline: 'Open source, by default'
 	}
 ];
+
+export const contactIntro = {
+	headline: 'Let’s talk',
+	body:
+		'Whether it’s a contract, a collaboration, or a research partnership — pick the channel that fits. We read everything that lands.'
+};

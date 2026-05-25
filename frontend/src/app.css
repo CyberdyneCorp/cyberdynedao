@@ -1,4 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import '@cyberdynecorp/svelte-ui-foundation/styles';
+@import './lib/styles/retroOverrides.css';
 @import './lib/styles/backgroundAnimations.css';
 @tailwind base;
 @tailwind components;
