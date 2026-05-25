@@ -2,8 +2,6 @@
 	import type { MarketplaceItem } from '$lib/types/components';
 	import {
 		createShopViewModel,
-		getCategoryColor,
-		getStatusColor,
 		getStatusText,
 		formatMarketplacePrice as formatPrice
 	} from '$lib/viewmodels/shopViewModel';
@@ -14,231 +12,579 @@
 	const { selectedCategory, selectedItem, filteredItems } = vm;
 	const { items: marketplaceItems, categories, popularItems } = vm;
 
-	function selectItem(item: MarketplaceItem) {
-		vm.selectItem(item);
-	}
+	function selectItem(item: MarketplaceItem) { vm.selectItem(item); }
+	function addToCart(item: MarketplaceItem) { vm.addToCart(item); }
 
-	function addToCart(item: MarketplaceItem) {
-		vm.addToCart(item);
-	}
+	type Pal = 'blue' | 'green' | 'purple' | 'orange' | 'red';
+	const palette: Record<Pal, { accent: string; accentDark: string }> = {
+		blue: { accent: '#3b82f6', accentDark: '#1d4ed8' },
+		green: { accent: '#22c55e', accentDark: '#15803d' },
+		purple: { accent: '#a855f7', accentDark: '#7e22ce' },
+		orange: { accent: '#f97316', accentDark: '#c2410c' },
+		red: { accent: '#ef4444', accentDark: '#b91c1c' }
+	};
+	const categoryPalette: Record<string, Pal> = {
+		Services: 'blue',
+		'Training Material': 'green',
+		Licenses: 'purple'
+	};
+	const statusPalette: Record<string, Pal> = {
+		available: 'green',
+		beta: 'orange',
+		'coming-soon': 'red'
+	};
+	const palStyle = (p: Pal) => `--accent: ${palette[p].accent}; --accent-dark: ${palette[p].accentDark};`;
+	const catPal = (cat: string): Pal => categoryPalette[cat] ?? 'orange';
+	const statusPal = (st: string): Pal => statusPalette[st] ?? 'blue';
+
+	const ORANGE = palette.orange;
 </script>
 
-<div class="flex flex-col h-full bg-white overflow-y-auto">
-	<!-- Header -->
-	<div class="bg-gradient-to-r from-orange-600 to-red-600 p-2 border-b-2 border-black">
-		<h1 class="text-lg font-bold font-mono flex items-center gap-2 text-black">
-			<span class="text-xl">🛍️</span>
-			CYBERDYNE MARKETPLACE
-		</h1>
-		<p class="font-mono text-xs text-black">Professional services • Training materials • Software licenses</p>
-	</div>
+<div class="shop-view">
+	<header class="hero" style="--accent: {ORANGE.accent}; --accent-dark: {ORANGE.accentDark};">
+		<div class="hero__brand">
+			<span class="hero__mark" aria-hidden="true">🛍️</span>
+			<h1 class="hero__title">CYBERDYNE MARKETPLACE</h1>
+		</div>
+		<p class="hero__tagline">Services · Training · Licenses — everything we ship, available to commission or buy.</p>
+	</header>
 
-	<div class="flex-1 flex">
-		<!-- Sidebar -->
-		<div class="w-1/3 border-r border-gray-200 bg-gray-50 overflow-y-auto">
-			<!-- Categories -->
-			<div class="p-2">
-				<h3 class="font-mono font-bold text-xs mb-2 text-gray-700">Categories</h3>
-				<div class="space-y-1">
+	<div class="body">
+		<aside class="sidebar">
+			<div class="sidebar-section">
+				<h3 class="sidebar-label">Categories</h3>
+				<div class="category-list">
 					{#each categories as category}
 						<button
-							class="w-full text-left px-2 py-1 text-xs font-mono rounded transition-colors flex items-center gap-1.5"
-							class:bg-orange-100={$selectedCategory === category.id}
-							class:text-orange-700={$selectedCategory === category.id}
-							class:font-bold={$selectedCategory === category.id}
+							type="button"
+							class="category"
+							class:category--active={$selectedCategory === category.id}
 							on:click={() => vm.selectCategory(category.id)}
 						>
-							<span>{category.icon}</span>
-							<span class="flex-1">{category.name}</span>
-							<span class="text-gray-500">({category.count})</span>
+							<span class="category__icon" aria-hidden="true">{category.icon}</span>
+							<span class="category__name">{category.name}</span>
+							<span class="category__count">{category.count}</span>
 						</button>
 					{/each}
 				</div>
 			</div>
 
-			<!-- Popular Items -->
 			{#if $selectedCategory === 'all'}
-				<div class="p-2 border-t border-gray-200">
-					<h3 class="font-mono font-bold text-xs mb-2 text-gray-700">⭐ Popular</h3>
-					<div class="space-y-1.5">
+				<div class="sidebar-section">
+					<h3 class="sidebar-label">⭐ Popular</h3>
+					<div class="item-list">
 						{#each popularItems.slice(0, 4) as item}
-							<div
-								class="bg-white rounded border border-gray-200 p-2 cursor-pointer transition-all hover:shadow-md"
-								class:ring-2={$selectedItem?.id === item.id}
-								class:ring-orange-400={$selectedItem?.id === item.id}
+							{@const pal = catPal(item.category)}
+							<button
+								type="button"
+								class="item-card"
+								class:item-card--active={$selectedItem?.id === item.id}
+								style={palStyle(pal)}
 								on:click={() => selectItem(item)}
-								on:keydown={(e) => e.key === 'Enter' && selectItem(item)}
-								role="button"
-								tabindex="0"
 							>
-								<h4 class="font-mono font-bold text-xs leading-tight mb-1">{item.title}</h4>
-								<div class="flex items-center justify-between text-xs">
-									<span class="px-1.5 py-0.5 rounded font-mono {getCategoryColor(item.category)}">
-										{item.category}
-									</span>
-									<span class="text-gray-600 font-mono font-bold">{formatPrice(item.price)}</span>
+								<div class="item-card__title">{item.title}</div>
+								<div class="item-card__meta">
+									<span class="chip" style={palStyle(pal)}>{item.category}</span>
+									<span class="item-card__price">{formatPrice(item.price)}</span>
 								</div>
-							</div>
+							</button>
 						{/each}
 					</div>
 				</div>
 			{/if}
 
-			<!-- Items List -->
-			<div class="p-2 border-t border-gray-200">
-				<h3 class="font-mono font-bold text-xs mb-2 text-gray-700">
+			<div class="sidebar-section">
+				<h3 class="sidebar-label">
 					{$selectedCategory === 'all' ? 'All Products' : categories.find(c => c.id === $selectedCategory)?.name}
 				</h3>
-				<div class="space-y-1.5">
-					{#each $filteredItems.slice(0, 8) as item}
-						<div
-							class="bg-white rounded border border-gray-200 p-2 cursor-pointer transition-all hover:shadow-md"
-							class:ring-2={$selectedItem?.id === item.id}
-							class:ring-orange-400={$selectedItem?.id === item.id}
+				<div class="item-list">
+					{#each $filteredItems.slice(0, 12) as item}
+						{@const pal = catPal(item.category)}
+						{@const sPal = statusPal(item.status)}
+						<button
+							type="button"
+							class="item-card"
+							class:item-card--active={$selectedItem?.id === item.id}
+							style={palStyle(pal)}
 							on:click={() => selectItem(item)}
-							on:keydown={(e) => e.key === 'Enter' && selectItem(item)}
-							role="button"
-							tabindex="0"
 						>
-							<div class="flex items-center gap-1 mb-1">
-								<h4 class="font-mono font-bold text-xs leading-tight flex-1">{item.title}</h4>
-								{#if item.popular}
-									<span class="text-xs">⭐</span>
-								{/if}
+							<div class="item-card__head">
+								<span class="item-card__title">{item.title}</span>
+								{#if item.popular}<span class="item-card__star" aria-label="Popular">⭐</span>{/if}
 							</div>
-							<div class="flex items-center justify-between text-xs mb-0.5">
-								<span class="px-1.5 py-0.5 rounded font-mono {getCategoryColor(item.category)}">
-									{item.subcategory || item.category}
-								</span>
-								<span class="px-1.5 py-0.5 rounded font-mono {getStatusColor(item.status)}">
-									{getStatusText(item.status)}
-								</span>
+							<div class="item-card__meta">
+								<span class="chip" style={palStyle(pal)}>{item.subcategory || item.category}</span>
+								<span class="chip chip--sm" style={palStyle(sPal)}>{getStatusText(item.status)}</span>
 							</div>
-							<div class="flex items-center justify-between text-xs">
-								<span class="text-gray-600 font-mono">{item.duration || 'Custom'}</span>
-								<span class="text-gray-800 font-mono font-bold">{formatPrice(item.price)}</span>
+							<div class="item-card__foot">
+								<span class="item-card__duration">{item.duration || 'Custom'}</span>
+								<span class="item-card__price">{formatPrice(item.price)}</span>
 							</div>
-						</div>
+						</button>
 					{/each}
 				</div>
 			</div>
-		</div>
+		</aside>
 
-		<!-- Main Content -->
-		<div class="flex-1 overflow-y-auto">
+		<section class="main">
 			{#if $selectedItem}
-				<div class="p-3">
-					<div class="flex items-start gap-2 mb-3">
-						<img
-							src={$selectedItem.image}
-							alt={$selectedItem.title}
-							class="w-16 h-16 object-cover rounded border border-gray-200"
-						/>
-						<div class="flex-1">
-							<div class="flex items-center gap-2 mb-1">
-								<h2 class="text-lg font-bold font-mono text-gray-800">{$selectedItem.title}</h2>
-								{#if $selectedItem.popular}
-									<span class="text-lg">⭐</span>
-								{/if}
+				{@const pal = catPal($selectedItem.category)}
+				{@const sPal = statusPal($selectedItem.status)}
+				<article class="detail" style={palStyle(pal)}>
+					<header class="detail__head">
+						<img src={$selectedItem.image} alt={$selectedItem.title} class="detail__img" />
+						<div class="detail__head-text">
+							<div class="detail__title-row">
+								<h2 class="detail__title">{$selectedItem.title}</h2>
+								{#if $selectedItem.popular}<span class="detail__star" aria-label="Popular">⭐</span>{/if}
 							</div>
-							<div class="flex items-center gap-2 mb-2">
-								<span class="text-xs px-2 py-0.5 rounded font-mono {getCategoryColor($selectedItem.category)}">
-									{$selectedItem.subcategory || $selectedItem.category}
-								</span>
-								<span class="text-xs px-2 py-0.5 rounded font-mono {getStatusColor($selectedItem.status)}">
-									{getStatusText($selectedItem.status)}
-								</span>
+							<div class="detail__meta">
+								<span class="chip" style={palStyle(pal)}>{$selectedItem.subcategory || $selectedItem.category}</span>
+								<span class="chip" style={palStyle(sPal)}>{getStatusText($selectedItem.status)}</span>
 								{#if $selectedItem.duration}
-									<span class="text-xs text-gray-600 font-mono">⏱️ {$selectedItem.duration}</span>
+									<span class="detail__duration">⏱ {$selectedItem.duration}</span>
 								{/if}
 							</div>
-							<p class="text-sm text-gray-700 leading-relaxed">{$selectedItem.description}</p>
+							<p class="detail__desc">{$selectedItem.description}</p>
 						</div>
-					</div>
+					</header>
 
-					<div class="bg-gray-50 rounded border border-gray-200 p-2 mb-3">
-						<h3 class="font-mono font-bold text-sm mb-2">✨ Features Included</h3>
-						<div class="grid grid-cols-2 gap-1">
+					<div class="detail__section" style={palStyle(pal)}>
+						<h3 class="detail__section-title">Features Included</h3>
+						<ul class="features">
 							{#each $selectedItem.features as feature}
-								<div class="flex items-center gap-1 text-xs">
-									<span class="text-green-500">✓</span>
-									<span class="font-mono">{feature}</span>
-								</div>
+								<li>{feature}</li>
 							{/each}
-						</div>
+						</ul>
 					</div>
 
-					<div class="bg-orange-50 rounded border border-orange-200 p-2 mb-3">
-						<h3 class="font-mono font-bold text-sm mb-2">💰 Pricing</h3>
-						<div class="flex items-center gap-4">
-							<div>
-								<span class="text-2xl font-bold font-mono text-orange-600">${$selectedItem.price.toLocaleString()}</span>
-								{#if $selectedItem.duration}
-									<span class="text-xs text-gray-600 font-mono">/ {$selectedItem.duration}</span>
-								{/if}
-							</div>
+					<div class="pricing" style={palStyle(pal)}>
+						<div class="pricing__price-block">
+							<div class="pricing__price">${$selectedItem.price.toLocaleString()}</div>
+							{#if $selectedItem.duration}<div class="pricing__per">per {$selectedItem.duration}</div>{/if}
+						</div>
+						<ul class="pricing__terms">
 							{#if $selectedItem.category === 'Services'}
-								<div class="text-xs text-gray-600 font-mono">
-									<p>• Custom quote based on requirements</p>
-									<p>• 50% upfront, 50% on completion</p>
-								</div>
+								<li>Custom quote based on requirements</li>
+								<li>50% upfront, 50% on completion</li>
+								<li>Full source + handover</li>
 							{:else if $selectedItem.category === 'Licenses'}
-								<div class="text-xs text-gray-600 font-mono">
-									<p>• Annual subscription</p>
-									<p>• Full access and updates included</p>
-								</div>
+								<li>Annual subscription</li>
+								<li>Full access and updates included</li>
+								<li>Priority support</li>
 							{:else}
-								<div class="text-xs text-gray-600 font-mono">
-									<p>• Lifetime access</p>
-									<p>• All future updates included</p>
-								</div>
+								<li>Lifetime access</li>
+								<li>All future updates included</li>
+								<li>Source materials & exercises</li>
 							{/if}
-						</div>
+						</ul>
 					</div>
 
-					<div class="flex gap-2">
+					<div class="actions">
 						<button
-							class="bg-orange-600 text-white px-4 py-1.5 rounded font-mono text-xs font-bold hover:bg-orange-700 transition-colors"
-							class:opacity-50={$selectedItem.status === 'coming-soon'}
-							class:cursor-not-allowed={$selectedItem.status === 'coming-soon'}
+							type="button"
+							class="btn btn--primary"
+							style={palStyle(pal)}
 							disabled={$selectedItem.status === 'coming-soon'}
 							on:click={() => $selectedItem && addToCart($selectedItem)}
 						>
 							{$selectedItem.status === 'coming-soon' ? 'Coming Soon' : 'Add to Cart'}
 						</button>
-						<button class="border border-gray-300 text-gray-700 px-4 py-1.5 rounded font-mono text-xs hover:bg-gray-50 transition-colors">
-							💬 Contact Sales
-						</button>
-						<button class="border border-gray-300 text-gray-700 px-4 py-1.5 rounded font-mono text-xs hover:bg-gray-50 transition-colors">
-							❤️ Wishlist
-						</button>
+						<button type="button" class="btn btn--ghost">💬 Contact Sales</button>
+						<button type="button" class="btn btn--ghost">❤️ Wishlist</button>
 					</div>
-				</div>
+				</article>
 			{:else}
-				<div class="p-3 text-center">
-					<div class="text-3xl mb-2">🛍️</div>
-					<h2 class="text-lg font-bold font-mono text-gray-800 mb-1">Cyberdyne Marketplace</h2>
-					<p class="text-sm text-gray-600 font-mono mb-4">Discover professional services, training materials, and software licenses for Web3 development.</p>
-
-					<div class="grid grid-cols-3 gap-2">
-						<div class="bg-blue-50 rounded border border-blue-200 p-2">
-							<div class="text-lg mb-1">⚙️</div>
-							<h3 class="font-mono font-bold text-xs">Services</h3>
-							<p class="text-xs text-gray-600">Custom development</p>
+				<div class="welcome">
+					<div class="welcome__mark" aria-hidden="true">🛍️</div>
+					<h2 class="welcome__title">Cyberdyne Marketplace</h2>
+					<p class="welcome__body">
+						Three ways to work with us — commission a build, learn the stack, or license the software we ship.
+					</p>
+					<div class="welcome-grid">
+						<div class="stat" style={palStyle('blue')}>
+							<div class="stat__icon" aria-hidden="true">⚙️</div>
+							<div class="stat__label">Services</div>
+							<div class="stat__sub">Custom builds, end-to-end</div>
+							<div class="stat__count">{marketplaceItems.filter(i => i.category === 'Services').length} listings</div>
 						</div>
-						<div class="bg-green-50 rounded border border-green-200 p-2">
-							<div class="text-lg mb-1">📚</div>
-							<h3 class="font-mono font-bold text-xs">Training</h3>
-							<p class="text-xs text-gray-600">Learn & grow</p>
+						<div class="stat" style={palStyle('green')}>
+							<div class="stat__icon" aria-hidden="true">📚</div>
+							<div class="stat__label">Training</div>
+							<div class="stat__sub">Workshops & courseware</div>
+							<div class="stat__count">{marketplaceItems.filter(i => i.category === 'Training Material').length} listings</div>
 						</div>
-						<div class="bg-purple-50 rounded border border-purple-200 p-2">
-							<div class="text-lg mb-1">🔑</div>
-							<h3 class="font-mono font-bold text-xs">Licenses</h3>
-							<p class="text-xs text-gray-600">Software access</p>
+						<div class="stat" style={palStyle('purple')}>
+							<div class="stat__icon" aria-hidden="true">🔑</div>
+							<div class="stat__label">Licenses</div>
+							<div class="stat__sub">Direct software access</div>
+							<div class="stat__count">{marketplaceItems.filter(i => i.category === 'Licenses').length} listings</div>
 						</div>
 					</div>
+					<p class="welcome__hint">Pick a category on the left, or open any item to see scope, pricing, and terms.</p>
 				</div>
 			{/if}
-		</div>
+		</section>
 	</div>
 </div>
+
+<style>
+	.shop-view {
+		font-family: var(--font-mono, 'JetBrains Mono', monospace);
+		background: #ffffff;
+		color: #111827;
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.hero {
+		padding: 18px 24px;
+		background: linear-gradient(135deg, #9a3412 0%, #f97316 100%);
+		border-bottom: 2px solid #000;
+		color: #ffffff;
+		flex: 0 0 auto;
+	}
+	.hero__brand { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+	.hero__mark { font-size: 1.5rem; }
+	.hero__title { font-size: 1.5rem; font-weight: 800; letter-spacing: 0.08em; margin: 0; color: #fff; }
+	.hero__tagline { margin: 0; font-size: 0.875rem; line-height: 1.5; color: #fed7aa; max-width: 880px; }
+
+	.body { flex: 1 1 auto; display: flex; min-height: 0; }
+	.sidebar {
+		width: 36%;
+		max-width: 380px;
+		min-width: 260px;
+		border-right: 2px solid #000;
+		background: #f9fafb;
+		overflow-y: auto;
+	}
+	.main { flex: 1 1 auto; overflow-y: auto; padding: 18px 20px; }
+	@media (max-width: 720px) {
+		.body { flex-direction: column; }
+		.sidebar { width: 100%; max-width: none; max-height: 40vh; border-right: 0; border-bottom: 2px solid #000; }
+	}
+
+	.sidebar-section { padding: 14px 12px; border-bottom: 1px dashed #d1d5db; }
+	.sidebar-section:last-child { border-bottom: 0; }
+	.sidebar-label {
+		font-size: 0.6875rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+		color: #1f2937;
+		margin: 0 0 10px;
+	}
+
+	.category-list { display: flex; flex-direction: column; gap: 6px; }
+	.category {
+		all: unset;
+		display: grid;
+		grid-template-columns: 22px 1fr auto;
+		gap: 8px;
+		align-items: center;
+		padding: 7px 10px;
+		background: #ffffff;
+		border: 2px solid #000;
+		box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
+		cursor: pointer;
+		font-size: 0.8125rem;
+		font-weight: 600;
+		color: #1f2937;
+		transition: transform 0.1s ease, background 0.1s ease;
+	}
+	.category:hover { background: #fef3c7; transform: translate(-1px, -1px); box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.4); }
+	.category--active { background: #f97316; color: #000; box-shadow: 3px 3px 0 #c2410c; }
+	.category__count {
+		font-size: 0.6875rem;
+		font-weight: 700;
+		background: #000;
+		color: #fff;
+		padding: 1px 6px;
+		border-radius: 0;
+	}
+
+	.item-list { display: flex; flex-direction: column; gap: 8px; }
+
+	.item-card {
+		all: unset;
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		background: #ffffff;
+		border: 2px solid #000;
+		box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.4);
+		padding: 8px 10px 8px 16px;
+		cursor: pointer;
+		transition: transform 0.12s ease, box-shadow 0.12s ease;
+	}
+	.item-card::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		width: 6px;
+		background: var(--accent);
+		border-right: 2px solid #000;
+	}
+	.item-card:hover {
+		transform: translate(-1px, -1px);
+		box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+	}
+	.item-card--active {
+		box-shadow: 4px 4px 0 var(--accent-dark);
+		background: #fff7ed;
+	}
+	.item-card__head { display: flex; align-items: center; gap: 6px; }
+	.item-card__title {
+		font-size: 0.8125rem;
+		font-weight: 700;
+		color: #000;
+		flex: 1 1 auto;
+		line-height: 1.2;
+		word-break: break-word;
+	}
+	.item-card__star { font-size: 0.75rem; }
+	.item-card__meta { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+	.item-card__foot { display: flex; justify-content: space-between; align-items: center; margin-top: 2px; }
+	.item-card__duration { font-size: 0.6875rem; color: #6b7280; }
+	.item-card__price { font-size: 0.8125rem; font-weight: 800; color: var(--accent-dark); }
+
+	.chip {
+		display: inline-flex;
+		align-items: center;
+		padding: 1px 6px;
+		font-size: 0.625rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		background: var(--accent);
+		color: #ffffff;
+		border: 1.5px solid #000;
+	}
+	.chip--sm { font-size: 0.5625rem; }
+
+	/* ---------- Detail ---------- */
+	.detail {
+		position: relative;
+		background: #ffffff;
+		border: 2px solid #000;
+		box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+		padding: 18px 18px 18px 26px;
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+	}
+	.detail::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		width: 8px;
+		background: var(--accent);
+		border-right: 2px solid #000;
+	}
+	.detail__head { display: flex; gap: 14px; align-items: flex-start; }
+	.detail__img {
+		width: 80px;
+		height: 80px;
+		object-fit: cover;
+		border: 2px solid #000;
+		box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.4);
+		flex: 0 0 auto;
+	}
+	.detail__head-text { flex: 1 1 auto; min-width: 0; }
+	.detail__title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+	.detail__title { font-size: 1.25rem; font-weight: 800; color: #000; margin: 0; line-height: 1.2; }
+	.detail__star { font-size: 1.125rem; }
+	.detail__meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; }
+	.detail__duration { font-size: 0.75rem; color: #6b7280; }
+	.detail__desc { font-size: 0.9375rem; line-height: 1.55; color: #1f2937; margin: 0; }
+
+	.detail__section {
+		position: relative;
+		background: #f9fafb;
+		border: 2px solid #000;
+		box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.35);
+		padding: 12px 14px;
+	}
+	.detail__section-title {
+		font-size: 0.75rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: var(--accent-dark);
+		margin: 0 0 8px;
+	}
+	.features {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 4px 14px;
+	}
+	@media (max-width: 540px) {
+		.features { grid-template-columns: minmax(0, 1fr); }
+	}
+	.features li {
+		position: relative;
+		padding-left: 18px;
+		font-size: 0.8125rem;
+		color: #1f2937;
+		line-height: 1.4;
+	}
+	.features li::before {
+		content: '▸';
+		position: absolute;
+		left: 0;
+		top: 0;
+		color: var(--accent-dark);
+		font-weight: 700;
+	}
+
+	/* Pricing */
+	.pricing {
+		position: relative;
+		background: #fffbeb;
+		border: 2px solid #000;
+		box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.4);
+		padding: 14px 16px;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 18px;
+		align-items: center;
+	}
+	.pricing__price-block { display: flex; flex-direction: column; }
+	.pricing__price {
+		font-size: 1.875rem;
+		font-weight: 800;
+		color: var(--accent-dark);
+		line-height: 1;
+	}
+	.pricing__per {
+		font-size: 0.6875rem;
+		color: #6b7280;
+		margin-top: 4px;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+	}
+	.pricing__terms {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		flex: 1 1 240px;
+		min-width: 200px;
+	}
+	.pricing__terms li {
+		position: relative;
+		padding-left: 16px;
+		font-size: 0.75rem;
+		color: #1f2937;
+		line-height: 1.45;
+	}
+	.pricing__terms li::before {
+		content: '▸';
+		position: absolute;
+		left: 0;
+		color: var(--accent-dark);
+	}
+
+	.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+	.btn {
+		font-family: inherit;
+		font-size: 0.8125rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		padding: 8px 14px;
+		border: 2px solid #000;
+		cursor: pointer;
+		transition: transform 0.1s ease, box-shadow 0.1s ease;
+	}
+	.btn--primary {
+		background: var(--accent);
+		color: #000;
+		box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.5);
+	}
+	.btn--primary:not(:disabled):hover {
+		transform: translate(-1px, -1px);
+		box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.55);
+	}
+	.btn--primary:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+	.btn--ghost {
+		background: #ffffff;
+		color: #000;
+		box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
+	}
+	.btn--ghost:hover { background: #f3f4f6; transform: translate(-1px, -1px); box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.4); }
+
+	/* Welcome */
+	.welcome {
+		text-align: center;
+		max-width: 760px;
+		margin: 16px auto;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 12px;
+	}
+	.welcome__mark { font-size: 2.25rem; }
+	.welcome__title { font-size: 1.5rem; font-weight: 800; color: #000; margin: 0; }
+	.welcome__body { font-size: 0.9375rem; line-height: 1.55; color: #374151; margin: 0; max-width: 620px; }
+	.welcome__hint { font-size: 0.75rem; color: #6b7280; margin: 6px 0 0; font-style: italic; }
+
+	.welcome-grid {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 12px;
+		width: 100%;
+		margin-top: 12px;
+	}
+	@media (max-width: 720px) {
+		.welcome-grid { grid-template-columns: minmax(0, 1fr); }
+	}
+	.stat {
+		position: relative;
+		background: #ffffff;
+		border: 2px solid #000;
+		box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+		padding: 14px 14px 16px 22px;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		align-items: flex-start;
+		text-align: left;
+	}
+	.stat::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		width: 8px;
+		background: var(--accent);
+		border-right: 2px solid #000;
+	}
+	.stat__icon { font-size: 1.5rem; }
+	.stat__label {
+		font-size: 0.875rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--accent-dark);
+	}
+	.stat__sub { font-size: 0.75rem; color: #374151; }
+	.stat__count {
+		font-size: 0.6875rem;
+		color: #6b7280;
+		margin-top: 4px;
+		font-weight: 700;
+	}
+</style>

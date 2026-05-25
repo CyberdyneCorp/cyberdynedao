@@ -4,13 +4,11 @@ import { teamMembers } from '../team';
 import { productSuite } from '../products';
 import { serviceSections, workflowSteps, whyCyberdynePoints } from '../services';
 import {
-	problemPoints,
-	solutionOfferings,
+	domains,
+	beliefs,
 	targetUsers,
 	tokenomicsRows,
 	tokenUtilityPoints,
-	strategicAdvantages,
-	flagshipProducts,
 	exampleEconomics,
 	roadmapPhases
 } from '../cyberdyne';
@@ -44,13 +42,12 @@ describe('additional data fixtures', () => {
 	});
 
 	it('cyberdyne DAO content sections non-empty', () => {
-		expect(problemPoints.length).toBeGreaterThan(0);
-		expect(solutionOfferings.length).toBeGreaterThan(0);
+		expect(domains.length).toBeGreaterThan(0);
+		domains.forEach(d => expect(d.projects.length).toBeGreaterThan(0));
+		expect(beliefs.length).toBeGreaterThan(0);
 		expect(targetUsers.length).toBeGreaterThan(0);
 		expect(tokenomicsRows.length).toBe(5);
 		expect(tokenUtilityPoints.length).toBeGreaterThan(0);
-		expect(strategicAdvantages.length).toBeGreaterThan(0);
-		expect(flagshipProducts.length).toBeGreaterThan(0);
 		expect(exampleEconomics.length).toBe(4);
 		expect(roadmapPhases.length).toBe(5);
 		roadmapPhases.forEach(p => expect(p.items.length).toBeGreaterThan(0));

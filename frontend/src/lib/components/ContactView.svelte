@@ -1,129 +1,388 @@
 <script lang="ts">
 	import { createContactViewModel } from '$lib/viewmodels/contactViewModel';
+	import { contactIntro } from '$lib/data/contact';
 
 	const vm = createContactViewModel();
 	const { methods: contactMethods } = vm;
-
-	function applyStyle(el: HTMLElement, bg: string, shadowRgb: string, shadowAlpha: number) {
-		el.style.backgroundColor = bg;
-		el.style.borderColor = bg;
-		el.style.boxShadow = `0 0 ${shadowAlpha > 0.5 ? 12 : 8}px rgba(${shadowRgb}, ${shadowAlpha})`;
-	}
-
-	function onEnter(event: Event, method: (typeof contactMethods)[number]) {
-		applyStyle(event.currentTarget as HTMLElement, method.colorPalette.hover, method.colorPalette.rgb, 0.6);
-	}
-
-	function onLeave(event: Event, method: (typeof contactMethods)[number]) {
-		applyStyle(event.currentTarget as HTMLElement, method.colorPalette.solid, method.colorPalette.rgb, 0.4);
-	}
 </script>
 
-<div class="flex flex-col h-full bg-black text-retro-green font-mono overflow-y-auto" style="background-color: #000 !important; color: #00ff00 !important; -webkit-overflow-scrolling: touch; scroll-behavior: smooth;">
-	<div class="p-2 border-b-2" style="background: linear-gradient(to right, #00aa00, #00ff00); border-color: #00ff00;">
-		<div class="text-center">
-			<div class="text-2xl mb-1 animate-pulse" style="color: #88ff88;">◉ CONTACT CYBERDYNE ◉</div>
-			<div class="text-xs tracking-wider" style="color: #ccffcc;">[ SECURE COMMUNICATION CHANNELS ACTIVE ]</div>
+<div class="contact-view">
+	<!-- Hero -->
+	<header class="hero">
+		<div class="hero__brand">
+			<span class="hero__mark" aria-hidden="true">📡</span>
+			<h1 class="hero__title">CONTACT CYBERDYNE</h1>
 		</div>
-	</div>
+		<p class="hero__tagline">Pick a channel. We read everything that lands.</p>
+	</header>
 
-	<div class="flex-1 relative overflow-hidden">
-		<div class="absolute inset-0 opacity-10">
-			<div class="grid grid-cols-8 h-full">
-				{#each Array(32) as _, i}
-					<div class="border-r animate-pulse" style="border-color: #00ff00; animation-delay: {i * 0.1}s"></div>
-				{/each}
-			</div>
+	<div class="content">
+		<!-- Intro card -->
+		<section class="intro">
+			<h2 class="intro__headline">{contactIntro.headline}</h2>
+			<p class="intro__body">{contactIntro.body}</p>
+			<div class="intro__divider" aria-hidden="true"></div>
+		</section>
+
+		<!-- Channels grid -->
+		<div class="channels">
+			{#each contactMethods as method}
+				<article
+					class="channel"
+					style="--brand: {method.colorPalette.solid}; --brand-hover: {method.colorPalette.hover}; --brand-rgb: {method.colorPalette.rgb};"
+				>
+					<header class="channel__head">
+						<div class="channel__avatar">
+							<span aria-hidden="true">{method.icon}</span>
+						</div>
+						<div class="channel__head-text">
+							<h3 class="channel__name">{method.name}</h3>
+							<div class="channel__id">ID: {method.id.toUpperCase()}</div>
+						</div>
+						<div class="channel__status">
+							<span class="channel__dot" aria-hidden="true"></span>
+							ONLINE
+						</div>
+					</header>
+
+					<p class="channel__desc">{method.description}</p>
+
+					<div class="channel__tagline">{method.tagline}</div>
+
+					<button
+						type="button"
+						class="channel__cta"
+						on:click={() => vm.openContact(method)}
+					>
+						<span class="channel__cta-bracket">[</span>
+						<span>{method.action}</span>
+						<span class="channel__cta-bracket">]</span>
+					</button>
+				</article>
+			{/each}
 		</div>
 
-		<div class="relative z-10 flex items-center justify-center min-h-full p-2">
-			<div class="w-full max-w-4xl">
-				<div class="text-center mb-3">
-					<div class="mb-1" style="color: #88ff88;">
-						<span class="text-sm">></span> INITIALIZING CONTACT PROTOCOLS...
-					</div>
-					<div class="text-xs mb-1" style="color: #00ff00;">SELECT YOUR PREFERRED COMMUNICATION METHOD</div>
-					<div class="text-xs" style="color: #66dd66;">[ ALL CHANNELS ENCRYPTED AND MONITORED ]</div>
+		<!-- Trust footer -->
+		<section class="trust">
+			<div class="trust__pixel-stripe" aria-hidden="true"></div>
+			<div class="trust__grid">
+				<div class="trust__item">
+					<div class="trust__icon" aria-hidden="true">◆</div>
+					<div class="trust__label">Web3-native team</div>
+					<div class="trust__sub">Production experience across the stack</div>
 				</div>
-
-				<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-					{#each contactMethods as method}
-						<div class="group">
-							<div class="relative p-1 rounded-lg transition-all duration-500" style="background: linear-gradient(to right, #00ff00, #88ff88, #00ff00); box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);">
-								<div class="rounded-lg p-4 h-full border transition-all duration-300" style="background-color: #000; border-color: rgba(0, 255, 0, 0.3);">
-									<div class="flex justify-between items-start mb-3">
-										<div class="flex items-center space-x-2">
-											<div class="w-2 h-2 rounded-full animate-pulse" style="background-color: #00ff00;"></div>
-											<span class="text-xs tracking-wider" style="color: #00ff00;">ONLINE</span>
-										</div>
-										<div class="text-xs" style="color: #66dd66;">ID: {method.id.toUpperCase()}</div>
-									</div>
-
-									<div class="text-center mb-3">
-										<div class="inline-block p-2.5 rounded-full border-2 transition-all duration-300" style="border-color: rgba(0, 255, 0, 0.5); box-shadow: 0 0 8px rgba(0, 255, 0, 0.2);">
-											<span class="text-2xl">{method.icon}</span>
-										</div>
-									</div>
-
-									<div class="text-center space-y-2">
-										<h3 class="text-base font-bold tracking-wide" style="color: #88ff88;">
-											{method.name.toUpperCase()}
-										</h3>
-										<p class="text-xs leading-relaxed" style="color: #00ff00;">
-											{method.description}
-										</p>
-
-										<div class="flex justify-center space-x-3 text-xs" style="color: #66dd66;">
-											<div class="flex items-center space-x-1">
-												<span style="color: #00ff00;">■</span>
-												<span>{method.tagline}</span>
-											</div>
-										</div>
-
-										<button
-											class="w-full mt-3 font-bold py-2 px-3 text-xs tracking-wider transition-all duration-300 transform hover:scale-105"
-											style="background: {method.colorPalette.solid}; border: 2px solid {method.colorPalette.solid}; color: #fff; border-radius: 4px; box-shadow: 0 0 8px rgba({method.colorPalette.rgb}, 0.4);"
-											on:click={() => vm.openContact(method)}
-											on:mouseenter={(e) => onEnter(e, method)}
-											on:mouseleave={(e) => onLeave(e, method)}
-										>
-											[ {method.action.toUpperCase()} ]
-										</button>
-									</div>
-
-									<div class="mt-3 pt-2 text-center" style="border-top: 1px solid rgba(0, 255, 0, 0.3);">
-										<div class="text-xs tracking-wider" style="color: #66dd66;">
-											CONNECTION: <span style="color: #00ff00;">SECURE</span>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-					{/each}
+				<div class="trust__item">
+					<div class="trust__icon" aria-hidden="true">◆</div>
+					<div class="trust__label">Open by default</div>
+					<div class="trust__sub">Source for everything we ship is public</div>
 				</div>
-
-				<div class="text-center pb-4">
-					<div class="inline-block rounded-lg p-3" style="background: linear-gradient(to right, rgba(0, 255, 0, 0.1), rgba(136, 255, 136, 0.1)); border: 1px solid rgba(0, 255, 0, 0.3); box-shadow: 0 0 8px rgba(0, 255, 0, 0.2);">
-						<div class="font-bold mb-2 tracking-wider text-xs" style="color: #88ff88;">
-							[ CYBERDYNE SYSTEMS ACTIVE ]
-						</div>
-						<div class="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 text-xs">
-							<div class="text-center">
-								<div class="mb-1" style="color: #00ff00;">◈</div>
-								<div style="color: #66dd66;">WEB3 EXPERTS</div>
-							</div>
-							<div class="text-center">
-								<div class="mb-1" style="color: #00ff00;">◈</div>
-								<div style="color: #66dd66;">24/7 SUPPORT</div>
-							</div>
-							<div class="text-center">
-								<div class="mb-1" style="color: #00ff00;">◈</div>
-								<div style="color: #66dd66;">SECURE COMM</div>
-							</div>
-						</div>
-					</div>
+				<div class="trust__item">
+					<div class="trust__icon" aria-hidden="true">◆</div>
+					<div class="trust__label">Pragmatic responses</div>
+					<div class="trust__sub">No sales theatre — engineers answer engineers</div>
 				</div>
 			</div>
-		</div>
+		</section>
 	</div>
 </div>
+
+<style>
+	.contact-view {
+		font-family: var(--font-mono, 'JetBrains Mono', monospace);
+		background: #0b1120;
+		color: #e5e7eb;
+		height: 100%;
+		overflow-y: auto;
+		display: flex;
+		flex-direction: column;
+	}
+
+	/* ---------- Hero ---------- */
+	.hero {
+		padding: 18px 24px;
+		background: linear-gradient(135deg, #064e3b 0%, #22c55e 100%);
+		border-bottom: 2px solid #000;
+		color: #ffffff;
+		flex: 0 0 auto;
+		position: relative;
+	}
+	.hero::after {
+		content: '';
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: -2px;
+		height: 4px;
+		background: linear-gradient(
+			to right,
+			#22c55e 0%, #22c55e 25%,
+			#3b82f6 25%, #3b82f6 50%,
+			#a855f7 50%, #a855f7 75%,
+			#f97316 75%, #f97316 100%
+		);
+		border-top: 2px solid #000;
+	}
+	.hero__brand { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+	.hero__mark { font-size: 1.5rem; }
+	.hero__title { font-size: 1.5rem; font-weight: 800; letter-spacing: 0.1em; margin: 0; color: #fff; }
+	.hero__tagline { margin: 0; font-size: 0.875rem; line-height: 1.5; color: #d1fae5; }
+
+	.content {
+		max-width: 1100px;
+		margin: 0 auto;
+		padding: 26px 20px 32px;
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+		width: 100%;
+	}
+
+	/* ---------- Intro ---------- */
+	.intro {
+		position: relative;
+		background: #ffffff;
+		color: #111827;
+		border: 2px solid #000;
+		box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.6);
+		padding: 22px 22px 18px 30px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 10px;
+		text-align: center;
+	}
+	.intro::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		width: 8px;
+		background: #22c55e;
+		border-right: 2px solid #000;
+	}
+	.intro__headline {
+		font-size: 1.5rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: #15803d;
+		margin: 0;
+	}
+	.intro__body {
+		font-size: 0.9375rem;
+		line-height: 1.55;
+		color: #1f2937;
+		margin: 0;
+		max-width: 640px;
+	}
+	.intro__divider {
+		width: 100%;
+		max-width: 240px;
+		height: 2px;
+		background: linear-gradient(
+			to right,
+			#22c55e 0%, #22c55e 33%,
+			#3b82f6 33%, #3b82f6 66%,
+			#a855f7 66%, #a855f7 100%
+		);
+		margin-top: 4px;
+	}
+
+	/* ---------- Channels ---------- */
+	.channels {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 16px;
+	}
+	@media (max-width: 900px) {
+		.channels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+	}
+	@media (max-width: 600px) {
+		.channels { grid-template-columns: minmax(0, 1fr); }
+	}
+
+	.channel {
+		position: relative;
+		background: #ffffff;
+		color: #111827;
+		border: 2px solid #000;
+		box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.6);
+		padding: 16px 16px 18px 22px;
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		transition: transform 0.15s ease, box-shadow 0.15s ease;
+	}
+	.channel::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		width: 8px;
+		background: var(--brand);
+		border-right: 2px solid #000;
+	}
+	.channel:hover {
+		transform: translate(-2px, -2px);
+		box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.7);
+	}
+
+	.channel__head {
+		display: grid;
+		grid-template-columns: 48px 1fr auto;
+		gap: 12px;
+		align-items: center;
+	}
+	.channel__avatar {
+		width: 48px;
+		height: 48px;
+		border: 2px solid #000;
+		background: var(--brand);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 22px;
+		color: #ffffff;
+		box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.4);
+	}
+	.channel__head-text { min-width: 0; }
+	.channel__name {
+		font-size: 1.0625rem;
+		font-weight: 800;
+		color: #000;
+		margin: 0;
+		line-height: 1.2;
+	}
+	.channel__id {
+		font-size: 0.625rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: #6b7280;
+		margin-top: 2px;
+	}
+	.channel__status {
+		font-size: 0.625rem;
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		color: #15803d;
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		flex: 0 0 auto;
+	}
+	.channel__dot {
+		width: 8px;
+		height: 8px;
+		background: #22c55e;
+		border: 1.5px solid #000;
+		display: inline-block;
+		animation: pulse 1.8s ease-in-out infinite;
+	}
+	@keyframes pulse {
+		0%, 100% { opacity: 1; }
+		50% { opacity: 0.4; }
+	}
+
+	.channel__desc {
+		font-size: 0.8125rem;
+		line-height: 1.5;
+		color: #374151;
+		margin: 0;
+		flex: 1 1 auto;
+	}
+
+	.channel__tagline {
+		font-size: 0.6875rem;
+		font-weight: 700;
+		color: var(--brand);
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		padding: 6px 10px;
+		background: #f9fafb;
+		border: 1.5px solid #000;
+		align-self: flex-start;
+	}
+
+	.channel__cta {
+		font-family: inherit;
+		font-size: 0.875rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		padding: 10px 14px;
+		background: var(--brand);
+		color: #ffffff;
+		border: 2px solid #000;
+		box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.5);
+		cursor: pointer;
+		display: inline-flex;
+		justify-content: center;
+		align-items: center;
+		gap: 6px;
+		transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.1s ease;
+	}
+	.channel__cta:hover {
+		background: var(--brand-hover);
+		transform: translate(-1px, -1px);
+		box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.6);
+	}
+	.channel__cta-bracket { opacity: 0.7; font-weight: 700; }
+
+	/* ---------- Trust footer ---------- */
+	.trust {
+		position: relative;
+		background: #0f172a;
+		color: #ffffff;
+		border: 2px solid #000;
+		box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.6);
+		padding: 22px 18px 18px;
+	}
+	.trust__pixel-stripe {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 4px;
+		background: linear-gradient(
+			to right,
+			#22c55e 0%, #22c55e 25%,
+			#3b82f6 25%, #3b82f6 50%,
+			#a855f7 50%, #a855f7 75%,
+			#f97316 75%, #f97316 100%
+		);
+		border-bottom: 2px solid #000;
+	}
+	.trust__grid {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 16px;
+	}
+	@media (max-width: 720px) {
+		.trust__grid { grid-template-columns: minmax(0, 1fr); }
+	}
+	.trust__item {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		text-align: center;
+	}
+	.trust__icon {
+		font-size: 1rem;
+		color: #67e8f9;
+	}
+	.trust__label {
+		font-size: 0.8125rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: #ffffff;
+	}
+	.trust__sub {
+		font-size: 0.75rem;
+		color: #94a3b8;
+		line-height: 1.45;
+	}
+</style>

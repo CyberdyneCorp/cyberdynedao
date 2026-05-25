@@ -26,6 +26,33 @@ export function getLearnCategoryColor(category: string): string {
 	}
 }
 
+export type LearnPalette = 'blue' | 'green' | 'purple' | 'orange' | 'red';
+
+export function getLevelPalette(level: string): LearnPalette {
+	switch (level) {
+		case 'Beginner': return 'green';
+		case 'Intermediate': return 'blue';
+		case 'Advanced': return 'red';
+		default: return 'blue';
+	}
+}
+
+export function getCategoryPalette(category: string): LearnPalette {
+	switch (category) {
+		case 'Blockchain': return 'blue';
+		case 'Development': return 'purple';
+		case 'Architecture': return 'orange';
+		case 'AI': return 'purple';
+		case 'Geospatial': return 'green';
+		case 'Governance': return 'purple';
+		case 'DeFi': return 'green';
+		case 'Economics': return 'orange';
+		case 'Infrastructure': return 'blue';
+		case 'Security': return 'red';
+		default: return 'blue';
+	}
+}
+
 export function resolvePathModules(path: LearningPath, modules: LearningModule[]): LearningModule[] {
 	return path.modules
 		.map(id => modules.find(m => m.id === id))

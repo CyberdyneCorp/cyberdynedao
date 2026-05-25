@@ -1,3 +1,5 @@
+export type ServicePalette = 'blue' | 'green' | 'purple' | 'orange' | 'red';
+
 export interface ServiceBullet {
 	title: string;
 	description: string;
@@ -9,134 +11,142 @@ export interface ServiceSection {
 	title: string;
 	intro: string;
 	bullets: ServiceBullet[];
-	gradientFrom: string;
-	gradientTo: string;
-	borderColor: string;
-	bulletColor: string;
+	palette: ServicePalette;
+	fullWidth?: boolean;
 }
 
+export const heroSubtitle =
+	'Production-grade software end-to-end — strategy, full-stack engineering, AI, geospatial intelligence, blockchain, and the open infrastructure to run it.';
+
 export const serviceSections: ServiceSection[] = [
+	{
+		id: 'geospatial-sovereign',
+		icon: '🌍',
+		title: 'Geospatial & Sovereign AI',
+		intro:
+			'Domain-specific AI on real satellite data — built for regulated buyers: insurers, ministries, development finance, EUDR-affected exporters.',
+		bullets: [
+			{ title: '3D dashboards', description: '25 toggleable layers, multi-tenant RLS, agent-driven workflows.' },
+			{ title: 'STAC catalogs with native MCP', description: 'dual backend (MongoDB / pgstac), CQL2 filters, agent-first discovery.' },
+			{ title: 'Parametric insurance', description: 'climatology baseline + anomaly engine + step / linear / sigmoid payouts.' },
+			{ title: 'EUDR pipelines', description: 'polygon → JRC + Hansen + WDPA → TRACES-ready DDS payload.' },
+			{ title: 'SAR primitives', description: 'pure-Python coherence, interferogram, unwrap_phase — no SNAP / GAMMA dependency.' },
+			{ title: 'RF planning', description: 'ITM, ITU-R P.1812-7, sector plans, link budgets, GeoJSON / KML export.' }
+		],
+		palette: 'green',
+		fullWidth: true
+	},
 	{
 		id: 'strategy',
 		icon: '🎯',
 		title: 'Strategy & Discovery',
-		intro: 'Turn ideas into a buildable plan—with token-aware economics.',
+		intro: 'Turn an idea into a buildable plan — architecture decided before the first commit.',
 		bullets: [
-			{ title: 'Product Strategy & PRD', description: 'for full-stack builds (frontend, backend, automation, LLMs).' },
-			{ title: 'Tokenomics & DAO Design', description: 'aligned to a yield-powered model (ops funded by DeFi; dividends optional).' },
-			{ title: 'Roadmap fit', description: 'with phased governance (incl. a Cosmos-SDK chain w/ IBC for scale in Phase 3).' }
+			{ title: 'Product strategy & PRDs', description: 'scoped for full-stack delivery, not slideware.' },
+			{ title: 'Architecture review', description: 'hexagonal cores, ports & adapters, tested at the seams.' },
+			{ title: 'Tokenomics & DAO design', description: 'yield-powered models where DeFi pays the ops bill.' },
+			{ title: 'Roadmap fit', description: 'phased, governance-aware, Cosmos-SDK + IBC when scale demands it.' }
 		],
-		gradientFrom: 'from-purple-50',
-		gradientTo: 'to-blue-50',
-		borderColor: 'border-purple-200',
-		bulletColor: 'text-purple-600'
+		palette: 'purple'
 	},
 	{
 		id: 'frontend',
 		icon: '🎨',
 		title: 'Frontend Engineering',
-		intro: 'Fast, portable frontends you can host anywhere.',
+		intro: 'Fast, portable frontends on the same component library already shipping in production.',
 		bullets: [
-			{ title: 'Web Apps', description: 'in Svelte + TypeScript + Tailwind with clean component systems.' },
-			{ title: 'Mobile', description: 'in SwiftUI (iOS) and Kotlin/Jetpack (Android).' },
-			{ title: 'Launch & Hosting:', description: 'Supabase-style backends and Coolify-like app deploys for frictionless DX.' }
+			{ title: 'Web apps', description: 'Svelte + TypeScript + Tailwind, MVVM end-to-end.' },
+			{ title: 'Mobile', description: 'SwiftUI (iOS) + Kotlin / Jetpack Compose (Android).' },
+			{ title: 'Design system', description: '@cyberdynecorp/svelte-ui-core — retro chrome and crypto primitives included.' },
+			{ title: 'Accessibility & type-safety', description: 'svelte-check clean, a11y-tested on every PR.' }
 		],
-		gradientFrom: 'from-green-50',
-		gradientTo: 'to-emerald-50',
-		borderColor: 'border-green-200',
-		bulletColor: 'text-green-600'
+		palette: 'blue'
 	},
 	{
 		id: 'backend',
 		icon: '⚡',
 		title: 'Backend, Data & DevOps',
-		intro: 'Cloud-simple, production-sharp.',
+		intro: 'Hexagonal cores, real coverage gates, predictable releases.',
 		bullets: [
-			{ title: 'APIs & Services', description: 'on Supabase (Auth, DB, Edge Functions) and Python/Go/Rust stacks.' },
-			{ title: 'Automation', description: 'with n8n for ingest, enrichment, and ops runbooks.' },
-			{ title: 'Containers & Orchestration', description: 'using Docker and Kubernetes, with CI/CD pipelines and observability.' }
+			{ title: 'APIs', description: 'FastAPI, Go, Rust — import-linter contracts enforce architecture on every PR.' },
+			{ title: 'REST + MCP dual surfaces', description: 'the same use cases serve agents and apps.' },
+			{ title: 'PostgreSQL stack', description: 'pgvector + Apache AGE for knowledge graphs; pgstac for spatial.' },
+			{ title: 'Ops', description: 'Coolify-first deploys, containers, structlog + Prometheus + Sentry.' }
 		],
-		gradientFrom: 'from-blue-50',
-		gradientTo: 'to-indigo-50',
-		borderColor: 'border-blue-200',
-		bulletColor: 'text-blue-600'
+		palette: 'orange'
 	},
 	{
 		id: 'ai',
 		icon: '🧠',
 		title: 'AI & Knowledge Systems',
-		intro: 'From RAG to agents—shipped responsibly.',
+		intro: 'From RAG to agents — production, not demos.',
 		bullets: [
-			{ title: 'Integrated LLMs', description: '(OpenRouter) when you want hosted intelligence without gatekeeping.' },
-			{ title: 'Self-hosted inference', description: 'using Ollama and vLLM; plug in open-source models like DeepSeek or Gemma.' },
-			{ title: 'Data pipelines', description: 'and doc parsing ready for knowledge graphs and retrieval workflows.' }
+			{ title: 'Knowledge graphs', description: 'LightRAG-backed, multi-tenant from day one.' },
+			{ title: 'Document ingestion', description: 'nine adapters, automatic fallback, LLM image enrichment, 97% coverage.' },
+			{ title: 'LLM ops', description: 'hosted (OpenRouter, Anthropic, OpenAI) or self-hosted (Ollama, vLLM).' },
+			{ title: 'MCP servers', description: 'first-class agent access to your data — same use cases over HTTP.' }
 		],
-		gradientFrom: 'from-orange-50',
-		gradientTo: 'to-yellow-50',
-		borderColor: 'border-orange-200',
-		bulletColor: 'text-orange-600'
+		palette: 'red'
 	},
 	{
 		id: 'blockchain',
 		icon: '⛓️',
-		title: 'Blockchain, DeFi & On-Chain Apps',
+		title: 'Blockchain & On-Chain Apps',
 		intro: 'Credible Web3 that survives mainnet.',
 		bullets: [
-			{ title: 'EVM smart contracts', description: '(Solidity) with oracles (Chainlink) and tested release flows.' },
-			{ title: 'Wallet & Auth', description: 'via Web3Auth/OpenWallet; fiat on-ramp with Coinbase SDK.' },
-			{ title: 'Target chains', description: 'include Arbitrum and Base for cost/perf balance.' },
-			{ title: 'DeFi-native operations:', description: 'leverage AAVE/Uniswap to structure covered loans and reduce liquidity costs.' },
-			{ title: 'DAO at scale:', description: 'Cosmos-SDK + IBC path for governance throughput when you need it.' },
-			{ title: 'Treasury & Finance:', description: 'ops funded by 4–6%/mo DeFi yield; optional dividend distribution to holders.' }
+			{ title: 'EVM smart contracts', description: 'Solidity with oracles, tested release flows, audited.' },
+			{ title: 'Wallet auth', description: 'EIP-4361, Web3Auth social login, WalletConnect (50+ wallets).' },
+			{ title: 'Chain focus', description: 'Base + Arbitrum for cost/perf, USDC-native economies.' },
+			{ title: 'NFT-tier IAM', description: 'on-chain Identity / Policy / Group contracts, dynamic permissions.' },
+			{ title: 'DeFi treasury', description: 'AAVE supply, Uniswap LPs, covered loans — proven, not theorized.' },
+			{ title: 'DAO at scale', description: 'Cosmos-SDK + IBC when governance throughput needs to scale.' }
 		],
-		gradientFrom: 'from-purple-50',
-		gradientTo: 'to-pink-50',
-		borderColor: 'border-purple-200',
-		bulletColor: 'text-purple-600'
-	},
-	{
-		id: 'storage',
-		icon: '💾',
-		title: 'Decentralized Storage & Compute',
-		intro: "Put your app where it can't be \"turned off.\"",
-		bullets: [
-			{ title: 'Storage', description: 'on Arweave and IPFS for assets, docs, and audit trails.' },
-			{ title: 'Portable compute', description: 'across your infra or decentralized providers, with caching/rate-limit strategies.' }
-		],
-		gradientFrom: 'from-teal-50',
-		gradientTo: 'to-cyan-50',
-		borderColor: 'border-teal-200',
-		bulletColor: 'text-teal-600'
+		palette: 'blue'
 	},
 	{
 		id: 'security',
 		icon: '🔒',
-		title: 'Security, Reliability & Support',
-		intro: 'Trust is a feature.',
+		title: 'Security & Reliability',
+		intro: 'Trust is a feature — and we test it like one.',
 		bullets: [
-			{ title: 'Security basics:', description: 'secrets, key handling, principle of least privilege.' },
-			{ title: 'Audits & Testing', description: 'for contracts and apps; threat modeling and fuzzing.' },
-			{ title: 'SLA-style support:', description: 'incident response, patch windows, and monthly ops reviews.' }
+			{ title: 'Sandboxed user code', description: 'real subprocess + Linux netns + egress allowlist (the model in CyberdyneAuth).' },
+			{ title: 'Hardened parsers', description: 'XXE defenses, size caps, sanitization, fuzzing on untrusted input.' },
+			{ title: 'SLA-style support', description: 'incident response, patch windows, monthly ops reviews.' },
+			{ title: 'Least-privilege everywhere', description: 'secrets hygiene, threat modeling, audit trails.' }
 		],
-		gradientFrom: 'from-red-50',
-		gradientTo: 'to-pink-50',
-		borderColor: 'border-red-200',
-		bulletColor: 'text-red-600'
+		palette: 'purple'
 	}
 ];
 
-export const workflowSteps: string[] = [
-	'Discover the smallest valuable slice.',
-	'Design the system and the experience, together.',
-	'Build with tests, telemetry, and CI from day zero.',
-	'Ship to users, not staging.',
-	"Measure what moved (or didn't) and why.",
-	'Grow & Govern with DAO rituals and clear economics.'
+export const workflowSteps: { title: string; description: string }[] = [
+	{ title: 'Discover', description: 'Find the smallest valuable slice.' },
+	{ title: 'Architect', description: 'Pick ports & adapters before the first PR.' },
+	{ title: 'Build', description: 'Tests, telemetry, and CI from day zero.' },
+	{ title: 'Ship', description: 'To users, not staging.' },
+	{ title: 'Measure', description: "What moved (or didn't) and why." },
+	{ title: 'Govern', description: 'DAO rituals and clear economics, when it’s time.' }
 ];
 
 export const whyCyberdynePoints: ServiceBullet[] = [
-	{ title: 'Yield-powered:', description: '"Usage ⇒ Yield ⇒ Self-Sustaining Infrastructure."' },
-	{ title: 'All-in-one:', description: 'Firebase + OpenAI + Heroku—but decentralized, community-owned, and yield-paying.' },
-	{ title: 'Open & composable:', description: 'choose hosted LLMs (OpenRouter) or your own (Ollama/vLLM).' },
-	{ title: 'DAO-native:', description: 'EVM compatible and governance-ready; CBY max supply fixed at 25,000,000.' }
+	{
+		title: 'Production proof',
+		description: '18 projects shipping. Coverage gates at 83–97%. Tests in the thousands.'
+	},
+	{
+		title: 'Open by default',
+		description: 'Every project hexagonal, open-source, swappable at the seams — no vendor lock-in.'
+	},
+	{
+		title: 'Full stack, one collective',
+		description: 'Strategy, mobile, backend, AI, geospatial, and Web3 — one team, one taste.'
+	},
+	{
+		title: 'Yield-powered economics',
+		description: 'For clients who want ops funded by DeFi yield, not per-seat SaaS taxes.'
+	}
 ];
+
+export const ctaHeadline = 'Ready to Build?';
+export const ctaBody =
+	'Whether it’s a regulated geospatial system, an AI-native operating system, or a DeFi-funded platform — let’s scope the first valuable slice.';
+export const ctaPills: string[] = ['Strategy', 'Engineering', 'AI', 'Geospatial', 'Web3'];
