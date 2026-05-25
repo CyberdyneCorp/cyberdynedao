@@ -65,16 +65,6 @@ export interface LearningPath {
 	estimatedTime: string;
 }
 
-// Cart related types
-export interface CartItem {
-	id: string;
-	title: string;
-	price: number;
-	quantity: number;
-	category: string;
-	image: string;
-}
-
 // Investment related types
 export interface LiquidityPosition {
 	pool: string;

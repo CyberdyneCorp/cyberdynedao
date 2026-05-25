@@ -30,7 +30,7 @@ describe('shellViewModel', () => {
 	});
 
 	it('openCart creates a cart window with count in title', () => {
-		cart.addItem({ id: 'a', name: 'A', price: 1, quantity: 2, category: 'c' });
+		cart.addItem({ id: 'a', name: 'A', price: 1, quantity: 2 });
 		const shell = createShellViewModel();
 		shell.openCart();
 		const w = get(windows)[0];
