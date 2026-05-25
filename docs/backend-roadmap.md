@@ -16,7 +16,7 @@ This doc is the plan, not a spec. Anything declared here is the default; anythin
 1. Replace every static `src/lib/data/*.ts` file with a versioned, cache-friendly REST endpoint on a Python FastAPI service, hexagonal at its core, behind CyberdyneAuth.
 2. Ship a learning platform (modules, paths, enrollment, progress, certificates) and a marketplace (Stripe-powered training + license keys + service inquiries) wired into the existing frontend views.
 3. Stand up a single OpenAI-backed chat agent (tool calls + retrieval) grounded in Cyberdyne content (projects, blog, learning modules, services) so the terminal UI can answer "what does CyberSTAC do?" without hitting the static file.
-4. Expose on-chain reality (NFT-tier access, treasury balances, proposal results, dividend windows) as cached read-models — not "another wallet flow". The wallet flow lives in CyberdyneAuth.
+4. Expose on-chain reality (NFT-tier access; full DAO treasury composition on Base: ERC-20 balances + **AAVE v3 positions** + **Uniswap v4 LP positions** for the DAO smart contract address) as cached read-models — not "another wallet flow". The wallet flow lives in CyberdyneAuth. Governance proposals and on-chain dividend mechanics are out of v1 — see Open Q 11.
 5. Hit **≥90% line coverage** on `domain/` and `application/` layers as a hard CI gate from day one (excluding integration-only adapters — same calibration the rest of the Cyberdyne stack uses).
 6. Be Coolify-deployable on first push using the same recipe as CyberdyneAuth/OrgPilot (multi-stage `uv` Dockerfile, `alembic upgrade head` on entrypoint, Traefik via `expose:`).
 
@@ -27,6 +27,7 @@ This doc is the plan, not a spec. Anything declared here is the default; anythin
 - **We are not re-implementing CyberRAG.** The chat agent's knowledge backend is CyberRAG via MCP (or HTTP fallback) — see §5.6 for why we are not rolling pgvector inline.
 - **We are not running a smart-contract indexer.** Web3 reads are on-demand + short-TTL cached, not a Subgraph clone. If we ever need historical indexing, that's a separate service.
 - **No write-side Web3 in v1.** Dividend distribution oracles, treasury rebalance triggers — design the seam, but don't ship the keystore yet.
+- **No DAO governance contract chosen in v1.** Proposal aggregation, voting, and on-chain dividend windows wait until a Governor implementation lands (Open Q 11). The frontend's Proposals panel keeps rendering mock data; the `GovernorAdapter` port is defined so the swap is small once a contract is picked.
 - **No Stripe Connect / multi-tenant payouts.** Single-tenant Stripe account, single payout destination. Marketplace sellers other than Cyberdyne itself is a v2 problem.
 
 ---
@@ -178,9 +179,11 @@ Only the entities that matter; no per-column ERDs.
 - `ChatMessage` (id, session_id, role ∈ {user, assistant, tool}, content_md, tool_name?, tool_args_json?, tool_result_json?, tokens_in, tokens_out, model, created_at).
 
 **Web3 Read-Models**
-- `TreasurySnapshot` (chain, taken_at, total_usd, assets_json). Cached every N minutes via scheduler — adapter, not domain.
-- `ProposalSnapshot` (proposal_id, status, votes_for, votes_against, ends_at, fetched_at).
+- `TreasurySnapshot` (chain, taken_at, total_usd, erc20_balances_json, aave_summary_json, uniswap_v4_position_count). Cached every N minutes via scheduler — adapter, not domain.
+- `AavePositionSnapshot` (chain, owner_address, reserve_address, supplied_underlying, borrowed_variable, borrowed_stable, fetched_at) — one row per (owner, reserve). The account-level summary (health factor, LTV, liquidation threshold, total collateral / debt / available borrows) lives in `TreasurySnapshot.aave_summary_json` so we don't recompute it per request.
+- `UniswapV4PositionSnapshot` (chain, owner_address, position_id, pool_id, currency0, currency1, fee, tick_spacing, hooks_address, tick_lower, tick_upper, liquidity, fees_owed_token0, fees_owed_token1, fetched_at) — one row per LP position the DAO holds.
 - `NftTierCache` (wallet_address, tier, fetched_at, expires_at). Same shape CyberdyneAuth uses; we cache because Base RPC isn't free.
+- *Deferred:* `ProposalSnapshot` — not in v1; reintroduced when the Governor contract is chosen (Open Q 11).
 
 Keys: every public ID is a slug (kebab-case) or a UUID v7. Stripe ids and on-chain addresses are stored as strings, never as enums.
 
@@ -314,35 +317,52 @@ Cost of this choice: the backend depends on CyberRAG being up. Mitigated by (a) 
 
 ### 5.7 Web3 Reader
 
-**Purpose:** Read-only on-chain access. Backs the DAO view, wallet investments panel, and the chat agent's `get_user_tier()` tool.
+**Purpose:** Read-only on-chain access against **Base mainnet**. Backs the DAO view (treasury composition + DeFi positions), wallet investments panel, and the chat agent's `get_user_tier()` tool.
 
 **Reads in v1:**
 - `CyberdyneAccessNFT` balanceOf / tierOf for a wallet → backs NFT terminal + chat tier check.
-- DAO treasury balance: USDC + ETH + (optionally) AAVE aToken balance on a multisig address.
+- **Full DAO treasury composition for `TREASURY_ADDRESS`** (the DAO's smart contract address on Base):
+  - **Plain ERC-20 balances** — USDC, WETH, and any other treasury assets held directly. Token list is admin-configured (env var `TREASURY_TOKEN_ADDRESSES`); no auto-discovery in v1.
+  - **AAVE v3 positions** via the Aave Pool + Protocol Data Provider on Base:
+    - Reserve list from `AaveProtocolDataProvider.getAllReservesTokens()`.
+    - Per-reserve aToken balance (supplies), variableDebtToken balance, stableDebtToken balance for the DAO address.
+    - Account summary via `Pool.getUserAccountData(TREASURY_ADDRESS)` → `totalCollateralBase`, `totalDebtBase`, `availableBorrowsBase`, `currentLiquidationThreshold`, `ltv`, `healthFactor`.
+  - **Uniswap v4 positions** via the Position Manager + StateView on Base:
+    - Enumerate ERC-721 positions owned by the DAO address from the v4 Position Manager.
+    - For each position, decode the `PoolKey` (currency0, currency1, fee, tickSpacing, hooks), tick range, and liquidity.
+    - Uncollected fees per token via StateView's position-info read (or `IPositionManager.getPositionInfo()` depending on the deployed interface — pin to the canonical Base mainnet addresses).
 - `CyberdyneMarketplace` and `TrainingMaterials` contract reads where they overlap with off-chain products (e.g., is this license already minted on-chain?).
-- Last N governance proposals from whatever Governor contract goes live in Phase 3.
+
+**DAO governance proposals: deferred.** We are *not* picking a Governor implementation yet (OpenZeppelin Governor + Timelock, Compound/Tally-style, Aragon, or custom). The frontend's "Recent Proposals" panel keeps rendering mock data from `daoData.ts` until that decision lands — see Open Q 11. The `GovernorAdapter` port is defined as a placeholder so the swap is small once a contract is chosen.
 
 **Writes in v1: none.** The seam is defined (`OnchainSigner` port with one prod implementation that raises `NotImplementedError`) so we don't have to refactor in Phase 5. Dividend distribution / oracle updates ship later behind a feature flag, with the signer key in a KMS — not in env vars.
 
 **Representative endpoints:**
-- `GET /api/v1/dao/treasury` — cached aggregate.
-- `GET /api/v1/dao/proposals?limit=20`.
-- `GET /api/v1/dao/dividends/next` — next distribution window.
+- `GET /api/v1/dao/treasury` — top-level aggregate: total USD value, ERC-20 breakdown, AAVE account summary (health factor / LTV / total supply / total borrow), Uniswap v4 position count.
+- `GET /api/v1/dao/positions/aave` — per-reserve AAVE positions (supplied + borrowed-variable + borrowed-stable, each with the underlying token symbol and USD value) plus the account summary.
+- `GET /api/v1/dao/positions/uniswap-v4` — every Uniswap v4 LP position the DAO holds: pool key, tick range, liquidity, uncollected fees per token, and a computed pool price snapshot.
+- `GET /api/v1/dao/dividends/next` — next distribution window. Off-chain admin-set schedule until the on-chain dividend mechanism ships (deferred with the Governor decision).
 - `GET /api/v1/wallet/{address}/access-tier` — CyberdyneAccessNFT tier resolver, cached 5 min.
 
-**Key dependencies:** `web3.py`, a multi-RPC adapter (primary RPC + backup — Base public RPC is rate-limited), a small ABI registry. Caching is required: every call goes through a `TtlReadCache` port to avoid hammering RPC.
+**Note:** `GET /api/v1/dao/proposals` is deliberately absent — see Open Q 11.
+
+**Key dependencies:** `web3.py`, a multi-RPC adapter (primary RPC + backup — Base public RPC is rate-limited), a small ABI registry containing: AccessNFT (from `contracts/contracts/`), ERC-20 (standard), AAVE v3 Pool + ProtocolDataProvider + aToken + DebtToken (from `@aave/core-v3`), Uniswap v4 PoolManager + PositionManager + StateView (from `@uniswap/v4-core` and `@uniswap/v4-periphery` once the Base addresses are published). Caching is required: every call goes through a `TtlReadCache` port to avoid hammering RPC.
 
 **Testing:**
-- Unit: ABI decoding, cache TTL behaviour, multi-RPC fallback.
-- Integration: `web3.py` against `anvil` (Foundry) with mock contracts deployed from `contracts/contracts/*.sol` — already in the monorepo at `/Users/leonardoaraujo/work/cyberdynedao/contracts`. Foundry binaries pulled in CI by a single `setup-foundry` step.
+- Unit: ABI decoding, cache TTL behaviour, multi-RPC fallback, AAVE health-factor / LTV math, Uniswap v4 position decoding.
+- Integration: two flavors —
+  - `anvil` with our own deployed mocks for AccessNFT / Marketplace / TrainingMaterials (the contracts we control).
+  - **Mainnet-fork mode** (`anvil --fork-url <BASE_RPC>` against a pinned block) for AAVE v3 and Uniswap v4 reads. We don't redeploy AAVE or Uniswap in CI — that's days of work; we read from forked mainnet state.
+  - Foundry binaries pulled in CI by a single `setup-foundry` step.
+- Manual spot-check before sign-off: AAVE health factor + LTV match the AAVE UI for `TREASURY_ADDRESS`; Uniswap v4 positions + uncollected fees match the Uniswap UI for the same address.
 
 ### 5.8 DAO Read-Models
 
 **Purpose:** Stitch Web3 reads + off-chain analytics into the shapes the frontend already consumes (`daoData.ts`: `TreasuryAsset[]`, `DaoProposal[]`, `DividendInfo`, `OperationalData`).
 
-Half of `daoData.ts` is genuinely on-chain (proposals, treasury). Half is operational (monthly income / op costs / profit margin) — that's *off-chain* finance data that needs to come from a dedicated `Treasury` aggregate in this backend (or from OrgPilot's finance module via API, if we want to avoid duplication — see Open Questions).
+What's on-chain in v1: treasury composition (ERC-20s + AAVE positions + Uniswap v4 positions) — all sourced via §5.7. What's off-chain: operational data (monthly income / op costs / profit margin) — needs a dedicated `Treasury` aggregate in this backend, or pulled from OrgPilot's finance module via API (see Open Q 4). What's deferred entirely: proposals + on-chain dividend windows — those wait for the Governor decision (Open Q 11).
 
-**Representative endpoints:** all under `GET /api/v1/dao/*` already listed in §5.7. The aggregator use case fans out to `web3_read` (on-chain) + `treasury_offchain` (Postgres tables fed by manual admin updates in v1).
+**Representative endpoints:** all under `GET /api/v1/dao/*` already listed in §5.7, plus `GET /api/v1/dao/operations` for the off-chain finance aggregate. The aggregator use case fans out to `web3_read` (on-chain) + `treasury_offchain` (Postgres tables fed by manual admin updates in v1, or OrgPilot pull if Open Q 4 lands that way).
 
 **Testing:** mostly composition tests — the on-chain adapter is stubbed at the port boundary, off-chain aggregates are unit-tested over fixtures.
 
@@ -361,8 +381,10 @@ Migration order is **cheapest first → most external-dep last**. Stripe sandbox
 | `contact.ts` (channels) + `ContactView` POST | `GET /api/v1/content/contact-methods` + `POST /api/v1/asks` | 2 (Phase 2) | Asks API ships with this view; captcha required |
 | `news.ts` | `GET /api/v1/blog/posts` + `GET /api/v1/blog/posts/{slug}` | 3 (Phase 3) | Drives the blog write-side too (admin endpoints) |
 | `learn.ts` (modules, paths, resources) | `GET /api/v1/learning/{modules,paths}`, `GET /api/v1/content/resources` | 4 (Phase 4) | Adds enrollment/progress (auth-gated) |
-| `daoData.ts` (treasury, proposals, dividends, ops) | `GET /api/v1/dao/*` | 5 (Phase 5) | Web3 read adapters land here |
-| `investments.ts` (LP positions) | `GET /api/v1/me/wallet/positions` | 5 (Phase 5) | Wallet must be linked via CyberdyneAuth |
+| `daoData.ts` treasury + AAVE + Uniswap v4 positions | `GET /api/v1/dao/treasury`, `GET /api/v1/dao/positions/{aave,uniswap-v4}` | 5 (Phase 5) | Real on-chain reads against Base mainnet |
+| `daoData.ts` operational data (income / costs / margin) | `GET /api/v1/dao/operations` | 5 (Phase 5) | Off-chain — admin uploads or pulled from OrgPilot (Open Q 4) |
+| `daoData.ts` proposals + dividend countdown | (none yet) | **Deferred** | Stay static until a Governor contract is chosen (Open Q 11) |
+| `investments.ts` (LP positions) | `GET /api/v1/me/wallet/positions` | 5 (Phase 5) | Wallet must be linked via CyberdyneAuth; reuses Uniswap v4 + AAVE adapters but for the *user's* address, not the DAO's |
 | `shop.ts` + cart | `GET /api/v1/marketplace/products`, `POST .../{slug}/checkout` | 6 (Phase 6) | Last because Stripe + license fulfilment is the slowest external bring-up |
 
 Frontend changes per phase: convert one or two static `*.ts` files into a `+page.server.ts` or `+layout.server.ts` `load()` that calls the new endpoint, with the static file kept around as a fallback for one PR for safety, then deleted.
@@ -448,22 +470,38 @@ Six phases. Each phase is independently shippable — at the end of every phase 
 
 **Dependencies:** Phase 1.
 
-### Phase 5 — Web3 read + DAO read-models (M, ~2 weeks)
+### Phase 5 — Web3 read + DAO treasury & DeFi positions (M, ~2.5 weeks)
 
-**Goal:** every DAO panel in the frontend is sourced from on-chain reality plus the off-chain Treasury aggregate.
+**Goal:** the DAO view's treasury and DeFi-position panels are sourced from on-chain reality on Base mainnet for the DAO smart contract address. Proposals and dividend countdown stay rendering mock data — they're deferred until a Governor contract is chosen (Open Q 11).
 
 **Scope:**
 - `domain/web3_read` + `domain/dao_readmodel` with their use cases.
-- `web3.py` adapter, multi-RPC fallback, ABI registry seeded from `contracts/contracts/*.sol`.
-- Foundry-based integration suite in CI (`anvil` + deployed mocks).
-- Scheduler (FastAPI startup task or `apscheduler`) refreshing `TreasurySnapshot` every 5 min and `NftTierCache` lazily.
+- `web3.py` adapter, multi-RPC fallback (primary + backup), ABI registry covering: `CyberdyneAccessNFT` (own contracts), ERC-20 standard, AAVE v3 (`Pool`, `ProtocolDataProvider`, `aToken`, `VariableDebtToken`, `StableDebtToken`), Uniswap v4 (`PoolManager`, `PositionManager`, `StateView`).
+- **AAVE v3 reader** for `TREASURY_ADDRESS`: enumerate reserves on Base, fetch per-reserve aToken / variableDebtToken / stableDebtToken balances, plus `getUserAccountData` for the health factor / LTV / liquidation threshold / total collateral / total debt / available borrows.
+- **Uniswap v4 reader** for `TREASURY_ADDRESS`: enumerate Position Manager NFTs owned by the DAO, decode each position's `PoolKey` + tick range + liquidity, and read uncollected fees per token via StateView.
+- **ERC-20 reader**: balances for the admin-configured `TREASURY_TOKEN_ADDRESSES` list (USDC, WETH, and anything else the DAO holds).
+- USD valuation: prefer on-chain oracles (Chainlink on Base) for token-to-USD rates; fall back to a configured static map for stablecoins.
+- Foundry-based integration suite in CI:
+  - `anvil` + our own deployed mocks for AccessNFT / Marketplace / TrainingMaterials.
+  - `anvil --fork-url <BASE_RPC>` at a pinned block for AAVE + Uniswap v4 (we don't redeploy those — too expensive in CI).
+- Scheduler (`apscheduler`) refreshing `TreasurySnapshot`, `AavePositionSnapshot[]`, and `UniswapV4PositionSnapshot[]` every 5 min; `NftTierCache` populated lazily.
 - Endpoints per §5.7.
-- Frontend: swap `DaoView`, `InvestmentsView`, `NFTTerminal`.
+- Frontend: swap `DaoView` (treasury + AAVE + Uniswap v4 panels), `InvestmentsView`, `NFTTerminal`. Proposals + dividend countdown panels keep their mock data with a small "demo data" badge until governance phase.
 
 **Exit criteria:**
-- DAO view renders live treasury, proposals, dividends in prod.
+- DAO view renders real treasury (ERC-20s + AAVE supplies/borrows with health factor + Uniswap v4 LP positions with uncollected fees) in prod.
 - RPC outage path: fallback RPC takes over within one retry, errors logged + Sentry breadcrumb.
 - AccessNFT tier from chain agrees with CyberdyneAuth's view (sanity test).
+- AAVE account summary (health factor, LTV) matches the AAVE UI for `TREASURY_ADDRESS` (manual spot check).
+- Uniswap v4 positions + uncollected fees match the Uniswap UI for `TREASURY_ADDRESS` (manual spot check).
+- Coverage gate still ≥90%.
+
+**Out of scope (explicit):**
+- Governance proposals — deferred (Open Q 11).
+- On-chain dividend distribution mechanics — deferred (depends on Governor + tokenomics decisions).
+- Write-side Web3 / signing — deferred.
+- Historical PnL, fee-accrual-over-time, impermanent loss — requires an event indexer; revisit in Phase 7+ (Open Q 12).
+- Auto-discovery of DAO-held tokens — token list is admin-configured.
 
 **Dependencies:** Phase 1. Independent of Phase 3/4 — can run in parallel with them.
 
@@ -504,9 +542,9 @@ These two share the phase because they're both external-dep-heavy and benefit fr
 | 2 | M | ~1.5 weeks |
 | 3 | M | ~1.5 weeks |
 | 4 | M | ~2 weeks |
-| 5 | M | ~2 weeks |
+| 5 | M | ~2.5 weeks |
 | 6 | L | ~3 weeks |
-| **Total** | | **~11 weeks** to full migration, with deployable value after each phase |
+| **Total** | | **~11.5 weeks** to full migration, with deployable value after each phase |
 
 ---
 
@@ -627,8 +665,13 @@ Follow the OrgPilot recipe — **anything baked into the build is `is_build = tr
 | `CYBERRAG_BEARER_TOKEN` | from CyberdyneAuth service-account flow |
 | `BASE_RPC_URL_PRIMARY` | Alchemy or self-hosted |
 | `BASE_RPC_URL_FALLBACK` | public Base RPC |
-| `ACCESSNFT_ADDRESS`, `MARKETPLACE_ADDRESS`, `TRAININGMATERIALS_ADDRESS`, `GOVERNOR_ADDRESS` | from `contracts/scripts` deploy output |
-| `TREASURY_MULTISIG_ADDRESS` | for treasury snapshots |
+| `ACCESSNFT_ADDRESS`, `MARKETPLACE_ADDRESS`, `TRAININGMATERIALS_ADDRESS` | from `contracts/scripts` deploy output |
+| `TREASURY_ADDRESS` | the DAO's smart contract address on Base; the owner whose positions we read |
+| `TREASURY_TOKEN_ADDRESSES` | comma-sep ERC-20 addresses the DAO holds directly (USDC, WETH, …); no auto-discovery in v1 |
+| `AAVE_V3_POOL_ADDRESS`, `AAVE_V3_DATA_PROVIDER_ADDRESS` | canonical Base mainnet deployment addresses |
+| `UNISWAP_V4_POOL_MANAGER_ADDRESS`, `UNISWAP_V4_POSITION_MANAGER_ADDRESS`, `UNISWAP_V4_STATE_VIEW_ADDRESS` | canonical Base mainnet deployment addresses |
+| `CHAINLINK_PRICE_FEEDS_JSON` | optional map of `{ token_address: chainlink_feed_address }` for USD valuation; stablecoins fall back to 1.0 |
+| `GOVERNOR_ADDRESS` | *deferred — set when a Governor contract is chosen (Open Q 11)* |
 | `CERT_SIGNING_KEY` | Ed25519 PEM, runtime only |
 | `EMAIL_PROVIDER` | `smtp` / `mock` |
 | `SMTP_URL` | when provider=smtp |
@@ -676,3 +719,5 @@ These need a decision before the corresponding phase starts. None block Phase 1.
 8. **Rate limiting strategy** — `slowapi` (in-process) vs a Redis-backed token bucket. Default: `slowapi` until traffic justifies otherwise. Captcha covers the most abusive endpoint already.
 9. **Service-account identity model for the chat agent calling CyberRAG** — CyberdyneAuth supports service tokens. Decide whether the chat agent uses a single static bearer or rotates via OAuth client-credentials. Default: static bearer in env, rotated quarterly.
 10. **Domain name** — `api.coolify.cyberdynecorp.ai` is the default. If we want a clean public surface for the chat endpoint (e.g., `chat.cyberdynecorp.ai`) decide before Phase 6 to avoid a CORS/cookie rebuild.
+11. **Which DAO governance contract to deploy?** — Deferred from v1; the frontend's Proposals + dividend-countdown panels stay on mock data until this lands. Realistic options: (a) OpenZeppelin Governor + TimelockController — most boring, widest ecosystem support, easy to audit; (b) Compound/Tally-style Governor — deepest existing tooling, ties UI to Tally; (c) custom contract aligned to the CBY tokenomics — most flexible, most audit surface. Companion decision: on-chain dividend windows (a `Distributor` contract emitting a `DistributionScheduled` event) vs. off-chain admin-set schedules. Decide before any frontend work depends on real proposals.
+12. **Position fee accrual: live read vs event indexing?** — Phase 5 takes the simple path — every 5 min poll uncollected fees and decode them. Historical fee earnings, APY-over-time charts, and IL math need an event indexer (Subgraph or self-hosted). Decide in Phase 7+ whether to consume Uniswap's official Subgraph for Base, ship our own minimal indexer, or skip historical analytics entirely.
