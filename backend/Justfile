@@ -1,0 +1,70 @@
+# Cyberdyne Backend — Tasks
+# https://just.systems
+
+set dotenv-load := true
+
+default:
+    @just --list
+
+# ── Setup ──────────────────────────────────────────────
+
+# Install all dependencies (including dev extras)
+install:
+    uv sync --all-extras
+
+# ── Development ────────────────────────────────────────
+
+# Run the HTTP API with hot-reload (uvicorn)
+dev:
+    uv run uvicorn cyberdyne_backend.main:app --reload --host 0.0.0.0 --port 8000
+
+# ── Quality gate ───────────────────────────────────────
+
+# Run unit tests (integration tests excluded by default — see test-integration)
+test *args:
+    uv run pytest tests {{args}}
+
+# Run integration tests explicitly (cross-process; mocked externals)
+test-integration *args:
+    uv run pytest tests/integration -m integration -v {{args}}
+
+# Lint with ruff
+lint:
+    uv run ruff check src tests
+
+# Auto-fix lint issues + format
+lint-fix:
+    uv run ruff check --fix src tests
+    uv run ruff format src tests
+
+# Format only
+fmt:
+    uv run ruff format src tests
+
+# Check formatting (CI mode — no changes applied)
+fmt-check:
+    uv run ruff format --check src tests
+
+# Type-check (mypy strict)
+typecheck:
+    uv run mypy src
+
+# Enforce hexagonal-architecture layer contracts
+lint-imports:
+    uv run lint-imports
+
+# Full quality gate (everything CI runs)
+check: lint fmt-check typecheck lint-imports test
+    @echo "✓ Backend gate passed."
+
+# ── Misc ───────────────────────────────────────────────
+
+# Dump the live OpenAPI schema (requires `just dev` running)
+openapi:
+    curl -s http://localhost:8000/openapi.json | jq
+
+# Clean caches
+clean:
+    rm -rf .venv .pytest_cache .ruff_cache .mypy_cache htmlcov .coverage
+    find . -type d -name __pycache__ -prune -exec rm -rf {} +
+    @echo "Cleaned."

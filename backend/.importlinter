@@ -1,0 +1,19 @@
+[importlinter]
+root_packages =
+    cyberdyne_backend
+
+# ── Hexagonal layer contract ──────────────────────────────────────────
+# domain knows nothing. application knows domain. adapters know
+# application and domain. infrastructure wires the rest. main is the
+# only thing allowed to import from anywhere.
+[importlinter:contract:layers]
+name = Hexagonal layers
+type = layers
+layers =
+    cyberdyne_backend.adapters.inbound
+    cyberdyne_backend.adapters.outbound
+    cyberdyne_backend.infrastructure
+    cyberdyne_backend.application
+    cyberdyne_backend.domain
+ignore_imports =
+    cyberdyne_backend.main -> *
