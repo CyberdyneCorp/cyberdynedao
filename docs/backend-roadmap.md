@@ -17,8 +17,9 @@ This doc is the plan, not a spec. Anything declared here is the default; anythin
 2. Ship a learning platform (modules, paths, enrollment, progress, certificates) and a marketplace (Stripe-powered training + license keys + service inquiries) wired into the existing frontend views.
 3. Stand up a single OpenAI-backed chat agent (tool calls + retrieval) grounded in Cyberdyne content (projects, blog, learning modules, services) so the terminal UI can answer "what does CyberSTAC do?" without hitting the static file.
 4. Expose on-chain reality (NFT-tier access; full DAO treasury composition on Base: ERC-20 balances + **AAVE v3 positions** + **Uniswap v4 LP positions** for the DAO smart contract address) as cached read-models — not "another wallet flow". The wallet flow lives in CyberdyneAuth. Governance proposals and on-chain dividend mechanics are out of v1 — see Open Q 11.
-5. Hit **≥90% line coverage** on `domain/` and `application/` layers as a hard CI gate from day one (excluding integration-only adapters — same calibration the rest of the Cyberdyne stack uses).
-6. Be Coolify-deployable on first push using the same recipe as CyberdyneAuth/OrgPilot (multi-stage `uv` Dockerfile, `alembic upgrade head` on entrypoint, Traefik via `expose:`).
+5. Hit **≥90% unit-test coverage** on `domain/` and `application/` layers as a hard CI gate from day one (excluding integration-only adapters — same calibration the rest of the Cyberdyne stack uses). The gate is enforced by `pytest-cov` with `fail_under=90`; the only allowed escape hatch is a PR that lowers the threshold, never a per-line `# pragma: no cover`.
+6. Standard Cyberdyne developer workflow: **`uv`** for dependency management (`uv.lock` committed, `uv sync --frozen` in Docker) and **`just`** as the task runner (`just install / dev / test / lint / typecheck / lint-imports / check`). Matches CyberdyneAuth / geo_dashboard / OrgPilot bone-for-bone so muscle memory transfers across services.
+7. Be Coolify-deployable on first push using the same recipe as CyberdyneAuth / OrgPilot (multi-stage `uv` Dockerfile with `UV_LINK_MODE=copy`, `alembic upgrade head` on entrypoint, Traefik via `expose:`).
 
 ### Non-Goals
 
