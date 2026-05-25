@@ -6,14 +6,19 @@ SvelteKit app styled with `@cyberdynecorp/svelte-ui-core` retro components.
 
 1. **GitHub Packages auth.** The retro component library is published to GitHub Packages, so `npm install` needs a personal access token with at least `read:packages` scope.
 
-   Export it before installing:
+   The committed `.npmrc` only declares the `@cyberdynecorp` scope — it carries no token. Add the token via your user-level `~/.npmrc`:
 
-   ```bash
-   export GITHUB_TOKEN=ghp_...   # classic PAT with read:packages
-   npm install
+   ```
+   //npm.pkg.github.com/:_authToken=ghp_...
    ```
 
-   The repo-local `.npmrc` references `${GITHUB_TOKEN}` at install time — no token is committed. Without the env var you'll see a 401 from `https://npm.pkg.github.com/`.
+   or pass it inline:
+
+   ```bash
+   NPM_TOKEN=ghp_... npm install
+   ```
+
+   In CI/CD (Coolify), set `NPM_TOKEN` as a **build arg** — the Dockerfile appends it to `.npmrc` during the install step and scrubs it before the layer is finalized. Without the token you'll see a 401 from `https://npm.pkg.github.com/`.
 
 2. **Dev server.**
 

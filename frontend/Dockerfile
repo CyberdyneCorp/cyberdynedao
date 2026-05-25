@@ -8,9 +8,16 @@ RUN apk add --no-cache libc6-compat python3 make g++
 ENV PYTHON=/usr/bin/python3
 WORKDIR /app
 
-# Copy and install dependencies
-COPY package.json package-lock.json* ./
-RUN npm ci
+# Copy lockfile, manifest, and .npmrc (declares the @cyberdynecorp scope -> GitHub Packages)
+COPY package.json package-lock.json* .npmrc ./
+
+# Authenticate to GitHub Packages for the install, then scrub the token so it
+# never lands in a layer. NPM_TOKEN must be passed as a build arg (Coolify
+# build-arg or `docker build --build-arg NPM_TOKEN=...`).
+ARG NPM_TOKEN
+RUN echo "//npm.pkg.github.com/:_authToken=${NPM_TOKEN}" >> .npmrc && \
+    npm ci && \
+    sed -i '/_authToken/d' .npmrc
 
 # Build the app
 FROM base AS builder
