@@ -14,6 +14,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from cyberdyne_backend import __version__
+from cyberdyne_backend.adapters.inbound.api.ai_chat.router import (
+    get_history_uc as get_chat_history_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.ai_chat.router import (
+    get_run_turn_uc,
+    get_start_session_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.ai_chat.router import (
+    router as chat_router,
+)
 from cyberdyne_backend.adapters.inbound.api.blog.router import (
     admin_router as blog_admin_router,
 )
@@ -69,8 +79,32 @@ from cyberdyne_backend.adapters.inbound.api.learning.router import (
 from cyberdyne_backend.adapters.inbound.api.learning.router import (
     public_router as learning_public_router,
 )
+from cyberdyne_backend.adapters.inbound.api.marketplace.router import (
+    admin_router as marketplace_admin_router,
+)
+from cyberdyne_backend.adapters.inbound.api.marketplace.router import (
+    get_create_checkout_uc,
+    get_handle_webhook_uc,
+    get_list_products_uc,
+    get_my_licenses_uc,
+    get_my_orders_uc,
+    get_revoke_license_uc,
+    get_webhook_verifier,
+)
+from cyberdyne_backend.adapters.inbound.api.marketplace.router import (
+    me_router as marketplace_me_router,
+)
+from cyberdyne_backend.adapters.inbound.api.marketplace.router import (
+    public_router as marketplace_public_router,
+)
+from cyberdyne_backend.adapters.inbound.api.marketplace.router import (
+    webhook_router as marketplace_webhook_router,
+)
 from cyberdyne_backend.adapters.inbound.health.router import router as health_router
 from cyberdyne_backend.adapters.inbound.middleware.auth import AuthMiddleware
+from cyberdyne_backend.adapters.outbound.persistence.ai_chat.repository import (
+    SqlAlchemyChatRepository,
+)
 from cyberdyne_backend.adapters.outbound.persistence.blog.repository import (
     SqlAlchemyBlogRepository,
 )
@@ -82,6 +116,16 @@ from cyberdyne_backend.adapters.outbound.persistence.leads.repository import (
 )
 from cyberdyne_backend.adapters.outbound.persistence.learning.repository import (
     SqlAlchemyLearningRepository,
+)
+from cyberdyne_backend.adapters.outbound.persistence.marketplace.repository import (
+    SqlAlchemyMarketplaceRepository,
+)
+from cyberdyne_backend.application.ai_chat import (
+    GetChatHistory,
+    RunChatTurn,
+    StartChatSession,
+    ToolContext,
+    ToolDispatcher,
 )
 from cyberdyne_backend.application.blog import (
     CreateBlogPost,
@@ -112,6 +156,17 @@ from cyberdyne_backend.application.learning import (
     ListPaths,
     UpdateModuleProgress,
 )
+from cyberdyne_backend.application.marketplace import (
+    CreateCheckoutSession,
+    HandleStripeWebhook,
+    ListMyLicenses,
+    ListMyOrders,
+    RevokeLicense,
+)
+from cyberdyne_backend.application.marketplace import (
+    ListProducts as ListMarketplaceProducts,
+)
+from cyberdyne_backend.application.marketplace.use_cases import GetProduct
 from cyberdyne_backend.infrastructure.container import Container
 from cyberdyne_backend.infrastructure.database.engine import (
     dispose_engine,
@@ -260,6 +315,69 @@ def create_app() -> FastAPI:
             holders=settings.dao_holders_count,
         )
 
+    async def _list_marketplace_products_dep() -> AsyncIterator[ListMarketplaceProducts]:
+        async with session_scope() as session:
+            yield ListMarketplaceProducts(repo=SqlAlchemyMarketplaceRepository(session))
+
+    async def _create_checkout_dep() -> AsyncIterator[CreateCheckoutSession]:
+        async with session_scope() as session:
+            yield CreateCheckoutSession(
+                repo=SqlAlchemyMarketplaceRepository(session),
+                checkout=container.stripe_checkout,
+                success_url=settings.stripe_success_url,
+                cancel_url=settings.stripe_cancel_url,
+            )
+
+    async def _handle_webhook_dep() -> AsyncIterator[HandleStripeWebhook]:
+        async with session_scope() as session:
+            yield HandleStripeWebhook(
+                marketplace=SqlAlchemyMarketplaceRepository(session),
+                learning=SqlAlchemyLearningRepository(session),
+                email_notifier=container.license_email_notifier,
+            )
+
+    async def _my_orders_dep() -> AsyncIterator[ListMyOrders]:
+        async with session_scope() as session:
+            yield ListMyOrders(repo=SqlAlchemyMarketplaceRepository(session))
+
+    async def _my_licenses_dep() -> AsyncIterator[ListMyLicenses]:
+        async with session_scope() as session:
+            yield ListMyLicenses(repo=SqlAlchemyMarketplaceRepository(session))
+
+    async def _revoke_license_dep() -> AsyncIterator[RevokeLicense]:
+        async with session_scope() as session:
+            yield RevokeLicense(repo=SqlAlchemyMarketplaceRepository(session))
+
+    def _webhook_verifier_dep() -> object:
+        return container.stripe_webhook_verifier
+
+    async def _start_session_dep() -> AsyncIterator[StartChatSession]:
+        async with session_scope() as session:
+            yield StartChatSession(repo=SqlAlchemyChatRepository(session))
+
+    async def _chat_history_dep() -> AsyncIterator[GetChatHistory]:
+        async with session_scope() as session:
+            yield GetChatHistory(repo=SqlAlchemyChatRepository(session))
+
+    async def _run_turn_dep() -> AsyncIterator[RunChatTurn]:
+        async with session_scope() as session:
+            chat_repo = SqlAlchemyChatRepository(session)
+            tools_ctx = ToolContext(
+                list_projects=ListProjects(repo=SqlAlchemyContentRepository(session)),
+                list_paths=ListPaths(repo=SqlAlchemyLearningRepository(session)),
+                get_product=GetProduct(repo=SqlAlchemyMarketplaceRepository(session)),
+                learning_repo=SqlAlchemyLearningRepository(session),
+                knowledge=container.knowledge_search,
+                ask_repo=SqlAlchemyAskRepository(session),
+                captcha=container.captcha_port,
+                ask_notifier=container.email_notifier,
+            )
+            yield RunChatTurn(
+                repo=chat_repo,
+                llm=container.chat_llm,
+                dispatcher=ToolDispatcher(tools_ctx),
+            )
+
     app.dependency_overrides[get_list_team_uc] = _list_team_dep
     app.dependency_overrides[get_cyberdyne_page_uc] = _cyberdyne_page_dep
     app.dependency_overrides[get_list_projects_uc] = _list_projects_dep
@@ -281,6 +399,16 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_my_state_uc] = _my_state_dep
     app.dependency_overrides[get_issue_certificate_uc] = _issue_certificate_dep
     app.dependency_overrides[get_dao_overview_uc] = _dao_overview_dep
+    app.dependency_overrides[get_list_products_uc] = _list_marketplace_products_dep
+    app.dependency_overrides[get_create_checkout_uc] = _create_checkout_dep
+    app.dependency_overrides[get_handle_webhook_uc] = _handle_webhook_dep
+    app.dependency_overrides[get_my_orders_uc] = _my_orders_dep
+    app.dependency_overrides[get_my_licenses_uc] = _my_licenses_dep
+    app.dependency_overrides[get_revoke_license_uc] = _revoke_license_dep
+    app.dependency_overrides[get_webhook_verifier] = _webhook_verifier_dep
+    app.dependency_overrides[get_start_session_uc] = _start_session_dep
+    app.dependency_overrides[get_chat_history_uc] = _chat_history_dep
+    app.dependency_overrides[get_run_turn_uc] = _run_turn_dep
 
     app.include_router(health_router)
     app.include_router(content_router)
@@ -291,6 +419,11 @@ def create_app() -> FastAPI:
     app.include_router(learning_public_router)
     app.include_router(learning_admin_router)
     app.include_router(dao_router)
+    app.include_router(marketplace_public_router)
+    app.include_router(marketplace_me_router)
+    app.include_router(marketplace_webhook_router)
+    app.include_router(marketplace_admin_router)
+    app.include_router(chat_router)
     return app
 
 

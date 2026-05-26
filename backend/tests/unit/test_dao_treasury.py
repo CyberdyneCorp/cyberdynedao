@@ -150,9 +150,7 @@ class TestFakeChainReader:
 
 class TestGetDaoOverview:
     async def test_returns_snapshot_when_configured(self) -> None:
-        uc = GetDaoOverview(
-            reader=FakeChainReader(), treasury_address="0xabc", holders=42
-        )
+        uc = GetDaoOverview(reader=FakeChainReader(), treasury_address="0xabc", holders=42)
         overview = await uc.execute()
         assert overview.snapshot.treasury_address == "0xabc"
         assert overview.holders == 42

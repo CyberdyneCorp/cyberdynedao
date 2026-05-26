@@ -554,3 +554,122 @@ export async function fetchDaoOverview(): Promise<DaoOverview | null> {
 		return null;
 	}
 }
+
+
+// ── Phase 6 fetchers (marketplace + chat) ───────────────────────────
+
+
+import type { MarketplaceItem } from '$lib/types/components';
+import { marketplaceItems as staticMarketplaceItems } from '$lib/data/shop';
+
+interface ApiProduct {
+	slug: string;
+	type: 'service' | 'training' | 'license';
+	title: string;
+	descriptionMd: string;
+	priceCents: number;
+	currency: string;
+	durationLabel: string;
+	features: string[];
+	category: string;
+	subcategory: string | null;
+	imageUrl: string;
+	popular: boolean;
+	status: 'available' | 'beta' | 'coming_soon' | 'retired';
+	isPurchasable: boolean;
+}
+
+function apiProductToMarketplaceItem(api: ApiProduct): MarketplaceItem {
+	const statusMap: Record<ApiProduct['status'], MarketplaceItem['status']> = {
+		available: 'available',
+		beta: 'beta',
+		coming_soon: 'coming-soon',
+		retired: 'available'
+	};
+	return {
+		id: api.slug,
+		title: api.title,
+		description: api.descriptionMd,
+		category: api.category as MarketplaceItem['category'],
+		subcategory: api.subcategory ?? undefined,
+		price: api.priceCents / 100,
+		duration: api.durationLabel,
+		features: api.features,
+		popular: api.popular || undefined,
+		image: api.imageUrl || '',
+		status: statusMap[api.status] ?? 'available'
+	};
+}
+
+export async function fetchMarketplaceItems(): Promise<MarketplaceItem[]> {
+	try {
+		const api = await fetchJson<ApiProduct[]>('/api/v1/marketplace/products');
+		return api.map(apiProductToMarketplaceItem);
+	} catch (err) {
+		console.warn('[contentApi] marketplace fetch failed, using static fallback:', err);
+		return staticMarketplaceItems;
+	}
+}
+
+
+export interface ChatSessionStart {
+	sessionId: string;
+	createdAt: string;
+}
+
+export interface ChatMessagePayload {
+	id: string;
+	sessionId: string;
+	role: 'user' | 'assistant' | 'tool' | 'system';
+	content: string;
+	toolCalls: { id: string; name: string; argumentsJson: string }[];
+	toolCallId: string | null;
+	tokensIn: number;
+	tokensOut: number;
+	model: string | null;
+	createdAt: string;
+}
+
+export async function startChatSession(): Promise<ChatSessionStart | null> {
+	if (!API_BASE) {
+		console.warn('[contentApi] chat disabled — VITE_BACKEND_API_URL not configured');
+		return null;
+	}
+	try {
+		const response = await fetch(`${API_BASE}/api/v1/chat/sessions`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json', Accept: 'application/json' }
+		});
+		if (!response.ok) {
+			throw new Error(`HTTP ${response.status}`);
+		}
+		return (await response.json()) as ChatSessionStart;
+	} catch (err) {
+		console.warn('[contentApi] startChatSession failed:', err);
+		return null;
+	}
+}
+
+export async function sendChatMessage(
+	sessionId: string,
+	content: string
+): Promise<ChatMessagePayload | null> {
+	if (!API_BASE) return null;
+	try {
+		const response = await fetch(
+			`${API_BASE}/api/v1/chat/sessions/${encodeURIComponent(sessionId)}/messages`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+				body: JSON.stringify({ content })
+			}
+		);
+		if (!response.ok) {
+			throw new Error(`HTTP ${response.status}`);
+		}
+		return (await response.json()) as ChatMessagePayload;
+	} catch (err) {
+		console.warn('[contentApi] sendChatMessage failed:', err);
+		return null;
+	}
+}

@@ -29,3 +29,27 @@ class LoggingEmailNotifier:
                 ask.email,
                 ask.product_slug,
             )
+
+
+class LoggingLicenseEmailNotifier:
+    """Logs license-key delivery instead of emailing. Default when no SMTP
+    provider is configured. The plaintext key is logged because it's
+    already going to land in our own server log either way — the
+    persistence layer never stores it."""
+
+    async def send_license_email(
+        self,
+        *,
+        to_email: str,
+        product_title: str,
+        plaintext_key: str,
+        expires_at_iso: str | None,
+    ) -> None:
+        with contextlib.suppress(Exception):
+            logger.info(
+                "license issued | to=%s product=%r key=%s expires=%s",
+                to_email,
+                product_title,
+                plaintext_key,
+                expires_at_iso,
+            )

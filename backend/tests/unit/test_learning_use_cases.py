@@ -62,12 +62,8 @@ class _FakeRepo:
         self.progress[(progress.user_id, progress.module_slug)] = progress
         return progress
 
-    async def get_progress_map_for_user(
-        self, user_id: uuid.UUID
-    ) -> dict[str, ModuleProgress]:
-        return {
-            slug: p for (uid, slug), p in self.progress.items() if uid == user_id
-        }
+    async def get_progress_map_for_user(self, user_id: uuid.UUID) -> dict[str, ModuleProgress]:
+        return {slug: p for (uid, slug), p in self.progress.items() if uid == user_id}
 
     async def save_certificate(self, certificate: Certificate) -> None:
         self.certs[(certificate.user_id, certificate.path_slug)] = certificate
@@ -124,9 +120,7 @@ class TestEnrollInPath:
         repo = _FakeRepo()
         repo.paths = {"p1": _path()}
         user = uuid.uuid4()
-        enrollment = await EnrollInPath(repo=repo).execute(
-            user_id=user, path_slug="p1"
-        )
+        enrollment = await EnrollInPath(repo=repo).execute(user_id=user, path_slug="p1")
         assert enrollment.user_id == user
         assert enrollment.path_slug == "p1"
 
@@ -143,9 +137,7 @@ class TestEnrollInPath:
     async def test_missing_path_raises(self) -> None:
         repo = _FakeRepo()
         with pytest.raises(LearningContentNotFoundError):
-            await EnrollInPath(repo=repo).execute(
-                user_id=uuid.uuid4(), path_slug="missing"
-            )
+            await EnrollInPath(repo=repo).execute(user_id=uuid.uuid4(), path_slug="missing")
 
 
 class TestUpdateModuleProgress:
@@ -173,12 +165,8 @@ class TestGetMyLearningState:
         repo.paths = {"p1": _path()}
         user = uuid.uuid4()
         await EnrollInPath(repo=repo).execute(user_id=user, path_slug="p1")
-        await UpdateModuleProgress(repo=repo).execute(
-            user_id=user, module_slug="m1", percent=100
-        )
-        await UpdateModuleProgress(repo=repo).execute(
-            user_id=user, module_slug="m2", percent=100
-        )
+        await UpdateModuleProgress(repo=repo).execute(user_id=user, module_slug="m1", percent=100)
+        await UpdateModuleProgress(repo=repo).execute(user_id=user, module_slug="m2", percent=100)
         # No cert yet.
         state = await GetMyLearningState(repo=repo).execute(user)
         assert len(state.enrollments) == 1
@@ -191,12 +179,8 @@ class TestIssueCertificate:
         repo = _FakeRepo()
         repo.paths = {"p1": _path()}
         user = uuid.uuid4()
-        await UpdateModuleProgress(repo=repo).execute(
-            user_id=user, module_slug="m1", percent=100
-        )
-        await UpdateModuleProgress(repo=repo).execute(
-            user_id=user, module_slug="m2", percent=100
-        )
+        await UpdateModuleProgress(repo=repo).execute(user_id=user, module_slug="m1", percent=100)
+        await UpdateModuleProgress(repo=repo).execute(user_id=user, module_slug="m2", percent=100)
         cert = await IssueCertificate(repo=repo, signer=_StubSigner()).execute(
             user_id=user, path_slug="p1"
         )
@@ -207,9 +191,7 @@ class TestIssueCertificate:
         repo = _FakeRepo()
         repo.paths = {"p1": _path()}
         user = uuid.uuid4()
-        await UpdateModuleProgress(repo=repo).execute(
-            user_id=user, module_slug="m1", percent=50
-        )
+        await UpdateModuleProgress(repo=repo).execute(user_id=user, module_slug="m1", percent=50)
         with pytest.raises(CertificateNotEligibleError):
             await IssueCertificate(repo=repo, signer=_StubSigner()).execute(
                 user_id=user, path_slug="p1"

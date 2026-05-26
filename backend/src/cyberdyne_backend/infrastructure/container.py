@@ -23,11 +23,33 @@ from cyberdyne_backend.adapters.outbound.certificates.signer import (
 from cyberdyne_backend.adapters.outbound.chain.caching_reader import CachingChainReader
 from cyberdyne_backend.adapters.outbound.chain.fake_reader import FakeChainReader
 from cyberdyne_backend.adapters.outbound.chain.web3py_reader import Web3PyChainReader
-from cyberdyne_backend.adapters.outbound.email.notifiers import LoggingEmailNotifier
+from cyberdyne_backend.adapters.outbound.email.notifiers import (
+    LoggingEmailNotifier,
+    LoggingLicenseEmailNotifier,
+)
+from cyberdyne_backend.adapters.outbound.llm.openai_client import (
+    OpenAIChatClient,
+    StaticChatClient,
+    StubKnowledgeSearch,
+)
+from cyberdyne_backend.adapters.outbound.stripe.checkout_client import (
+    MockStripeCheckoutClient,
+    StripeCheckoutClient,
+)
+from cyberdyne_backend.adapters.outbound.stripe.webhook_verifier import (
+    MockStripeWebhookVerifier,
+    StripeWebhookVerifier,
+)
+from cyberdyne_backend.domain.ai_chat import ChatLLMPort, KnowledgeSearchPort
 from cyberdyne_backend.domain.auth_identity import AuthPort
 from cyberdyne_backend.domain.dao_treasury import ChainReaderPort
 from cyberdyne_backend.domain.leads import CaptchaPort, EmailNotifierPort
 from cyberdyne_backend.domain.learning import CertificateSigner
+from cyberdyne_backend.domain.marketplace import (
+    LicenseEmailNotifierPort,
+    StripeCheckoutPort,
+    StripeWebhookVerifierPort,
+)
 from cyberdyne_backend.infrastructure.settings import Settings
 
 
@@ -43,6 +65,11 @@ class Container:
         self._email_notifier: EmailNotifierPort | None = None
         self._certificate_signer: CertificateSigner | None = None
         self._chain_reader: ChainReaderPort | None = None
+        self._stripe_checkout: StripeCheckoutPort | None = None
+        self._stripe_webhook_verifier: StripeWebhookVerifierPort | None = None
+        self._license_email_notifier: LicenseEmailNotifierPort | None = None
+        self._chat_llm: ChatLLMPort | None = None
+        self._knowledge_search: KnowledgeSearchPort | None = None
 
     # ── HTTP ──────────────────────────────────────────────────────────
     @property
@@ -155,6 +182,64 @@ class Container:
             ttl_s=self._settings.dao_snapshot_ttl_s,
         )
         return self._chain_reader
+
+    # ── Marketplace / Stripe (Phase 6) ───────────────────────────────
+    @property
+    def stripe_checkout(self) -> StripeCheckoutPort:
+        if self._stripe_checkout is not None:
+            return self._stripe_checkout
+        key = self._settings.stripe_secret_key
+        if key is not None:
+            self._stripe_checkout = StripeCheckoutClient(
+                secret_key=key.get_secret_value(),
+                http_client=self.http_client,
+            )
+        else:
+            self._stripe_checkout = MockStripeCheckoutClient()
+        return self._stripe_checkout
+
+    @property
+    def stripe_webhook_verifier(self) -> StripeWebhookVerifierPort:
+        if self._stripe_webhook_verifier is not None:
+            return self._stripe_webhook_verifier
+        secret = self._settings.stripe_webhook_secret
+        if secret is not None:
+            self._stripe_webhook_verifier = StripeWebhookVerifier(
+                signing_secret=secret.get_secret_value()
+            )
+        else:
+            self._stripe_webhook_verifier = MockStripeWebhookVerifier()
+        return self._stripe_webhook_verifier
+
+    @property
+    def license_email_notifier(self) -> LicenseEmailNotifierPort:
+        if self._license_email_notifier is None:
+            self._license_email_notifier = LoggingLicenseEmailNotifier()
+        return self._license_email_notifier
+
+    # ── AI chat (Phase 6) ─────────────────────────────────────────────
+    @property
+    def chat_llm(self) -> ChatLLMPort:
+        if self._chat_llm is not None:
+            return self._chat_llm
+        key = self._settings.openai_api_key
+        if key is not None:
+            self._chat_llm = OpenAIChatClient(
+                api_key=key.get_secret_value(),
+                http_client=self.http_client,
+                model=self._settings.openai_model,
+            )
+        else:
+            self._chat_llm = StaticChatClient()
+        return self._chat_llm
+
+    @property
+    def knowledge_search(self) -> KnowledgeSearchPort:
+        if self._knowledge_search is None:
+            # Real CyberRAG MCP client lands in a follow-up adapter; the
+            # stub keeps the tool callable in v1.
+            self._knowledge_search = StubKnowledgeSearch()
+        return self._knowledge_search
 
     async def aclose(self) -> None:
         if self._service_token_provider is not None:

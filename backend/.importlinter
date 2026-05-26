@@ -28,3 +28,6 @@ ignore_imports =
     cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.chain.caching_reader
     cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.chain.fake_reader
     cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.chain.web3py_reader
+    cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.stripe.checkout_client
+    cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.stripe.webhook_verifier
+    cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.llm.openai_client

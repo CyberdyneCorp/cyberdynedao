@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { createTerminalViewModel } from '$lib/viewmodels/terminalViewModel';
+	import { sendChatMessage, startChatSession } from '$lib/api/contentApi';
 
 	const vm = createTerminalViewModel();
 	const terminalHistory = vm.history;
@@ -8,12 +9,64 @@
 	const currentHost = vm.host;
 	let terminalInput = '';
 
-	function handleSubmit() {
-		if (terminalInput.trim() === '') return;
-		vm.submit(terminalInput);
+	// Lazy chat session — created on first `ask` use.
+	let chatSessionId: string | null = null;
+	let isAsking = false;
+
+	async function handleSubmit() {
+		const raw = terminalInput.trim();
+		if (raw === '') return;
+		const inputForLog = terminalInput;
 		terminalInput = '';
+
+		// `ask <question>` routes to the real AI chat backend. Everything
+		// else stays on the local command processor.
+		const parts = raw.split(' ');
+		const cmd = parts[0].toLowerCase();
+		const rest = parts.slice(1).join(' ').trim();
+		if (cmd === 'ask' && rest) {
+			vm.submit(inputForLog);
+			scrollToBottom();
+			await dispatchAsk(rest);
+			scrollToBottom();
+			setTimeout(() => focusInput(), 10);
+			return;
+		}
+
+		vm.submit(inputForLog);
 		scrollToBottom();
 		setTimeout(() => focusInput(), 10);
+	}
+
+	async function dispatchAsk(question: string) {
+		if (isAsking) return;
+		isAsking = true;
+		try {
+			if (!chatSessionId) {
+				const session = await startChatSession();
+				if (!session) {
+					vm.history.update((h) => [
+						...h,
+						{ type: 'output', text: 'ChatBot: chat backend unavailable — VITE_BACKEND_API_URL missing or backend down.' }
+					]);
+					return;
+				}
+				chatSessionId = session.sessionId;
+			}
+			vm.history.update((h) => [
+				...h,
+				{ type: 'system', text: 'ChatBot: thinking…' }
+			]);
+			const reply = await sendChatMessage(chatSessionId, question);
+			vm.history.update((h) => {
+				// Drop the trailing "thinking…" line.
+				const trimmed = h[h.length - 1]?.text === 'ChatBot: thinking…' ? h.slice(0, -1) : h;
+				const text = reply?.content?.trim() || 'ChatBot: (no reply)';
+				return [...trimmed, { type: 'output', text: `ChatBot: ${text}` }];
+			});
+		} finally {
+			isAsking = false;
+		}
 	}
 	
 	function scrollToBottom() {

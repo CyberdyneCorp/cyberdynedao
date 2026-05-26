@@ -112,6 +112,24 @@ class Settings(BaseSettings):
     # Filled in by the governance subgraph once it ships; defaults to 0.
     dao_holders_count: int = 0
 
+    # ── Marketplace / Stripe (Phase 6) ────────────────────────────────
+    # Both unset = MockStripeCheckoutClient + MockStripeWebhookVerifier
+    # (local-dev only). Settings hard-refuses to start with mocks in
+    # staging/production via ``model_post_init``.
+    stripe_secret_key: SecretStr | None = None
+    stripe_webhook_secret: SecretStr | None = None
+    # URLs Stripe redirects to after Checkout.
+    stripe_success_url: str = "http://localhost:5173/marketplace?session={CHECKOUT_SESSION_ID}"
+    stripe_cancel_url: str = "http://localhost:5173/marketplace?cancelled=1"
+
+    # ── AI chat (Phase 6) ─────────────────────────────────────────────
+    # Unset = StaticChatClient mock — local dev only.
+    openai_api_key: SecretStr | None = None
+    openai_model: str = "gpt-4o-mini"
+    # CyberRAG MCP URL — stub fallback runs when unset. Real client is a
+    # follow-up adapter (see docs/backend-roadmap.md §5.6).
+    cyberrag_mcp_url: str | None = None
+
     @field_validator("log_level")
     @classmethod
     def _upper_log_level(cls, value: str) -> str:
