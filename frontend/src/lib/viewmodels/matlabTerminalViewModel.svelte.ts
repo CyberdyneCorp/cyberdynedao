@@ -18,7 +18,59 @@
  * forgotten PNGs in the browser.
  */
 
-import { downloadArtifact, repl as runRepl, MatlabApiError } from '$lib/api/matlabApi';
+import {
+	downloadArtifact,
+	listFiles,
+	repl as runRepl,
+	uploadFile,
+	MatlabApiError,
+	type FileInfo
+} from '$lib/api/matlabApi';
+
+export interface WorkspaceVariable {
+	/** Variable name as it appears in the MATLAB workspace. */
+	name: string;
+	/** Human-readable shape — ``5x5``, ``1x1``, ``200x3`` etc. */
+	size: string;
+	/** Class label — ``double``, ``logical``, ``char``, ``struct`` … */
+	klass: string;
+}
+
+/**
+ * Parse the stdout of a MATLAB ``whos`` call. Format observed on
+ * matlab-llvm (slightly leaner than classic MATLAB — no Bytes
+ * column):
+ *
+ * ```
+ *   Name             Size             Class
+ *   A                5x5              double
+ *   b                1x1              double
+ * ```
+ *
+ * Lines outside that shape (errors / blank / header) are skipped.
+ * Exported for unit testing.
+ */
+export function parseWhos(stdout: string): WorkspaceVariable[] {
+	const rows: WorkspaceVariable[] = [];
+	for (const raw of stdout.split('\n')) {
+		const line = raw.trim();
+		if (!line) continue;
+		// Skip the column header line (case-insensitive).
+		if (/^name\s+size\s+class/i.test(line)) continue;
+		// 3+ whitespace-separated columns, name first.
+		const parts = line.split(/\s+/);
+		if (parts.length < 3) continue;
+		const [name, size, klass, ...rest] = parts;
+		// Defensive: skip lines that don't look like a MATLAB identifier.
+		if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) continue;
+		rows.push({
+			name,
+			size,
+			klass: [klass, ...rest].join(' ')
+		});
+	}
+	return rows;
+}
 
 /**
  * Build the saveas-augmented source that turns a /v1/repl call into a
@@ -94,11 +146,38 @@ export interface MatlabTerminalViewModel {
 	readonly input: string;
 	readonly running: boolean;
 	readonly sessionId: string;
+	/** Live MATLAB workspace — refreshed via ``whos`` after each
+	 *  successful REPL turn, and on demand via ``refreshWorkspace()``. */
+	readonly workspaceVariables: WorkspaceVariable[];
+	/** Files in the session's workspace dir. Refreshed at the same
+	 *  cadence as variables. */
+	readonly workspaceFiles: FileInfo[];
+	/** True while a workspace refresh is in flight (variables OR files). */
+	readonly workspaceLoading: boolean;
+	/** Non-empty when the most recent refresh failed; surfaced in the
+	 *  side panel as a small banner. */
+	readonly workspaceError: string | null;
+
 	setInput(value: string): void;
 	submitRepl(): Promise<void>;
 	submitPlot(): Promise<void>;
 	resetSession(): void;
 	clearCells(): void;
+
+	/** Refresh both variables (via ``whos``) and files (via
+	 *  /v1/files) in parallel. Called automatically after each
+	 *  successful turn; also exposed for an explicit refresh button. */
+	refreshWorkspace(): Promise<void>;
+
+	/** Insert ``snippet`` at the cursor in the prompt textarea. Used
+	 *  by Variables-panel click handlers (``disp(name)``, etc.). */
+	appendToInput(snippet: string): void;
+
+	/** Download a workspace file into the user's browser. */
+	downloadWorkspaceFile(path: string): Promise<void>;
+
+	/** Upload a file from the user's machine into the workspace. */
+	uploadWorkspaceFile(file: File): Promise<void>;
 }
 
 export function createMatlabTerminalVM(): MatlabTerminalViewModel {
@@ -106,6 +185,10 @@ export function createMatlabTerminalVM(): MatlabTerminalViewModel {
 	let input = $state<string>('');
 	let running = $state<boolean>(false);
 	let sessionId = $state<string>(randomSessionId());
+	let workspaceVariables = $state<WorkspaceVariable[]>([]);
+	let workspaceFiles = $state<FileInfo[]>([]);
+	let workspaceLoading = $state<boolean>(false);
+	let workspaceError = $state<string | null>(null);
 	let nextCellId = 1;
 
 	function appendCell(mode: 'repl' | 'plot', source: string): MatlabCell {
@@ -259,6 +342,98 @@ export function createMatlabTerminalVM(): MatlabTerminalViewModel {
 			});
 		} finally {
 			running = false;
+			// Auto-refresh workspace after a turn so the side panel
+			// reflects new variables / files. Failures are silenced —
+			// we surface them via workspaceError but don't block.
+			void refreshWorkspace();
+		}
+	}
+
+	/**
+	 * Pull the current MATLAB workspace state in parallel:
+	 *   - variables: a side ``whos`` call into the same session
+	 *   - files: /v1/files listing for the same session_id
+	 *
+	 * Concurrent invocations are coalesced (only one in-flight refresh
+	 * at a time) so a rapid string of REPL turns doesn't queue up
+	 * redundant work.
+	 */
+	let refreshInflight: Promise<void> | null = null;
+	async function refreshWorkspace(): Promise<void> {
+		if (refreshInflight) return refreshInflight;
+		refreshInflight = (async () => {
+			workspaceLoading = true;
+			try {
+				const [whosResult, filesResult] = await Promise.allSettled([
+					runRepl({ source: 'whos', session_id: sessionId, stateful: true }),
+					listFiles(sessionId)
+				]);
+
+				const errs: string[] = [];
+
+				if (whosResult.status === 'fulfilled') {
+					workspaceVariables = parseWhos(whosResult.value.stdout ?? '');
+				} else {
+					errs.push(
+						`whos: ${
+							whosResult.reason instanceof Error
+								? whosResult.reason.message
+								: String(whosResult.reason)
+						}`
+					);
+				}
+
+				if (filesResult.status === 'fulfilled') {
+					workspaceFiles = filesResult.value;
+				} else {
+					errs.push(
+						`files: ${
+							filesResult.reason instanceof Error
+								? filesResult.reason.message
+								: String(filesResult.reason)
+						}`
+					);
+				}
+
+				workspaceError = errs.length > 0 ? errs.join(' · ') : null;
+			} finally {
+				workspaceLoading = false;
+				refreshInflight = null;
+			}
+		})();
+		return refreshInflight;
+	}
+
+	async function downloadWorkspaceFile(path: string): Promise<void> {
+		try {
+			const { url, contentType: _ct, bytes: _b } = await downloadArtifact(path, sessionId);
+			// Trigger a browser-side download via a hidden anchor.
+			const anchor = document.createElement('a');
+			anchor.href = url;
+			anchor.download = path.split('/').pop() ?? path;
+			document.body.appendChild(anchor);
+			anchor.click();
+			document.body.removeChild(anchor);
+			// The blob URL stays alive long enough for the download to
+			// initiate; revoke after a tick so subsequent clicks still
+			// work if the browser hasn't started the transfer yet.
+			setTimeout(() => URL.revokeObjectURL(url), 30_000);
+		} catch (err) {
+			workspaceError = err instanceof Error ? err.message : String(err);
+		}
+	}
+
+	async function uploadWorkspaceFile(file: File): Promise<void> {
+		try {
+			workspaceLoading = true;
+			await uploadFile(file, file.name, sessionId);
+			// Re-list immediately so the new file appears in the panel.
+			workspaceFiles = await listFiles(sessionId);
+			workspaceError = null;
+		} catch (err) {
+			workspaceError = err instanceof Error ? err.message : String(err);
+		} finally {
+			workspaceLoading = false;
 		}
 	}
 
@@ -267,6 +442,10 @@ export function createMatlabTerminalVM(): MatlabTerminalViewModel {
 		get input() { return input; },
 		get running() { return running; },
 		get sessionId() { return sessionId; },
+		get workspaceVariables() { return workspaceVariables; },
+		get workspaceFiles() { return workspaceFiles; },
+		get workspaceLoading() { return workspaceLoading; },
+		get workspaceError() { return workspaceError; },
 		setInput: (value) => {
 			input = value;
 		},
@@ -277,11 +456,21 @@ export function createMatlabTerminalVM(): MatlabTerminalViewModel {
 			cells = [];
 			sessionId = randomSessionId();
 			nextCellId = 1;
+			workspaceVariables = [];
+			workspaceFiles = [];
+			workspaceError = null;
 		},
 		clearCells: () => {
 			for (const c of cells) revokeCellPlots(c);
 			cells = [];
 			nextCellId = 1;
-		}
+		},
+		refreshWorkspace,
+		appendToInput: (snippet) => {
+			const sep = input.length > 0 && !input.endsWith('\n') ? '\n' : '';
+			input = `${input}${sep}${snippet}`;
+		},
+		downloadWorkspaceFile,
+		uploadWorkspaceFile
 	};
 }

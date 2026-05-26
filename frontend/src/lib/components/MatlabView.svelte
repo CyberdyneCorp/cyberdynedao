@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onDestroy, tick } from 'svelte';
+	import { onDestroy, onMount, tick } from 'svelte';
 	import { Badge, PixelButton, PixelScrollArea } from '@cyberdynecorp/svelte-ui-core';
 	import { createMatlabTerminalVM, type MatlabCell } from '$lib/viewmodels/matlabTerminalViewModel.svelte';
 	import { authVM } from '$lib/auth/authViewModel.svelte';
@@ -8,6 +8,8 @@
 
 	let scrollEl = $state<HTMLElement | null>(null);
 	let textareaEl = $state<HTMLTextAreaElement | null>(null);
+	let uploadInputEl = $state<HTMLInputElement | null>(null);
+	let workspaceOpen = $state<boolean>(true);
 
 	// Auto-scroll the cell log to the bottom whenever a new cell lands
 	// or finishes streaming.
@@ -17,6 +19,16 @@
 		void tick().then(() => {
 			if (scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight;
 		});
+	});
+
+	onMount(() => {
+		// Auth gating: don't fire workspace probes until we know the
+		// CyberdyneAuth session is restored. If it's already restored
+		// + signed in, kick a refresh so the panel has data on first
+		// open.
+		if (authVM.isRestored && authVM.isAuthenticated) {
+			void vm.refreshWorkspace();
+		}
 	});
 
 	onDestroy(() => {
@@ -56,6 +68,39 @@
 		return `${(ms / 1000).toFixed(2)} s`;
 	}
 
+	function formatBytes(n: number): string {
+		if (n < 1024) return `${n} B`;
+		if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+		return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+	}
+
+	function formatRelativeTime(epoch: number): string {
+		const now = Date.now() / 1000;
+		const delta = Math.max(0, now - epoch);
+		if (delta < 60) return `${Math.round(delta)}s ago`;
+		if (delta < 3600) return `${Math.round(delta / 60)}m ago`;
+		if (delta < 86400) return `${Math.round(delta / 3600)}h ago`;
+		return `${Math.round(delta / 86400)}d ago`;
+	}
+
+	function pickFileForUpload() {
+		uploadInputEl?.click();
+	}
+
+	async function onUploadInputChange(e: Event) {
+		const target = e.currentTarget as HTMLInputElement;
+		const file = target.files?.[0];
+		if (!file) return;
+		await vm.uploadWorkspaceFile(file);
+		// Reset so picking the same filename twice in a row still fires change.
+		target.value = '';
+	}
+
+	function onVarClick(name: string) {
+		vm.appendToInput(`disp(${name})`);
+		textareaEl?.focus();
+	}
+
 	const heroStyle = '--accent: #f97316; --accent-dark: #c2410c;';
 	const authReady = $derived(authVM.isRestored && authVM.isAuthenticated);
 </script>
@@ -67,6 +112,15 @@
 			<span class="hero__mark" aria-hidden="true">📐</span>
 			<h1 class="hero__title">MATLAB LLVM REPL</h1>
 			<span class="hero__chip">session {vm.sessionId.slice(-6)}</span>
+			<button
+				type="button"
+				class="hero__toggle"
+				aria-pressed={workspaceOpen}
+				onclick={() => (workspaceOpen = !workspaceOpen)}
+				title={workspaceOpen ? 'Hide workspace panel' : 'Show workspace panel'}
+			>
+				{workspaceOpen ? '⊟' : '⊞'} Workspace
+			</button>
 		</div>
 		<p class="hero__tagline">
 			Stateful MATLAB on a remote LLVM engine. Plots render inline. <kbd>⌘/Ctrl + Enter</kbd> to run.
@@ -80,7 +134,8 @@
 		</div>
 	{/if}
 
-	<!-- Cell log -->
+	<!-- Cell log + Workspace panel -->
+	<div class="main" class:main--with-workspace={workspaceOpen}>
 	<div class="cells" bind:this={scrollEl}>
 		<PixelScrollArea maxHeight="100%" ariaLabel="MATLAB cells">
 			{#if vm.cells.length === 0}
@@ -161,6 +216,103 @@ x = linspace(0, 2*pi, 200); plot(x, sin(x).*cos(2*x))</pre>
 		</PixelScrollArea>
 	</div>
 
+	{#if workspaceOpen}
+		<aside class="workspace" aria-label="MATLAB workspace">
+			<header class="workspace__head">
+				<h2 class="workspace__title">Workspace</h2>
+				<button
+					type="button"
+					class="workspace__refresh"
+					onclick={() => vm.refreshWorkspace()}
+					disabled={!authReady || vm.workspaceLoading}
+					title="Refresh variables + files"
+				>
+					{vm.workspaceLoading ? '…' : '↻'}
+				</button>
+			</header>
+
+			{#if vm.workspaceError}
+				<div class="workspace__error" role="status">{vm.workspaceError}</div>
+			{/if}
+
+			<section class="workspace__section">
+				<h3 class="workspace__section-title">
+					Variables <span class="workspace__count">{vm.workspaceVariables.length}</span>
+				</h3>
+				{#if vm.workspaceVariables.length === 0}
+					<p class="workspace__empty">
+						{authReady
+							? 'Empty — assign something (e.g. `A = magic(5)`) and Run.'
+							: 'Sign in to see workspace state.'}
+					</p>
+				{:else}
+					<ul class="var-list">
+						{#each vm.workspaceVariables as v (v.name)}
+							<li>
+								<button
+									type="button"
+									class="var"
+									onclick={() => onVarClick(v.name)}
+									title={`Insert "disp(${v.name})" into the prompt`}
+								>
+									<span class="var__name">{v.name}</span>
+									<span class="var__meta">{v.size} · {v.klass}</span>
+								</button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</section>
+
+			<section class="workspace__section">
+				<h3 class="workspace__section-title">
+					Files <span class="workspace__count">{vm.workspaceFiles.length}</span>
+				</h3>
+				<div class="workspace__actions">
+					<input
+						type="file"
+						class="workspace__file-input"
+						bind:this={uploadInputEl}
+						onchange={onUploadInputChange}
+					/>
+					<PixelButton
+						variant="outline"
+						size="sm"
+						onclick={pickFileForUpload}
+						disabled={!authReady || vm.workspaceLoading}
+					>
+						⬆ Upload
+					</PixelButton>
+				</div>
+				{#if vm.workspaceFiles.length === 0}
+					<p class="workspace__empty">
+						{authReady
+							? 'No files yet. Upload one or write a `saveas` / `writematrix` from the REPL.'
+							: 'Sign in to see workspace files.'}
+					</p>
+				{:else}
+					<ul class="file-list">
+						{#each vm.workspaceFiles as f (f.path)}
+							<li>
+								<button
+									type="button"
+									class="file"
+									onclick={() => vm.downloadWorkspaceFile(f.path)}
+									title={`Download ${f.path}`}
+								>
+									<span class="file__name">{f.path}</span>
+									<span class="file__meta">{formatBytes(f.size)} · {formatRelativeTime(f.modified)}</span>
+								</button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</section>
+		</aside>
+	{/if}
+	</div>
+	<!-- end .main -->
+
 	<!-- Input -->
 	<form class="prompt" onsubmit={onSubmit}>
 		<div class="prompt__head">
@@ -240,6 +392,20 @@ x = linspace(0, 2*pi, 200); plot(x, sin(x).*cos(2*x))</pre>
 		padding: 3px 8px;
 		border: 1.5px solid #000;
 	}
+	.hero__toggle {
+		font-family: inherit;
+		font-size: 0.65rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		background: rgba(0, 0, 0, 0.3);
+		color: #ffedd5;
+		padding: 3px 8px;
+		border: 1.5px solid #000;
+		cursor: pointer;
+	}
+	.hero__toggle[aria-pressed='true'] { background: rgba(255, 237, 213, 0.15); }
+	.hero__toggle:hover { background: rgba(255, 237, 213, 0.25); }
 	.hero__tagline {
 		margin: 0;
 		font-size: 0.8125rem;
@@ -264,6 +430,25 @@ x = linspace(0, 2*pi, 200); plot(x, sin(x).*cos(2*x))</pre>
 		flex-wrap: wrap;
 		font-size: 0.8125rem;
 		color: #92400e;
+	}
+
+	/* ---------- Main column ↔ Workspace sidebar ---------- */
+	.main {
+		flex: 1 1 auto;
+		min-height: 0;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.main--with-workspace {
+		grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+	}
+	@media (max-width: 720px) {
+		.main--with-workspace {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.workspace {
+			display: none; /* collapsed on tight viewports */
+		}
 	}
 
 	/* ---------- Cells (dark terminal aesthetic) ---------- */
@@ -445,4 +630,138 @@ x = linspace(0, 2*pi, 200); plot(x, sin(x).*cos(2*x))</pre>
 	}
 	.prompt__input:focus { border-color: #fb923c; }
 	.prompt__input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+	/* ---------- Workspace sidebar ---------- */
+	.workspace {
+		background: #1e293b;
+		color: #e2e8f0;
+		border-left: 2px solid #000;
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		padding: 12px;
+		overflow-y: auto;
+		min-height: 0;
+	}
+	.workspace__head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
+	}
+	.workspace__title {
+		margin: 0;
+		font-size: 0.75rem;
+		font-weight: 800;
+		text-transform: uppercase;
+		letter-spacing: 0.12em;
+		color: var(--accent);
+	}
+	.workspace__refresh {
+		background: transparent;
+		border: 1px solid #334155;
+		color: #cbd5e1;
+		font-family: inherit;
+		font-size: 0.9rem;
+		width: 24px;
+		height: 24px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+	}
+	.workspace__refresh:hover:not(:disabled) {
+		color: var(--accent);
+		border-color: var(--accent);
+	}
+	.workspace__refresh:disabled { opacity: 0.5; cursor: not-allowed; }
+
+	.workspace__error {
+		background: rgba(127, 29, 29, 0.4);
+		border: 1px solid #b91c1c;
+		color: #fecaca;
+		padding: 6px 8px;
+		font-size: 0.7rem;
+		white-space: pre-wrap;
+		word-break: break-word;
+	}
+
+	.workspace__section {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+	.workspace__section-title {
+		margin: 0;
+		font-size: 0.7rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: #94a3b8;
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+	}
+	.workspace__count {
+		font-size: 0.65rem;
+		color: #64748b;
+		font-weight: 600;
+	}
+	.workspace__empty {
+		margin: 0;
+		font-size: 0.7rem;
+		color: #64748b;
+		font-style: italic;
+		line-height: 1.45;
+	}
+	.workspace__actions { display: flex; }
+	.workspace__file-input {
+		position: absolute;
+		left: -9999px;
+		width: 1px;
+		height: 1px;
+		opacity: 0;
+	}
+
+	.var-list,
+	.file-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+	.var, .file {
+		display: flex;
+		flex-direction: column;
+		align-items: stretch;
+		gap: 2px;
+		background: #0f172a;
+		border: 1px solid #334155;
+		border-left: 4px solid var(--accent);
+		padding: 6px 8px;
+		font-family: inherit;
+		color: inherit;
+		text-align: left;
+		cursor: pointer;
+		transition: background 0.1s ease, border-color 0.1s ease;
+	}
+	.var:hover, .file:hover {
+		background: #1e293b;
+		border-color: var(--accent);
+	}
+	.var__name, .file__name {
+		font-size: 0.8rem;
+		font-weight: 700;
+		color: #fed7aa;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.var__meta, .file__meta {
+		font-size: 0.65rem;
+		color: #94a3b8;
+		font-variant-numeric: tabular-nums;
+	}
 </style>
