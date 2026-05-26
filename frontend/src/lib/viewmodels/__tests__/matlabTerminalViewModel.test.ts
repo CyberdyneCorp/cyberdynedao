@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	createMatlabTerminalVM,
 	looksLikePlot,
+	parseWhos,
 	withSaveas
 } from '../matlabTerminalViewModel.svelte';
 import * as matlabApi from '$lib/api/matlabApi';
@@ -86,17 +87,18 @@ describe('matlabTerminalViewModel', () => {
 			stateful: true,
 			artifacts: ['cd_plot_x_abcdef.png']
 		});
+		vi.spyOn(matlabApi, 'listFiles').mockResolvedValue([]);
 		const dlSpy = vi
 			.spyOn(matlabApi, 'downloadArtifact')
 			.mockResolvedValue({ url: 'blob:figs', contentType: 'image/png', bytes: 1024 });
 		const vm = createMatlabTerminalVM();
 		vm.setInput('plot(rand(10,1))');
 		await vm.submitPlot();
-		expect(replSpy).toHaveBeenCalledTimes(1);
-		// The source got augmented with our saveas call.
-		const payload = replSpy.mock.calls[0][0];
-		expect(payload.source).toMatch(/saveas\(gcf, 'cd_plot_/);
-		expect(payload.source).toMatch(/^plot\(rand\(10,1\)\);/);
+		// Call 0 is the user's snippet; call 1 is the post-turn auto-
+		// refresh `whos`.
+		const userCall = replSpy.mock.calls[0][0];
+		expect(userCall.source).toMatch(/saveas\(gcf, 'cd_plot_/);
+		expect(userCall.source).toMatch(/^plot\(rand\(10,1\)\);/);
 		expect(dlSpy).toHaveBeenCalled();
 		expect(vm.cells[0].plots).toHaveLength(1);
 		expect(vm.cells[0].mode).toBe('plot');
@@ -224,6 +226,8 @@ describe('matlabTerminalViewModel', () => {
 		});
 
 		it('Run with a plotting source + empty artifacts → re-invokes /v1/repl with saveas', async () => {
+			// Sequence: (1) user's Run, (2) saveas fallback, (3) auto-
+			// refresh whos. Final OK call returns no extra figures.
 			const replSpy = vi
 				.spyOn(matlabApi, 'repl')
 				.mockResolvedValueOnce({
@@ -243,7 +247,17 @@ describe('matlabTerminalViewModel', () => {
 					truncated: false,
 					stateful: true,
 					artifacts: ['cd_plot_x_abcdef.png']
+				})
+				.mockResolvedValueOnce({
+					ok: true,
+					stdout: '',
+					stderr: '',
+					timed_out: false,
+					truncated: false,
+					stateful: true,
+					artifacts: []
 				});
+			vi.spyOn(matlabApi, 'listFiles').mockResolvedValue([]);
 			vi.spyOn(matlabApi, 'downloadArtifact').mockResolvedValue({
 				url: 'blob:figure',
 				contentType: 'image/png',
@@ -253,9 +267,10 @@ describe('matlabTerminalViewModel', () => {
 			vm.setInput('plot(rand(10))');
 			await vm.submitRepl();
 
-			expect(replSpy).toHaveBeenCalledTimes(2);
-			// Second call has saveas appended.
+			// Call 0: user's Run. Call 1: fallback saveas. Call 2:
+			// auto-refresh `whos`.
 			expect(replSpy.mock.calls[1][0].source).toMatch(/saveas\(gcf, 'cd_plot_/);
+			expect(replSpy.mock.calls[2][0].source).toBe('whos');
 			const cell = vm.cells[0];
 			expect(cell.mode).toBe('repl');
 			expect(cell.plotFallback).toBe(true);
@@ -273,10 +288,13 @@ describe('matlabTerminalViewModel', () => {
 				stateful: true,
 				artifacts: []
 			});
+			vi.spyOn(matlabApi, 'listFiles').mockResolvedValue([]);
 			const vm = createMatlabTerminalVM();
 			vm.setInput("disp('hi')");
 			await vm.submitRepl();
-			expect(replSpy).toHaveBeenCalledTimes(1);
+			// Call 0: user's Run. Call 1: auto-refresh `whos`. No fallback.
+			expect(replSpy.mock.calls.length).toBe(2);
+			expect(replSpy.mock.calls[1][0].source).toBe('whos');
 			expect(vm.cells[0].plotFallback).toBe(false);
 		});
 
@@ -290,6 +308,7 @@ describe('matlabTerminalViewModel', () => {
 				stateful: true,
 				artifacts: ['cd_pre.png']
 			});
+			vi.spyOn(matlabApi, 'listFiles').mockResolvedValue([]);
 			vi.spyOn(matlabApi, 'downloadArtifact').mockResolvedValue({
 				url: 'blob:1',
 				contentType: 'image/png',
@@ -298,7 +317,10 @@ describe('matlabTerminalViewModel', () => {
 			const vm = createMatlabTerminalVM();
 			vm.setInput('plot(1)');
 			await vm.submitRepl();
-			expect(replSpy).toHaveBeenCalledTimes(1);
+			// Call 0: user's Run (returns artifact). Call 1: auto-
+			// refresh `whos`. No fallback because artifact was present.
+			expect(replSpy.mock.calls.length).toBe(2);
+			expect(replSpy.mock.calls[1][0].source).toBe('whos');
 			expect(vm.cells[0].plotFallback).toBe(false);
 		});
 
@@ -347,5 +369,220 @@ describe('matlabTerminalViewModel', () => {
 		expect(vm.cells[0].plots).toHaveLength(1);
 		expect(vm.cells[0].artifactErrors).toHaveLength(1);
 		expect(vm.cells[0].artifactErrors[0]).toMatch(/missing.png.*not found/);
+	});
+
+	// ── Workspace state ──────────────────────────────────────────────
+
+	describe('parseWhos', () => {
+		it('parses a 3-column matlab-llvm output', () => {
+			const stdout = `  Name             Size             Class\n` +
+				`  A                5x5              double\n` +
+				`  b                1x1              double\n`;
+			const vars = parseWhos(stdout);
+			expect(vars).toEqual([
+				{ name: 'A', size: '5x5', klass: 'double' },
+				{ name: 'b', size: '1x1', klass: 'double' }
+			]);
+		});
+
+		it('returns empty for header-only output', () => {
+			expect(parseWhos('  Name  Size  Class\n')).toEqual([]);
+		});
+
+		it('returns empty for completely empty input', () => {
+			expect(parseWhos('')).toEqual([]);
+		});
+
+		it('skips noise lines that do not start with a valid identifier', () => {
+			const stdout = `Warning: workspace state lost\n` +
+				`  A    5x5    double\n` +
+				`>>>\n`;
+			expect(parseWhos(stdout)).toEqual([
+				{ name: 'A', size: '5x5', klass: 'double' }
+			]);
+		});
+
+		it('keeps trailing class attributes joined', () => {
+			const stdout = `  Name  Size  Class\n  x  3x3  double sparse\n`;
+			expect(parseWhos(stdout)).toEqual([
+				{ name: 'x', size: '3x3', klass: 'double sparse' }
+			]);
+		});
+	});
+
+	describe('workspace refresh', () => {
+		it('refreshWorkspace populates variables (from whos) + files', async () => {
+			vi.spyOn(matlabApi, 'repl').mockResolvedValue({
+				ok: true,
+				stdout: '  Name  Size  Class\n  A  5x5  double\n',
+				stderr: '',
+				timed_out: false,
+				truncated: false,
+				stateful: true,
+				artifacts: []
+			});
+			vi.spyOn(matlabApi, 'listFiles').mockResolvedValue([
+				{ path: 'note.txt', size: 12, modified: 1700000000 }
+			]);
+			const vm = createMatlabTerminalVM();
+			await vm.refreshWorkspace();
+			expect(vm.workspaceVariables).toHaveLength(1);
+			expect(vm.workspaceVariables[0]).toEqual({
+				name: 'A',
+				size: '5x5',
+				klass: 'double'
+			});
+			expect(vm.workspaceFiles).toHaveLength(1);
+			expect(vm.workspaceError).toBe(null);
+		});
+
+		it('passes the VM sessionId to whos + listFiles', async () => {
+			const replSpy = vi.spyOn(matlabApi, 'repl').mockResolvedValue({
+				ok: true,
+				stdout: '',
+				stderr: '',
+				timed_out: false,
+				truncated: false,
+				stateful: true,
+				artifacts: []
+			});
+			const filesSpy = vi.spyOn(matlabApi, 'listFiles').mockResolvedValue([]);
+			const vm = createMatlabTerminalVM();
+			await vm.refreshWorkspace();
+			expect(replSpy.mock.calls[0][0].source).toBe('whos');
+			expect(replSpy.mock.calls[0][0].session_id).toBe(vm.sessionId);
+			expect(filesSpy).toHaveBeenCalledWith(vm.sessionId);
+		});
+
+		it('coalesces concurrent refresh calls (only one in-flight)', async () => {
+			const replSpy = vi.spyOn(matlabApi, 'repl').mockImplementation(
+				() =>
+					new Promise((r) =>
+						setTimeout(
+							() =>
+								r({
+									ok: true,
+									stdout: '',
+									stderr: '',
+									timed_out: false,
+									truncated: false,
+									stateful: true,
+									artifacts: []
+								}),
+							5
+						)
+					)
+			);
+			vi.spyOn(matlabApi, 'listFiles').mockResolvedValue([]);
+			const vm = createMatlabTerminalVM();
+			await Promise.all([vm.refreshWorkspace(), vm.refreshWorkspace()]);
+			expect(replSpy).toHaveBeenCalledTimes(1);
+		});
+
+		it('records partial failure (files OK, whos fails) in workspaceError', async () => {
+			vi.spyOn(matlabApi, 'repl').mockRejectedValue(new Error('whos boom'));
+			vi.spyOn(matlabApi, 'listFiles').mockResolvedValue([
+				{ path: 'x.bin', size: 1, modified: 0 }
+			]);
+			const vm = createMatlabTerminalVM();
+			await vm.refreshWorkspace();
+			expect(vm.workspaceError).toMatch(/whos boom/);
+			expect(vm.workspaceFiles).toHaveLength(1);
+		});
+
+		it('auto-refreshes after a successful REPL turn', async () => {
+			vi.spyOn(matlabApi, 'repl')
+				.mockResolvedValueOnce({
+					ok: true,
+					stdout: 'hello\n',
+					stderr: '',
+					timed_out: false,
+					truncated: false,
+					stateful: true,
+					artifacts: []
+				})
+				.mockResolvedValueOnce({
+					// Second call is the auto-refresh ``whos``.
+					ok: true,
+					stdout: '  Name  Size  Class\n  z  1x1  double\n',
+					stderr: '',
+					timed_out: false,
+					truncated: false,
+					stateful: true,
+					artifacts: []
+				});
+			vi.spyOn(matlabApi, 'listFiles').mockResolvedValue([]);
+			const vm = createMatlabTerminalVM();
+			vm.setInput('z = 7');
+			await vm.submitRepl();
+			// runOne fires the refresh in a non-awaited microtask via
+			// ``void refreshWorkspace()``; flush a tick or two.
+			await new Promise((r) => setTimeout(r, 5));
+			expect(vm.workspaceVariables).toEqual([
+				{ name: 'z', size: '1x1', klass: 'double' }
+			]);
+		});
+	});
+
+	describe('appendToInput', () => {
+		it('appends with a newline when input is non-empty', () => {
+			const vm = createMatlabTerminalVM();
+			vm.setInput('A = magic(5)');
+			vm.appendToInput('disp(A)');
+			expect(vm.input).toBe('A = magic(5)\ndisp(A)');
+		});
+		it('does not double the newline when input ends with one', () => {
+			const vm = createMatlabTerminalVM();
+			vm.setInput('A = magic(5)\n');
+			vm.appendToInput('disp(A)');
+			expect(vm.input).toBe('A = magic(5)\ndisp(A)');
+		});
+		it('writes verbatim when input is empty', () => {
+			const vm = createMatlabTerminalVM();
+			vm.appendToInput('disp(A)');
+			expect(vm.input).toBe('disp(A)');
+		});
+	});
+
+	describe('uploadWorkspaceFile + downloadWorkspaceFile', () => {
+		it('uploadWorkspaceFile POSTs and re-lists files', async () => {
+			const uploadSpy = vi.spyOn(matlabApi, 'uploadFile').mockResolvedValue({
+				ok: true,
+				file: { path: 'data.csv', size: 32, modified: 0 }
+			});
+			const listSpy = vi.spyOn(matlabApi, 'listFiles').mockResolvedValue([
+				{ path: 'data.csv', size: 32, modified: 0 }
+			]);
+			const vm = createMatlabTerminalVM();
+			const file = new File(['1,2,3'], 'data.csv', { type: 'text/csv' });
+			await vm.uploadWorkspaceFile(file);
+			expect(uploadSpy).toHaveBeenCalledWith(file, 'data.csv', vm.sessionId);
+			expect(listSpy).toHaveBeenCalledWith(vm.sessionId);
+			expect(vm.workspaceFiles).toHaveLength(1);
+		});
+
+		it('uploadWorkspaceFile surfaces errors via workspaceError', async () => {
+			vi.spyOn(matlabApi, 'uploadFile').mockRejectedValue(new Error('quota exceeded'));
+			const vm = createMatlabTerminalVM();
+			const file = new File(['x'], 'too-big.bin');
+			await vm.uploadWorkspaceFile(file);
+			expect(vm.workspaceError).toMatch(/quota exceeded/);
+		});
+
+		it('downloadWorkspaceFile triggers a hidden anchor with the right filename', async () => {
+			vi.spyOn(matlabApi, 'downloadArtifact').mockResolvedValue({
+				url: 'blob:dl',
+				contentType: 'image/png',
+				bytes: 100
+			});
+			// Spy on anchor click to confirm the download was triggered.
+			const clickSpy = vi
+				.spyOn(HTMLAnchorElement.prototype, 'click')
+				.mockImplementation(() => {});
+			const vm = createMatlabTerminalVM();
+			await vm.downloadWorkspaceFile('plots/figure.png');
+			expect(clickSpy).toHaveBeenCalledTimes(1);
+			clickSpy.mockRestore();
+		});
 	});
 });

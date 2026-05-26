@@ -3,8 +3,10 @@ import {
 	MatlabApiError,
 	check,
 	downloadArtifact,
+	listFiles,
 	plot,
 	repl,
+	uploadFile,
 	whoami
 } from '../matlabApi';
 import { clearAuthToken, setAuthToken } from '$lib/auth/authToken';
@@ -138,6 +140,59 @@ describe('matlabApi', () => {
 			name: 'MatlabApiError',
 			status: 401,
 			message: 'missing bearer token'
+		});
+	});
+
+	it('listFiles GETs /v1/files with session_id and returns the file list', async () => {
+		mockJsonOnce(200, {
+			files: [
+				{ path: 'a.mat', size: 128, modified: 1700000000 },
+				{ path: 'plots/x.png', size: 4096, modified: 1700001000 }
+			]
+		});
+		const files = await listFiles('web-1');
+		expect(files).toHaveLength(2);
+		expect(files[0].path).toBe('a.mat');
+		const [url, init] = (globalThis.fetch as unknown as FetchMock).mock.calls[0];
+		expect(url).toBe(`/api/matlab/v1/files?session_id=${encodeURIComponent('web-1')}`);
+		expect(init.method).toBe('GET');
+	});
+
+	it('listFiles omits the query string when no sessionId given', async () => {
+		mockJsonOnce(200, { files: [] });
+		await listFiles();
+		const [url] = (globalThis.fetch as unknown as FetchMock).mock.calls[0];
+		expect(url).toBe('/api/matlab/v1/files');
+	});
+
+	it('uploadFile posts multipart with the file blob + filename', async () => {
+		setAuthToken('tok');
+		mockJsonOnce(200, {
+			ok: true,
+			file: { path: 'note.txt', size: 12, modified: 1700000000 }
+		});
+		const blob = new Blob(['hello world!'], { type: 'text/plain' });
+		const res = await uploadFile(blob, 'note.txt', 'web-1');
+		expect(res.file.path).toBe('note.txt');
+		const [url, init] = (globalThis.fetch as unknown as FetchMock).mock.calls[0];
+		expect(url).toBe(`/api/matlab/v1/files?session_id=${encodeURIComponent('web-1')}`);
+		expect(init.method).toBe('POST');
+		expect(init.body).toBeInstanceOf(FormData);
+		const form = init.body as FormData;
+		const sent = form.get('file');
+		expect(sent).toBeInstanceOf(Blob);
+		// Don't manually set content-type — FormData generates the boundary.
+		const headers = init.headers as Headers;
+		expect(headers.get('content-type')).toBe(null);
+		expect(headers.get('authorization')).toBe('Bearer tok');
+	});
+
+	it('uploadFile surfaces the upstream error', async () => {
+		mockJsonOnce(413, { detail: 'upload exceeds 10 MB' });
+		const blob = new Blob(['x'.repeat(16)], { type: 'text/plain' });
+		await expect(uploadFile(blob, 'big.bin', 'web-1')).rejects.toMatchObject({
+			status: 413,
+			message: 'upload exceeds 10 MB'
 		});
 	});
 

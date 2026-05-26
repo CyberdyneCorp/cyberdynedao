@@ -126,6 +126,68 @@ export function check(req: ReplRequest): Promise<CheckResponse> {
 	return postJson<CheckResponse>('/v1/check', req);
 }
 
+// ── Files ──────────────────────────────────────────────────────────
+
+export interface FileInfo {
+	path: string;
+	size: number;
+	modified: number; // epoch seconds
+}
+
+export interface FileListResponse {
+	files: FileInfo[];
+}
+
+export interface UploadResponse {
+	ok: boolean;
+	file: FileInfo;
+}
+
+/**
+ * List every file in the user/session workspace. The upstream's
+ * ``/v1/files`` resolves the workspace from ``session_id`` (and the
+ * authenticated principal). Pass the same id you use on /v1/repl so
+ * the listing reflects the same workspace.
+ *
+ * Heads-up: there's an upstream bug where stateful REPL turns can
+ * write to a warm-pool worker's tempdir instead of the deterministic
+ * workspace this endpoint reads from, so plot files from stateful
+ * turns may not show up. Files uploaded via ``uploadFile()`` always
+ * appear because uploads target the deterministic dir.
+ */
+export async function listFiles(sessionId?: string): Promise<FileInfo[]> {
+	const qs = sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : '';
+	const headers = withAuth({ accept: 'application/json' });
+	const res = await fetch(`${MATLAB_BASE}/v1/files${qs}`, { method: 'GET', headers });
+	if (!res.ok) throw new MatlabApiError(res.status, await readError(res));
+	const body = (await res.json()) as FileListResponse;
+	return body.files ?? [];
+}
+
+/**
+ * Multipart upload to ``/v1/files``. ``filename`` is the path-within-
+ * workspace; pass just the basename to drop the file at the root.
+ */
+export async function uploadFile(
+	file: File | Blob,
+	filename: string,
+	sessionId?: string
+): Promise<UploadResponse> {
+	const qs = sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : '';
+	const form = new FormData();
+	form.append('file', file, filename);
+	// Don't set content-type — fetch + FormData generate the multipart
+	// boundary automatically.
+	const headers = withAuth();
+	const res = await fetch(`${MATLAB_BASE}/v1/files${qs}`, {
+		method: 'POST',
+		headers,
+		body: form
+	});
+	if (!res.ok) throw new MatlabApiError(res.status, await readError(res));
+	return (await res.json()) as UploadResponse;
+}
+
 /**
  * Download an artifact (plot PNG/SVG/PDF) as an object URL ready to
  * drop into an `<img src>`. Caller owns the URL — revoke with
