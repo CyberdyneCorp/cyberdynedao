@@ -1,27 +1,23 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { Badge, PixelButton, PixelScrollArea } from '@cyberdynecorp/svelte-ui-core';
 	import type { BlogPost } from '$lib/types/components';
 	import { formatDate } from '$lib/utils/formatters';
 	import {
 		createNewsViewModel,
-		getBlogCategoryColor as getCategoryColor,
 		truncateTitle
 	} from '$lib/viewmodels/newsViewModel';
 	import { fetchBlogPosts, type BlogPostSummary } from '$lib/api/contentApi';
 
 	let { isMobile = false }: { isMobile?: boolean } = $props();
-	// The prop is currently unused inside this component (its layout
-	// adapts via CSS media queries); kept on the interface because
-	// callers pass it and we don't want a breaking change here.
+	// Layout adapts via CSS media queries — keep the prop for caller
+	// compatibility but it's not read directly.
 	void isMobile;
 
 	const vm = createNewsViewModel();
 	const { selectedCategory, selectedPost, filteredPosts } = vm;
 	const { categories, featuredPosts } = vm;
-	// The VM seeds ``blogPosts`` from static demo content. Phase 3
-	// fetches the real list on mount; if the API returns any posts we
-	// swap them in. Empty API list leaves the demo content untouched
-	// so the view isn't blank before an editor publishes anything.
+
 	let blogPosts = $state<BlogPost[]>(vm.posts);
 
 	onMount(async () => {
@@ -31,9 +27,6 @@
 	});
 
 	function apiPostToFrontend(p: BlogPostSummary): BlogPost {
-		// Map the backend's summary shape to the frontend's BlogPost
-		// shape. Fields the backend doesn't carry yet (author, image,
-		// readTime, featured) get sensible defaults.
 		const wordCount = (p.excerpt || '').split(/\s+/).length;
 		const readTimeMin = Math.max(1, Math.round(wordCount / 200));
 		return {
@@ -52,183 +45,561 @@
 	function selectPost(post: BlogPost) {
 		vm.selectPost(post);
 	}
+
+	// ── Palette + per-category accent mapping (mirrors CyberddyneView) ─
+	type Palette = 'blue' | 'green' | 'purple' | 'orange' | 'red';
+
+	const paletteVars: Record<Palette, { accent: string; accentDark: string }> = {
+		blue:   { accent: '#3b82f6', accentDark: '#1d4ed8' },
+		green:  { accent: '#22c55e', accentDark: '#15803d' },
+		purple: { accent: '#a855f7', accentDark: '#7e22ce' },
+		orange: { accent: '#f97316', accentDark: '#c2410c' },
+		red:    { accent: '#ef4444', accentDark: '#b91c1c' }
+	};
+
+	const categoryPalette: Record<string, Palette> = {
+		Governance:     'purple',
+		DeFi:           'green',
+		Development:    'blue',
+		Security:       'red',
+		Economics:      'orange',
+		Infrastructure: 'blue',
+		NFTs:           'red',
+		'UX/UI':        'purple'
+	};
+
+	const categoryBadgeVariant: Record<
+		Palette,
+		'info' | 'success' | 'warning' | 'danger' | 'neutral'
+	> = {
+		blue:   'info',
+		green:  'success',
+		purple: 'neutral',
+		orange: 'warning',
+		red:    'danger'
+	};
+
+	function catPal(category: string): Palette {
+		return categoryPalette[category] ?? 'blue';
+	}
+
+	function palStyle(p: Palette): string {
+		const v = paletteVars[p];
+		return `--accent: ${v.accent}; --accent-dark: ${v.accentDark};`;
+	}
 </script>
 
-<div class="flex flex-col h-full bg-white overflow-y-auto">
-	<!-- Header -->
-	<div class="bg-gradient-to-r from-green-600 to-blue-600 p-2 border-b-2 border-black">
-		<h1 class="text-lg font-bold font-mono flex items-center gap-2 text-black">
-			<span class="text-xl">📰</span>
-			CYBERDYNE BLOG
-		</h1>
-		<p class="font-mono text-xs text-black">Latest insights on Web3, DeFi, DAOs & Blockchain Technology</p>
-	</div>
+<PixelScrollArea maxHeight="100%" ariaLabel="Cyberdyne Blog">
+<div class="blog-view">
+	<!-- Hero -->
+	<header class="hero" style={palStyle('blue')}>
+		<div class="hero__brand">
+			<span class="hero__mark" aria-hidden="true">📰</span>
+			<h1 class="hero__title">CYBERDYNE BLOG</h1>
+		</div>
+		<p class="hero__tagline">Latest insights on Web3, DeFi, DAOs &amp; blockchain technology.</p>
+	</header>
 
-	<div class="flex-1 flex">
-		<!-- Sidebar -->
-		<div class="w-1/3 border-r border-gray-200 bg-gray-50 overflow-y-auto">
-			<!-- Categories -->
-			<div class="p-2">
-				<h3 class="font-mono font-bold text-xs mb-2 text-gray-700">Categories</h3>
-				<div class="space-y-1">
+	<div class="content">
+		<!-- Sidebar column -->
+		<aside class="sidebar">
+			<!-- Categories card -->
+			<section class="card" style={palStyle('blue')}>
+				<h2 class="card__title">Categories</h2>
+				<div class="cat-list">
 					{#each categories as category}
+						{@const pal = category.id === 'all' ? 'blue' : catPal(category.name)}
 						<button
-							class="w-full text-left px-2 py-1 text-xs font-mono rounded transition-colors flex items-center gap-1.5"
-							class:bg-blue-100={$selectedCategory === category.id}
-							class:text-blue-700={$selectedCategory === category.id}
-							class:font-bold={$selectedCategory === category.id}
-							on:click={() => vm.selectCategory(category.id)}
+							type="button"
+							class="cat-btn"
+							class:cat-btn--active={$selectedCategory === category.id}
+							style={palStyle(pal)}
+							onclick={() => vm.selectCategory(category.id)}
 						>
-							<span>{category.icon}</span>
-							<span class="flex-1">{category.name}</span>
-							<span class="text-gray-500">({category.count})</span>
+							<span class="cat-btn__icon" aria-hidden="true">{category.icon}</span>
+							<span class="cat-btn__name">{category.name}</span>
+							<Badge variant="neutral" size="sm">{category.count}</Badge>
 						</button>
 					{/each}
 				</div>
-			</div>
+			</section>
 
-			<!-- Featured Posts -->
-			{#if $selectedCategory === 'all'}
-				<div class="p-2 border-t border-gray-200">
-					<h3 class="font-mono font-bold text-xs mb-2 text-gray-700">⭐ Featured</h3>
-					<div class="space-y-2">
+			<!-- Featured card -->
+			{#if $selectedCategory === 'all' && featuredPosts.length > 0}
+				<section class="card" style={palStyle('orange')}>
+					<h2 class="card__title">⭐ Featured</h2>
+					<div class="post-list">
 						{#each featuredPosts as post}
-							<div
-								class="bg-white rounded border border-gray-200 p-2 cursor-pointer transition-all hover:shadow-md"
-								class:ring-2={$selectedPost?.id === post.id}
-								class:ring-blue-400={$selectedPost?.id === post.id}
-								on:click={() => selectPost(post)}
-								on:keydown={(e) => e.key === 'Enter' && selectPost(post)}
-								role="button"
-								tabindex="0"
+							{@const pal = catPal(post.category)}
+							<button
+								type="button"
+								class="post"
+								class:post--active={$selectedPost?.id === post.id}
+								style={palStyle(pal)}
+								onclick={() => selectPost(post)}
 							>
-								<h4 class="font-mono font-bold text-xs leading-tight mb-1">{truncateTitle(post.title, 60)}</h4>
-								<div class="flex items-center justify-between text-xs">
-									<span class="text-gray-600 font-mono">{post.author}</span>
-									<span class="px-1.5 py-0.5 rounded font-mono {getCategoryColor(post.category)}">
+								<h4 class="post__title">{truncateTitle(post.title, 64)}</h4>
+								<div class="post__meta">
+									<span class="post__author">{post.author}</span>
+									<Badge variant={categoryBadgeVariant[pal]} size="sm">
 										{post.category}
-									</span>
+									</Badge>
 								</div>
-							</div>
+							</button>
 						{/each}
 					</div>
-				</div>
+				</section>
 			{/if}
 
-			<!-- Recent Posts List -->
-			<div class="p-2 border-t border-gray-200">
-				<h3 class="font-mono font-bold text-xs mb-2 text-gray-700">Recent Posts</h3>
-				<div class="space-y-1.5">
+			<!-- Recent card -->
+			<section class="card" style={palStyle('green')}>
+				<h2 class="card__title">Recent Posts</h2>
+				<div class="post-list">
 					{#each $filteredPosts.slice(0, 8) as post}
-						<div
-							class="bg-white rounded border border-gray-200 p-2 cursor-pointer transition-all hover:shadow-md"
-							class:ring-2={$selectedPost?.id === post.id}
-							class:ring-blue-400={$selectedPost?.id === post.id}
-							on:click={() => selectPost(post)}
-							on:keydown={(e) => e.key === 'Enter' && selectPost(post)}
-							role="button"
-							tabindex="0"
+						{@const pal = catPal(post.category)}
+						<button
+							type="button"
+							class="post"
+							class:post--active={$selectedPost?.id === post.id}
+							style={palStyle(pal)}
+							onclick={() => selectPost(post)}
 						>
-							<h4 class="font-mono font-bold text-xs leading-tight mb-1">{truncateTitle(post.title, 50)}</h4>
-							<div class="flex items-center justify-between text-xs">
-								<span class="text-gray-600 font-mono">{formatDate(post.date)}</span>
-								<span class="text-gray-500 font-mono">{post.readTime}</span>
+							<h4 class="post__title">{truncateTitle(post.title, 56)}</h4>
+							<div class="post__meta">
+								<span class="post__date">{formatDate(post.date)}</span>
+								<span class="post__readtime">{post.readTime}</span>
 							</div>
-						</div>
+						</button>
 					{/each}
+					{#if $filteredPosts.length === 0}
+						<p class="post-list__empty">No posts in this category yet.</p>
+					{/if}
 				</div>
-			</div>
-		</div>
+			</section>
+		</aside>
 
-		<!-- Main Content -->
-		<div class="flex-1 overflow-y-auto">
+		<!-- Main column -->
+		<main class="main">
 			{#if $selectedPost}
-				<div class="p-3">
-					<div class="mb-3">
-						<div class="flex items-center gap-2 mb-2">
-							<span class="text-xs px-2 py-0.5 rounded font-mono {getCategoryColor($selectedPost.category)}">
+				{@const pal = catPal($selectedPost.category)}
+				<article class="card article" style={palStyle(pal)}>
+					<header class="article__header">
+						<div class="article__meta">
+							<Badge variant={categoryBadgeVariant[pal]} size="sm">
 								{$selectedPost.category}
-							</span>
-							<span class="text-xs text-gray-600 font-mono">{formatDate($selectedPost.date)}</span>
-							<span class="text-xs text-gray-500 font-mono">• {$selectedPost.readTime}</span>
+							</Badge>
+							<span class="article__date">{formatDate($selectedPost.date)}</span>
+							<span class="article__sep">•</span>
+							<span class="article__readtime">{$selectedPost.readTime}</span>
 						</div>
-						<h2 class="text-lg font-bold font-mono text-gray-800 mb-2 leading-tight">{$selectedPost.title}</h2>
-						<div class="flex items-center gap-2 mb-2">
-							<span class="text-xs text-gray-600 font-mono">By {$selectedPost.author}</span>
-						</div>
-					</div>
+						<h2 class="article__title">{$selectedPost.title}</h2>
+						<p class="article__byline">By {$selectedPost.author}</p>
+					</header>
 
 					{#if $selectedPost.image}
-						<div class="mb-3">
-							<img
-								src={$selectedPost.image}
-								alt={$selectedPost.title}
-								class="w-full h-32 object-cover rounded border border-gray-200"
-							/>
+						<img class="article__image" src={$selectedPost.image} alt={$selectedPost.title} />
+					{/if}
+
+					<p class="article__excerpt">{$selectedPost.excerpt}</p>
+
+					{#if $selectedPost.tags && $selectedPost.tags.length > 0}
+						<div class="tags">
+							<h3 class="subsection-title">Tags</h3>
+							<div class="tags__list">
+								{#each $selectedPost.tags as tag}
+									<span class="tag">{tag}</span>
+								{/each}
+							</div>
 						</div>
 					{/if}
 
-					<div class="mb-3">
-						<p class="text-sm text-gray-700 leading-relaxed font-mono">{$selectedPost.excerpt}</p>
+					<div class="article__cta">
+						<PixelButton variant="solid" size="md">Read Full Article</PixelButton>
+						<PixelButton variant="outline" size="md">👍 Like</PixelButton>
+						<PixelButton variant="outline" size="md">🔗 Share</PixelButton>
 					</div>
-
-					<div class="mb-3">
-						<h3 class="font-mono font-bold text-sm mb-2">🏷️ Tags</h3>
-						<div class="flex flex-wrap gap-1">
-							{#each $selectedPost.tags as tag}
-								<span class="text-xs px-2 py-0.5 bg-gray-100 text-gray-700 rounded font-mono border">
-									{tag}
-								</span>
-							{/each}
-						</div>
-					</div>
-
-					<div class="bg-gray-50 rounded border border-gray-200 p-2 mb-3">
-						<h3 class="font-mono font-bold text-sm mb-2">📖 Full Article</h3>
-						<p class="text-xs text-gray-600 font-mono mb-2">This is a preview of the blog post. The full article contains detailed technical explanations, code examples, and comprehensive analysis.</p>
-						<button class="bg-blue-600 text-white px-3 py-1.5 rounded font-mono text-xs font-bold hover:bg-blue-700 transition-colors">
-							Read Full Article
-						</button>
-					</div>
-
-					<div class="flex gap-2">
-						<button class="border border-gray-300 text-gray-700 px-3 py-1.5 rounded font-mono text-xs hover:bg-gray-50 transition-colors">
-							👍 Like
-						</button>
-						<button class="border border-gray-300 text-gray-700 px-3 py-1.5 rounded font-mono text-xs hover:bg-gray-50 transition-colors">
-							💬 Comment
-						</button>
-						<button class="border border-gray-300 text-gray-700 px-3 py-1.5 rounded font-mono text-xs hover:bg-gray-50 transition-colors">
-							🔗 Share
-						</button>
-					</div>
-				</div>
+				</article>
 			{:else}
-				<div class="p-3 text-center">
-					<div class="text-3xl mb-2">📰</div>
-					<h2 class="text-lg font-bold font-mono text-gray-800 mb-1">Welcome to Cyberdyne Blog</h2>
-					<p class="text-sm text-gray-600 font-mono mb-4">Explore our latest insights on Web3 technology, DeFi protocols, and blockchain development.</p>
+				<section class="card welcome" style={palStyle('blue')}>
+					<div class="welcome__intro">
+						<span class="welcome__mark" aria-hidden="true">📰</span>
+						<h2 class="card__title">Welcome to Cyberdyne Blog</h2>
+						<p class="card__lead">
+							Explore our latest insights on Web3 technology, DeFi protocols, and blockchain development.
+						</p>
+					</div>
 
-					<div class="grid grid-cols-3 gap-2">
-						<div class="bg-green-50 rounded border border-green-200 p-2">
-							<div class="text-lg mb-1">📝</div>
-							<h3 class="font-mono font-bold text-xs">{blogPosts.length} Articles</h3>
-							<p class="text-xs text-gray-600">In-depth analysis</p>
+					<div class="stat-grid">
+						<div class="stat" style={palStyle('green')}>
+							<div class="stat__icon" aria-hidden="true">📝</div>
+							<div class="stat__value">{blogPosts.length}</div>
+							<div class="stat__label">Articles</div>
+							<div class="stat__sublabel">In-depth analysis</div>
 						</div>
-						<div class="bg-blue-50 rounded border border-blue-200 p-2">
-							<div class="text-lg mb-1">👥</div>
-							<h3 class="font-mono font-bold text-xs">Expert Authors</h3>
-							<p class="text-xs text-gray-600">Industry leaders</p>
+						<div class="stat" style={palStyle('blue')}>
+							<div class="stat__icon" aria-hidden="true">👥</div>
+							<div class="stat__value">Expert</div>
+							<div class="stat__label">Authors</div>
+							<div class="stat__sublabel">Industry leaders</div>
 						</div>
-						<div class="bg-purple-50 rounded border border-purple-200 p-2">
-							<div class="text-lg mb-1">🔄</div>
-							<h3 class="font-mono font-bold text-xs">Weekly Updates</h3>
-							<p class="text-xs text-gray-600">Fresh content</p>
+						<div class="stat" style={palStyle('purple')}>
+							<div class="stat__icon" aria-hidden="true">🔄</div>
+							<div class="stat__value">Weekly</div>
+							<div class="stat__label">Updates</div>
+							<div class="stat__sublabel">Fresh content</div>
 						</div>
 					</div>
-				</div>
+				</section>
 			{/if}
-		</div>
+		</main>
 	</div>
 </div>
+</PixelScrollArea>
 
+<style>
+	.blog-view {
+		font-family: var(--font-mono, 'JetBrains Mono', monospace);
+		background: #ffffff;
+		color: #111827;
+		min-height: 100%;
+	}
+
+	/* ---------- Hero ---------- */
+	.hero {
+		padding: 22px 26px;
+		background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+		border-bottom: 2px solid #000;
+		color: #ffffff;
+	}
+	.hero__brand {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		margin-bottom: 8px;
+	}
+	.hero__mark { font-size: 1.6rem; }
+	.hero__title {
+		font-size: 1.625rem;
+		font-weight: 800;
+		margin: 0;
+		letter-spacing: 0.12em;
+		color: #ffffff;
+	}
+	.hero__tagline {
+		margin: 0;
+		font-size: 0.875rem;
+		line-height: 1.55;
+		color: #e0e7ff;
+		max-width: 820px;
+	}
+
+	/* ---------- Content layout ---------- */
+	.content {
+		padding: 20px;
+		display: grid;
+		grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+		gap: 18px;
+		max-width: 1200px;
+		margin: 0 auto;
+		align-items: start;
+	}
+	@media (max-width: 820px) {
+		.content { grid-template-columns: minmax(0, 1fr); }
+	}
+
+	.sidebar, .main {
+		display: flex;
+		flex-direction: column;
+		gap: 18px;
+		min-width: 0;
+	}
+
+	/* ---------- Card primitive (mirrors CyberddyneView .card) ---------- */
+	.card {
+		position: relative;
+		background: #ffffff;
+		border: 2px solid #000;
+		box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+		padding: 18px 18px 18px 26px;
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+	.card::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		width: 8px;
+		background: var(--accent);
+		border-right: 2px solid #000;
+	}
+	.card__title {
+		font-size: 1.05rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: var(--accent-dark);
+		margin: 0;
+	}
+	.card__lead {
+		font-size: 0.9rem;
+		line-height: 1.6;
+		color: #1f2937;
+		margin: 0;
+	}
+	.subsection-title {
+		font-size: 0.7rem;
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+		color: var(--accent-dark);
+		font-weight: 700;
+		margin: 0;
+	}
+
+	/* ---------- Categories ---------- */
+	.cat-list {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+	.cat-btn {
+		position: relative;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 8px 10px 8px 16px;
+		background: #ffffff;
+		border: 2px solid #000;
+		box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.35);
+		font-family: inherit;
+		font-size: 0.8125rem;
+		font-weight: 600;
+		color: #1f2937;
+		cursor: pointer;
+		text-align: left;
+		transition: transform 0.1s ease, box-shadow 0.1s ease;
+	}
+	.cat-btn::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		width: 6px;
+		background: var(--accent);
+		border-right: 2px solid #000;
+	}
+	.cat-btn:hover {
+		transform: translate(-1px, -1px);
+		box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.45);
+	}
+	.cat-btn--active {
+		background: color-mix(in srgb, var(--accent) 12%, #ffffff);
+		color: var(--accent-dark);
+	}
+	.cat-btn__icon {
+		flex: 0 0 auto;
+		font-size: 0.95rem;
+		line-height: 1;
+	}
+	.cat-btn__name {
+		flex: 1 1 auto;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	/* ---------- Post tiles ---------- */
+	.post-list {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+	.post-list__empty {
+		font-size: 0.8125rem;
+		color: #6b7280;
+		font-style: italic;
+		margin: 0;
+	}
+	.post {
+		position: relative;
+		text-align: left;
+		background: #ffffff;
+		border: 2px solid #000;
+		box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.4);
+		padding: 10px 12px 10px 18px;
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		font-family: inherit;
+		cursor: pointer;
+		color: inherit;
+		transition: transform 0.1s ease, box-shadow 0.1s ease;
+	}
+	.post::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		width: 6px;
+		background: var(--accent);
+		border-right: 2px solid #000;
+	}
+	.post:hover {
+		transform: translate(-2px, -2px);
+		box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.5);
+	}
+	.post--active {
+		background: color-mix(in srgb, var(--accent) 10%, #ffffff);
+	}
+	.post__title {
+		font-size: 0.875rem;
+		font-weight: 700;
+		color: #000;
+		margin: 0;
+		line-height: 1.35;
+		word-break: break-word;
+	}
+	.post__meta {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 6px;
+		font-size: 0.6875rem;
+		color: #4b5563;
+	}
+	.post__author { font-weight: 600; }
+	.post__readtime { color: #6b7280; }
+
+	/* ---------- Article view ---------- */
+	.article { gap: 16px; }
+	.article__header {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+	.article__meta {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		flex-wrap: wrap;
+		font-size: 0.75rem;
+		color: #4b5563;
+	}
+	.article__sep { color: #9ca3af; }
+	.article__title {
+		font-size: 1.375rem;
+		font-weight: 800;
+		color: #000;
+		margin: 0;
+		line-height: 1.25;
+	}
+	.article__byline {
+		margin: 0;
+		font-size: 0.8125rem;
+		color: #374151;
+	}
+	.article__image {
+		width: 100%;
+		max-height: 280px;
+		object-fit: cover;
+		border: 2px solid #000;
+		box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.4);
+	}
+	.article__excerpt {
+		font-size: 0.9375rem;
+		line-height: 1.65;
+		color: #1f2937;
+		margin: 0;
+	}
+	.tags {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+	.tags__list {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+	}
+	.tag {
+		font-size: 0.6875rem;
+		font-weight: 600;
+		padding: 3px 8px;
+		background: var(--accent);
+		color: #ffffff;
+		border: 1.5px solid #000;
+		letter-spacing: 0.04em;
+		text-transform: lowercase;
+	}
+	.article__cta {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px;
+		padding-top: 4px;
+	}
+
+	/* ---------- Welcome state ---------- */
+	.welcome { gap: 18px; }
+	.welcome__intro {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 8px;
+		text-align: center;
+		padding: 6px 0;
+	}
+	.welcome__mark { font-size: 2.25rem; }
+
+	.stat-grid {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 12px;
+	}
+	@media (max-width: 720px) {
+		.stat-grid { grid-template-columns: minmax(0, 1fr); }
+	}
+	.stat {
+		position: relative;
+		background: #ffffff;
+		border: 2px solid #000;
+		box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.4);
+		padding: 12px 12px 14px 18px;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+	.stat::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		width: 6px;
+		background: var(--accent);
+		border-right: 2px solid #000;
+	}
+	.stat__icon { font-size: 1.4rem; line-height: 1; margin-bottom: 4px; }
+	.stat__value {
+		font-size: 1.25rem;
+		font-weight: 800;
+		color: var(--accent-dark);
+		line-height: 1.1;
+	}
+	.stat__label {
+		font-size: 0.85rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: #000;
+	}
+	.stat__sublabel {
+		font-size: 0.7rem;
+		color: #6b7280;
+		margin-top: 2px;
+	}
+</style>
