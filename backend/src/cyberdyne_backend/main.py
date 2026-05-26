@@ -38,6 +38,12 @@ from cyberdyne_backend.adapters.inbound.api.content.router import (
 from cyberdyne_backend.adapters.inbound.api.content.router import (
     router as content_router,
 )
+from cyberdyne_backend.adapters.inbound.api.dao.router import (
+    get_dao_overview_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.dao.router import (
+    router as dao_router,
+)
 from cyberdyne_backend.adapters.inbound.api.leads.router import (
     admin_router as leads_admin_router,
 )
@@ -49,6 +55,20 @@ from cyberdyne_backend.adapters.inbound.api.leads.router import (
 from cyberdyne_backend.adapters.inbound.api.leads.router import (
     public_router as leads_public_router,
 )
+from cyberdyne_backend.adapters.inbound.api.learning.router import (
+    admin_router as learning_admin_router,
+)
+from cyberdyne_backend.adapters.inbound.api.learning.router import (
+    get_enroll_uc,
+    get_issue_certificate_uc,
+    get_list_modules_uc,
+    get_list_paths_uc,
+    get_my_state_uc,
+    get_update_progress_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.learning.router import (
+    public_router as learning_public_router,
+)
 from cyberdyne_backend.adapters.inbound.health.router import router as health_router
 from cyberdyne_backend.adapters.inbound.middleware.auth import AuthMiddleware
 from cyberdyne_backend.adapters.outbound.persistence.blog.repository import (
@@ -59,6 +79,9 @@ from cyberdyne_backend.adapters.outbound.persistence.content.repository import (
 )
 from cyberdyne_backend.adapters.outbound.persistence.leads.repository import (
     SqlAlchemyAskRepository,
+)
+from cyberdyne_backend.adapters.outbound.persistence.learning.repository import (
+    SqlAlchemyLearningRepository,
 )
 from cyberdyne_backend.application.blog import (
     CreateBlogPost,
@@ -75,10 +98,19 @@ from cyberdyne_backend.application.content.use_cases import (
     ListResourceGroups,
     ListTeam,
 )
+from cyberdyne_backend.application.dao_treasury import GetDaoOverview
 from cyberdyne_backend.application.leads import (
     AdminListAsks,
     AdminUpdateAsk,
     CreateAsk,
+)
+from cyberdyne_backend.application.learning import (
+    EnrollInPath,
+    GetMyLearningState,
+    IssueCertificate,
+    ListModules,
+    ListPaths,
+    UpdateModuleProgress,
 )
 from cyberdyne_backend.infrastructure.container import Container
 from cyberdyne_backend.infrastructure.database.engine import (
@@ -193,6 +225,41 @@ def create_app() -> FastAPI:
                 site_url=settings.public_site_url,
             )
 
+    async def _list_modules_dep() -> AsyncIterator[ListModules]:
+        async with session_scope() as session:
+            yield ListModules(repo=SqlAlchemyLearningRepository(session))
+
+    async def _list_paths_dep() -> AsyncIterator[ListPaths]:
+        async with session_scope() as session:
+            yield ListPaths(repo=SqlAlchemyLearningRepository(session))
+
+    async def _enroll_dep() -> AsyncIterator[EnrollInPath]:
+        async with session_scope() as session:
+            yield EnrollInPath(repo=SqlAlchemyLearningRepository(session))
+
+    async def _update_progress_dep() -> AsyncIterator[UpdateModuleProgress]:
+        async with session_scope() as session:
+            yield UpdateModuleProgress(repo=SqlAlchemyLearningRepository(session))
+
+    async def _my_state_dep() -> AsyncIterator[GetMyLearningState]:
+        async with session_scope() as session:
+            yield GetMyLearningState(repo=SqlAlchemyLearningRepository(session))
+
+    async def _issue_certificate_dep() -> AsyncIterator[IssueCertificate]:
+        async with session_scope() as session:
+            yield IssueCertificate(
+                repo=SqlAlchemyLearningRepository(session),
+                signer=container.certificate_signer,
+            )
+
+    async def _dao_overview_dep() -> AsyncIterator[GetDaoOverview]:
+        # No DB session needed — chain reads are HTTP-only.
+        yield GetDaoOverview(
+            reader=container.chain_reader,
+            treasury_address=settings.dao_treasury_address,
+            holders=settings.dao_holders_count,
+        )
+
     app.dependency_overrides[get_list_team_uc] = _list_team_dep
     app.dependency_overrides[get_cyberdyne_page_uc] = _cyberdyne_page_dep
     app.dependency_overrides[get_list_projects_uc] = _list_projects_dep
@@ -207,6 +274,13 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_create_post_uc] = _create_blog_post_dep
     app.dependency_overrides[get_publish_post_uc] = _publish_blog_post_dep
     app.dependency_overrides[get_rss_uc] = _rss_feed_dep
+    app.dependency_overrides[get_list_modules_uc] = _list_modules_dep
+    app.dependency_overrides[get_list_paths_uc] = _list_paths_dep
+    app.dependency_overrides[get_enroll_uc] = _enroll_dep
+    app.dependency_overrides[get_update_progress_uc] = _update_progress_dep
+    app.dependency_overrides[get_my_state_uc] = _my_state_dep
+    app.dependency_overrides[get_issue_certificate_uc] = _issue_certificate_dep
+    app.dependency_overrides[get_dao_overview_uc] = _dao_overview_dep
 
     app.include_router(health_router)
     app.include_router(content_router)
@@ -214,6 +288,9 @@ def create_app() -> FastAPI:
     app.include_router(leads_admin_router)
     app.include_router(blog_public_router)
     app.include_router(blog_admin_router)
+    app.include_router(learning_public_router)
+    app.include_router(learning_admin_router)
+    app.include_router(dao_router)
     return app
 
 

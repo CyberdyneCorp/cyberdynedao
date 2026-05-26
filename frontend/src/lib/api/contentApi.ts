@@ -419,3 +419,138 @@ export async function fetchBlogPost(slug: string): Promise<BlogPostDetail | null
 		return null;
 	}
 }
+
+
+// ── Phase 4 fetchers (learning) ─────────────────────────────────────
+
+
+import type { LearningModule, LearningPath } from '$lib/types/components';
+import { learningModules as staticLearningModules, learningPaths as staticLearningPaths } from '$lib/data/learn';
+
+interface ApiLearningModule {
+	slug: string;
+	title: string;
+	category: string;
+	description: string;
+	level: 'Beginner' | 'Intermediate' | 'Advanced' | string;
+	duration: string;
+	icon: string;
+	topics: string[];
+}
+
+interface ApiLearningPath {
+	slug: string;
+	title: string;
+	description: string;
+	moduleSlugs: string[];
+	estimatedTime: string;
+	icon: string;
+}
+
+function apiLearningModuleToFrontend(api: ApiLearningModule): LearningModule {
+	return {
+		id: api.slug,
+		title: api.title,
+		category: api.category,
+		description: api.description,
+		level: api.level as LearningModule['level'],
+		duration: api.duration,
+		icon: api.icon,
+		topics: api.topics,
+		completed: false
+	};
+}
+
+function apiLearningPathToFrontend(api: ApiLearningPath): LearningPath {
+	return {
+		id: api.slug,
+		title: api.title,
+		description: api.description,
+		modules: api.moduleSlugs,
+		icon: api.icon,
+		estimatedTime: api.estimatedTime
+	};
+}
+
+export async function fetchLearningModules(): Promise<LearningModule[]> {
+	try {
+		const api = await fetchJson<ApiLearningModule[]>('/api/v1/learning/modules');
+		return api.map(apiLearningModuleToFrontend);
+	} catch (err) {
+		console.warn('[contentApi] learning modules fetch failed, using static fallback:', err);
+		return staticLearningModules;
+	}
+}
+
+export async function fetchLearningPaths(): Promise<LearningPath[]> {
+	try {
+		const api = await fetchJson<ApiLearningPath[]>('/api/v1/learning/paths');
+		return api.map(apiLearningPathToFrontend);
+	} catch (err) {
+		console.warn('[contentApi] learning paths fetch failed, using static fallback:', err);
+		return staticLearningPaths;
+	}
+}
+
+
+// ── Phase 5 fetchers (DAO treasury) ─────────────────────────────────
+
+
+export interface DaoTokenBalance {
+	symbol: string;
+	name: string;
+	address: string;
+	balance: number;
+	usdValue: number;
+	change24hPct: number;
+	icon: string;
+}
+
+export interface DaoAavePosition {
+	symbol: string;
+	aTokenBalance: number;
+	variableDebt: number;
+	supplyApy: number;
+	borrowApy: number;
+	usdValueSupplied: number;
+	usdValueBorrowed: number;
+}
+
+export interface DaoUniswapPosition {
+	positionId: string;
+	poolId: string;
+	token0Symbol: string;
+	token1Symbol: string;
+	token0Amount: number;
+	token1Amount: number;
+	feeTierBps: number;
+	tickLower: number;
+	tickUpper: number;
+	inRange: boolean;
+	usdValue: number;
+	uncollectedFeesUsd: number;
+}
+
+export interface DaoTreasurySnapshot {
+	treasuryAddress: string;
+	chainId: number;
+	snapshotAt: string;
+	tokenBalances: DaoTokenBalance[];
+	aavePositions: DaoAavePosition[];
+	uniswapPositions: DaoUniswapPosition[];
+	totalUsdValue: number;
+}
+
+export interface DaoOverview {
+	snapshot: DaoTreasurySnapshot;
+	holders: number;
+}
+
+export async function fetchDaoOverview(): Promise<DaoOverview | null> {
+	try {
+		return await fetchJson<DaoOverview>('/api/v1/dao/overview');
+	} catch (err) {
+		console.warn('[contentApi] dao overview fetch failed:', err);
+		return null;
+	}
+}

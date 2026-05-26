@@ -79,6 +79,39 @@ class Settings(BaseSettings):
     captcha_provider: Literal["mock", "turnstile"] = "mock"
     captcha_secret: SecretStr | None = None
 
+    # ── Certificates (Phase 4 — Learning platform) ────────────────────
+    # HMAC-SHA256 shared secret used to sign learning certificates.
+    # If unset the EphemeralCertificateSigner kicks in — fine for local
+    # dev, loud in staging/prod via a startup warning.
+    cert_signing_key: SecretStr | None = None
+
+    # ── DAO treasury / Web3 (Phase 5) ─────────────────────────────────
+    # ``fake`` ships deterministic data and is the default until a real
+    # DAO multisig is registered. ``web3py`` activates the real RPC
+    # reader (scaffolded; lands in a follow-up PR).
+    chain_reader_provider: Literal["fake", "web3py"] = "fake"
+
+    # The DAO multisig address on Base. The frontend never sees it
+    # except through the /dao endpoints — keep it server-side so we can
+    # rotate without a redeploy of the frontend.
+    dao_treasury_address: str | None = None
+
+    # Base mainnet RPC. Required when chain_reader_provider == "web3py".
+    base_rpc_url: str | None = None
+
+    # AAVE v3 + Uniswap v4 contract addresses on Base. Defaults pulled
+    # from the canonical deployments (see docs/backend-roadmap.md §5.2).
+    aave_pool_data_provider: str = "0x2A0979257105834789bC6b9E1B00446DFbA8dFBa"
+    uniswap_v4_position_manager: str = "0x7C5f5A4bBd8fD63184577525326123B519429bDc"
+
+    # Cache TTL for chain snapshots. Default 5 minutes; tune up for
+    # rate-limited RPCs.
+    dao_snapshot_ttl_s: int = 300
+
+    # Optional: number of token holders, surfaced in /dao/overview.
+    # Filled in by the governance subgraph once it ships; defaults to 0.
+    dao_holders_count: int = 0
+
     @field_validator("log_level")
     @classmethod
     def _upper_log_level(cls, value: str) -> str:

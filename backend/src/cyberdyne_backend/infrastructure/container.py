@@ -16,9 +16,18 @@ from cyberdyne_backend.adapters.outbound.captcha.providers import (
     AlwaysPassCaptchaProvider,
     CloudflareTurnstileProvider,
 )
+from cyberdyne_backend.adapters.outbound.certificates.signer import (
+    EphemeralCertificateSigner,
+    HmacCertificateSigner,
+)
+from cyberdyne_backend.adapters.outbound.chain.caching_reader import CachingChainReader
+from cyberdyne_backend.adapters.outbound.chain.fake_reader import FakeChainReader
+from cyberdyne_backend.adapters.outbound.chain.web3py_reader import Web3PyChainReader
 from cyberdyne_backend.adapters.outbound.email.notifiers import LoggingEmailNotifier
 from cyberdyne_backend.domain.auth_identity import AuthPort
+from cyberdyne_backend.domain.dao_treasury import ChainReaderPort
 from cyberdyne_backend.domain.leads import CaptchaPort, EmailNotifierPort
+from cyberdyne_backend.domain.learning import CertificateSigner
 from cyberdyne_backend.infrastructure.settings import Settings
 
 
@@ -32,6 +41,8 @@ class Container:
         self._service_token_provider: ServiceTokenProvider | None = None
         self._captcha_port: CaptchaPort | None = None
         self._email_notifier: EmailNotifierPort | None = None
+        self._certificate_signer: CertificateSigner | None = None
+        self._chain_reader: ChainReaderPort | None = None
 
     # ── HTTP ──────────────────────────────────────────────────────────
     @property
@@ -111,6 +122,39 @@ class Container:
             # when the provider is provisioned.
             self._email_notifier = LoggingEmailNotifier()
         return self._email_notifier
+
+    # ── Learning (Phase 4) ───────────────────────────────────────────
+    @property
+    def certificate_signer(self) -> CertificateSigner:
+        if self._certificate_signer is not None:
+            return self._certificate_signer
+        secret = self._settings.cert_signing_key
+        if secret is not None:
+            self._certificate_signer = HmacCertificateSigner(secret=secret.get_secret_value())
+        else:
+            self._certificate_signer = EphemeralCertificateSigner(
+                environment=self._settings.environment
+            )
+        return self._certificate_signer
+
+    # ── DAO treasury (Phase 5) ───────────────────────────────────────
+    @property
+    def chain_reader(self) -> ChainReaderPort:
+        if self._chain_reader is not None:
+            return self._chain_reader
+        if self._settings.chain_reader_provider == "web3py" and self._settings.base_rpc_url:
+            inner: ChainReaderPort = Web3PyChainReader(
+                rpc_url=self._settings.base_rpc_url,
+                aave_pool_data_provider=self._settings.aave_pool_data_provider,
+                uniswap_position_manager=self._settings.uniswap_v4_position_manager,
+            )
+        else:
+            inner = FakeChainReader()
+        self._chain_reader = CachingChainReader(
+            inner=inner,
+            ttl_s=self._settings.dao_snapshot_ttl_s,
+        )
+        return self._chain_reader
 
     async def aclose(self) -> None:
         if self._service_token_provider is not None:

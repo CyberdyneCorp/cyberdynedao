@@ -8,14 +8,39 @@
 		formatDaoDate as formatDate,
 		getVotePercentage,
 		acceptedProposalCount,
-		successRate
+		successRate,
+		sumTreasury
 	} from '$lib/viewmodels/daoViewModel';
+	import type { TreasuryAsset } from '$lib/types/dao';
+	import { fetchDaoOverview } from '$lib/api/contentApi';
 
 	const vm = createDaoViewModel();
-	const { treasuryAssets, recentProposals, dividendInfo, operationalData, totalTreasuryValue } = vm;
+	const { recentProposals, dividendInfo, operationalData } = vm;
 	const timeUntilDividend = vm.timeUntilDividend;
 
-	onMount(() => vm.startCountdown());
+	// Stale-while-revalidate the treasury slice. Proposals + dividend
+	// stay static until the governance subgraph ships in Phase 6.
+	let treasuryAssets = $state<TreasuryAsset[]>(vm.treasuryAssets);
+	let totalTreasuryValue = $state<number>(vm.totalTreasuryValue);
+
+	onMount(() => {
+		const stop = vm.startCountdown();
+		void (async () => {
+			const overview = await fetchDaoOverview();
+			if (overview) {
+				treasuryAssets = overview.snapshot.tokenBalances.map((b) => ({
+					symbol: b.symbol,
+					name: b.name,
+					balance: b.balance,
+					usdValue: b.usdValue,
+					change24h: b.change24hPct,
+					icon: b.icon
+				}));
+				totalTreasuryValue = sumTreasury(treasuryAssets);
+			}
+		})();
+		return stop;
+	});
 
 	function statusGlyph(status: string): string {
 		if (status === 'accepted') return '✓';

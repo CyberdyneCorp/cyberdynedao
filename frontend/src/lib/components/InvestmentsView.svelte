@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import {
 		LiquidityPositionCard,
 		StatCard,
@@ -8,13 +9,47 @@
 	} from '@cyberdynecorp/svelte-ui-core';
 	import {
 		createInvestmentsViewModel,
+		computePoolStats,
 		formatInvestmentPrice as formatPrice
 	} from '$lib/viewmodels/investmentsViewModel';
+	import type { LiquidityPosition } from '$lib/data/investments';
+	import { fetchDaoOverview } from '$lib/api/contentApi';
 
 	const vm = createInvestmentsViewModel();
-	const { positions, poolStats } = vm;
 
-	$: overviewRows = ([
+	// Stale-while-revalidate: static positions render first, the API
+	// snapshot replaces them once it lands.
+	let positions = $state<LiquidityPosition[]>(vm.positions);
+
+	onMount(async () => {
+		const overview = await fetchDaoOverview();
+		if (!overview) return;
+		positions = overview.snapshot.uniswapPositions.map((p, idx) => ({
+			id: p.positionId,
+			pair: `${p.token0Symbol}/${p.token1Symbol}`,
+			token0: p.token0Symbol,
+			token1: p.token1Symbol,
+			token0Logo: '',
+			token1Logo: '',
+			totalValue: p.usdValue,
+			minPrice: p.tickLower,
+			maxPrice: p.tickUpper,
+			currentPrice: (p.tickLower + p.tickUpper) / 2,
+			feeAPY: p.feeTierBps / 100,
+			pooledAssets: { token0Amount: p.token0Amount, token1Amount: p.token1Amount },
+			totalPnL: 0,
+			totalAPR: 0,
+			uncollectedFees: p.uncollectedFeesUsd,
+			status: p.inRange ? 'in-range' : 'out-of-range',
+			compound: false,
+			// Preserve sort stability if the DAO ships duplicate pool ids.
+			...(idx === -1 ? {} : {})
+		}));
+	});
+
+	const poolStats = $derived(computePoolStats(positions));
+
+	const overviewRows = $derived([
 		{ label: 'Total Value', value: formatPrice(poolStats.totalValueLocked) },
 		{
 			label: 'Total P&L',
@@ -25,11 +60,11 @@
 		{ label: 'Avg APY', value: `${poolStats.averageAPY.toFixed(1)}%` }
 	] as StatCardRow[]);
 
-	$: statusRows = positions.map((p) => ({
+	const statusRows = $derived(positions.map((p) => ({
 		label: p.pair,
 		value: formatPrice(p.totalValue),
 		accent: p.status === 'in-range' ? 'success' : 'danger'
-	})) as StatCardRow[];
+	})) as StatCardRow[]);
 </script>
 
 <div class="investments-view flex flex-col h-full bg-white">
