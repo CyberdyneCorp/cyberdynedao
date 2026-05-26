@@ -197,9 +197,13 @@ def create_app() -> FastAPI:
         version=__version__,
         description="Hexagonal FastAPI service backing the Cyberdyne SvelteKit frontend.",
         # Expose docs/openapi at default paths outside of prod.
-        docs_url="/docs" if settings.environment != "production" else None,
+        # /docs + /openapi.json are public on every environment — this is a
+        # marketing + DAO surface where the API is consumed by our own
+        # frontend, the chat agent, and partner integrations. Hiding the
+        # schema in prod buys nothing.
+        docs_url="/docs",
         redoc_url=None,
-        openapi_url="/openapi.json" if settings.environment != "production" else None,
+        openapi_url="/openapi.json",
         lifespan=lifespan,
     )
 
