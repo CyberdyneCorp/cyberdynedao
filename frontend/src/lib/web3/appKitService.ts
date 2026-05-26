@@ -273,6 +273,27 @@ class AppKitService {
   }
 
   /**
+   * Ask the connected wallet to sign an arbitrary message via the
+   * EIP-1193 ``personal_sign`` method. Used by the SIWE flow so the
+   * frontend never touches private keys.
+   */
+  async signPersonalMessage(message: string, address: string): Promise<string> {
+    if (!this.appKit) {
+      throw new Error('AppKit not initialized — connect a wallet first');
+    }
+    const provider = this.appKit.getWalletProvider() as
+      | { request(args: { method: string; params: unknown[] }): Promise<string> }
+      | null;
+    if (!provider) {
+      throw new Error('No active wallet provider — connect a wallet first');
+    }
+    return provider.request({
+      method: 'personal_sign',
+      params: [message, address]
+    });
+  }
+
+  /**
    * Disconnect the current wallet
    * @returns Promise<boolean> - Success status
    */
