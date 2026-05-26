@@ -1,0 +1,23 @@
+name: cyberdyne-backend-dev
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: cyberdyne
+      POSTGRES_PASSWORD: cyberdyne
+      POSTGRES_DB: cyberdyne
+    # 5433 on the host so we don't collide with anyone else's local
+    # Postgres (geo_dashboard's compose claims 5432). Inside the
+    # container we still listen on 5432.
+    ports:
+      - "5433:5432"
+    volumes:
+      - cyberdyne_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cyberdyne -d cyberdyne"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  cyberdyne_pg_data:
