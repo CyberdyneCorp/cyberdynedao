@@ -1,20 +1,44 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { Badge } from '@cyberdynecorp/svelte-ui-core';
 	import {
-		heroTagline,
-		introLead,
-		introBullets,
-		domains,
-		beliefs,
-		targetUsers,
-		tokenomicsRows,
-		tokenUtilityPoints,
-		exampleEconomics,
-		roadmapPhases,
-		closingHeadline,
-		closingBody,
+		heroTagline as staticHeroTagline,
+		introLead as staticIntroLead,
+		introBullets as staticIntroBullets,
+		domains as staticDomains,
+		beliefs as staticBeliefs,
+		targetUsers as staticTargetUsers,
+		tokenomicsRows as staticTokenomicsRows,
+		tokenUtilityPoints as staticTokenUtilityPoints,
+		exampleEconomics as staticExampleEconomics,
+		roadmapPhases as staticRoadmapPhases,
+		closingHeadline as staticClosingHeadline,
+		closingBody as staticClosingBody,
 		type Palette
 	} from '$lib/data/cyberdyne';
+	import { fetchCyberdynePage, type CyberdynePagePayload } from '$lib/api/contentApi';
+
+	// Stale-while-revalidate: bundled static payload renders instantly,
+	// API result replaces it once it lands. On any failure the static
+	// payload stays — the user never sees an error.
+	let page = $state<CyberdynePagePayload>({
+		heroTagline: staticHeroTagline,
+		introLead: staticIntroLead,
+		introBullets: [...staticIntroBullets],
+		domains: [...staticDomains],
+		beliefs: [...staticBeliefs],
+		targetUsers: [...staticTargetUsers],
+		tokenomicsRows: [...staticTokenomicsRows],
+		tokenUtilityPoints: [...staticTokenUtilityPoints],
+		exampleEconomics: [...staticExampleEconomics],
+		roadmapPhases: [...staticRoadmapPhases],
+		closingHeadline: staticClosingHeadline,
+		closingBody: staticClosingBody
+	});
+
+	onMount(async () => {
+		page = await fetchCyberdynePage();
+	});
 
 	const paletteVars: Record<Palette, { accent: string; accentDark: string }> = {
 		blue: { accent: '#3b82f6', accentDark: '#1d4ed8' },
@@ -75,16 +99,16 @@
 			<span class="hero__mark" aria-hidden="true">🧠</span>
 			<h1 class="hero__title">CYBERDYNE</h1>
 		</div>
-		<p class="hero__tagline">{heroTagline}</p>
+		<p class="hero__tagline">{page.heroTagline}</p>
 	</header>
 
 	<div class="content">
 		<!-- Intro -->
 		<section class="card" style={sectionStyle('intro')}>
 			<h2 class="card__title">What is Cyberdyne?</h2>
-			<p class="card__lead">{introLead}</p>
+			<p class="card__lead">{page.introLead}</p>
 			<ul class="bullets">
-				{#each introBullets as b}
+				{#each page.introBullets as b}
 					<li>{b}</li>
 				{/each}
 			</ul>
@@ -95,7 +119,7 @@
 			<h2 class="card__title">The Domains</h2>
 			<p class="card__lead">Five domains, eighteen projects, one open stack.</p>
 			<div class="domain-grid">
-				{#each domains as d}
+				{#each page.domains as d}
 					{@const p = paletteVars[d.palette]}
 					<article class="domain" style="--accent: {p.accent}; --accent-dark: {p.accentDark};">
 						<header class="domain__header">
@@ -120,7 +144,7 @@
 		<section class="card" style={sectionStyle('beliefs')}>
 			<h2 class="card__title">What We Believe</h2>
 			<div class="belief-grid">
-				{#each beliefs as b}
+				{#each page.beliefs as b}
 					<div class="belief">
 						<h4 class="belief__title">{b.title}</h4>
 						<p class="belief__desc">{b.description}</p>
@@ -133,7 +157,7 @@
 		<section class="card" style={sectionStyle('audience')}>
 			<h2 class="card__title">Who It’s For</h2>
 			<ul class="audience">
-				{#each targetUsers as u}
+				{#each page.targetUsers as u}
 					<li>
 						<strong>{u.name}</strong>
 						<span class="audience__sep">→</span>
@@ -157,7 +181,7 @@
 						</tr>
 					</thead>
 					<tbody>
-						{#each tokenomicsRows as row}
+						{#each page.tokenomicsRows as row}
 							<tr>
 								<td>{row.allocation}</td>
 								<td>{row.percentage}</td>
@@ -169,7 +193,7 @@
 			</div>
 			<h3 class="subsection-title">Utility</h3>
 			<ul class="bullets">
-				{#each tokenUtilityPoints as u}
+				{#each page.tokenUtilityPoints as u}
 					<li>{u}</li>
 				{/each}
 			</ul>
@@ -180,7 +204,7 @@
 			<h2 class="card__title">Example Economics</h2>
 			<p class="card__lead">A worked example at $40k treasury — the loop scales linearly.</p>
 			<div class="econ-grid">
-				{#each exampleEconomics as e}
+				{#each page.exampleEconomics as e}
 					<div class="econ">
 						<div class="econ__label">{e.label}</div>
 						<div class="econ__value">{e.value}</div>
@@ -196,7 +220,7 @@
 		<section class="card" style={sectionStyle('roadmap')}>
 			<h2 class="card__title">Roadmap</h2>
 			<div class="roadmap">
-				{#each roadmapPhases as phase}
+				{#each page.roadmapPhases as phase}
 					{@const ph = paletteVars[phase.color]}
 					<div class="phase" style="--accent: {ph.accent}; --accent-dark: {ph.accentDark};">
 						<header class="phase__header">
@@ -221,8 +245,8 @@
 
 		<!-- Closing -->
 		<section class="closing" style={sectionStyle('closing')}>
-			<h2 class="closing__headline">{closingHeadline}</h2>
-			<p class="closing__body">{closingBody}</p>
+			<h2 class="closing__headline">{page.closingHeadline}</h2>
+			<p class="closing__body">{page.closingBody}</p>
 		</section>
 	</div>
 </div>

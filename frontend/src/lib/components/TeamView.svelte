@@ -1,14 +1,27 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { PixelButton, PixelScrollArea } from '@cyberdynecorp/svelte-ui-core';
 	import {
-		teamMembers,
+		teamMembers as staticTeamMembers,
 		teamHeroTitle,
 		teamHeroBody,
 		teamCtaHeadline,
 		teamCtaBody,
 		teamCtaButton,
+		type TeamMember,
 		type TeamPalette
 	} from '$lib/data/team';
+	import { fetchTeam } from '$lib/api/contentApi';
+
+	// Stale-while-revalidate: render the bundled static list immediately,
+	// then replace with the API response once it lands. If the API call
+	// fails (network down, backend not deployed yet, etc.), the static
+	// list stays in place and the user never sees an error.
+	let teamMembers = $state<TeamMember[]>(staticTeamMembers);
+
+	onMount(async () => {
+		teamMembers = await fetchTeam();
+	});
 
 	const paletteVars: Record<TeamPalette, { accent: string; accentDark: string }> = {
 		blue: { accent: '#3b82f6', accentDark: '#1d4ed8' },

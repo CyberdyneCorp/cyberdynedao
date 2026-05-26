@@ -51,6 +51,12 @@ ARG VITE_WEB3AUTH_NETWORK
 # Contract Addresses
 ARG VITE_CYBERDYNE_ACCESS_NFT_ADDRESS
 
+# Cyberdyne backend API base URL (Phase 1+).
+# Vite bakes import.meta.env at build time, so this MUST be set as a
+# build arg in Coolify (is_build=true), not just a runtime env var.
+# When unset the contentApi falls back to bundled static data.
+ARG VITE_BACKEND_API_URL
+
 # ---- Make them visible to the build (Vite reads import.meta.env) ----
 ENV VITE_INFURA_ENDPOINT=${VITE_INFURA_ENDPOINT} \
     VITE_CHAIN_ID=${VITE_CHAIN_ID} \
@@ -64,7 +70,8 @@ ENV VITE_INFURA_ENDPOINT=${VITE_INFURA_ENDPOINT} \
     VITE_REOWN_APP_ICON=${VITE_REOWN_APP_ICON} \
     VITE_WEB3AUTH_CLIENT_ID=${VITE_WEB3AUTH_CLIENT_ID} \
     VITE_WEB3AUTH_NETWORK=${VITE_WEB3AUTH_NETWORK} \
-    VITE_CYBERDYNE_ACCESS_NFT_ADDRESS=${VITE_CYBERDYNE_ACCESS_NFT_ADDRESS}
+    VITE_CYBERDYNE_ACCESS_NFT_ADDRESS=${VITE_CYBERDYNE_ACCESS_NFT_ADDRESS} \
+    VITE_BACKEND_API_URL=${VITE_BACKEND_API_URL}
 
 RUN npm run build
 
