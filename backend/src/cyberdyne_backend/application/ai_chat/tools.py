@@ -93,8 +93,11 @@ CYBERDYNE_TOOLS: list[ToolSchema] = [
     ToolSchema(
         name="create_ask_for_handoff",
         description=(
-            "Open a lead so a human follows up. Only call this when the user has explicitly "
-            "asked to be contacted. Always confirm the email address with the user before calling."
+            "Open a generic lead so a human follows up. Use this for vague 'please contact me' "
+            "requests where the user hasn't shared concrete project details. "
+            "Always confirm the email address with the user before calling. "
+            "If the user has shared project specifics (scope, budget, timeline), prefer "
+            "``capture_project_idea`` instead."
         ),
         parameters={
             "type": "object",
@@ -105,6 +108,56 @@ CYBERDYNE_TOOLS: list[ToolSchema] = [
                 "product_slug": {"type": "string"},
             },
             "required": ["name", "email", "body"],
+        },
+    ),
+    ToolSchema(
+        name="capture_project_idea",
+        description=(
+            "Structured lead capture for project ideas. Use this when the user has shared "
+            "any of: project title, scope (one-time / ongoing), budget range, timeline, "
+            "domain (geospatial / AI / web3 / dev-tooling / identity). Confirm the email "
+            "back to the user in plain text BEFORE calling. The result lands as an Ask "
+            "with channel ``chat_agent_handoff`` and the structured details in the body."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "email": {"type": "string"},
+                "project_title": {
+                    "type": "string",
+                    "description": "Short title — e.g. 'Geospatial risk dashboard for orchards'",
+                },
+                "description": {
+                    "type": "string",
+                    "description": "What the project is. Plain language, 1-3 sentences.",
+                },
+                "scope": {
+                    "type": "string",
+                    "enum": ["one_time", "ongoing", "unknown"],
+                    "description": "One-time engagement vs. ongoing retainer.",
+                },
+                "budget_range": {
+                    "type": "string",
+                    "description": "User-stated budget — free-form, e.g. '$5k-15k' or 'tbd'",
+                },
+                "timeline": {
+                    "type": "string",
+                    "description": "Desired start / completion timing — free-form.",
+                },
+                "domain": {
+                    "type": "string",
+                    "enum": [
+                        "geospatial",
+                        "ai_knowledge_graphs",
+                        "web3_defi",
+                        "developer_tooling",
+                        "identity",
+                        "other",
+                    ],
+                },
+            },
+            "required": ["name", "email", "project_title", "description"],
         },
     ),
 ]
@@ -151,6 +204,8 @@ class ToolDispatcher:
                 return await self._search(cast(str, args.get("query", "")))
             if call.name == "create_ask_for_handoff":
                 return await self._create_ask(args)
+            if call.name == "capture_project_idea":
+                return await self._capture_project_idea(args)
         except Exception as exc:
             logger.exception("tool %s failed", call.name)
             return json.dumps({"error": "tool_failed", "detail": str(exc)})
@@ -250,3 +305,56 @@ class ToolDispatcher:
         await self._ctx.ask_repo.save(ask)
         await self._ctx.ask_notifier.send_new_ask_notification(ask)
         return json.dumps({"ok": True, "ask_id": str(ask.id)})
+
+    async def _capture_project_idea(self, args: dict[str, object]) -> str:
+        """Structured lead capture. Bundles the structured fields into a
+        deterministic markdown-ish body so the admin /asks list view
+        renders it sensibly without a new column schema."""
+        name = cast(str, args.get("name", "")).strip()
+        email = cast(str, args.get("email", "")).strip()
+        title = cast(str, args.get("project_title", "")).strip()
+        description = cast(str, args.get("description", "")).strip()
+        if not (name and email and title and description):
+            return json.dumps({"error": "missing_required_fields"})
+        scope = cast(str, args.get("scope", "unknown") or "unknown")
+        budget = cast(str, args.get("budget_range", "") or "").strip()
+        timeline = cast(str, args.get("timeline", "") or "").strip()
+        domain = cast(str, args.get("domain", "") or "").strip()
+        # Compact, copy-paste-friendly body for the admin view.
+        lines = [
+            f"# {title}",
+            "",
+            description,
+            "",
+            f"- **Scope:** {scope}",
+        ]
+        if budget:
+            lines.append(f"- **Budget:** {budget}")
+        if timeline:
+            lines.append(f"- **Timeline:** {timeline}")
+        if domain:
+            lines.append(f"- **Domain:** {domain}")
+        body = "\n".join(lines)
+        ask = new_ask(
+            channel=AskChannel.CHAT_AGENT_HANDOFF,
+            name=name,
+            email=email,
+            body=body,
+            product_slug=None,
+            source_url=None,
+        )
+        await self._ctx.ask_repo.save(ask)
+        await self._ctx.ask_notifier.send_new_ask_notification(ask)
+        return json.dumps(
+            {
+                "ok": True,
+                "ask_id": str(ask.id),
+                "captured": {
+                    "project_title": title,
+                    "scope": scope,
+                    "budget_range": budget or None,
+                    "timeline": timeline or None,
+                    "domain": domain or None,
+                },
+            }
+        )
