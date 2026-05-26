@@ -107,4 +107,11 @@ server {
 EOF
 
 EXPOSE 80
+
+# 127.0.0.1, GET-based (not HEAD), discards body. Required for Coolify+Traefik:
+# unhealthy containers get pulled from the upstream pool → 503 to clients.
+# See leo-obsidian-vault/Infrastructure/Coolify/Coolify Tricks and Traps.md.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD wget -q -O /dev/null http://127.0.0.1/ || exit 1
+
 CMD ["nginx", "-g", "daemon off;"]
