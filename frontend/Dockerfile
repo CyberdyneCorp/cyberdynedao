@@ -111,6 +111,23 @@ server {
     add_header Cache-Control "no-store" always;
   }
 
+  # MATLAB-LLVM REPL backend reverse proxy. Same trailing-slash trick
+  # as /api/auth: the slash on proxy_pass strips the location prefix.
+  # The REPL can run for tens of seconds (figure rendering); raise the
+  # read timeout accordingly.
+  location /api/matlab/ {
+    proxy_pass https://matlab-backend.coolify.cyberdynecorp.ai/;
+    proxy_set_header Host matlab-backend.coolify.cyberdynecorp.ai;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+    proxy_ssl_server_name on;
+    proxy_read_timeout 120s;
+    proxy_connect_timeout 10s;
+    # Plot artifacts can be a few MB — bump the buffer ceiling.
+    client_max_body_size 16m;
+    proxy_buffering off;
+  }
+
   location / { try_files \$uri \$uri/ /index.html; }
 
   add_header X-Frame-Options "SAMEORIGIN" always;

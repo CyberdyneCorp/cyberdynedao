@@ -8,6 +8,8 @@ import { defineConfig } from 'vitest/config';
 // environment it's running in.
 const AUTH_UPSTREAM = process.env.CYBERDYNE_AUTH_URL
 	?? 'https://auth.backend.coolify.cyberdynecorp.ai';
+const MATLAB_UPSTREAM = process.env.MATLAB_BACKEND_URL
+	?? 'https://matlab-backend.coolify.cyberdynecorp.ai';
 
 export default defineConfig({
 	plugins: [sveltekit()],
@@ -19,6 +21,12 @@ export default defineConfig({
 				secure: true,
 				// Strip the `/api/auth` prefix so the upstream sees `/api/v1/...`
 				rewrite: (path: string) => path.replace(/^\/api\/auth/, '')
+			},
+			'/api/matlab': {
+				target: MATLAB_UPSTREAM,
+				changeOrigin: true,
+				secure: true,
+				rewrite: (path: string) => path.replace(/^\/api\/matlab/, '')
 			}
 		}
 	},

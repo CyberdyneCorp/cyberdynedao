@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges">
+  <!-- Background tile (orange, with a deeper drop-shadow square so it
+       sits in the same chunky lineage as the other Cyberdyne icons) -->
+  <rect x="6" y="9" width="55" height="51" fill="#7c2d12"/>
+  <rect x="3" y="5" width="55" height="51" fill="#f97316" stroke="#000" stroke-width="2"/>
+
+  <!-- Stylized "M" — uppercase, blocky, matches the pixel-icon family -->
+  <g fill="#fff7ed" stroke="#000" stroke-width="1.5">
+    <path d="M11 44 V19 H17 L25 31 L33 19 H39 V44 H33 V29 L27 38 H23 L17 29 V44 Z"/>
+  </g>
+
+  <!-- Tiny chart overlay in the lower-right — a plotted sine peak
+       hinting at the REPL's plot capability -->
+  <g fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="42,46 46,38 50,44 54,30" />
+  </g>
+  <g fill="#22c55e" stroke="#000" stroke-width="1">
+    <rect x="40" y="48" width="3" height="3"/>
+    <rect x="44" y="40" width="3" height="3"/>
+    <rect x="48" y="45" width="3" height="3"/>
+    <rect x="52" y="32" width="3" height="3"/>
+  </g>
+</svg>
