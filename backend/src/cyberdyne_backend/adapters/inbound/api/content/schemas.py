@@ -1,9 +1,15 @@
 """Pydantic response models for the content endpoints.
 
 These pin the API contract — the OpenAPI schema and the frontend's
-fetcher both depend on them being stable. They mirror the shapes the
-existing Svelte components consume in
-``frontend/src/lib/data/{team,cyberdyne}.ts``.
+fetcher both depend on them being stable. Field names are Python
+snake_case internally, but every model serialises to **camelCase** on
+the wire via ``alias_generator=to_camel``. The router uses
+``response_model_by_alias=True`` to enforce that.
+
+Why bother: the existing Svelte components consume camelCase (e.g.
+``member.imageUrl``). Pushing the case-conversion to the API boundary
+keeps the frontend types untouched as we migrate from static data to
+live fetches.
 """
 
 from __future__ import annotations
@@ -11,6 +17,17 @@ from __future__ import annotations
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
+from pydantic.alias_generators import to_camel
+
+
+class _CamelModel(BaseModel):
+    """Project-wide response base. Emits camelCase, accepts either."""
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
 
 # ── Shared palette enum ──────────────────────────────────────────────
 
@@ -20,8 +37,12 @@ Palette = Literal["blue", "green", "purple", "orange", "red"]
 # ── Team ─────────────────────────────────────────────────────────────
 
 
-class TeamMemberResponse(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class TeamMemberResponse(_CamelModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        extra="forbid",
+    )
 
     id: str
     name: str
@@ -39,7 +60,7 @@ class TeamMemberResponse(BaseModel):
 # render in one round-trip.
 
 
-class DomainResponse(BaseModel):
+class DomainResponse(_CamelModel):
     id: str
     name: str
     icon: str
@@ -49,33 +70,33 @@ class DomainResponse(BaseModel):
     status: Literal["live", "shipping", "active", "planned"]
 
 
-class BeliefResponse(BaseModel):
+class BeliefResponse(_CamelModel):
     title: str
     description: str
 
 
-class TargetUserResponse(BaseModel):
+class TargetUserResponse(_CamelModel):
     name: str
     description: str
 
 
-class TokenomicsRowResponse(BaseModel):
+class TokenomicsRowResponse(_CamelModel):
     allocation: str
     percentage: str
     vesting: str
 
 
-class ExampleEconomicsRowResponse(BaseModel):
+class ExampleEconomicsRowResponse(_CamelModel):
     label: str
     value: str
 
 
-class RoadmapItemResponse(BaseModel):
+class RoadmapItemResponse(_CamelModel):
     icon: str
     text: str
 
 
-class RoadmapPhaseResponse(BaseModel):
+class RoadmapPhaseResponse(_CamelModel):
     id: str
     title: str
     subtitle: str
@@ -84,8 +105,12 @@ class RoadmapPhaseResponse(BaseModel):
     items: list[RoadmapItemResponse]
 
 
-class CyberdynePageResponse(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class CyberdynePageResponse(_CamelModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        extra="forbid",
+    )
 
     hero_tagline: str
     intro_lead: str

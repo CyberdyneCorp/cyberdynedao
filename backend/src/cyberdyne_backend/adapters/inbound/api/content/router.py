@@ -34,7 +34,11 @@ async def get_cyberdyne_page_uc() -> GetCyberdynePage:  # pragma: no cover - ove
     raise NotImplementedError("GetCyberdynePage dependency not wired")
 
 
-@router.get("/team", response_model=list[TeamMemberResponse])
+@router.get(
+    "/team",
+    response_model=list[TeamMemberResponse],
+    response_model_by_alias=True,
+)
 async def list_team(
     use_case: Annotated[ListTeam, Depends(get_list_team_uc)],
 ) -> list[TeamMemberResponse]:
@@ -53,7 +57,11 @@ async def list_team(
     ]
 
 
-@router.get("/cyberdyne", response_model=CyberdynePageResponse)
+@router.get(
+    "/cyberdyne",
+    response_model=CyberdynePageResponse,
+    response_model_by_alias=True,
+)
 async def get_cyberdyne_page(
     use_case: Annotated[GetCyberdynePage, Depends(get_cyberdyne_page_uc)],
 ) -> CyberdynePageResponse:

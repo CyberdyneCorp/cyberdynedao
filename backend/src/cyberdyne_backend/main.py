@@ -11,6 +11,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from cyberdyne_backend import __version__
 from cyberdyne_backend.adapters.inbound.api.content.router import (
@@ -63,6 +64,16 @@ def create_app() -> FastAPI:
         redoc_url=None,
         openapi_url="/openapi.json" if settings.environment != "production" else None,
         lifespan=lifespan,
+    )
+
+    # CORS must be installed before the auth middleware so the preflight
+    # OPTIONS requests don't go through token introspection.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origin_list,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type"],
     )
 
     app.add_middleware(AuthMiddleware, auth_port=container.auth_port)

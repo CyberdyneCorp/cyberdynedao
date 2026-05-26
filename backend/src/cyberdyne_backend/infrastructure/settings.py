@@ -29,6 +29,15 @@ class Settings(BaseSettings):
     log_level: str = Field("INFO", description="Root log level — DEBUG / INFO / WARNING / ERROR")
     port: int = 8000
 
+    # Comma-separated list of allowed origins for browser fetches.
+    # Locally defaults to the SvelteKit dev server. In prod set to the
+    # frontend FQDN(s) — e.g. ``https://cyberdyne.coolify.cyberdynecorp.ai``.
+    cors_origins: str = "http://localhost:5173"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
     # ── Database ──────────────────────────────────────────────────────
     # Default points at the compose.dev.yaml Postgres on the non-standard
     # 5433 port (avoids collision with other local sidecars). In prod
