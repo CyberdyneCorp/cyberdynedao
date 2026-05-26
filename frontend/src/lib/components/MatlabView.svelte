@@ -98,7 +98,13 @@ x = linspace(0, 2*pi, 200); plot(x, sin(x).*cos(2*x))</pre>
 				<article class="cell">
 					<header class="cell__head">
 						<span class="cell__no">[{cell.id}]</span>
-						<span class="cell__mode">{cell.mode === 'plot' ? 'PLOT' : 'REPL'}</span>
+						<span class="cell__mode">
+							{cell.mode === 'plot' ? 'PLOT' : 'REPL'}{#if cell.plotFallback}<span
+									class="cell__fallback"
+									title="Source looked like a plot call so we transparently called /v1/plot to capture the figure"
+									> → PLOT</span
+								>{/if}
+						</span>
 						<Badge variant={badgeVariant(cell.status)} size="sm">
 							{cell.status === 'running'
 								? 'RUNNING'
@@ -144,6 +150,11 @@ x = linspace(0, 2*pi, 200); plot(x, sin(x).*cos(2*x))</pre>
 								{/if}
 							{/each}
 						</div>
+					{/if}
+
+					{#if cell.artifactErrors.length > 0}
+						<pre class="cell__artifact-err">⚠ Some artifacts could not be downloaded:
+{cell.artifactErrors.join('\n')}</pre>
 					{/if}
 				</article>
 			{/each}
@@ -312,6 +323,11 @@ x = linspace(0, 2*pi, 200); plot(x, sin(x).*cos(2*x))</pre>
 		font-weight: 700;
 		letter-spacing: 0.08em;
 	}
+	.cell__fallback {
+		color: #fbbf24;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+	}
 	.cell__elapsed {
 		color: #64748b;
 		margin-left: auto;
@@ -341,6 +357,15 @@ x = linspace(0, 2*pi, 200); plot(x, sin(x).*cos(2*x))</pre>
 		color: #fecaca;
 		background: rgba(127, 29, 29, 0.4);
 		border-top: 1px solid #b91c1c;
+	}
+	.cell__artifact-err {
+		margin: 0;
+		padding: 8px 12px;
+		font-size: 0.75rem;
+		color: #fde68a;
+		background: rgba(146, 64, 14, 0.4);
+		border-top: 1px dashed #f59e0b;
+		white-space: pre-wrap;
 	}
 
 	.cell__plots {
