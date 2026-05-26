@@ -18,6 +18,35 @@ install:
 dev:
     uv run uvicorn cyberdyne_backend.main:app --reload --host 0.0.0.0 --port 8000
 
+# ── Local Postgres (compose.dev.yaml) ──────────────────
+
+# Bring up the local Postgres sidecar (waits for healthy)
+db-up:
+    docker compose -f compose.dev.yaml up -d --wait postgres
+
+# Stop the local Postgres (volume preserved)
+db-down:
+    docker compose -f compose.dev.yaml stop postgres
+
+# Wipe the volume + restart — destructive
+db-reset:
+    docker compose -f compose.dev.yaml down -v
+    docker compose -f compose.dev.yaml up -d --wait postgres
+    just db-migrate
+
+# Apply all pending migrations to the running database
+db-migrate:
+    uv run alembic upgrade head
+
+# Roll back the most recent migration
+db-rollback:
+    uv run alembic downgrade -1
+
+# Generate a new migration from current SQLAlchemy metadata
+# Usage: just db-revision "add foo table"
+db-revision message:
+    uv run alembic revision --autogenerate -m "{{message}}"
+
 # ── Quality gate ───────────────────────────────────────
 
 # Run unit tests (integration tests excluded by default — see test-integration)
