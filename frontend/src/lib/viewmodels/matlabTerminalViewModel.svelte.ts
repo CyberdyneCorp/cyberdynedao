@@ -18,7 +18,29 @@
  * forgotten PNGs in the browser.
  */
 
-import { downloadArtifact, plot as runPlot, repl as runRepl, MatlabApiError } from '$lib/api/matlabApi';
+import { downloadArtifact, repl as runRepl, MatlabApiError } from '$lib/api/matlabApi';
+
+/**
+ * Build the saveas-augmented source that turns a /v1/repl call into a
+ * figure-producing one. Mirrors what the upstream `/v1/plot` endpoint
+ * does internally — append ``saveas(gcf, '<name>.png')`` — but we
+ * control the filename, so the artifact comes back via the normal
+ * ReplResponse.artifacts scan + /v1/files download path.
+ *
+ * /v1/plot has a separate code path that has been observed to fail
+ * with "The string did not match the expected pattern." — going
+ * through /v1/repl with our own saveas avoids it entirely.
+ */
+export function withSaveas(source: string, figName: string): string {
+	const trimmed = source.replace(/[;\s]+$/, '');
+	return `${trimmed};\nsaveas(gcf, '${figName}');\n`;
+}
+
+function makeFigName(): string {
+	const stamp = Date.now().toString(36);
+	const rand = Math.random().toString(36).slice(2, 8);
+	return `cd_plot_${stamp}_${rand}.png`;
+}
 
 export interface MatlabPlot {
 	url: string;
@@ -146,19 +168,34 @@ export function createMatlabTerminalVM(): MatlabTerminalViewModel {
 		input = '';
 		const cell = appendCell(mode, trimmed);
 		try {
-			const fn = mode === 'plot' ? runPlot : runRepl;
-			const response = await fn({ source: trimmed, session_id: sessionId, stateful: true });
+			// For both modes we always hit /v1/repl. The Plot button just
+			// pre-augments the source with our own saveas so the figure
+			// gets written to the workspace; the artifact then surfaces
+			// through ReplResponse.artifacts the same way as any other
+			// new file. We avoid /v1/plot entirely because its server-
+			// side wrapping has been flaky and it returns a binary
+			// FileResponse our JSON client can't parse anyway.
+			let toRun = trimmed;
+			let figName: string | null = null;
+			if (mode === 'plot') {
+				figName = makeFigName();
+				toRun = withSaveas(trimmed, figName);
+			}
+			const response = await runRepl({
+				source: toRun,
+				session_id: sessionId,
+				stateful: true
+			});
 
 			const downloaded = await downloadAllArtifacts(response.artifacts ?? []);
 			let plots = downloaded.plots;
 			const artifactErrors = [...downloaded.errors];
 			let plotFallback = false;
-			let extraStderr = '';
 
-			// Auto-fallback: if Run produced no figure but the source
-			// looks like a plot call, transparently retry through
-			// /v1/plot in the same session. MATLAB's /v1/repl doesn't
-			// auto-saveas — the user shouldn't have to know that.
+			// Auto-fallback for Run: if the source looks like a plot
+			// call but produced no figure (REPL doesn't auto-saveas),
+			// re-submit with a client-side saveas appended. Same session,
+			// so the workspace state is preserved.
 			if (
 				mode === 'repl' &&
 				response.ok &&
@@ -166,19 +203,25 @@ export function createMatlabTerminalVM(): MatlabTerminalViewModel {
 				looksLikePlot(trimmed)
 			) {
 				try {
-					const plotResponse = await runPlot({
-						source: trimmed,
+					figName = makeFigName();
+					const fallbackResponse = await runRepl({
+						source: withSaveas(trimmed, figName),
 						session_id: sessionId,
-						format: 'png'
+						stateful: true
 					});
-					const fallback = await downloadAllArtifacts(plotResponse.artifacts ?? []);
+					// /v1/repl's ``artifacts`` only lists files created
+					// *during this turn*. Our saveas adds exactly one;
+					// surface them all (defensively, if the snippet
+					// itself wrote other files, the user wants to see
+					// them too).
+					const fallback = await downloadAllArtifacts(fallbackResponse.artifacts ?? []);
 					if (fallback.plots.length > 0) {
 						plots = fallback.plots;
 						plotFallback = true;
 					}
 					artifactErrors.push(...fallback.errors);
-					if (plotResponse.stderr) {
-						extraStderr = plotResponse.stderr;
+					if (fallbackResponse.stderr) {
+						artifactErrors.push(`saveas stderr: ${fallbackResponse.stderr.trim()}`);
 					}
 				} catch (fallbackErr) {
 					const msg =
@@ -190,7 +233,7 @@ export function createMatlabTerminalVM(): MatlabTerminalViewModel {
 			patchCell(cell.id, {
 				status: response.ok ? 'ok' : 'error',
 				stdout: response.stdout ?? '',
-				stderr: [response.stderr ?? '', extraStderr].filter(Boolean).join('\n').trim(),
+				stderr: response.stderr ?? '',
 				plots,
 				artifactErrors,
 				plotFallback,

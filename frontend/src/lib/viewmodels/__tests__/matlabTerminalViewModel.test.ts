@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createMatlabTerminalVM, looksLikePlot } from '../matlabTerminalViewModel.svelte';
+import {
+	createMatlabTerminalVM,
+	looksLikePlot,
+	withSaveas
+} from '../matlabTerminalViewModel.svelte';
 import * as matlabApi from '$lib/api/matlabApi';
 
 beforeEach(() => {
@@ -72,29 +76,29 @@ describe('matlabTerminalViewModel', () => {
 		});
 	});
 
-	it('submitPlot calls plot() and downloads artifacts in parallel', async () => {
-		vi.spyOn(matlabApi, 'plot').mockResolvedValue({
+	it('submitPlot routes through /v1/repl with appended saveas', async () => {
+		const replSpy = vi.spyOn(matlabApi, 'repl').mockResolvedValue({
 			ok: true,
 			stdout: '',
 			stderr: '',
 			timed_out: false,
 			truncated: false,
 			stateful: true,
-			artifacts: ['/m/figs/a.png', '/m/figs/b.png']
+			artifacts: ['cd_plot_x_abcdef.png']
 		});
 		const dlSpy = vi
 			.spyOn(matlabApi, 'downloadArtifact')
-			.mockImplementation(async (path) => ({
-				url: `blob:mock://${path}`,
-				contentType: 'image/png',
-				bytes: 1024
-			}));
+			.mockResolvedValue({ url: 'blob:figs', contentType: 'image/png', bytes: 1024 });
 		const vm = createMatlabTerminalVM();
 		vm.setInput('plot(rand(10,1))');
 		await vm.submitPlot();
-		expect(dlSpy).toHaveBeenCalledTimes(2);
-		expect(vm.cells[0].plots).toHaveLength(2);
-		expect(vm.cells[0].plots[0].contentType).toBe('image/png');
+		expect(replSpy).toHaveBeenCalledTimes(1);
+		// The source got augmented with our saveas call.
+		const payload = replSpy.mock.calls[0][0];
+		expect(payload.source).toMatch(/saveas\(gcf, 'cd_plot_/);
+		expect(payload.source).toMatch(/^plot\(rand\(10,1\)\);/);
+		expect(dlSpy).toHaveBeenCalled();
+		expect(vm.cells[0].plots).toHaveLength(1);
 		expect(vm.cells[0].mode).toBe('plot');
 	});
 
@@ -164,14 +168,14 @@ describe('matlabTerminalViewModel', () => {
 	});
 
 	it('clearCells drops history and revokes plot URLs', async () => {
-		vi.spyOn(matlabApi, 'plot').mockResolvedValue({
+		vi.spyOn(matlabApi, 'repl').mockResolvedValue({
 			ok: true,
 			stdout: '',
 			stderr: '',
 			timed_out: false,
 			truncated: false,
 			stateful: true,
-			artifacts: ['/m/a.png']
+			artifacts: ['cd_plot_a.png']
 		});
 		vi.spyOn(matlabApi, 'downloadArtifact').mockResolvedValue({
 			url: 'blob:to-revoke',
@@ -213,25 +217,33 @@ describe('matlabTerminalViewModel', () => {
 			expect(looksLikePlot('A = magic(5)')).toBe(false);
 		});
 
-		it('Run with a plotting source + empty artifacts → auto-calls /v1/plot', async () => {
-			const replSpy = vi.spyOn(matlabApi, 'repl').mockResolvedValue({
-				ok: true,
-				stdout: '',
-				stderr: '',
-				timed_out: false,
-				truncated: false,
-				stateful: true,
-				artifacts: []
-			});
-			const plotSpy = vi.spyOn(matlabApi, 'plot').mockResolvedValue({
-				ok: true,
-				stdout: '',
-				stderr: '',
-				timed_out: false,
-				truncated: false,
-				stateful: true,
-				artifacts: ['/m/figs/p.png']
-			});
+		it('withSaveas appends saveas + strips trailing punctuation', () => {
+			expect(withSaveas('plot(x)', 'p.png')).toMatch(/^plot\(x\);\nsaveas\(gcf, 'p\.png'\);\n$/);
+			// Trailing semicolon + whitespace is collapsed.
+			expect(withSaveas('plot(x);   ', 'p.png')).toMatch(/^plot\(x\);\nsaveas/);
+		});
+
+		it('Run with a plotting source + empty artifacts → re-invokes /v1/repl with saveas', async () => {
+			const replSpy = vi
+				.spyOn(matlabApi, 'repl')
+				.mockResolvedValueOnce({
+					ok: true,
+					stdout: '',
+					stderr: '',
+					timed_out: false,
+					truncated: false,
+					stateful: true,
+					artifacts: []
+				})
+				.mockResolvedValueOnce({
+					ok: true,
+					stdout: '',
+					stderr: '',
+					timed_out: false,
+					truncated: false,
+					stateful: true,
+					artifacts: ['cd_plot_x_abcdef.png']
+				});
 			vi.spyOn(matlabApi, 'downloadArtifact').mockResolvedValue({
 				url: 'blob:figure',
 				contentType: 'image/png',
@@ -241,8 +253,9 @@ describe('matlabTerminalViewModel', () => {
 			vm.setInput('plot(rand(10))');
 			await vm.submitRepl();
 
-			expect(replSpy).toHaveBeenCalledTimes(1);
-			expect(plotSpy).toHaveBeenCalledTimes(1);
+			expect(replSpy).toHaveBeenCalledTimes(2);
+			// Second call has saveas appended.
+			expect(replSpy.mock.calls[1][0].source).toMatch(/saveas\(gcf, 'cd_plot_/);
 			const cell = vm.cells[0];
 			expect(cell.mode).toBe('repl');
 			expect(cell.plotFallback).toBe(true);
@@ -251,7 +264,7 @@ describe('matlabTerminalViewModel', () => {
 		});
 
 		it('Run with non-plot source never fires the fallback', async () => {
-			vi.spyOn(matlabApi, 'repl').mockResolvedValue({
+			const replSpy = vi.spyOn(matlabApi, 'repl').mockResolvedValue({
 				ok: true,
 				stdout: 'hi\n',
 				stderr: '',
@@ -260,48 +273,47 @@ describe('matlabTerminalViewModel', () => {
 				stateful: true,
 				artifacts: []
 			});
-			const plotSpy = vi.spyOn(matlabApi, 'plot');
 			const vm = createMatlabTerminalVM();
 			vm.setInput("disp('hi')");
 			await vm.submitRepl();
-			expect(plotSpy).not.toHaveBeenCalled();
+			expect(replSpy).toHaveBeenCalledTimes(1);
 			expect(vm.cells[0].plotFallback).toBe(false);
 		});
 
-		it('Run that already returned artifacts does not call /v1/plot again', async () => {
-			vi.spyOn(matlabApi, 'repl').mockResolvedValue({
+		it('Run that already returned artifacts does not fire the fallback', async () => {
+			const replSpy = vi.spyOn(matlabApi, 'repl').mockResolvedValue({
 				ok: true,
 				stdout: '',
 				stderr: '',
 				timed_out: false,
 				truncated: false,
 				stateful: true,
-				artifacts: ['/m/a.png']
+				artifacts: ['cd_pre.png']
 			});
 			vi.spyOn(matlabApi, 'downloadArtifact').mockResolvedValue({
 				url: 'blob:1',
 				contentType: 'image/png',
 				bytes: 100
 			});
-			const plotSpy = vi.spyOn(matlabApi, 'plot');
 			const vm = createMatlabTerminalVM();
 			vm.setInput('plot(1)');
 			await vm.submitRepl();
-			expect(plotSpy).not.toHaveBeenCalled();
+			expect(replSpy).toHaveBeenCalledTimes(1);
 			expect(vm.cells[0].plotFallback).toBe(false);
 		});
 
 		it('Fallback failure leaves a note in artifactErrors but keeps the cell OK', async () => {
-			vi.spyOn(matlabApi, 'repl').mockResolvedValue({
-				ok: true,
-				stdout: '',
-				stderr: '',
-				timed_out: false,
-				truncated: false,
-				stateful: true,
-				artifacts: []
-			});
-			vi.spyOn(matlabApi, 'plot').mockRejectedValue(new Error('boom'));
+			vi.spyOn(matlabApi, 'repl')
+				.mockResolvedValueOnce({
+					ok: true,
+					stdout: '',
+					stderr: '',
+					timed_out: false,
+					truncated: false,
+					stateful: true,
+					artifacts: []
+				})
+				.mockRejectedValueOnce(new Error('boom'));
 			const vm = createMatlabTerminalVM();
 			vm.setInput('plot(rand(10))');
 			await vm.submitRepl();
@@ -314,14 +326,14 @@ describe('matlabTerminalViewModel', () => {
 	// ── Artifact download error surfacing ───────────────────────────
 
 	it('reports failed artifact downloads in artifactErrors', async () => {
-		vi.spyOn(matlabApi, 'plot').mockResolvedValue({
+		vi.spyOn(matlabApi, 'repl').mockResolvedValue({
 			ok: true,
 			stdout: '',
 			stderr: '',
 			timed_out: false,
 			truncated: false,
 			stateful: true,
-			artifacts: ['/m/ok.png', '/m/missing.png']
+			artifacts: ['cd_plot_ok.png', 'cd_plot_missing.png']
 		});
 		vi.spyOn(matlabApi, 'downloadArtifact').mockImplementation(async (path) => {
 			if (path.endsWith('missing.png')) {
