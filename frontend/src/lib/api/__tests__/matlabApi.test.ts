@@ -115,8 +115,21 @@ describe('matlabApi', () => {
 		expect(out.contentType).toBe('image/png');
 		expect(out.bytes).toBe(16);
 		const [url] = (globalThis.fetch as unknown as FetchMock).mock.calls[0];
-		// Leading slash stripped, then URL-encoded.
+		// Leading slash stripped, then URL-encoded. No session_id when
+		// caller doesn't supply one.
 		expect(url).toBe(`/api/matlab/v1/files/${encodeURIComponent('srv/matlab/figs/x.png')}`);
+	});
+
+	it('downloadArtifact appends ?session_id when supplied', async () => {
+		setAuthToken('tok');
+		mockBlobOnce(200, 8, 'image/png');
+		await downloadArtifact('cd_plot_abc.png', 'web-uuid-123');
+		const [url] = (globalThis.fetch as unknown as FetchMock).mock.calls[0];
+		// Path is URL-encoded; session_id rides as a query string so
+		// the upstream resolves the correct workspace.
+		expect(url).toBe(
+			`/api/matlab/v1/files/${encodeURIComponent('cd_plot_abc.png')}?session_id=${encodeURIComponent('web-uuid-123')}`
+		);
 	});
 
 	it('throws MatlabApiError with the server detail on non-2xx', async () => {
