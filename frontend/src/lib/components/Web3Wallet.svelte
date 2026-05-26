@@ -7,19 +7,9 @@
 		bootstrapWeb3Wallet
 	} from '$lib/viewmodels/web3WalletViewModelFactory';
 	import NFTTerminal from './NFTTerminal.svelte';
-	import { ConnectWalletModal } from '@cyberdynecorp/svelte-ui-core';
-
-	const walletProviders = [
-		{ id: 'walletconnect', name: 'WalletConnect', description: 'Connect MetaMask, Trust Wallet & 50+ wallets', icon: '📱' },
-		{ id: 'web3auth', name: 'Continue with Google', description: 'Secure authentication via Google', icon: 'G' }
-	];
+	import CyberdyneConnectModal from './CyberdyneConnectModal.svelte';
 
 	const vm = createDefaultWeb3WalletViewModel();
-
-	function onProviderSelect(id: string) {
-		if (id === 'walletconnect') vm.handleWalletConnect();
-		else if (id === 'web3auth') vm.handleWeb3AuthConnect();
-	}
 
 	const {
 		walletConnected,
@@ -33,9 +23,9 @@
 	} = vm;
 
 	let showNFTTerminalBind = false;
-	const unsubShowNFT = showNFTTerminal.subscribe(v => (showNFTTerminalBind = v));
+	const unsubShowNFT = showNFTTerminal.subscribe((v) => (showNFTTerminalBind = v));
 
-	const unsubscribe = walletInfo.subscribe(info => {
+	const unsubscribe = walletInfo.subscribe((info) => {
 		vm.updateFromWalletConnect({
 			address: info.address,
 			balance: info.balance,
@@ -56,18 +46,25 @@
 	});
 
 	$: walletConnectInfoSnap = vm.snapshot().walletConnectInfo;
+
+	function shortAddress(addr: string | null | undefined): string {
+		if (!addr) return 'Not available';
+		return addr.length > 14 ? `${addr.slice(0, 8)}…${addr.slice(-6)}` : addr;
+	}
 </script>
 
 <div class="web3-wallet">
-	<ConnectWalletModal
+	<CyberdyneConnectModal
 		open={$showConnectionModal}
-		title="🖥️ CONNECT WALLET"
-		providers={walletProviders}
-		onSelect={onProviderSelect}
+		loading={$isLoading}
+		error={$errorMessage || null}
+		onGoogle={() => vm.handleGoogleLogin()}
+		onEmailLogin={(email, password) => vm.handleEmailLogin(email, password)}
+		onWalletConnect={() => vm.handleWalletSignIn()}
 		onClose={() => vm.closeConnectionModal()}
 	/>
 
-	{#if $errorMessage}
+	{#if $errorMessage && !$showConnectionModal}
 		<div class="error-banner-absolute">
 			<div class="error-content">
 				<span class="error-text">{$errorMessage}</span>
@@ -78,7 +75,7 @@
 
 	{#if !$walletConnected}
 		<button on:click={() => vm.openConnectionModal()} disabled={$isLoading} class="connect-btn">
-			{$isLoading ? '> CONNECTING...' : '> CONNECT WALLET'}
+			{$isLoading ? '> CONNECTING...' : '> CONNECT'}
 		</button>
 	{:else}
 		<div class="wallet-connected">
@@ -86,7 +83,9 @@
 				<button on:click={() => vm.toggleDetails()} class="wallet-summary">
 					<div class="wallet-status">
 						<div class="status-indicator">
-							<div class="status-text">CONNECTED</div>
+							<div class="status-text">
+								{$connectionType === 'walletconnect' ? 'WALLET' : 'ACCOUNT'} · CONNECTED
+							</div>
 						</div>
 						<div class="wallet-balance">
 							<div class="expand-icon">{$showDetails ? '▲' : '▼'}</div>
@@ -98,36 +97,37 @@
 					<div class="wallet-details">
 						<div class="detail-grid">
 							<div class="detail-row">
-								<span class="detail-label">TYPE:</span>
-								<span class="detail-value">{$connectionType === 'web3auth' ? 'Web3Auth (Google)' : $connectionType === 'walletconnect' ? 'WalletConnect' : 'Unknown'}</span>
-							</div>
-							<div class="detail-row">
-								<span class="detail-label">ADDRESS:</span>
-								<span class="detail-value address-full">
-									{$connectionType === 'web3auth' ? $currentUser?.address || 'Not available' :
-									 $connectionType === 'walletconnect' ? walletConnectInfoSnap?.address || 'Not available' : 'Not available'}
+								<span class="detail-label">METHOD:</span>
+								<span class="detail-value">
+									{$connectionType === 'walletconnect'
+										? 'WalletConnect + SIWE'
+										: $connectionType === 'cyberdyne'
+											? 'CyberdyneAuth'
+											: 'Unknown'}
 								</span>
 							</div>
+							{#if $currentUser?.email}
+								<div class="detail-row">
+									<span class="detail-label">EMAIL:</span>
+									<span class="detail-value">{$currentUser.email}</span>
+								</div>
+							{/if}
 							{#if $connectionType === 'walletconnect'}
+								<div class="detail-row">
+									<span class="detail-label">ADDRESS:</span>
+									<span class="detail-value address-full">
+										{shortAddress(walletConnectInfoSnap?.address || $currentUser?.walletAddress)}
+									</span>
+								</div>
 								<div class="detail-row">
 									<span class="detail-label">NETWORK:</span>
 									<span class="detail-value">{getNetworkName(walletConnectInfoSnap?.chainId)}</span>
 								</div>
 							{/if}
-							{#if $connectionType === 'web3auth'}
-								<div class="detail-row">
-									<span class="detail-label">EMAIL:</span>
-									<span class="detail-value">{$currentUser?.userInfo.email || 'Not provided'}</span>
-								</div>
-								<div class="detail-row">
-									<span class="detail-label">NAME:</span>
-									<span class="detail-value">{$currentUser?.userInfo.name || 'Not provided'}</span>
-								</div>
-							{/if}
 							{#if $isLoadingTraits}
 								<div class="detail-row">
 									<span class="detail-label">ACCESS:</span>
-									<span class="detail-value loading">Loading traits...</span>
+									<span class="detail-value loading">Loading traits…</span>
 								</div>
 							{:else if $hasAnyAccess && $userTraits}
 								<div class="detail-row traits-section">
@@ -136,12 +136,16 @@
 										{#each getActiveTraits($userTraits) as trait}
 											<span class="trait-badge">{trait}</span>
 										{/each}
-										<button class="nft-view-btn" on:click={() => vm.openNFTTerminal()} title="View NFT Certificate">
+										<button
+											class="nft-view-btn"
+											on:click={() => vm.openNFTTerminal()}
+											title="View NFT Certificate"
+										>
 											📜 VIEW NFT
 										</button>
 									</div>
 								</div>
-							{:else if $userTraits === null}
+							{:else if $connectionType === 'walletconnect' && $userTraits === null}
 								<div class="detail-row">
 									<span class="detail-label">ACCESS:</span>
 									<span class="detail-value no-access">No Access NFT</span>
@@ -168,36 +172,155 @@
 </div>
 
 <style>
-	.web3-wallet { font-family: 'JetBrains Mono', 'Courier New', monospace; color: #00ff00; background: transparent; position: relative; z-index: 5; min-height: fit-content; }
+	.web3-wallet {
+		font-family: 'JetBrains Mono', 'Courier New', monospace;
+		color: #00ff00;
+		background: transparent;
+		position: relative;
+		z-index: 5;
+		min-height: fit-content;
+	}
 	.wallet-connected { position: relative; }
 	.wallet-info { position: relative; z-index: 20; }
-.connect-btn { width: 100%; padding: 8px 12px; background: #22c55e; border: 2px solid #000; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: bold; cursor: pointer; border-radius: 4px; transition: all 0.2s ease; text-align: center; box-shadow: 2px 2px 0 #000; }
-	.connect-btn:hover:not(:disabled) { background: #16a34a; transform: translate(1px,1px); box-shadow: 1px 1px 0 #000; }
+	.connect-btn {
+		width: 100%;
+		padding: 8px 12px;
+		background: #22c55e;
+		border: 2px solid #000;
+		color: #fff;
+		font-family: 'JetBrains Mono', monospace;
+		font-size: 12px;
+		font-weight: bold;
+		cursor: pointer;
+		border-radius: 4px;
+		transition: all 0.2s ease;
+		text-align: center;
+		box-shadow: 2px 2px 0 #000;
+	}
+	.connect-btn:hover:not(:disabled) {
+		background: #16a34a;
+		transform: translate(1px, 1px);
+		box-shadow: 1px 1px 0 #000;
+	}
 	.connect-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-	.error-banner-absolute { position: fixed; top: 70px; right: 20px; background: rgba(255,0,0,0.95); border: 2px solid #ff4444; border-radius: 8px; padding: 16px; z-index: 2147483647; box-shadow: 0 8px 24px rgba(0,0,0,0.4); min-width: 300px; max-width: 400px; }
+	.error-banner-absolute {
+		position: fixed;
+		top: 70px;
+		right: 20px;
+		background: rgba(255, 0, 0, 0.95);
+		border: 2px solid #ff4444;
+		border-radius: 8px;
+		padding: 16px;
+		z-index: 2147483647;
+		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+		min-width: 300px;
+		max-width: 400px;
+	}
 	.error-content { display: flex; justify-content: space-between; align-items: center; }
 	.error-text { color: #fff; font-size: 12px; font-weight: bold; }
-	.error-close { background: rgba(255,255,255,0.2); border: 1px solid #fff; color: #fff; cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: all 0.2s ease; font-weight: bold; }
+	.error-close {
+		background: rgba(255, 255, 255, 0.2);
+		border: 1px solid #fff;
+		color: #fff;
+		cursor: pointer;
+		padding: 4px 8px;
+		border-radius: 4px;
+		transition: all 0.2s ease;
+		font-weight: bold;
+	}
 	.error-close:hover { background: #fff; color: #ff4444; }
-	.wallet-summary { width: 100%; padding: 8px 12px; background: #22c55e; border: 2px solid #000; color: #fff; font-family: 'JetBrains Mono', monospace; cursor: pointer; border-radius: 4px; transition: all 0.2s ease; text-align: left; box-shadow: 2px 2px 0 #000; }
-	.wallet-summary:hover { background: #16a34a; transform: translate(1px,1px); box-shadow: 1px 1px 0 #000; }
+	.wallet-summary {
+		width: 100%;
+		padding: 8px 12px;
+		background: #22c55e;
+		border: 2px solid #000;
+		color: #fff;
+		font-family: 'JetBrains Mono', monospace;
+		cursor: pointer;
+		border-radius: 4px;
+		transition: all 0.2s ease;
+		text-align: left;
+		box-shadow: 2px 2px 0 #000;
+	}
+	.wallet-summary:hover {
+		background: #16a34a;
+		transform: translate(1px, 1px);
+		box-shadow: 1px 1px 0 #000;
+	}
 	.wallet-status { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
 	.status-text { font-weight: bold; font-size: 11px; color: #fff; }
-	.wallet-details { background: rgba(0,0,0,0.8); border: 1px solid #00ff00; border-top: none; border-radius: 0 0 4px 4px; padding: 12px; animation: slideDown 0.2s ease-out; position: absolute; top: 100%; right: 0; z-index: 1000; margin-top: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.3); width: 300px; max-height: 80vh; overflow-y: auto; }
+	.wallet-details {
+		background: rgba(0, 0, 0, 0.8);
+		border: 1px solid #00ff00;
+		border-top: none;
+		border-radius: 0 0 4px 4px;
+		padding: 12px;
+		animation: slideDown 0.2s ease-out;
+		position: absolute;
+		top: 100%;
+		right: 0;
+		z-index: 1000;
+		margin-top: 0;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+		width: 320px;
+		max-height: 80vh;
+		overflow-y: auto;
+	}
 	.detail-grid { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
-	.detail-row { display: flex; justify-content: space-between; align-items: center; }
-	.detail-label { color: #80ff80; font-size: 10px; font-weight: bold; }
-	.detail-value { color: #00ff00; font-size: 11px; font-family: monospace; }
+	.detail-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+	.detail-label { color: #80ff80; font-size: 10px; font-weight: bold; flex: 0 0 auto; }
+	.detail-value { color: #00ff00; font-size: 11px; font-family: monospace; text-align: right; }
 	.address-full { max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
 	.traits-section { flex-direction: column; align-items: flex-start !important; gap: 8px; }
 	.traits-container { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
-	.trait-badge { background: rgba(0,255,0,0.2); border: 1px solid #00ff00; color: #00ff00; padding: 4px 8px; border-radius: 12px; font-size: 9px; font-weight: bold; text-transform: uppercase; white-space: nowrap; }
+	.trait-badge {
+		background: rgba(0, 255, 0, 0.2);
+		border: 1px solid #00ff00;
+		color: #00ff00;
+		padding: 4px 8px;
+		border-radius: 12px;
+		font-size: 9px;
+		font-weight: bold;
+		text-transform: uppercase;
+		white-space: nowrap;
+	}
 	.loading { color: #80ff80; font-style: italic; }
 	.no-access { color: #ff8080; font-style: italic; }
-	.nft-view-btn { background: rgba(0,255,0,0.2); border: 1px solid #00ff00; color: #00ff00; padding: 6px 12px; border-radius: 12px; font-size: 9px; font-weight: bold; cursor: pointer; transition: all 0.2s ease; font-family: inherit; white-space: nowrap; margin-left: 8px; }
-	.nft-view-btn:hover { background: rgba(0,255,0,0.3); box-shadow: 0 0 8px rgba(0,255,0,0.4); transform: translateY(-1px); }
-	.disconnect-btn { width: 100%; padding: 8px; background: rgba(255,0,0,0.1); border: 1px solid #ff4444; color: #ff4444; font-family: inherit; font-size: 12px; font-weight: bold; cursor: pointer; border-radius: 4px; transition: all 0.2s ease; }
-	.disconnect-btn:hover { background: rgba(255,0,0,0.2); box-shadow: 0 0 5px rgba(255,68,68,0.3); }
-	@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-	@keyframes pulse { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }
+	.nft-view-btn {
+		background: rgba(0, 255, 0, 0.2);
+		border: 1px solid #00ff00;
+		color: #00ff00;
+		padding: 6px 12px;
+		border-radius: 12px;
+		font-size: 9px;
+		font-weight: bold;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		font-family: inherit;
+		white-space: nowrap;
+		margin-left: 8px;
+	}
+	.nft-view-btn:hover {
+		background: rgba(0, 255, 0, 0.3);
+		box-shadow: 0 0 8px rgba(0, 255, 0, 0.4);
+		transform: translateY(-1px);
+	}
+	.disconnect-btn {
+		width: 100%;
+		padding: 8px;
+		background: rgba(255, 0, 0, 0.1);
+		border: 1px solid #ff4444;
+		color: #ff4444;
+		font-family: inherit;
+		font-size: 12px;
+		font-weight: bold;
+		cursor: pointer;
+		border-radius: 4px;
+		transition: all 0.2s ease;
+	}
+	.disconnect-btn:hover { background: rgba(255, 0, 0, 0.2); box-shadow: 0 0 5px rgba(255, 68, 68, 0.3); }
+	@keyframes slideDown {
+		from { opacity: 0; transform: translateY(-10px); }
+		to { opacity: 1; transform: translateY(0); }
+	}
 </style>

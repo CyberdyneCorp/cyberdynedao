@@ -81,13 +81,38 @@ FROM nginx:alpine AS runner
 # Copy built static files to nginx
 COPY --from=builder /app/build /usr/share/nginx/html
 
-# Copy custom nginx config
+# Copy custom nginx config. Same-origin reverse proxy for CyberdyneAuth
+# means the browser never CORS-preflights and the auth host stays out of
+# the Vite bundle. ``resolver`` is required for proxy_pass to a hostname
+# that nginx hasn't statically resolved at config-load time.
 COPY <<EOF /etc/nginx/conf.d/default.conf
+resolver 8.8.8.8 1.1.1.1 valid=300s ipv6=off;
+resolver_timeout 5s;
+
 server {
   listen 80;
   server_name localhost;
   root /usr/share/nginx/html;
   index index.html;
+
+  # CyberdyneAuth reverse proxy — must come before the SPA fallback.
+  # Frontend calls /api/auth/api/v1/auth/login → upstream sees
+  # /api/v1/auth/login at auth.backend.coolify.cyberdynecorp.ai.
+  location /api/auth/ {
+    set \$cyberdyne_auth https://auth.backend.coolify.cyberdynecorp.ai;
+    proxy_pass \$cyberdyne_auth/;
+    proxy_set_header Host auth.backend.coolify.cyberdynecorp.ai;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+    proxy_ssl_server_name on;
+    proxy_ssl_verify off;
+    proxy_read_timeout 30s;
+    proxy_connect_timeout 10s;
+    # Auth tokens are sensitive — never let an intermediary cache them.
+    proxy_no_cache 1;
+    proxy_cache_bypass 1;
+    add_header Cache-Control "no-store" always;
+  }
 
   location / { try_files \$uri \$uri/ /index.html; }
 

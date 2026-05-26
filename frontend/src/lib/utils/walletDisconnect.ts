@@ -5,7 +5,6 @@
  * from all wallet services and clean up all related state and storage.
  */
 
-import { web3AuthService } from '../web3/web3AuthService';
 import { appKitService } from '../web3/appKitService';
 import { appKitActions } from '../stores/appKitStore';
 import { web3Actions } from '../stores/web3Store';
@@ -28,17 +27,6 @@ export async function completeWalletDisconnect(): Promise<DisconnectResult> {
     errors: [],
     warnings: []
   };
-
-  // Disconnect from Web3Auth
-  try {
-    console.log('Disconnecting Web3Auth...');
-    await web3AuthService.logout();
-    console.log('✅ Web3Auth disconnected successfully');
-  } catch (error) {
-    const errorMsg = `Web3Auth disconnect failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
-    console.warn('⚠️', errorMsg);
-    result.warnings.push(errorMsg);
-  }
 
   // Disconnect from WalletConnect/AppKit
   try {
@@ -167,13 +155,7 @@ function clearAllWalletStorage(): void {
  */
 export function hasWalletConnections(): boolean {
   try {
-    // Check Web3Auth connection
-    const web3authConnected = web3AuthService.isConnected();
-    
-    // Check WalletConnect/AppKit connection
-    const appKitConnected = appKitService.isInitialized();
-    
-    return web3authConnected || appKitConnected;
+    return appKitService.isInitialized();
   } catch (error) {
     console.warn('Error checking wallet connections:', error);
     return false;
@@ -184,25 +166,14 @@ export function hasWalletConnections(): boolean {
  * Get current connection status
  */
 export function getConnectionStatus(): {
-  web3auth: boolean;
   walletConnect: boolean;
   hasAnyConnection: boolean;
 } {
   try {
-    const web3auth = web3AuthService.isConnected();
     const walletConnect = appKitService.isInitialized();
-    
-    return {
-      web3auth,
-      walletConnect,
-      hasAnyConnection: web3auth || walletConnect
-    };
+    return { walletConnect, hasAnyConnection: walletConnect };
   } catch (error) {
     console.warn('Error getting connection status:', error);
-    return {
-      web3auth: false,
-      walletConnect: false,
-      hasAnyConnection: false
-    };
+    return { walletConnect: false, hasAnyConnection: false };
   }
 }
