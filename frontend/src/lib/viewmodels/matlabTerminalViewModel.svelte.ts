@@ -31,16 +31,32 @@ export type CellStatus = 'running' | 'ok' | 'error';
 export interface MatlabCell {
 	id: number;
 	mode: 'repl' | 'plot';
+	/** True when the cell was a Run that auto-fell-back to /v1/plot. */
+	plotFallback: boolean;
 	source: string;
 	status: CellStatus;
 	stdout: string;
 	stderr: string;
 	error: string | null;
 	plots: MatlabPlot[];
+	/** Non-empty when one or more artifact downloads failed; surfaced
+	 *  in the cell so the user knows why the plot is missing. */
+	artifactErrors: string[];
 	timedOut: boolean;
 	truncated: boolean;
 	startedAt: number;
 	finishedAt: number | null;
+}
+
+/**
+ * Heuristic: does this MATLAB source look like it's trying to draw?
+ * Matches the common 2D/3D plotting verbs at the start of an expression
+ * or after a newline / semicolon. Used to auto-route Run → Plot so the
+ * user doesn't have to know which endpoint to call.
+ */
+const PLOT_VERB = /(^|[\s;])(plot|plot3|figure|imshow|imagesc|surf|mesh|contour|contourf|histogram|bar|barh|scatter|scatter3|stem|stairs|loglog|semilogx|semilogy|polar|polarplot|pie|area|heatmap|fplot|fsurf|fmesh|quiver|quiver3|geoplot|geoscatter|plotmatrix|spy)\s*\(/i;
+export function looksLikePlot(source: string): boolean {
+	return PLOT_VERB.test(source);
 }
 
 function randomSessionId(): string {
@@ -74,12 +90,14 @@ export function createMatlabTerminalVM(): MatlabTerminalViewModel {
 		const cell: MatlabCell = {
 			id: nextCellId++,
 			mode,
+			plotFallback: false,
 			source,
 			status: 'running',
 			stdout: '',
 			stderr: '',
 			error: null,
 			plots: [],
+			artifactErrors: [],
 			timedOut: false,
 			truncated: false,
 			startedAt: Date.now(),
@@ -87,6 +105,24 @@ export function createMatlabTerminalVM(): MatlabTerminalViewModel {
 		};
 		cells = [...cells, cell];
 		return cell;
+	}
+
+	async function downloadAllArtifacts(
+		paths: string[]
+	): Promise<{ plots: MatlabPlot[]; errors: string[] }> {
+		const plots: MatlabPlot[] = [];
+		const errors: string[] = [];
+		if (paths.length === 0) return { plots, errors };
+		const settled = await Promise.allSettled(paths.map((p) => downloadArtifact(p)));
+		settled.forEach((r, i) => {
+			if (r.status === 'fulfilled') {
+				plots.push(r.value);
+			} else {
+				const reason = r.reason instanceof Error ? r.reason.message : String(r.reason);
+				errors.push(`${paths[i]}: ${reason}`);
+			}
+		});
+		return { plots, errors };
 	}
 
 	function patchCell(id: number, patch: Partial<MatlabCell>): void {
@@ -113,23 +149,51 @@ export function createMatlabTerminalVM(): MatlabTerminalViewModel {
 			const fn = mode === 'plot' ? runPlot : runRepl;
 			const response = await fn({ source: trimmed, session_id: sessionId, stateful: true });
 
-			// Download every artifact in parallel; collect plots that
-			// actually decoded.
-			const plots: MatlabPlot[] = [];
-			if (response.artifacts && response.artifacts.length > 0) {
-				const settled = await Promise.allSettled(
-					response.artifacts.map((path) => downloadArtifact(path))
-				);
-				for (const r of settled) {
-					if (r.status === 'fulfilled') plots.push(r.value);
+			const downloaded = await downloadAllArtifacts(response.artifacts ?? []);
+			let plots = downloaded.plots;
+			const artifactErrors = [...downloaded.errors];
+			let plotFallback = false;
+			let extraStderr = '';
+
+			// Auto-fallback: if Run produced no figure but the source
+			// looks like a plot call, transparently retry through
+			// /v1/plot in the same session. MATLAB's /v1/repl doesn't
+			// auto-saveas — the user shouldn't have to know that.
+			if (
+				mode === 'repl' &&
+				response.ok &&
+				plots.length === 0 &&
+				looksLikePlot(trimmed)
+			) {
+				try {
+					const plotResponse = await runPlot({
+						source: trimmed,
+						session_id: sessionId,
+						format: 'png'
+					});
+					const fallback = await downloadAllArtifacts(plotResponse.artifacts ?? []);
+					if (fallback.plots.length > 0) {
+						plots = fallback.plots;
+						plotFallback = true;
+					}
+					artifactErrors.push(...fallback.errors);
+					if (plotResponse.stderr) {
+						extraStderr = plotResponse.stderr;
+					}
+				} catch (fallbackErr) {
+					const msg =
+						fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
+					artifactErrors.push(`plot fallback failed: ${msg}`);
 				}
 			}
 
 			patchCell(cell.id, {
 				status: response.ok ? 'ok' : 'error',
 				stdout: response.stdout ?? '',
-				stderr: response.stderr ?? '',
+				stderr: [response.stderr ?? '', extraStderr].filter(Boolean).join('\n').trim(),
 				plots,
+				artifactErrors,
+				plotFallback,
 				timedOut: response.timed_out ?? false,
 				truncated: response.truncated ?? false,
 				finishedAt: Date.now()

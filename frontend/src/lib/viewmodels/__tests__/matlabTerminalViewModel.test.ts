@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createMatlabTerminalVM } from '../matlabTerminalViewModel.svelte';
+import { createMatlabTerminalVM, looksLikePlot } from '../matlabTerminalViewModel.svelte';
 import * as matlabApi from '$lib/api/matlabApi';
 
 beforeEach(() => {
@@ -193,5 +193,147 @@ describe('matlabTerminalViewModel', () => {
 		vm.resetSession();
 		expect(vm.sessionId).not.toBe(first);
 		expect(vm.cells).toEqual([]);
+	});
+
+	// ── Auto Run → Plot fallback ────────────────────────────────────
+
+	describe('plot auto-fallback', () => {
+		it('looksLikePlot matches common plotting verbs', () => {
+			expect(looksLikePlot('plot(x, y)')).toBe(true);
+			expect(looksLikePlot('  figure; plot(x, y)')).toBe(true);
+			expect(looksLikePlot('imshow(img)')).toBe(true);
+			expect(looksLikePlot('surf(Z)')).toBe(true);
+			expect(looksLikePlot('histogram(rand(100,1))')).toBe(true);
+			expect(looksLikePlot('a = 1; bar([1 2 3])')).toBe(true);
+		});
+
+		it('looksLikePlot rejects non-plot code', () => {
+			expect(looksLikePlot('disp(1+1)')).toBe(false);
+			expect(looksLikePlot("x = 'plot a chart'")).toBe(false);
+			expect(looksLikePlot('A = magic(5)')).toBe(false);
+		});
+
+		it('Run with a plotting source + empty artifacts → auto-calls /v1/plot', async () => {
+			const replSpy = vi.spyOn(matlabApi, 'repl').mockResolvedValue({
+				ok: true,
+				stdout: '',
+				stderr: '',
+				timed_out: false,
+				truncated: false,
+				stateful: true,
+				artifacts: []
+			});
+			const plotSpy = vi.spyOn(matlabApi, 'plot').mockResolvedValue({
+				ok: true,
+				stdout: '',
+				stderr: '',
+				timed_out: false,
+				truncated: false,
+				stateful: true,
+				artifacts: ['/m/figs/p.png']
+			});
+			vi.spyOn(matlabApi, 'downloadArtifact').mockResolvedValue({
+				url: 'blob:figure',
+				contentType: 'image/png',
+				bytes: 1024
+			});
+			const vm = createMatlabTerminalVM();
+			vm.setInput('plot(rand(10))');
+			await vm.submitRepl();
+
+			expect(replSpy).toHaveBeenCalledTimes(1);
+			expect(plotSpy).toHaveBeenCalledTimes(1);
+			const cell = vm.cells[0];
+			expect(cell.mode).toBe('repl');
+			expect(cell.plotFallback).toBe(true);
+			expect(cell.plots).toHaveLength(1);
+			expect(cell.status).toBe('ok');
+		});
+
+		it('Run with non-plot source never fires the fallback', async () => {
+			vi.spyOn(matlabApi, 'repl').mockResolvedValue({
+				ok: true,
+				stdout: 'hi\n',
+				stderr: '',
+				timed_out: false,
+				truncated: false,
+				stateful: true,
+				artifacts: []
+			});
+			const plotSpy = vi.spyOn(matlabApi, 'plot');
+			const vm = createMatlabTerminalVM();
+			vm.setInput("disp('hi')");
+			await vm.submitRepl();
+			expect(plotSpy).not.toHaveBeenCalled();
+			expect(vm.cells[0].plotFallback).toBe(false);
+		});
+
+		it('Run that already returned artifacts does not call /v1/plot again', async () => {
+			vi.spyOn(matlabApi, 'repl').mockResolvedValue({
+				ok: true,
+				stdout: '',
+				stderr: '',
+				timed_out: false,
+				truncated: false,
+				stateful: true,
+				artifacts: ['/m/a.png']
+			});
+			vi.spyOn(matlabApi, 'downloadArtifact').mockResolvedValue({
+				url: 'blob:1',
+				contentType: 'image/png',
+				bytes: 100
+			});
+			const plotSpy = vi.spyOn(matlabApi, 'plot');
+			const vm = createMatlabTerminalVM();
+			vm.setInput('plot(1)');
+			await vm.submitRepl();
+			expect(plotSpy).not.toHaveBeenCalled();
+			expect(vm.cells[0].plotFallback).toBe(false);
+		});
+
+		it('Fallback failure leaves a note in artifactErrors but keeps the cell OK', async () => {
+			vi.spyOn(matlabApi, 'repl').mockResolvedValue({
+				ok: true,
+				stdout: '',
+				stderr: '',
+				timed_out: false,
+				truncated: false,
+				stateful: true,
+				artifacts: []
+			});
+			vi.spyOn(matlabApi, 'plot').mockRejectedValue(new Error('boom'));
+			const vm = createMatlabTerminalVM();
+			vm.setInput('plot(rand(10))');
+			await vm.submitRepl();
+			expect(vm.cells[0].status).toBe('ok');
+			expect(vm.cells[0].plotFallback).toBe(false);
+			expect(vm.cells[0].artifactErrors[0]).toMatch(/plot fallback failed: boom/);
+		});
+	});
+
+	// ── Artifact download error surfacing ───────────────────────────
+
+	it('reports failed artifact downloads in artifactErrors', async () => {
+		vi.spyOn(matlabApi, 'plot').mockResolvedValue({
+			ok: true,
+			stdout: '',
+			stderr: '',
+			timed_out: false,
+			truncated: false,
+			stateful: true,
+			artifacts: ['/m/ok.png', '/m/missing.png']
+		});
+		vi.spyOn(matlabApi, 'downloadArtifact').mockImplementation(async (path) => {
+			if (path.endsWith('missing.png')) {
+				throw new matlabApi.MatlabApiError(404, 'not found');
+			}
+			return { url: 'blob:ok', contentType: 'image/png', bytes: 100 };
+		});
+		const vm = createMatlabTerminalVM();
+		vm.setInput('plot(1)');
+		await vm.submitPlot();
+		expect(vm.cells[0].plots).toHaveLength(1);
+		expect(vm.cells[0].artifactErrors).toHaveLength(1);
+		expect(vm.cells[0].artifactErrors[0]).toMatch(/missing.png.*not found/);
 	});
 });
