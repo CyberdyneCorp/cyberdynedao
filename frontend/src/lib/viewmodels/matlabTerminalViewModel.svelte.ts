@@ -135,7 +135,11 @@ export function createMatlabTerminalVM(): MatlabTerminalViewModel {
 		const plots: MatlabPlot[] = [];
 		const errors: string[] = [];
 		if (paths.length === 0) return { plots, errors };
-		const settled = await Promise.allSettled(paths.map((p) => downloadArtifact(p)));
+		// Pass the active sessionId so the upstream resolves to the
+		// right workspace (not the default one) when streaming the file.
+		const settled = await Promise.allSettled(
+			paths.map((p) => downloadArtifact(p, sessionId))
+		);
 		settled.forEach((r, i) => {
 			if (r.status === 'fulfilled') {
 				plots.push(r.value);

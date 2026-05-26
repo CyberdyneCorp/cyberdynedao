@@ -130,16 +130,25 @@ export function check(req: ReplRequest): Promise<CheckResponse> {
  * Download an artifact (plot PNG/SVG/PDF) as an object URL ready to
  * drop into an `<img src>`. Caller owns the URL — revoke with
  * `URL.revokeObjectURL` when the cell scrolls out of view.
+ *
+ * The upstream's ``/v1/files/{path}`` route resolves the workspace
+ * from ``session_id`` (plus the authenticated principal). Without it,
+ * the file lookup falls back to the ``default`` workspace, which is
+ * **not** the one our REPL writes to → 404. Always pass the same
+ * ``sessionId`` you used for the REPL turn that produced the
+ * artifact.
  */
 export async function downloadArtifact(
-	path: string
+	path: string,
+	sessionId?: string
 ): Promise<{ url: string; contentType: string; bytes: number }> {
-	// The upstream gives us absolute-looking server paths
-	// (e.g. ``/var/lib/matlab/sessions/abc/fig1.png``). Strip leading
-	// slashes so they don't collide with the proxy prefix.
+	// The upstream gives us paths relative to the workspace
+	// (e.g. ``cd_plot_abc.png``). Strip any leading slashes
+	// defensively — the proxy prefix already adds the right segment.
 	const cleanPath = path.replace(/^\/+/, '');
+	const qs = sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : '';
 	const headers = withAuth();
-	const res = await fetch(`${MATLAB_BASE}/v1/files/${encodeURIComponent(cleanPath)}`, {
+	const res = await fetch(`${MATLAB_BASE}/v1/files/${encodeURIComponent(cleanPath)}${qs}`, {
 		method: 'GET',
 		headers
 	});
