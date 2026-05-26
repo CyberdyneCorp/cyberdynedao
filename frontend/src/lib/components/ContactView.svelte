@@ -1,9 +1,27 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { createContactViewModel } from '$lib/viewmodels/contactViewModel';
-	import { contactIntro } from '$lib/data/contact';
+	import {
+		contactIntro as staticContactIntro,
+		contactMethods as staticContactMethods,
+		type ContactMethod
+	} from '$lib/data/contact';
+	import { fetchContactPage } from '$lib/api/contentApi';
 
 	const vm = createContactViewModel();
-	const { methods: contactMethods } = vm;
+
+	// Stale-while-revalidate for methods + intro. The viewmodel still
+	// owns the click handler so the ContactMethod-related behaviour
+	// (opening the link in a new tab, instrumentation) stays in one
+	// place — we just refresh the underlying list.
+	let contactMethods = $state<ContactMethod[]>(staticContactMethods);
+	let contactIntro = $state(staticContactIntro);
+
+	onMount(async () => {
+		const page = await fetchContactPage();
+		contactMethods = page.methods;
+		contactIntro = page.intro;
+	});
 </script>
 
 <div class="contact-view">

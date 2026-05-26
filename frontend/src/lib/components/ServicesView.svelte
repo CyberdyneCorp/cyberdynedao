@@ -1,15 +1,42 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { PixelScrollArea } from '@cyberdynecorp/svelte-ui-core';
 	import {
-		heroSubtitle,
-		serviceSections,
-		workflowSteps,
-		whyCyberdynePoints,
-		ctaHeadline,
-		ctaBody,
-		ctaPills,
+		heroSubtitle as staticHeroSubtitle,
+		serviceSections as staticServiceSections,
+		workflowSteps as staticWorkflowSteps,
+		whyCyberdynePoints as staticWhyPoints,
+		ctaHeadline as staticCtaHeadline,
+		ctaBody as staticCtaBody,
+		ctaPills as staticCtaPills,
 		type ServicePalette
 	} from '$lib/data/services';
+	import { fetchServicesPage, type ServicesPagePayload } from '$lib/api/contentApi';
+
+	// Stale-while-revalidate. Static data renders instantly; API
+	// response replaces it on success; on failure the static stays.
+	let page = $state<ServicesPagePayload>({
+		sections: staticServiceSections.map((s) => ({ ...s, fullWidth: s.fullWidth ?? false })),
+		heroSubtitle: staticHeroSubtitle,
+		workflowSteps: [...staticWorkflowSteps],
+		whyPoints: [...staticWhyPoints],
+		ctaHeadline: staticCtaHeadline,
+		ctaBody: staticCtaBody,
+		ctaPills: [...staticCtaPills]
+	});
+
+	onMount(async () => {
+		page = await fetchServicesPage();
+	});
+
+	// Backwards-compat aliases for the existing template references.
+	const heroSubtitle = $derived(page.heroSubtitle);
+	const serviceSections = $derived(page.sections);
+	const workflowSteps = $derived(page.workflowSteps);
+	const whyCyberdynePoints = $derived(page.whyPoints);
+	const ctaHeadline = $derived(page.ctaHeadline);
+	const ctaBody = $derived(page.ctaBody);
+	const ctaPills = $derived(page.ctaPills);
 
 	const paletteVars: Record<ServicePalette, { accent: string; accentDark: string }> = {
 		blue: { accent: '#3b82f6', accentDark: '#1d4ed8' },

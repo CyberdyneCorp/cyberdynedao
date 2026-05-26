@@ -12,6 +12,10 @@ dependencies = [
     "pydantic-settings>=2.6.1",
     "structlog>=24.4.0",
     "httpx>=0.27.0",
+    # Persistence — Phase 1 forward.
+    "sqlalchemy[asyncio]>=2.0.30",
+    "asyncpg>=0.29.0",
+    "alembic>=1.13.0",
 ]
 
 [project.optional-dependencies]
@@ -23,6 +27,7 @@ dev = [
     "mypy>=1.10.0",
     "import-linter>=2.0",
     "respx>=0.21.0",
+    "aiosqlite>=0.20.0",  # in-memory SQLAlchemy backend for unit/integration tests
 ]
 
 [project.scripts]
@@ -48,18 +53,16 @@ markers = [
 ]
 
 # ── coverage ──────────────────────────────────────────────────────────
-# Long-term calibration: gate only the hexagonal core (domain +
-# application) at 90% — adapters are exercised by integration tests
-# instead, same shape as the rest of the Cyberdyne stack. For Phase 1
-# scaffold those layers are nearly empty, so we temporarily measure the
-# whole tree. PR B (domain content + auth middleware) narrows the source
-# back to ["domain", "application"].
+# Gate only the hexagonal core (domain + application) at 90% — adapters
+# are exercised by integration tests instead, same shape as the rest of
+# the Cyberdyne stack. The whole tree is still imported when tests run,
+# but coverage only counts the layers we care about gating.
 [tool.coverage.run]
-source = ["src/cyberdyne_backend"]
-omit = [
-    "**/__init__.py",
-    "src/cyberdyne_backend/main.py",  # boot wiring; covered by integration once we add it
+source = [
+    "src/cyberdyne_backend/domain",
+    "src/cyberdyne_backend/application",
 ]
+omit = ["**/__init__.py"]
 branch = true
 
 [tool.coverage.report]

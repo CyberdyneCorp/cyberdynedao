@@ -140,3 +140,536 @@ export async function fetchCyberdynePage(): Promise<CyberdynePagePayload> {
 // convenience — callers that already import from $lib/data/cyberdyne
 // can keep doing so; only the API consumer needs the Palette name.
 export type { Palette };
+
+
+// ── Phase 2 fetchers ────────────────────────────────────────────────
+
+
+import type { ProductEntry, ProductStatus } from '$lib/data/products';
+import { productSuite as staticProductSuite } from '$lib/data/products';
+
+interface ApiProject {
+	id: string;
+	name: string;
+	icon: string;
+	description: string;
+	features: string[];
+	extraFeatures: string[] | null;
+	palette: ProductEntry['palette'];
+	status: ProductStatus;
+	fullWidth: boolean;
+}
+
+function apiProjectToProductEntry(api: ApiProject): ProductEntry {
+	return {
+		id: api.id,
+		name: api.name,
+		icon: api.icon,
+		description: api.description,
+		features: api.features,
+		extraFeatures: api.extraFeatures ?? undefined,
+		palette: api.palette,
+		status: api.status,
+		fullWidth: api.fullWidth
+	};
+}
+
+export async function fetchProjects(): Promise<ProductEntry[]> {
+	try {
+		const api = await fetchJson<ApiProject[]>('/api/v1/content/projects');
+		return api.map(apiProjectToProductEntry);
+	} catch (err) {
+		console.warn('[contentApi] projects fetch failed, using static fallback:', err);
+		return staticProductSuite;
+	}
+}
+
+
+import type {
+	ServiceSection as StaticServiceSection,
+	ServicePalette
+} from '$lib/data/services';
+import {
+	heroSubtitle as staticServicesHero,
+	serviceSections as staticServiceSections,
+	workflowSteps as staticWorkflowSteps,
+	whyCyberdynePoints as staticWhyPoints,
+	ctaHeadline as staticServicesCtaHeadline,
+	ctaBody as staticServicesCtaBody,
+	ctaPills as staticServicesCtaPills
+} from '$lib/data/services';
+
+export interface ServicesPagePayload {
+	sections: StaticServiceSection[];
+	heroSubtitle: string;
+	workflowSteps: { title: string; description: string }[];
+	whyPoints: { title: string; description: string }[];
+	ctaHeadline: string;
+	ctaBody: string;
+	ctaPills: string[];
+}
+
+interface ApiServiceSection {
+	id: string;
+	icon: string;
+	title: string;
+	intro: string;
+	bullets: { title: string; description: string }[];
+	palette: ServicePalette;
+	fullWidth: boolean;
+}
+
+interface ApiServicesPage {
+	sections: ApiServiceSection[];
+	heroSubtitle: string;
+	workflowSteps: { title: string; description: string }[];
+	whyPoints: { title: string; description: string }[];
+	ctaHeadline: string;
+	ctaBody: string;
+	ctaPills: string[];
+}
+
+const STATIC_SERVICES_PAGE: ServicesPagePayload = {
+	sections: staticServiceSections.map((s) => ({ ...s, fullWidth: s.fullWidth ?? false })),
+	heroSubtitle: staticServicesHero,
+	workflowSteps: [...staticWorkflowSteps],
+	whyPoints: [...staticWhyPoints],
+	ctaHeadline: staticServicesCtaHeadline,
+	ctaBody: staticServicesCtaBody,
+	ctaPills: [...staticServicesCtaPills]
+};
+
+export async function fetchServicesPage(): Promise<ServicesPagePayload> {
+	try {
+		const api = await fetchJson<ApiServicesPage>('/api/v1/content/services');
+		return {
+			sections: api.sections.map((s) => ({
+				id: s.id,
+				icon: s.icon,
+				title: s.title,
+				intro: s.intro,
+				bullets: s.bullets,
+				palette: s.palette,
+				fullWidth: s.fullWidth
+			})),
+			heroSubtitle: api.heroSubtitle,
+			workflowSteps: api.workflowSteps,
+			whyPoints: api.whyPoints,
+			ctaHeadline: api.ctaHeadline,
+			ctaBody: api.ctaBody,
+			ctaPills: api.ctaPills
+		};
+	} catch (err) {
+		console.warn('[contentApi] services fetch failed, using static fallback:', err);
+		return STATIC_SERVICES_PAGE;
+	}
+}
+
+
+import type { ContactMethod as StaticContactMethod } from '$lib/data/contact';
+import { contactIntro as staticContactIntro, contactMethods as staticContactMethods } from '$lib/data/contact';
+
+export interface ContactPagePayload {
+	methods: StaticContactMethod[];
+	intro: { headline: string; body: string };
+}
+
+interface ApiContactMethod {
+	id: string;
+	name: string;
+	icon: string;
+	description: string;
+	action: string;
+	link: string;
+	brandSolid: string;
+	brandHover: string;
+	brandRgb: string;
+	tagline: string;
+}
+
+interface ApiContactPage {
+	methods: ApiContactMethod[];
+	intro: { headline: string; body: string };
+}
+
+function apiContactMethodToStatic(api: ApiContactMethod): StaticContactMethod {
+	return {
+		id: api.id,
+		name: api.name,
+		icon: api.icon,
+		description: api.description,
+		action: api.action,
+		link: api.link,
+		colorPalette: { solid: api.brandSolid, hover: api.brandHover, rgb: api.brandRgb },
+		tagline: api.tagline
+	};
+}
+
+const STATIC_CONTACT_PAGE: ContactPagePayload = {
+	methods: [...staticContactMethods],
+	intro: { ...staticContactIntro }
+};
+
+export async function fetchContactPage(): Promise<ContactPagePayload> {
+	try {
+		const api = await fetchJson<ApiContactPage>('/api/v1/content/contact');
+		return {
+			methods: api.methods.map(apiContactMethodToStatic),
+			intro: api.intro
+		};
+	} catch (err) {
+		console.warn('[contentApi] contact fetch failed, using static fallback:', err);
+		return STATIC_CONTACT_PAGE;
+	}
+}
+
+
+export interface AskSubmission {
+	name: string;
+	email: string;
+	body: string;
+	channel?: 'contact_form' | 'marketplace_service_inquiry' | 'chat_agent_handoff';
+	productSlug?: string | null;
+	sourceUrl?: string | null;
+	captchaToken: string;
+}
+
+export async function postAsk(submission: AskSubmission): Promise<{ ok: boolean; error?: string }> {
+	if (!API_BASE) {
+		// In dev with no backend, pretend the submission succeeded so the
+		// UI flow can be exercised. A console warn flags it.
+		console.warn('[contentApi] postAsk skipped — VITE_BACKEND_API_URL not configured');
+		return { ok: true };
+	}
+	try {
+		const response = await fetch(`${API_BASE}/api/v1/asks`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+			body: JSON.stringify({
+				name: submission.name,
+				email: submission.email,
+				body: submission.body,
+				channel: submission.channel ?? 'contact_form',
+				productSlug: submission.productSlug ?? null,
+				sourceUrl: submission.sourceUrl ?? null,
+				captchaToken: submission.captchaToken
+			})
+		});
+		if (response.status === 201) {
+			return { ok: true };
+		}
+		const detail = (await response.json().catch(() => null)) as { detail?: unknown } | null;
+		const msg = typeof detail?.detail === 'string' ? detail.detail : `HTTP ${response.status}`;
+		return { ok: false, error: msg };
+	} catch (err) {
+		console.warn('[contentApi] postAsk failed:', err);
+		return { ok: false, error: err instanceof Error ? err.message : 'unknown error' };
+	}
+}
+
+
+// ── Phase 3 fetchers (blog) ─────────────────────────────────────────
+
+
+export interface BlogPostSummary {
+	id: string;
+	slug: string;
+	title: string;
+	excerpt: string;
+	categorySlug: string | null;
+	tags: string[];
+	status: 'draft' | 'published';
+	createdAt: string;
+	publishedAt: string | null;
+}
+
+export interface BlogPostDetail extends BlogPostSummary {
+	bodyMd: string;
+}
+
+export interface BlogPostList {
+	items: BlogPostSummary[];
+	total: number;
+	page: number;
+	pageSize: number;
+}
+
+export async function fetchBlogPosts(
+	options: { category?: string; tag?: string; page?: number; pageSize?: number } = {}
+): Promise<BlogPostList> {
+	const params = new URLSearchParams();
+	if (options.category) params.set('category', options.category);
+	if (options.tag) params.set('tag', options.tag);
+	params.set('page', String(options.page ?? 1));
+	params.set('pageSize', String(options.pageSize ?? 20));
+	try {
+		return await fetchJson<BlogPostList>(`/api/v1/blog/posts?${params}`);
+	} catch (err) {
+		console.warn('[contentApi] blog posts fetch failed:', err);
+		// Empty list is a safe fallback — the blog is allowed to be empty.
+		return { items: [], total: 0, page: 1, pageSize: 20 };
+	}
+}
+
+export async function fetchBlogPost(slug: string): Promise<BlogPostDetail | null> {
+	try {
+		return await fetchJson<BlogPostDetail>(`/api/v1/blog/posts/${encodeURIComponent(slug)}`);
+	} catch (err) {
+		console.warn('[contentApi] blog post fetch failed:', err);
+		return null;
+	}
+}
+
+
+// ── Phase 4 fetchers (learning) ─────────────────────────────────────
+
+
+import type { LearningModule, LearningPath } from '$lib/types/components';
+import { learningModules as staticLearningModules, learningPaths as staticLearningPaths } from '$lib/data/learn';
+
+interface ApiLearningModule {
+	slug: string;
+	title: string;
+	category: string;
+	description: string;
+	level: 'Beginner' | 'Intermediate' | 'Advanced' | string;
+	duration: string;
+	icon: string;
+	topics: string[];
+}
+
+interface ApiLearningPath {
+	slug: string;
+	title: string;
+	description: string;
+	moduleSlugs: string[];
+	estimatedTime: string;
+	icon: string;
+}
+
+function apiLearningModuleToFrontend(api: ApiLearningModule): LearningModule {
+	return {
+		id: api.slug,
+		title: api.title,
+		category: api.category,
+		description: api.description,
+		level: api.level as LearningModule['level'],
+		duration: api.duration,
+		icon: api.icon,
+		topics: api.topics,
+		completed: false
+	};
+}
+
+function apiLearningPathToFrontend(api: ApiLearningPath): LearningPath {
+	return {
+		id: api.slug,
+		title: api.title,
+		description: api.description,
+		modules: api.moduleSlugs,
+		icon: api.icon,
+		estimatedTime: api.estimatedTime
+	};
+}
+
+export async function fetchLearningModules(): Promise<LearningModule[]> {
+	try {
+		const api = await fetchJson<ApiLearningModule[]>('/api/v1/learning/modules');
+		return api.map(apiLearningModuleToFrontend);
+	} catch (err) {
+		console.warn('[contentApi] learning modules fetch failed, using static fallback:', err);
+		return staticLearningModules;
+	}
+}
+
+export async function fetchLearningPaths(): Promise<LearningPath[]> {
+	try {
+		const api = await fetchJson<ApiLearningPath[]>('/api/v1/learning/paths');
+		return api.map(apiLearningPathToFrontend);
+	} catch (err) {
+		console.warn('[contentApi] learning paths fetch failed, using static fallback:', err);
+		return staticLearningPaths;
+	}
+}
+
+
+// ── Phase 5 fetchers (DAO treasury) ─────────────────────────────────
+
+
+export interface DaoTokenBalance {
+	symbol: string;
+	name: string;
+	address: string;
+	balance: number;
+	usdValue: number;
+	change24hPct: number;
+	icon: string;
+}
+
+export interface DaoAavePosition {
+	symbol: string;
+	aTokenBalance: number;
+	variableDebt: number;
+	supplyApy: number;
+	borrowApy: number;
+	usdValueSupplied: number;
+	usdValueBorrowed: number;
+}
+
+export interface DaoUniswapPosition {
+	positionId: string;
+	poolId: string;
+	token0Symbol: string;
+	token1Symbol: string;
+	token0Amount: number;
+	token1Amount: number;
+	feeTierBps: number;
+	tickLower: number;
+	tickUpper: number;
+	inRange: boolean;
+	usdValue: number;
+	uncollectedFeesUsd: number;
+}
+
+export interface DaoTreasurySnapshot {
+	treasuryAddress: string;
+	chainId: number;
+	snapshotAt: string;
+	tokenBalances: DaoTokenBalance[];
+	aavePositions: DaoAavePosition[];
+	uniswapPositions: DaoUniswapPosition[];
+	totalUsdValue: number;
+}
+
+export interface DaoOverview {
+	snapshot: DaoTreasurySnapshot;
+	holders: number;
+}
+
+export async function fetchDaoOverview(): Promise<DaoOverview | null> {
+	try {
+		return await fetchJson<DaoOverview>('/api/v1/dao/overview');
+	} catch (err) {
+		console.warn('[contentApi] dao overview fetch failed:', err);
+		return null;
+	}
+}
+
+
+// ── Phase 6 fetchers (marketplace + chat) ───────────────────────────
+
+
+import type { MarketplaceItem } from '$lib/types/components';
+import { marketplaceItems as staticMarketplaceItems } from '$lib/data/shop';
+
+interface ApiProduct {
+	slug: string;
+	type: 'service' | 'training' | 'license';
+	title: string;
+	descriptionMd: string;
+	priceCents: number;
+	currency: string;
+	durationLabel: string;
+	features: string[];
+	category: string;
+	subcategory: string | null;
+	imageUrl: string;
+	popular: boolean;
+	status: 'available' | 'beta' | 'coming_soon' | 'retired';
+	isPurchasable: boolean;
+}
+
+function apiProductToMarketplaceItem(api: ApiProduct): MarketplaceItem {
+	const statusMap: Record<ApiProduct['status'], MarketplaceItem['status']> = {
+		available: 'available',
+		beta: 'beta',
+		coming_soon: 'coming-soon',
+		retired: 'available'
+	};
+	return {
+		id: api.slug,
+		title: api.title,
+		description: api.descriptionMd,
+		category: api.category as MarketplaceItem['category'],
+		subcategory: api.subcategory ?? undefined,
+		price: api.priceCents / 100,
+		duration: api.durationLabel,
+		features: api.features,
+		popular: api.popular || undefined,
+		image: api.imageUrl || '',
+		status: statusMap[api.status] ?? 'available'
+	};
+}
+
+export async function fetchMarketplaceItems(): Promise<MarketplaceItem[]> {
+	try {
+		const api = await fetchJson<ApiProduct[]>('/api/v1/marketplace/products');
+		return api.map(apiProductToMarketplaceItem);
+	} catch (err) {
+		console.warn('[contentApi] marketplace fetch failed, using static fallback:', err);
+		return staticMarketplaceItems;
+	}
+}
+
+
+export interface ChatSessionStart {
+	sessionId: string;
+	createdAt: string;
+}
+
+export interface ChatMessagePayload {
+	id: string;
+	sessionId: string;
+	role: 'user' | 'assistant' | 'tool' | 'system';
+	content: string;
+	toolCalls: { id: string; name: string; argumentsJson: string }[];
+	toolCallId: string | null;
+	tokensIn: number;
+	tokensOut: number;
+	model: string | null;
+	createdAt: string;
+}
+
+export async function startChatSession(): Promise<ChatSessionStart | null> {
+	if (!API_BASE) {
+		console.warn('[contentApi] chat disabled — VITE_BACKEND_API_URL not configured');
+		return null;
+	}
+	try {
+		const response = await fetch(`${API_BASE}/api/v1/chat/sessions`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json', Accept: 'application/json' }
+		});
+		if (!response.ok) {
+			throw new Error(`HTTP ${response.status}`);
+		}
+		return (await response.json()) as ChatSessionStart;
+	} catch (err) {
+		console.warn('[contentApi] startChatSession failed:', err);
+		return null;
+	}
+}
+
+export async function sendChatMessage(
+	sessionId: string,
+	content: string
+): Promise<ChatMessagePayload | null> {
+	if (!API_BASE) return null;
+	try {
+		const response = await fetch(
+			`${API_BASE}/api/v1/chat/sessions/${encodeURIComponent(sessionId)}/messages`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+				body: JSON.stringify({ content })
+			}
+		);
+		if (!response.ok) {
+			throw new Error(`HTTP ${response.status}`);
+		}
+		return (await response.json()) as ChatMessagePayload;
+	} catch (err) {
+		console.warn('[contentApi] sendChatMessage failed:', err);
+		return null;
+	}
+}

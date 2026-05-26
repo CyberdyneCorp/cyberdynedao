@@ -15,5 +15,19 @@ layers =
     cyberdyne_backend.infrastructure
     cyberdyne_backend.application
     cyberdyne_backend.domain
+# The Container is the composition root for adapter wiring — it must
+# import concrete adapters by definition. Listed explicitly because
+# import-linter ignore_imports doesn't support wildcards.
 ignore_imports =
-    cyberdyne_backend.main -> *
+    cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.auth.introspection_client
+    cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.auth.caching_auth_port
+    cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.auth.service_token_provider
+    cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.captcha.providers
+    cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.email.notifiers
+    cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.certificates.signer
+    cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.chain.caching_reader
+    cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.chain.fake_reader
+    cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.chain.web3py_reader
+    cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.stripe.checkout_client
+    cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.stripe.webhook_verifier
+    cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.llm.openai_client

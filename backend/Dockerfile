@@ -30,8 +30,9 @@ FROM base AS production
 COPY --from=deps /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 
-COPY pyproject.toml uv.lock* ./
+COPY pyproject.toml uv.lock* alembic.ini ./
 COPY src/ src/
+COPY alembic/ alembic/
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
@@ -45,8 +46,10 @@ EXPOSE 8000
 
 # Coolify trap: `wget -qO-` and `localhost` (DNS) both fail silently inside
 # slim Alpine/Debian — use a Python one-liner against 127.0.0.1 instead.
-HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
     CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=5).status == 200 else 1)"
 
-# `exec` form so SIGTERM reaches uvicorn for graceful shutdown
-CMD ["uvicorn", "cyberdyne_backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run migrations on container start, then exec uvicorn so SIGTERM reaches
+# it for graceful shutdown. `start-period=20s` on the healthcheck gives
+# Alembic room to apply migrations before Traefik considers us unhealthy.
+CMD ["sh", "-c", "alembic upgrade head && exec uvicorn cyberdyne_backend.main:app --host 0.0.0.0 --port 8000"]

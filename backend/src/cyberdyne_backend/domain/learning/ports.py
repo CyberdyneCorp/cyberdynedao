@@ -1,0 +1,55 @@
+"""Ports for the learning context."""
+
+from __future__ import annotations
+
+from typing import Protocol, runtime_checkable
+from uuid import UUID
+
+from cyberdyne_backend.domain.learning.entities import (
+    Certificate,
+    Enrollment,
+    LearningModule,
+    LearningPath,
+    ModuleProgress,
+)
+
+
+@runtime_checkable
+class LearningRepository(Protocol):
+    # Catalogue (read-only, seeded)
+    async def list_modules(self) -> list[LearningModule]: ...
+    async def list_paths(self) -> list[LearningPath]: ...
+    async def get_path(self, slug: str) -> LearningPath: ...
+
+    # Per-user state
+    async def upsert_enrollment(self, enrollment: Enrollment) -> Enrollment:
+        """Insert if (user_id, path_slug) is new; return the existing
+        row otherwise. Caller passes a fresh ``new_enrollment(...)``
+        each time; the repo enforces uniqueness."""
+        ...
+
+    async def list_enrollments_for_user(self, user_id: UUID) -> list[Enrollment]: ...
+
+    async def upsert_progress(self, progress: ModuleProgress) -> ModuleProgress:
+        """Insert or update by ``(user_id, module_slug)``. Returns the
+        stored row."""
+        ...
+
+    async def get_progress_map_for_user(self, user_id: UUID) -> dict[str, ModuleProgress]:
+        """``{module_slug: ModuleProgress}`` for every module the user
+        has touched. Missing slugs mean "never started"."""
+        ...
+
+    async def save_certificate(self, certificate: Certificate) -> None: ...
+
+    async def get_certificate_for_user_and_path(
+        self, user_id: UUID, path_slug: str
+    ) -> Certificate | None: ...
+
+
+@runtime_checkable
+class CertificateSigner(Protocol):
+    """Signs the certificate's verification hash. Real impl uses
+    Ed25519 over the env-loaded private key."""
+
+    def sign(self, message: str) -> str: ...

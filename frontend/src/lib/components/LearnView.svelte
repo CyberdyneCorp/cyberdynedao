@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import type { LearningModule, LearningPath } from '$lib/types/components';
 	import {
 		createLearnViewModel,
@@ -12,10 +13,24 @@
 		learnWelcomeBody,
 		resourceGroups
 	} from '$lib/data/learn';
+	import { fetchLearningModules, fetchLearningPaths } from '$lib/api/contentApi';
 
 	const vm = createLearnViewModel();
 	const { selectedModule, selectedPath, activeTab } = vm;
-	const { modules: learningModules, paths: learningPaths } = vm;
+
+	// Stale-while-revalidate: start with the static catalogue, swap to
+	// the API response once it lands. Same pattern as TeamView / ProductsView.
+	let learningModules = $state<LearningModule[]>(vm.modules);
+	let learningPaths = $state<LearningPath[]>(vm.paths);
+
+	onMount(async () => {
+		const [modules, paths] = await Promise.all([
+			fetchLearningModules(),
+			fetchLearningPaths()
+		]);
+		learningModules = modules;
+		learningPaths = paths;
+	});
 
 	function selectModule(module: LearningModule) { vm.selectModule(module); }
 	function selectPath(path: LearningPath) { vm.selectPath(path); }

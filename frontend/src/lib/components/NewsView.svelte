@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import type { BlogPost } from '$lib/types/components';
 	import { formatDate } from '$lib/utils/formatters';
 	import {
@@ -6,12 +7,47 @@
 		getBlogCategoryColor as getCategoryColor,
 		truncateTitle
 	} from '$lib/viewmodels/newsViewModel';
+	import { fetchBlogPosts, type BlogPostSummary } from '$lib/api/contentApi';
 
-	export const isMobile: boolean = false;
+	let { isMobile = false }: { isMobile?: boolean } = $props();
+	// The prop is currently unused inside this component (its layout
+	// adapts via CSS media queries); kept on the interface because
+	// callers pass it and we don't want a breaking change here.
+	void isMobile;
 
 	const vm = createNewsViewModel();
 	const { selectedCategory, selectedPost, filteredPosts } = vm;
-	const { posts: blogPosts, categories, featuredPosts } = vm;
+	const { categories, featuredPosts } = vm;
+	// The VM seeds ``blogPosts`` from static demo content. Phase 3
+	// fetches the real list on mount; if the API returns any posts we
+	// swap them in. Empty API list leaves the demo content untouched
+	// so the view isn't blank before an editor publishes anything.
+	let blogPosts = $state<BlogPost[]>(vm.posts);
+
+	onMount(async () => {
+		const list = await fetchBlogPosts({ pageSize: 50 });
+		if (list.items.length === 0) return;
+		blogPosts = list.items.map(apiPostToFrontend);
+	});
+
+	function apiPostToFrontend(p: BlogPostSummary): BlogPost {
+		// Map the backend's summary shape to the frontend's BlogPost
+		// shape. Fields the backend doesn't carry yet (author, image,
+		// readTime, featured) get sensible defaults.
+		const wordCount = (p.excerpt || '').split(/\s+/).length;
+		const readTimeMin = Math.max(1, Math.round(wordCount / 200));
+		return {
+			id: p.slug,
+			title: p.title,
+			category: p.categorySlug ?? 'general',
+			excerpt: p.excerpt,
+			author: 'Cyberdyne',
+			date: (p.publishedAt ?? p.createdAt).slice(0, 10),
+			readTime: `${readTimeMin} min read`,
+			tags: p.tags,
+			featured: false
+		};
+	}
 
 	function selectPost(post: BlogPost) {
 		vm.selectPost(post);

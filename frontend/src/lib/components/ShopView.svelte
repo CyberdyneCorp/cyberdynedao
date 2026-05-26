@@ -1,16 +1,31 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import type { MarketplaceItem } from '$lib/types/components';
+	import { buildMarketplaceCategories } from '$lib/data/shop';
 	import {
 		createShopViewModel,
+		filterByCategorySlug,
 		getStatusText,
 		formatMarketplacePrice as formatPrice
 	} from '$lib/viewmodels/shopViewModel';
+	import { fetchMarketplaceItems } from '$lib/api/contentApi';
 
-	export let onAddToCart: ((item: MarketplaceItem) => void) | undefined = undefined;
+	let { onAddToCart }: { onAddToCart?: (item: MarketplaceItem) => void } = $props();
 
+	// vm still owns the UI state stores (selectedCategory + selectedItem);
+	// the displayed lists are reactive $state so the API can swap them in.
 	const vm = createShopViewModel(undefined, (item) => onAddToCart?.(item));
-	const { selectedCategory, selectedItem, filteredItems } = vm;
-	const { items: marketplaceItems, categories, popularItems } = vm;
+	const { selectedCategory, selectedItem } = vm;
+
+	let marketplaceItems = $state<MarketplaceItem[]>(vm.items);
+
+	onMount(async () => {
+		marketplaceItems = await fetchMarketplaceItems();
+	});
+
+	const categories = $derived(buildMarketplaceCategories(marketplaceItems));
+	const popularItems = $derived(marketplaceItems.filter((i) => i.popular));
+	const filteredList = $derived(filterByCategorySlug(marketplaceItems, $selectedCategory));
 
 	function selectItem(item: MarketplaceItem) { vm.selectItem(item); }
 	function addToCart(item: MarketplaceItem) { vm.addToCart(item); }
@@ -98,7 +113,7 @@
 					{$selectedCategory === 'all' ? 'All Products' : categories.find(c => c.id === $selectedCategory)?.name}
 				</h3>
 				<div class="item-list">
-					{#each $filteredItems.slice(0, 12) as item}
+					{#each filteredList.slice(0, 12) as item}
 						{@const pal = catPal(item.category)}
 						{@const sPal = statusPal(item.status)}
 						<button
