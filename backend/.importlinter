@@ -22,3 +22,5 @@ ignore_imports =
     cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.auth.introspection_client
     cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.auth.caching_auth_port
     cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.auth.service_token_provider
+    cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.captcha.providers
+    cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.email.notifiers

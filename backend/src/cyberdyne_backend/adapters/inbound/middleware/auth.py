@@ -1,28 +1,35 @@
-"""FastAPI auth middleware.
+"""FastAPI auth middleware + scope dependencies.
 
 Resolves ``request.state.principal: Principal | None`` for every
 request. Token source priority: ``Authorization: Bearer …`` header
 first, then ``access_token`` cookie (browser sessions). Missing token
 is fine — the principal stays ``None`` and downstream code decides
 whether to allow it.
+
+The ``require_principal`` and ``require_editor`` dependencies enforce
+auth on routes that need it; routes that don't depend on them stay
+public.
 """
 
 from __future__ import annotations
 
 import logging
 
-from fastapi import Request, Response
+from fastapi import HTTPException, Request, Response, status
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from cyberdyne_backend.domain.auth_identity import (
     AuthPort,
     AuthServiceUnavailableError,
     InvalidTokenError,
+    Principal,
+    UserPrincipal,
 )
 
 logger = logging.getLogger("cyberdyne_backend.auth.middleware")
 
 BEARER_PREFIX = "Bearer "
+EDITOR_SCOPE = "editor"
 
 
 def _extract_token(request: Request) -> str | None:
@@ -74,3 +81,40 @@ class AuthMiddleware(BaseHTTPMiddleware):
             )
         request.state.principal = principal
         return await call_next(request)
+
+
+# ── Dependencies ─────────────────────────────────────────────────────
+
+
+def require_principal(request: Request) -> Principal:
+    """Asserts that the middleware resolved a principal; 401 otherwise."""
+    principal: Principal | None = getattr(request.state, "principal", None)
+    if principal is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="authentication required"
+        )
+    return principal
+
+
+def require_editor(request: Request) -> UserPrincipal:
+    """Asserts the caller is a user with the ``editor`` scope.
+
+    Service tokens (``ServicePrincipal``) are rejected — admin actions
+    are gated to human reviewers. Phase 1 wired scopes through
+    introspection; CyberdyneAuth doesn't yet surface scopes on user
+    tokens directly, so until that lands we additionally accept
+    ``email``-claim allowlisting in a follow-up PR. For now the scope
+    check is authoritative.
+    """
+    principal = require_principal(request)
+    if not isinstance(principal, UserPrincipal):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="user token required (service tokens cannot edit asks)",
+        )
+    if EDITOR_SCOPE not in principal.scopes:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="editor scope required",
+        )
+    return principal

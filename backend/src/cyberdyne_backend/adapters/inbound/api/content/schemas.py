@@ -124,3 +124,121 @@ class CyberdynePageResponse(_CamelModel):
     roadmap_phases: list[RoadmapPhaseResponse]
     closing_headline: str
     closing_body: str
+
+
+# ── Projects ─────────────────────────────────────────────────────────
+
+
+class ProjectResponse(_CamelModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        extra="forbid",
+    )
+
+    id: str
+    name: str
+    icon: str
+    description: str
+    features: list[str]
+    extra_features: list[str] | None = None
+    palette: Palette
+    status: Literal["live", "active", "development", "planning", "design"]
+    full_width: bool = False
+
+
+# ── Services ─────────────────────────────────────────────────────────
+
+
+class ServiceBulletResponse(_CamelModel):
+    title: str
+    description: str
+
+
+class ServiceSectionResponse(_CamelModel):
+    id: str
+    icon: str
+    title: str
+    intro: str
+    bullets: list[ServiceBulletResponse]
+    palette: Palette
+    full_width: bool = False
+
+
+class WorkflowStepResponse(_CamelModel):
+    title: str
+    description: str
+
+
+class WhyPointResponse(_CamelModel):
+    title: str
+    description: str
+
+
+class ServicesPageResponse(_CamelModel):
+    """Bundled response for the Services view — sections plus the page-
+    level meta (workflow steps, why-Cyberdyne points, CTA copy)."""
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        extra="forbid",
+    )
+
+    sections: list[ServiceSectionResponse]
+    hero_subtitle: str
+    workflow_steps: list[WorkflowStepResponse]
+    why_points: list[WhyPointResponse]
+    cta_headline: str
+    cta_body: str
+    cta_pills: list[str]
+
+
+# ── Contact ──────────────────────────────────────────────────────────
+
+
+class ContactMethodResponse(_CamelModel):
+    id: str
+    name: str
+    icon: str
+    description: str
+    action: str
+    link: str
+    brand_solid: str
+    brand_hover: str
+    brand_rgb: str
+    tagline: str
+
+
+class ContactIntroResponse(_CamelModel):
+    headline: str
+    body: str
+
+
+class ContactPageResponse(_CamelModel):
+    """Bundled response for the Contact view."""
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        extra="forbid",
+    )
+
+    methods: list[ContactMethodResponse]
+    intro: ContactIntroResponse
+
+
+# ── Resources (Learn view footer) ────────────────────────────────────
+
+
+class ResourceLinkResponse(_CamelModel):
+    label: str
+    href: str
+    disabled: bool = False
+
+
+class ResourceGroupResponse(_CamelModel):
+    id: str
+    icon: str
+    title: str
+    links: list[ResourceLinkResponse]

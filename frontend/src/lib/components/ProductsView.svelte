@@ -1,6 +1,18 @@
 <script lang="ts">
 	import { PixelButton, PixelScrollArea, Badge } from '@cyberdynecorp/svelte-ui-core';
-	import { productSuite, type ProductStatus } from '$lib/data/products';
+	import { onMount } from 'svelte';
+	import {
+		productSuite as staticProductSuite,
+		type ProductEntry,
+		type ProductStatus
+	} from '$lib/data/products';
+	import { fetchProjects } from '$lib/api/contentApi';
+
+	let productSuite = $state<ProductEntry[]>(staticProductSuite);
+
+	onMount(async () => {
+		productSuite = await fetchProjects();
+	});
 
 	const paletteVars = {
 		blue: { accent: '#3b82f6', accentDark: '#1d4ed8' },

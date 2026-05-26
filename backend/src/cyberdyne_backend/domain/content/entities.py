@@ -21,20 +21,82 @@ class TeamMember:
 class CyberdynePage:
     """The Cyberdyne about-us page payload.
 
-    Held as an opaque ``dict[str, Any]`` for Phase 1 because:
-
-    1. The shape is rich (domains, beliefs, tokenomics, roadmap,
-       economics) and changes per-section over time.
-    2. There is no admin-editing UI yet; content is seeded via an
-       Alembic data migration. Normalising the schema before we have
-       an editor would invest in the wrong abstraction.
-    3. The router layer pins a strict pydantic response schema so the
-       OpenAPI surface stays typed even when the domain object is dict-
-       shaped.
-
-    Phase 3 (admin authoring) can split this into per-section
-    aggregates when there's a real reason to.
+    Held as an opaque ``dict[str, Any]`` — the shape is rich (domains,
+    beliefs, tokenomics, roadmap, economics) and admin authoring (Phase
+    3+) hasn't shipped, so normalising before there's an editor would
+    invest in the wrong abstraction. The router pins a strict pydantic
+    response schema so the OpenAPI surface stays typed.
     """
 
     slug: str
     payload: dict[str, Any]
+
+
+# ── Phase 2 list entities ────────────────────────────────────────────
+
+
+@dataclass(frozen=True, slots=True)
+class Project:
+    """One Cyberdyne project entry. Backs the Marketplace + Products views."""
+
+    id: str
+    name: str
+    icon: str
+    description: str
+    features: tuple[str, ...]
+    extra_features: tuple[str, ...] | None
+    palette: str
+    status: str
+    full_width: bool
+
+
+@dataclass(frozen=True, slots=True)
+class ServiceBullet:
+    title: str
+    description: str
+
+
+@dataclass(frozen=True, slots=True)
+class ServiceSection:
+    """One service-offering card on the Services view."""
+
+    id: str
+    icon: str
+    title: str
+    intro: str
+    bullets: tuple[ServiceBullet, ...]
+    palette: str
+    full_width: bool
+
+
+@dataclass(frozen=True, slots=True)
+class ContactMethod:
+    """One channel on the Contact Us view (WhatsApp / Discord / …)."""
+
+    id: str
+    name: str
+    icon: str
+    description: str
+    action: str
+    link: str
+    brand_solid: str
+    brand_hover: str
+    brand_rgb: str
+    tagline: str
+
+
+@dataclass(frozen=True, slots=True)
+class ResourceLink:
+    label: str
+    href: str
+    disabled: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class ResourceGroup:
+    """A labelled cluster of external resource links (Learn view)."""
+
+    id: str
+    icon: str
+    title: str
+    links: tuple[ResourceLink, ...]

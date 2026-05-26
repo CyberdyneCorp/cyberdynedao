@@ -12,7 +12,13 @@ import httpx
 from cyberdyne_backend.adapters.outbound.auth.caching_auth_port import CachingAuthPort
 from cyberdyne_backend.adapters.outbound.auth.introspection_client import IntrospectionClient
 from cyberdyne_backend.adapters.outbound.auth.service_token_provider import ServiceTokenProvider
+from cyberdyne_backend.adapters.outbound.captcha.providers import (
+    AlwaysPassCaptchaProvider,
+    CloudflareTurnstileProvider,
+)
+from cyberdyne_backend.adapters.outbound.email.notifiers import LoggingEmailNotifier
 from cyberdyne_backend.domain.auth_identity import AuthPort
+from cyberdyne_backend.domain.leads import CaptchaPort, EmailNotifierPort
 from cyberdyne_backend.infrastructure.settings import Settings
 
 
@@ -24,6 +30,8 @@ class Container:
         self._http_client: httpx.AsyncClient | None = None
         self._auth_port: AuthPort | None = None
         self._service_token_provider: ServiceTokenProvider | None = None
+        self._captcha_port: CaptchaPort | None = None
+        self._email_notifier: EmailNotifierPort | None = None
 
     # ── HTTP ──────────────────────────────────────────────────────────
     @property
@@ -76,6 +84,33 @@ class Container:
             timeout_s=self._settings.cyberdyne_auth_request_timeout_s,
         )
         return self._service_token_provider
+
+    # ── Leads (Phase 2) ──────────────────────────────────────────────
+    @property
+    def captcha_port(self) -> CaptchaPort:
+        if self._captcha_port is not None:
+            return self._captcha_port
+        provider = self._settings.captcha_provider
+        if provider == "turnstile" and self._settings.captcha_secret is not None:
+            self._captcha_port = CloudflareTurnstileProvider(
+                secret=self._settings.captcha_secret.get_secret_value(),
+                http_client=self.http_client,
+                timeout_s=self._settings.cyberdyne_auth_request_timeout_s,
+            )
+        else:
+            # Default: always-pass. Logs a warning in non-local envs so a
+            # misconfigured production deploy doesn't silently accept
+            # any body.
+            self._captcha_port = AlwaysPassCaptchaProvider(environment=self._settings.environment)
+        return self._captcha_port
+
+    @property
+    def email_notifier(self) -> EmailNotifierPort:
+        if self._email_notifier is None:
+            # Only logger-backed in Phase 2; real SMTP / Postmark lands
+            # when the provider is provisioned.
+            self._email_notifier = LoggingEmailNotifier()
+        return self._email_notifier
 
     async def aclose(self) -> None:
         if self._service_token_provider is not None:

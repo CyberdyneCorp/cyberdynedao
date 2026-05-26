@@ -16,8 +16,14 @@ from cyberdyne_backend.infrastructure.settings import get_settings
 # Import every package that defines SQLAlchemy models so they register
 # against Base.metadata before autogenerate runs. Add new modules here
 # when new bounded contexts ship persistence adapters.
+from cyberdyne_backend.adapters.outbound.persistence.blog import (  # noqa: F401
+    models as _blog_models,
+)
 from cyberdyne_backend.adapters.outbound.persistence.content import (  # noqa: F401
     models as _content_models,
+)
+from cyberdyne_backend.adapters.outbound.persistence.leads import (  # noqa: F401
+    models as _leads_models,
 )
 
 config = context.config

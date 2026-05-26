@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     # frontend FQDN(s) — e.g. ``https://cyberdyne.coolify.cyberdynecorp.ai``.
     cors_origins: str = "http://localhost:5173"
 
+    # Public URL the frontend is served from. Used by the RSS feed to
+    # build absolute post URLs. Should match the primary CORS origin
+    # in prod.
+    public_site_url: str = "http://localhost:5173"
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
@@ -67,6 +72,12 @@ class Settings(BaseSettings):
     cyberdyne_auth_client_secret: SecretStr | None = None
     cyberdyne_auth_oauth_scopes: str = ""
     cyberdyne_auth_oauth_audience: str | None = None
+
+    # ── Captcha (Phase 2 — Contact form) ──────────────────────────────
+    # "mock" = always-pass (safe for dev / tests). "turnstile" = real
+    # Cloudflare siteverify; requires captcha_secret.
+    captcha_provider: Literal["mock", "turnstile"] = "mock"
+    captcha_secret: SecretStr | None = None
 
     @field_validator("log_level")
     @classmethod

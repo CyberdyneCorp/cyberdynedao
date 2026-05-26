@@ -14,21 +14,71 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from cyberdyne_backend import __version__
+from cyberdyne_backend.adapters.inbound.api.blog.router import (
+    admin_router as blog_admin_router,
+)
+from cyberdyne_backend.adapters.inbound.api.blog.router import (
+    get_create_post_uc,
+    get_list_posts_uc,
+    get_post_uc,
+    get_publish_post_uc,
+    get_rss_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.blog.router import (
+    public_router as blog_public_router,
+)
 from cyberdyne_backend.adapters.inbound.api.content.router import (
+    get_contact_page_uc,
     get_cyberdyne_page_uc,
+    get_list_projects_uc,
+    get_list_resources_uc,
     get_list_team_uc,
+    get_services_page_uc,
 )
 from cyberdyne_backend.adapters.inbound.api.content.router import (
     router as content_router,
 )
+from cyberdyne_backend.adapters.inbound.api.leads.router import (
+    admin_router as leads_admin_router,
+)
+from cyberdyne_backend.adapters.inbound.api.leads.router import (
+    get_admin_list_asks_uc,
+    get_admin_update_ask_uc,
+    get_create_ask_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.leads.router import (
+    public_router as leads_public_router,
+)
 from cyberdyne_backend.adapters.inbound.health.router import router as health_router
 from cyberdyne_backend.adapters.inbound.middleware.auth import AuthMiddleware
+from cyberdyne_backend.adapters.outbound.persistence.blog.repository import (
+    SqlAlchemyBlogRepository,
+)
 from cyberdyne_backend.adapters.outbound.persistence.content.repository import (
     SqlAlchemyContentRepository,
 )
+from cyberdyne_backend.adapters.outbound.persistence.leads.repository import (
+    SqlAlchemyAskRepository,
+)
+from cyberdyne_backend.application.blog import (
+    CreateBlogPost,
+    GenerateRssFeed,
+    GetBlogPost,
+    ListBlogPosts,
+    PublishBlogPost,
+)
 from cyberdyne_backend.application.content.use_cases import (
+    GetContactPage,
     GetCyberdynePage,
+    GetServicesPage,
+    ListProjects,
+    ListResourceGroups,
     ListTeam,
+)
+from cyberdyne_backend.application.leads import (
+    AdminListAsks,
+    AdminUpdateAsk,
+    CreateAsk,
 )
 from cyberdyne_backend.infrastructure.container import Container
 from cyberdyne_backend.infrastructure.database.engine import (
@@ -88,11 +138,82 @@ def create_app() -> FastAPI:
         async with session_scope() as session:
             yield GetCyberdynePage(repo=SqlAlchemyContentRepository(session))
 
+    async def _list_projects_dep() -> AsyncIterator[ListProjects]:
+        async with session_scope() as session:
+            yield ListProjects(repo=SqlAlchemyContentRepository(session))
+
+    async def _services_page_dep() -> AsyncIterator[GetServicesPage]:
+        async with session_scope() as session:
+            yield GetServicesPage(repo=SqlAlchemyContentRepository(session))
+
+    async def _contact_page_dep() -> AsyncIterator[GetContactPage]:
+        async with session_scope() as session:
+            yield GetContactPage(repo=SqlAlchemyContentRepository(session))
+
+    async def _list_resources_dep() -> AsyncIterator[ListResourceGroups]:
+        async with session_scope() as session:
+            yield ListResourceGroups(repo=SqlAlchemyContentRepository(session))
+
+    async def _create_ask_dep() -> AsyncIterator[CreateAsk]:
+        async with session_scope() as session:
+            yield CreateAsk(
+                repo=SqlAlchemyAskRepository(session),
+                captcha=container.captcha_port,
+                notifier=container.email_notifier,
+            )
+
+    async def _admin_list_asks_dep() -> AsyncIterator[AdminListAsks]:
+        async with session_scope() as session:
+            yield AdminListAsks(repo=SqlAlchemyAskRepository(session))
+
+    async def _admin_update_ask_dep() -> AsyncIterator[AdminUpdateAsk]:
+        async with session_scope() as session:
+            yield AdminUpdateAsk(repo=SqlAlchemyAskRepository(session))
+
+    async def _list_blog_posts_dep() -> AsyncIterator[ListBlogPosts]:
+        async with session_scope() as session:
+            yield ListBlogPosts(repo=SqlAlchemyBlogRepository(session))
+
+    async def _get_blog_post_dep() -> AsyncIterator[GetBlogPost]:
+        async with session_scope() as session:
+            yield GetBlogPost(repo=SqlAlchemyBlogRepository(session))
+
+    async def _create_blog_post_dep() -> AsyncIterator[CreateBlogPost]:
+        async with session_scope() as session:
+            yield CreateBlogPost(repo=SqlAlchemyBlogRepository(session))
+
+    async def _publish_blog_post_dep() -> AsyncIterator[PublishBlogPost]:
+        async with session_scope() as session:
+            yield PublishBlogPost(repo=SqlAlchemyBlogRepository(session))
+
+    async def _rss_feed_dep() -> AsyncIterator[GenerateRssFeed]:
+        async with session_scope() as session:
+            yield GenerateRssFeed(
+                repo=SqlAlchemyBlogRepository(session),
+                site_url=settings.public_site_url,
+            )
+
     app.dependency_overrides[get_list_team_uc] = _list_team_dep
     app.dependency_overrides[get_cyberdyne_page_uc] = _cyberdyne_page_dep
+    app.dependency_overrides[get_list_projects_uc] = _list_projects_dep
+    app.dependency_overrides[get_services_page_uc] = _services_page_dep
+    app.dependency_overrides[get_contact_page_uc] = _contact_page_dep
+    app.dependency_overrides[get_list_resources_uc] = _list_resources_dep
+    app.dependency_overrides[get_create_ask_uc] = _create_ask_dep
+    app.dependency_overrides[get_admin_list_asks_uc] = _admin_list_asks_dep
+    app.dependency_overrides[get_admin_update_ask_uc] = _admin_update_ask_dep
+    app.dependency_overrides[get_list_posts_uc] = _list_blog_posts_dep
+    app.dependency_overrides[get_post_uc] = _get_blog_post_dep
+    app.dependency_overrides[get_create_post_uc] = _create_blog_post_dep
+    app.dependency_overrides[get_publish_post_uc] = _publish_blog_post_dep
+    app.dependency_overrides[get_rss_uc] = _rss_feed_dep
 
     app.include_router(health_router)
     app.include_router(content_router)
+    app.include_router(leads_public_router)
+    app.include_router(leads_admin_router)
+    app.include_router(blog_public_router)
+    app.include_router(blog_admin_router)
     return app
 
 
