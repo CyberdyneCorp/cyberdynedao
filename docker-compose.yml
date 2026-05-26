@@ -1,0 +1,150 @@
+# Coolify-deployable top-level compose.
+#
+# Rules baked in from /Users/leonardoaraujo/work/leo-obsidian-vault/
+# Infrastructure/Coolify/ (production-proven on OrgPilot, amini0, Bridge):
+#
+#   1. Use `expose`, never `ports` — Traefik routes externally.
+#   2. NO custom Traefik labels — Coolify auto-generates them from the
+#      "Domains" field. Custom labels create orphaned Traefik services.
+#   3. NO custom `networks:` block — Coolify attaches its own bridge.
+#      Declaring our own makes containers multi-homed and Traefik
+#      latches onto the unreachable IP (intermittent 504s).
+#   4. NO `container_name` — Coolify prefixes names; hardcoding breaks
+#      rolling deploys.
+#   5. Healthchecks hit `127.0.0.1` (not `localhost`) and use GET-based
+#      probes (not `--spider`). Traefik skips unhealthy containers.
+#   6. `depends_on` uses `condition: service_healthy` so the backend
+#      doesn't start before Postgres accepts connections.
+#   7. Service names ARE hostnames inside the compose network
+#      (e.g. `postgres:5432`).
+#   8. Secrets live in Coolify env vars, NEVER in this file.
+#   9. `VITE_*` and `PUBLIC_*` build args go in `build.args` (baked
+#      at build time); runtime config goes in `environment`.
+#  10. In Coolify, set `SERVICE_FQDN_BACKEND=https://<host>:8000` and
+#      `SERVICE_FQDN_FRONTEND=https://<host>:80` — the port suffix is
+#      mandatory or Traefik returns 503 "no available server".
+
+services:
+  # ── Infrastructure ──────────────────────────────────────────────────
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cyberdyne}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cyberdyne}
+      POSTGRES_DB: ${POSTGRES_DB:-cyberdyne}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cyberdyne} -d ${POSTGRES_DB:-cyberdyne}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Application ─────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      target: production
+    restart: unless-stopped
+    environment:
+      # ---- Runtime ----
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      PORT: "8000"
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://cyberdyne.coolify.cyberdynecorp.ai}
+      PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:-https://cyberdyne.coolify.cyberdynecorp.ai}
+
+      # ---- Database ----
+      # Service-name hostname; never `localhost` here.
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-cyberdyne}:${POSTGRES_PASSWORD:-cyberdyne}@postgres:5432/${POSTGRES_DB:-cyberdyne}
+
+      # ---- CyberdyneAuth ----
+      CYBERDYNE_AUTH_BASE_URL: ${CYBERDYNE_AUTH_BASE_URL:-https://auth.backend.coolify.cyberdynecorp.ai}
+      CYBERDYNE_AUTH_CLIENT_ID: ${CYBERDYNE_AUTH_CLIENT_ID}
+      CYBERDYNE_AUTH_CLIENT_SECRET: ${CYBERDYNE_AUTH_CLIENT_SECRET}
+      CYBERDYNE_AUTH_OAUTH_SCOPES: ${CYBERDYNE_AUTH_OAUTH_SCOPES}
+      CYBERDYNE_AUTH_OAUTH_AUDIENCE: ${CYBERDYNE_AUTH_OAUTH_AUDIENCE}
+
+      # ---- Captcha (Phase 2) ----
+      CAPTCHA_PROVIDER: ${CAPTCHA_PROVIDER:-mock}
+      CAPTCHA_SECRET: ${CAPTCHA_SECRET}
+
+      # ---- Learning certificate signer (Phase 4) ----
+      CERT_SIGNING_KEY: ${CERT_SIGNING_KEY}
+
+      # ---- DAO treasury / Web3 (Phase 5) ----
+      CHAIN_READER_PROVIDER: ${CHAIN_READER_PROVIDER:-fake}
+      DAO_TREASURY_ADDRESS: ${DAO_TREASURY_ADDRESS}
+      BASE_RPC_URL: ${BASE_RPC_URL}
+      DAO_SNAPSHOT_TTL_S: ${DAO_SNAPSHOT_TTL_S:-300}
+      DAO_HOLDERS_COUNT: ${DAO_HOLDERS_COUNT:-0}
+
+      # ---- Marketplace / Stripe (Phase 6) ----
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      STRIPE_SUCCESS_URL: ${STRIPE_SUCCESS_URL:-https://cyberdyne.coolify.cyberdynecorp.ai/marketplace?session={CHECKOUT_SESSION_ID}}
+      STRIPE_CANCEL_URL: ${STRIPE_CANCEL_URL:-https://cyberdyne.coolify.cyberdynecorp.ai/marketplace?cancelled=1}
+
+      # ---- AI chat (Phase 6) ----
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      CYBERRAG_MCP_URL: ${CYBERRAG_MCP_URL}
+    expose:
+      - "8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      # GET-based probe against 127.0.0.1 (not `localhost`, not HEAD).
+      test:
+        - "CMD"
+        - "python"
+        - "-c"
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=5).status == 200 else 1)"
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # GitHub Packages auth for @cyberdynecorp/* — set is_build=true in
+        # Coolify so this lands in the build context.
+        NPM_TOKEN: ${NPM_TOKEN}
+
+        # Vite bakes import.meta.env at build time → these MUST be build
+        # args, not runtime env. Set is_build=true in Coolify.
+        VITE_BACKEND_API_URL: ${VITE_BACKEND_API_URL:-https://api.cyberdyne.coolify.cyberdynecorp.ai}
+        VITE_INFURA_ENDPOINT: ${VITE_INFURA_ENDPOINT}
+        VITE_CHAIN_ID: ${VITE_CHAIN_ID:-8453}
+        VITE_NETWORK_NAME: ${VITE_NETWORK_NAME:-Base}
+        VITE_NATIVE_CURRENCY: ${VITE_NATIVE_CURRENCY:-ETH}
+        VITE_APP_NAME: ${VITE_APP_NAME:-Cyberdyne}
+        VITE_REOWN_PROJECT_ID: ${VITE_REOWN_PROJECT_ID}
+        VITE_REOWN_APP_NAME: ${VITE_REOWN_APP_NAME:-Cyberdyne}
+        VITE_REOWN_APP_DESCRIPTION: ${VITE_REOWN_APP_DESCRIPTION}
+        VITE_REOWN_APP_URL: ${VITE_REOWN_APP_URL}
+        VITE_REOWN_APP_ICON: ${VITE_REOWN_APP_ICON}
+        VITE_WEB3AUTH_CLIENT_ID: ${VITE_WEB3AUTH_CLIENT_ID}
+        VITE_WEB3AUTH_NETWORK: ${VITE_WEB3AUTH_NETWORK}
+        VITE_CYBERDYNE_ACCESS_NFT_ADDRESS: ${VITE_CYBERDYNE_ACCESS_NFT_ADDRESS}
+    restart: unless-stopped
+    expose:
+      - "80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      # nginx serves the SPA on :80. GET / against 127.0.0.1 so Traefik
+      # doesn't drop the container as unhealthy and 503 the whole site.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+
+volumes:
+  postgres_data:
