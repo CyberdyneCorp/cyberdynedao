@@ -477,11 +477,106 @@ class TestToolDispatcher:
         )
         assert json.loads(result)["error"] == "unknown_tool"
 
+    async def test_capture_project_idea_persists_structured_body(self) -> None:
+        ask_repo = _FakeAskRepo()
+        notifier = _RecordingAskNotifier()
+        ctx = _build_ctx(ask_repo=ask_repo, ask_notifier=notifier)
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x",
+                name="capture_project_idea",
+                arguments_json=json.dumps(
+                    {
+                        "name": "Bob",
+                        "email": "bob@x.io",
+                        "project_title": "Geospatial risk dashboard for orchards",
+                        "description": "Need a STAC-backed dashboard showing parametric risk for fruit growers.",
+                        "scope": "one_time",
+                        "budget_range": "$10k-$25k",
+                        "timeline": "Q3 2026",
+                        "domain": "geospatial",
+                    }
+                ),
+            )
+        )
+        parsed = json.loads(result)
+        assert parsed["ok"] is True
+        assert parsed["captured"]["project_title"].startswith("Geospatial")
+        assert parsed["captured"]["scope"] == "one_time"
+        assert parsed["captured"]["budget_range"] == "$10k-$25k"
+        assert len(ask_repo.saved) == 1
+        # Body is structured-markdown so admins see fields at a glance.
+        saved = ask_repo.saved[0]
+        assert "Geospatial risk dashboard" in saved.body
+        assert "Scope:** one_time" in saved.body
+        assert "Budget:** $10k" in saved.body
+        assert "Timeline:** Q3 2026" in saved.body
+        assert "Domain:** geospatial" in saved.body
+        assert len(notifier.sent) == 1
+
+    async def test_capture_project_idea_validates_required_fields(self) -> None:
+        result = await ToolDispatcher(_build_ctx()).dispatch(
+            ToolCall(
+                id="x",
+                name="capture_project_idea",
+                arguments_json=json.dumps(
+                    {
+                        "name": "Bob",
+                        "email": "bob@x.io",
+                        "project_title": "",
+                        "description": "",
+                    }
+                ),
+            )
+        )
+        assert json.loads(result)["error"] == "missing_required_fields"
+
+    async def test_capture_project_idea_omits_blank_optional_fields(self) -> None:
+        ask_repo = _FakeAskRepo()
+        ctx = _build_ctx(ask_repo=ask_repo)
+        await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x",
+                name="capture_project_idea",
+                arguments_json=json.dumps(
+                    {
+                        "name": "Bob",
+                        "email": "bob@x.io",
+                        "project_title": "Foo",
+                        "description": "Bar.",
+                    }
+                ),
+            )
+        )
+        saved = ask_repo.saved[0]
+        assert "Budget" not in saved.body
+        assert "Timeline" not in saved.body
+        assert "Domain" not in saved.body
+        # Scope defaults to 'unknown' so it's always listed.
+        assert "Scope:** unknown" in saved.body
+
     async def test_bad_arguments_json_returns_error(self) -> None:
         result = await ToolDispatcher(_build_ctx()).dispatch(
             ToolCall(id="x", name="list_projects", arguments_json="{not json")
         )
         assert json.loads(result)["error"] == "invalid_arguments_json"
+
+
+class TestSystemPrompt:
+    def test_includes_cyberdyne_identity_and_tool_guidance(self) -> None:
+        from cyberdyne_backend.application.ai_chat.use_cases import SYSTEM_PROMPT
+
+        # Persona + identity is baked in so the agent doesn't burn a
+        # list_projects round just to introduce itself.
+        assert "Cyberdyne" in SYSTEM_PROMPT
+        assert "five domains" in SYSTEM_PROMPT.lower()
+        # Behavioral rails for lead capture.
+        assert "capture_project_idea" in SYSTEM_PROMPT
+        assert "create_ask_for_handoff" in SYSTEM_PROMPT
+        # Operational guidance the agent must follow at runtime.
+        assert "confirm" in SYSTEM_PROMPT.lower()  # email confirmation rule
+        assert "lookup" in SYSTEM_PROMPT.lower()
+        assert "search_cyberdyne_knowledge" in SYSTEM_PROMPT
 
 
 # Suppress unused-import warning.

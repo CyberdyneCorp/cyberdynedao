@@ -12,6 +12,7 @@
 	import LearnView from './LearnView.svelte';
 	import ContactView from './ContactView.svelte';
 	import MatlabView from './MatlabView.svelte';
+	import AgentView from './AgentView.svelte';
 	import type { MarketplaceItem } from '$lib/types/components';
 
 	export let content: string;
@@ -43,6 +44,8 @@
 	<ContactView />
 {:else if content === 'matlab'}
 	<MatlabView />
+{:else if content === 'agent'}
+	<AgentView />
 {:else}
 	<NewsView {isMobile} />
 {/if}

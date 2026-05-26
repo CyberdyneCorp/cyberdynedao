@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges">
+  <!-- Background tile (purple, drop-shadow layer matches the
+       other desktop icons in the family) -->
+  <rect x="6" y="9" width="55" height="51" fill="#4c1d95"/>
+  <rect x="3" y="5" width="55" height="51" fill="#a855f7" stroke="#000" stroke-width="2"/>
+
+  <!-- Pixel-art "robot head" silhouette -->
+  <g stroke="#000" stroke-width="1.5">
+    <!-- Head -->
+    <rect x="14" y="14" width="28" height="26" fill="#fff7ed"/>
+    <!-- Antenna -->
+    <rect x="26" y="9" width="4" height="5" fill="#000"/>
+    <circle cx="28" cy="9" r="2" fill="#fbbf24" stroke="#000" stroke-width="1"/>
+    <!-- Eyes -->
+    <rect x="18" y="22" width="5" height="5" fill="#22c55e"/>
+    <rect x="33" y="22" width="5" height="5" fill="#22c55e"/>
+    <!-- Mouth grid -->
+    <rect x="20" y="32" width="3" height="2" fill="#000"/>
+    <rect x="25" y="32" width="3" height="2" fill="#000"/>
+    <rect x="30" y="32" width="3" height="2" fill="#000"/>
+    <rect x="35" y="32" width="3" height="2" fill="#000"/>
+  </g>
+
+  <!-- Small chat tail (suggests dialogue) -->
+  <g fill="#fff7ed" stroke="#000" stroke-width="1.5">
+    <polygon points="42,36 50,40 42,44"/>
+  </g>
+</svg>

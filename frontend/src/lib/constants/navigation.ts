@@ -15,7 +15,8 @@ export const navItems: NavItem[] = [
 	{ name: 'Products', mobileLabel: 'Product', icon: '/assets/products_icon.svg' },
 	{ name: 'Team', icon: '/assets/the_team.svg' },
 	{ name: 'Marketplace', mobileLabel: 'Market', icon: '/assets/marketplace_icon.svg' },
-	{ name: 'MATLAB', icon: '/assets/matlab_icon.svg' }
+	{ name: 'MATLAB', icon: '/assets/matlab_icon.svg' },
+	{ name: 'Agent', icon: '/assets/agent_icon.svg' }
 ];
 
 export const viewMap: { [key: string]: any } = {
@@ -29,5 +30,6 @@ export const viewMap: { [key: string]: any } = {
 	'DAO': 'dao',
 	'Products': 'products',
 	'Team': 'team',
-	'MATLAB': 'matlab'
+	'MATLAB': 'matlab',
+	'Agent': 'agent'
 };
