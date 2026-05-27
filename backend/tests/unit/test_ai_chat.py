@@ -235,10 +235,23 @@ class _StubKnowledge:
         return f"stub:{query}"
 
 
+class _CapturingLLM:
+    """Records the system_prompt of the last call, returns a fixed reply."""
+
+    def __init__(self, reply: str = "ok") -> None:
+        self.last_system_prompt: str | None = None
+        self._reply = reply
+
+    async def complete(self, *, messages, tools, system_prompt):
+        self.last_system_prompt = system_prompt
+        return LLMResponse(content=self._reply, model="m")
+
+
 def _build_ctx(
     *,
     ask_repo: _FakeAskRepo | None = None,
     ask_notifier: _RecordingAskNotifier | None = None,
+    user: object | None = None,
 ) -> ToolContext:
     content = _FakeContentRepo()
     learning = _FakeLearningRepo()
@@ -252,6 +265,7 @@ def _build_ctx(
         ask_repo=ask_repo or _FakeAskRepo(),
         captcha=_AlwaysPassCaptcha(),
         ask_notifier=ask_notifier or _RecordingAskNotifier(),
+        user=user,  # type: ignore[arg-type]
     )
 
 
@@ -560,6 +574,112 @@ class TestToolDispatcher:
             ToolCall(id="x", name="list_projects", arguments_json="{not json")
         )
         assert json.loads(result)["error"] == "invalid_arguments_json"
+
+
+class TestUserPersonalization:
+    def _profile(self, **kw):
+        from cyberdyne_backend.domain.auth_identity import UserProfile
+
+        base = dict(
+            user_id=uuid.uuid4(),
+            email="leo@amini.ai",
+            wallet_address="0xABCDEF0000000000000000000000000000001234",
+            organization_id=None,
+            is_email_verified=True,
+        )
+        base.update(kw)
+        return UserProfile(**base)  # type: ignore[arg-type]
+
+    def test_context_block_empty_for_anonymous(self) -> None:
+        from cyberdyne_backend.application.ai_chat.use_cases import build_user_context_block
+
+        assert build_user_context_block(None) == ""
+
+    def test_context_block_includes_email_wallet_handle(self) -> None:
+        from cyberdyne_backend.application.ai_chat.use_cases import build_user_context_block
+
+        block = build_user_context_block(self._profile())
+        assert "leo@amini.ai" in block
+        assert "verified" in block
+        assert "0xABCDEF" in block
+        assert "leo" in block  # display_name = email local part
+
+    async def test_run_turn_injects_profile_into_prompt(self) -> None:
+        repo = _FakeChatRepo()
+        session = await StartChatSession(repo=repo).execute()
+        llm = _CapturingLLM()
+        uc = RunChatTurn(
+            repo=repo,
+            llm=llm,
+            dispatcher=ToolDispatcher(_build_ctx()),
+            user=self._profile(),
+        )
+        await uc.execute(session_id=session.id, user_content="hi")
+        assert llm.last_system_prompt is not None
+        assert "leo@amini.ai" in llm.last_system_prompt
+        # The static persona is still present — we append, not replace.
+        assert "Cyberdyne terminal assistant" in llm.last_system_prompt
+
+    async def test_run_turn_anonymous_prompt_unchanged(self) -> None:
+        from cyberdyne_backend.application.ai_chat.use_cases import SYSTEM_PROMPT
+
+        repo = _FakeChatRepo()
+        session = await StartChatSession(repo=repo).execute()
+        llm = _CapturingLLM()
+        uc = RunChatTurn(repo=repo, llm=llm, dispatcher=ToolDispatcher(_build_ctx()))
+        await uc.execute(session_id=session.id, user_content="hi")
+        assert llm.last_system_prompt == SYSTEM_PROMPT
+
+    async def test_capture_project_idea_prefills_email_from_profile(self) -> None:
+        ask_repo = _FakeAskRepo()
+        ctx = _build_ctx(ask_repo=ask_repo, user=self._profile())
+        # LLM omits email entirely — should fall back to the profile.
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x",
+                name="capture_project_idea",
+                arguments_json=json.dumps(
+                    {
+                        "name": "",
+                        "email": "",
+                        "project_title": "RAG for docs",
+                        "description": "Index our PDFs.",
+                    }
+                ),
+            )
+        )
+        assert json.loads(result)["ok"] is True
+        saved = ask_repo.saved[0]
+        assert saved.email == "leo@amini.ai"
+        assert saved.name == "leo"  # display_name fallback
+
+    async def test_create_ask_prefills_email_from_profile(self) -> None:
+        ask_repo = _FakeAskRepo()
+        ctx = _build_ctx(ask_repo=ask_repo, user=self._profile())
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x",
+                name="create_ask_for_handoff",
+                arguments_json=json.dumps({"name": "", "email": "", "body": "call me"}),
+            )
+        )
+        assert json.loads(result)["ok"] is True
+        assert ask_repo.saved[0].email == "leo@amini.ai"
+
+    async def test_explicit_email_arg_overrides_profile(self) -> None:
+        ask_repo = _FakeAskRepo()
+        ctx = _build_ctx(ask_repo=ask_repo, user=self._profile())
+        await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x",
+                name="create_ask_for_handoff",
+                arguments_json=json.dumps(
+                    {"name": "Pat", "email": "pat@other.io", "body": "hi"}
+                ),
+            )
+        )
+        assert ask_repo.saved[0].email == "pat@other.io"
+        assert ask_repo.saved[0].name == "Pat"
 
 
 class TestSystemPrompt:

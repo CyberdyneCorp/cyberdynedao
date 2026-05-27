@@ -32,7 +32,10 @@ BEARER_PREFIX = "Bearer "
 EDITOR_SCOPE = "editor"
 
 
-def _extract_token(request: Request) -> str | None:
+def extract_token(request: Request) -> str | None:
+    """Pull the bearer token from the Authorization header or the
+    ``access_token`` cookie. Public so non-middleware code (e.g. the
+    chat profile lookup) can reuse the same precedence rules."""
     auth_header = request.headers.get("authorization")
     if auth_header and auth_header.startswith(BEARER_PREFIX):
         return auth_header[len(BEARER_PREFIX) :].strip() or None
@@ -40,6 +43,10 @@ def _extract_token(request: Request) -> str | None:
     if cookie_token:
         return cookie_token
     return None
+
+
+# Backwards-compatible private alias (internal callers below).
+_extract_token = extract_token
 
 
 class AuthMiddleware(BaseHTTPMiddleware):

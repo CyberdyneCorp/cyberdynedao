@@ -17,6 +17,7 @@ from cyberdyne_backend.domain.ai_chat import (
     new_tool_message,
     new_user_message,
 )
+from cyberdyne_backend.domain.auth_identity import UserProfile
 
 logger = logging.getLogger("cyberdyne_backend.ai_chat")
 
@@ -74,6 +75,35 @@ materials + licenses) and the service-engagement funnel.
 MAX_TOOL_ROUNDS = 4
 
 
+def build_user_context_block(profile: UserProfile | None) -> str:
+    """Render the authenticated-user block appended to the system prompt.
+
+    Empty string for anonymous visitors (no change in behavior). When a
+    user is signed in, this tells the agent who it's talking to and —
+    crucially — that it should reuse the known email/wallet for lead
+    capture instead of asking for details we already hold.
+    """
+    if profile is None:
+        return ""
+    lines = ["", "# Current user (authenticated — do not ask for what's already here)"]
+    if profile.email:
+        verified = "verified" if profile.is_email_verified else "unverified"
+        lines.append(f"  - email: {profile.email} ({verified})")
+    if profile.wallet_address:
+        lines.append(f"  - wallet: {profile.wallet_address}")
+    if profile.organization_id:
+        lines.append(f"  - organization_id: {profile.organization_id}")
+    handle = profile.display_name
+    if handle:
+        lines.append(f"  - address them as: {handle}")
+    lines.append(
+        "When they propose a project or ask to be contacted, reuse the email "
+        "above in capture_project_idea / create_ask_for_handoff — confirm it "
+        "back in plain text first, but don't ask them to re-type it."
+    )
+    return "\n".join(lines)
+
+
 @dataclass(slots=True)
 class StartChatSession:
     repo: ChatRepository
@@ -104,6 +134,7 @@ class RunChatTurn:
     llm: ChatLLMPort
     dispatcher: ToolDispatcher
     system_prompt: str = SYSTEM_PROMPT
+    user: UserProfile | None = None
     max_tool_rounds: int = MAX_TOOL_ROUNDS
 
     async def execute(self, *, session_id: UUID, user_content: str) -> ChatMessage:
@@ -112,12 +143,13 @@ class RunChatTurn:
         user_msg = new_user_message(session_id=session_id, content=user_content)
         await self.repo.append_message(user_msg)
 
+        effective_prompt = self.system_prompt + build_user_context_block(self.user)
         for _ in range(self.max_tool_rounds):
             transcript = await self.repo.list_messages(session_id)
             response = await self.llm.complete(
                 messages=transcript,
                 tools=CYBERDYNE_TOOLS,
-                system_prompt=self.system_prompt,
+                system_prompt=effective_prompt,
             )
             assistant_msg = new_assistant_message(
                 session_id=session_id,
