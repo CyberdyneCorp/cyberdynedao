@@ -10,6 +10,17 @@
 	let textareaEl = $state<HTMLTextAreaElement | null>(null);
 	let uploadInputEl = $state<HTMLInputElement | null>(null);
 	let workspaceOpen = $state<boolean>(true);
+	// Per-plot expanded state (keyed by blob URL). Plots default to a
+	// compact 240 px so a figure doesn't dominate the scrollback;
+	// click toggles to the full size.
+	let expandedPlots = $state<Set<string>>(new Set());
+
+	function togglePlot(url: string) {
+		const next = new Set(expandedPlots);
+		if (next.has(url)) next.delete(url);
+		else next.add(url);
+		expandedPlots = next;
+	}
 
 	// Auto-scroll the cell log to the bottom whenever a new cell lands
 	// or finishes streaming.
@@ -192,10 +203,22 @@ x = linspace(0, 2*pi, 200); plot(x, sin(x).*cos(2*x))</pre>
 						<div class="cell__plots">
 							{#each cell.plots as plotItem, i (plotItem.url)}
 								{#if plotItem.contentType.startsWith('image/')}
-									<figure class="plot">
-										<img src={plotItem.url} alt={`Figure ${i + 1} from cell ${cell.id}`} loading="lazy" />
+									{@const expanded = expandedPlots.has(plotItem.url)}
+									<figure class="plot" class:plot--expanded={expanded}>
+										<button
+											type="button"
+											class="plot__zoom"
+											aria-label={expanded ? 'Collapse figure' : 'Expand figure'}
+											onclick={() => togglePlot(plotItem.url)}
+										>
+											<img
+												src={plotItem.url}
+												alt={`Figure ${i + 1} from cell ${cell.id}`}
+												loading="lazy"
+											/>
+										</button>
 										<figcaption>
-											Figure {i + 1} · {(plotItem.bytes / 1024).toFixed(1)} KB · {plotItem.contentType}
+											Figure {i + 1} · {(plotItem.bytes / 1024).toFixed(1)} KB · click to {expanded ? 'collapse' : 'expand'}
 										</figcaption>
 									</figure>
 								{:else}
@@ -565,12 +588,28 @@ x = linspace(0, 2*pi, 200); plot(x, sin(x).*cos(2*x))</pre>
 		box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.5);
 		padding: 8px;
 	}
+	.plot__zoom {
+		all: unset;
+		display: block;
+		width: 100%;
+		cursor: zoom-in;
+	}
+	.plot--expanded .plot__zoom {
+		cursor: zoom-out;
+	}
+	.plot__zoom:focus-visible {
+		outline: 2px solid var(--accent, #f97316);
+		outline-offset: 2px;
+	}
 	.plot img {
 		display: block;
 		width: 100%;
 		height: auto;
-		max-height: 480px;
+		max-height: 240px;
 		object-fit: contain;
+	}
+	.plot--expanded img {
+		max-height: 70vh;
 	}
 	.plot figcaption {
 		font-size: 0.7rem;
