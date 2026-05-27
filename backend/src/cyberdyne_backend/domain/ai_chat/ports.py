@@ -72,7 +72,9 @@ class MatlabPort(Protocol):
     the signed-in user (``bearer`` is the user's CyberdyneAuth token),
     so figures land in that user's per-session workspace."""
 
-    async def run_repl(self, *, source: str, session_id: str, bearer: str | None) -> MatlabRunResult: ...
+    async def run_repl(
+        self, *, source: str, session_id: str, bearer: str | None
+    ) -> MatlabRunResult: ...
 
     async def run_plot(
         self, *, source: str, session_id: str, bearer: str | None, fmt: str = "png"

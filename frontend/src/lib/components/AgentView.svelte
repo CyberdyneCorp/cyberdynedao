@@ -19,6 +19,31 @@
 		expandedPlots = next;
 	}
 
+	// Split assistant text into prose + fenced code blocks so code (e.g.
+	// the MATLAB the agent wrote) renders monospace/bordered instead of
+	// as a wall of plain text. XSS-safe: rendered through Svelte markup,
+	// no {@html}.
+	type Segment = { kind: 'text'; text: string } | { kind: 'code'; lang: string; code: string };
+	function parseSegments(content: string): Segment[] {
+		const segments: Segment[] = [];
+		const fence = /```([a-zA-Z0-9_+-]*)\n?([\s\S]*?)```/g;
+		let last = 0;
+		let m: RegExpExecArray | null;
+		while ((m = fence.exec(content)) !== null) {
+			if (m.index > last) {
+				const text = content.slice(last, m.index).trim();
+				if (text) segments.push({ kind: 'text', text });
+			}
+			segments.push({ kind: 'code', lang: m[1] || '', code: m[2].replace(/\n$/, '') });
+			last = fence.lastIndex;
+		}
+		const tail = content.slice(last).trim();
+		if (tail) segments.push({ kind: 'text', text: tail });
+		// No fences → a single text segment (covers the common case).
+		if (segments.length === 0 && content) segments.push({ kind: 'text', text: content });
+		return segments;
+	}
+
 	// Download each figure once (authed /api/matlab proxy → blob URL) and
 	// memoize the promise so re-renders don't re-fetch. Reuses the same
 	// client + auth path as the MATLAB window.
@@ -154,7 +179,18 @@
 					{:else if bubble.error}
 						<p class="bubble__error">{bubble.error}</p>
 					{:else}
-						<p class="bubble__content">{bubble.content}</p>
+						<div class="bubble__content">
+							{#each parseSegments(bubble.content) as seg}
+								{#if seg.kind === 'code'}
+									<div class="code">
+										{#if seg.lang}<span class="code__lang">{seg.lang}</span>{/if}
+										<pre>{seg.code}</pre>
+									</div>
+								{:else}
+									<p class="bubble__text">{seg.text}</p>
+								{/if}
+							{/each}
+						</div>
 					{/if}
 
 					{#if bubble.plots.length > 0}
@@ -374,7 +410,12 @@
 	}
 	.bubble--user .bubble__role { color: #1d4ed8; }
 
-	.bubble__content,
+	.bubble__content {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+	.bubble__text,
 	.bubble__error,
 	.bubble__placeholder {
 		margin: 0;
@@ -385,6 +426,36 @@
 		color: #1f2937;
 	}
 	.bubble__error { color: #b91c1c; }
+
+	/* Fenced code blocks (e.g. the MATLAB the agent wrote). */
+	.code {
+		position: relative;
+		background: #0b1120;
+		border: 2px solid #000;
+		box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.4);
+	}
+	.code__lang {
+		display: block;
+		font-size: 0.625rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: #9fb4ff;
+		background: #1a2440;
+		padding: 2px 8px;
+		border-bottom: 1px solid #2a3a66;
+	}
+	.code pre {
+		margin: 0;
+		padding: 10px 12px;
+		overflow-x: auto;
+		font-family: 'Courier New', ui-monospace, monospace;
+		font-size: 0.8125rem;
+		line-height: 1.5;
+		color: #c9ffd9;
+		white-space: pre;
+		tab-size: 2;
+	}
 
 	.bubble__placeholder {
 		display: inline-flex;

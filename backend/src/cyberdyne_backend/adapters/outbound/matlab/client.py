@@ -25,7 +25,9 @@ logger = logging.getLogger("cyberdyne_backend.matlab")
 
 
 class MatlabBackendClient:
-    def __init__(self, base_url: str, http_client: httpx.AsyncClient, timeout_s: float = 60.0) -> None:
+    def __init__(
+        self, base_url: str, http_client: httpx.AsyncClient, timeout_s: float = 60.0
+    ) -> None:
         self._base_url = base_url.rstrip("/")
         self._http = http_client
         self._timeout = timeout_s

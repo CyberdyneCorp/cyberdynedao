@@ -62,21 +62,32 @@ class OpenAIChatClient:
         }
         if tools:
             body["tools"] = [_tool_to_openai(t) for t in tools]
-        try:
-            response = await self._http.post(
-                f"{self._base_url}/chat/completions",
-                json=body,
-                headers={
-                    "Authorization": f"Bearer {self._api_key}",
-                    "Content-Type": "application/json",
-                },
-                timeout=self._timeout_s,
-            )
-        except httpx.HTTPError as exc:
-            raise ChatProviderError(f"openai transport error: {exc}") from exc
-        if response.status_code >= 400:
-            raise ChatProviderError(f"openai error {response.status_code}: {response.text[:500]}")
-        return _parse_openai_response(response.json(), default_model=self._model)
+        # Transient transport hiccups (a dropped keep-alive on the shared
+        # httpx pool, a brief network blip) surface as httpx.HTTPError
+        # with an often-empty message. One quick retry turns those from a
+        # user-visible 502 into a non-event; a real outage still fails.
+        last_exc: httpx.HTTPError | None = None
+        for attempt in range(2):
+            try:
+                response = await self._http.post(
+                    f"{self._base_url}/chat/completions",
+                    json=body,
+                    headers={
+                        "Authorization": f"Bearer {self._api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    timeout=self._timeout_s,
+                )
+            except httpx.HTTPError as exc:
+                last_exc = exc
+                logger.warning("openai transport error (attempt %d): %r", attempt + 1, exc)
+                continue
+            if response.status_code >= 400:
+                raise ChatProviderError(
+                    f"openai error {response.status_code}: {response.text[:500]}"
+                )
+            return _parse_openai_response(response.json(), default_model=self._model)
+        raise ChatProviderError(f"openai transport error: {last_exc!r}")
 
 
 def _message_to_openai(m: ChatMessage) -> dict[str, object]:

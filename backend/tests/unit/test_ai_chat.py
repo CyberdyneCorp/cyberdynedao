@@ -246,9 +246,7 @@ class _FakeMatlab:
         from cyberdyne_backend.domain.ai_chat import MatlabRunResult
 
         self.repl_calls.append({"source": source, "session_id": session_id, "bearer": bearer})
-        return MatlabRunResult(
-            ok=True, stdout="ans = 4\n", stderr="", session_id=session_id
-        )
+        return MatlabRunResult(ok=True, stdout="ans = 4\n", stderr="", session_id=session_id)
 
     async def run_plot(self, *, source, session_id, bearer, fmt="png"):
         from cyberdyne_backend.domain.ai_chat import MatlabRunResult
@@ -754,9 +752,7 @@ class TestUserPersonalization:
             ToolCall(
                 id="x",
                 name="create_ask_for_handoff",
-                arguments_json=json.dumps(
-                    {"name": "Pat", "email": "pat@other.io", "body": "hi"}
-                ),
+                arguments_json=json.dumps({"name": "Pat", "email": "pat@other.io", "body": "hi"}),
             )
         )
         assert ask_repo.saved[0].email == "pat@other.io"
