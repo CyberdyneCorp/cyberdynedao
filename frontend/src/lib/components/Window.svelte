@@ -156,13 +156,19 @@
 		};
 	});
 
+	// ``height`` (not ``min-height``) pins the window to the user's
+	// chosen size — otherwise inner content can collapse below the
+	// resized value and the window appears to "snap back" when the
+	// user types or clears the screen. Inner panels manage overflow
+	// with their own scrolling so the chosen size is authoritative.
 	$: windowStyle = `
 		left: ${window.x}px;
 		top: ${window.y}px;
 		width: ${window.maximized ? '100vw' : `${window.width}px`};
-		min-height: ${window.maximized ? '100vh' : `${window.height}px`};
+		height: ${window.maximized ? '100vh' : `${window.height}px`};
 		z-index: ${window.zIndex};
-		display: ${window.minimized ? 'none' : 'block'};
+		display: ${window.minimized ? 'none' : 'flex'};
+		flex-direction: column;
 		transition: ${isDragging || isResizing ? 'none' : 'left 0.3s ease-out, top 0.3s ease-out'};
 		${isMobile ? 'max-width: calc(100vw - 20px); max-height: calc(100vh - 20px);' : ''}
 	`;
@@ -210,7 +216,7 @@
         </div>
     </div>
 	
-    <div class="window-content" style="max-height: calc({window.height}px - 72px); {window.content === 'terminal' ? 'height: calc(' + window.height + 'px - 72px);' : ''}">
+    <div class="window-content" style="flex: 1 1 auto; min-height: 0; overflow: hidden;">
 		<TerminalWindow 
 			title={window.title}
 			showCart={window.content === 'cart'}
