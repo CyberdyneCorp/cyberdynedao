@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { Badge, PixelButton, PixelScrollArea } from '@cyberdynecorp/svelte-ui-core';
-	import { createAgentVM } from '$lib/viewmodels/agentViewModel.svelte';
+	import { createAgentVM, type AgentPlot } from '$lib/viewmodels/agentViewModel.svelte';
+	import { downloadArtifact } from '$lib/api/matlabApi';
 
 	const vm = createAgentVM();
 
@@ -16,6 +17,20 @@
 		if (next.has(key)) next.delete(key);
 		else next.add(key);
 		expandedPlots = next;
+	}
+
+	// Download each figure once (authed /api/matlab proxy → blob URL) and
+	// memoize the promise so re-renders don't re-fetch. Reuses the same
+	// client + auth path as the MATLAB window.
+	const plotUrlCache = new Map<string, Promise<string>>();
+	function plotUrl(p: AgentPlot): Promise<string> {
+		const key = `${p.sessionId}/${p.artifactPath}`;
+		let pending = plotUrlCache.get(key);
+		if (!pending) {
+			pending = downloadArtifact(p.artifactPath, p.sessionId).then((r) => r.url);
+			plotUrlCache.set(key, pending);
+		}
+		return pending;
 	}
 
 	onMount(async () => {
@@ -148,15 +163,21 @@
 								{@const key = bubble.id + '-' + i}
 								{@const expanded = expandedPlots.has(key)}
 								<figure class="plot" class:plot--expanded={expanded}>
-									<button
-										type="button"
-										class="plot__zoom"
-										aria-label={expanded ? 'Collapse figure' : 'Expand figure'}
-										onclick={() => togglePlot(key)}
-									>
-										<img src={plot.dataUrl} alt={plot.caption} loading="lazy" />
-									</button>
-									<figcaption>{plot.caption} · click to {expanded ? 'collapse' : 'expand'}</figcaption>
+									{#await plotUrl(plot)}
+										<div class="plot__loading">rendering figure…</div>
+									{:then url}
+										<button
+											type="button"
+											class="plot__zoom"
+											aria-label={expanded ? 'Collapse figure' : 'Expand figure'}
+											onclick={() => togglePlot(key)}
+										>
+											<img src={url} alt={plot.caption} loading="lazy" />
+										</button>
+										<figcaption>{plot.caption} · click to {expanded ? 'collapse' : 'expand'}</figcaption>
+									{:catch}
+										<div class="plot__loading">Figure unavailable.</div>
+									{/await}
 								</figure>
 							{/each}
 						</div>
@@ -492,5 +513,11 @@
 		font-size: 0.7rem;
 		color: #6b7280;
 		margin-top: 4px;
+	}
+	.plot__loading {
+		font-size: 0.8125rem;
+		color: #6b7280;
+		font-style: italic;
+		padding: 12px;
 	}
 </style>
