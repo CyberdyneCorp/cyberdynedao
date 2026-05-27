@@ -10,12 +10,15 @@ from cyberdyne_backend.domain.auth_identity.entities import (
     Principal,
     ServicePrincipal,
     UserPrincipal,
+    UserProfile,
+    profile_from_users_me,
 )
 from cyberdyne_backend.domain.auth_identity.ports import (
     AuthError,
     AuthPort,
     AuthServiceUnavailableError,
     InvalidTokenError,
+    UserProfilePort,
 )
 
 __all__ = [
@@ -26,4 +29,7 @@ __all__ = [
     "Principal",
     "ServicePrincipal",
     "UserPrincipal",
+    "UserProfile",
+    "UserProfilePort",
+    "profile_from_users_me",
 ]

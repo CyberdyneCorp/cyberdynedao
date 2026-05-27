@@ -46,6 +46,58 @@ class ServicePrincipal:
 Principal = UserPrincipal | ServicePrincipal
 
 
+@dataclass(frozen=True, slots=True)
+class UserProfile:
+    """Full user profile from CyberdyneAuth's ``/users/me``.
+
+    Distinct from ``UserPrincipal`` (which is just the introspected
+    token claims): this is the richer record a route fetches when it
+    actually needs contact details — e.g. the chat agent personalizing
+    a reply or pre-filling a lead. CyberdyneAuth has no display-name
+    field, so ``email`` (or its local part via ``display_name``) is the
+    closest human-readable handle.
+    """
+
+    user_id: UUID
+    email: str | None
+    wallet_address: str | None = None
+    organization_id: str | None = None
+    is_email_verified: bool = False
+
+    @property
+    def display_name(self) -> str | None:
+        if self.email:
+            return self.email.split("@", 1)[0]
+        if self.wallet_address:
+            return f"{self.wallet_address[:6]}…{self.wallet_address[-4:]}"
+        return None
+
+
+def profile_from_users_me(payload: dict[str, Any]) -> UserProfile | None:
+    """Map CyberdyneAuth's ``GET /users/me`` body to a ``UserProfile``.
+
+    Returns ``None`` when the payload lacks a usable ``id`` — callers
+    treat that as "no profile available" and degrade to anonymous.
+    """
+    raw_id = payload.get("id")
+    if not isinstance(raw_id, str):
+        return None
+    try:
+        user_id = UUID(raw_id)
+    except ValueError:
+        return None
+    email = payload.get("email")
+    wallet = payload.get("wallet_address")
+    org = payload.get("organization_id")
+    return UserProfile(
+        user_id=user_id,
+        email=email if isinstance(email, str) else None,
+        wallet_address=wallet if isinstance(wallet, str) else None,
+        organization_id=org if isinstance(org, str) else None,
+        is_email_verified=bool(payload.get("is_email_verified", False)),
+    )
+
+
 def _parse_scopes(raw: str | None) -> frozenset[str]:
     if not raw:
         return frozenset()

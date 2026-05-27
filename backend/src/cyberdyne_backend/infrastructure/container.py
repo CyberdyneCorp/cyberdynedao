@@ -11,6 +11,7 @@ import httpx
 
 from cyberdyne_backend.adapters.outbound.auth.caching_auth_port import CachingAuthPort
 from cyberdyne_backend.adapters.outbound.auth.introspection_client import IntrospectionClient
+from cyberdyne_backend.adapters.outbound.auth.profile_client import CyberdyneAuthProfileClient
 from cyberdyne_backend.adapters.outbound.auth.service_token_provider import ServiceTokenProvider
 from cyberdyne_backend.adapters.outbound.captcha.providers import (
     AlwaysPassCaptchaProvider,
@@ -41,7 +42,7 @@ from cyberdyne_backend.adapters.outbound.stripe.webhook_verifier import (
     StripeWebhookVerifier,
 )
 from cyberdyne_backend.domain.ai_chat import ChatLLMPort, KnowledgeSearchPort
-from cyberdyne_backend.domain.auth_identity import AuthPort
+from cyberdyne_backend.domain.auth_identity import AuthPort, UserProfilePort
 from cyberdyne_backend.domain.dao_treasury import ChainReaderPort
 from cyberdyne_backend.domain.leads import CaptchaPort, EmailNotifierPort
 from cyberdyne_backend.domain.learning import CertificateSigner
@@ -60,6 +61,7 @@ class Container:
         self._settings = settings
         self._http_client: httpx.AsyncClient | None = None
         self._auth_port: AuthPort | None = None
+        self._user_profile_port: UserProfilePort | None = None
         self._service_token_provider: ServiceTokenProvider | None = None
         self._captcha_port: CaptchaPort | None = None
         self._email_notifier: EmailNotifierPort | None = None
@@ -97,6 +99,19 @@ class Container:
                 ttl_s=self._settings.cyberdyne_auth_introspection_ttl_s,
             )
         return self._auth_port
+
+    @property
+    def user_profile_port(self) -> UserProfilePort:
+        """Best-effort ``/users/me`` lookup for personalizing the chat
+        agent. Carries its own TTL cache; failures resolve to None."""
+        if self._user_profile_port is None:
+            self._user_profile_port = CyberdyneAuthProfileClient(
+                base_url=str(self._settings.cyberdyne_auth_base_url),
+                http_client=self.http_client,
+                ttl_s=self._settings.cyberdyne_auth_profile_ttl_s,
+                timeout_s=self._settings.cyberdyne_auth_request_timeout_s,
+            )
+        return self._user_profile_port
 
     @property
     def service_token_provider(self) -> ServiceTokenProvider | None:

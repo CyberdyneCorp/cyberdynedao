@@ -26,6 +26,7 @@ from cyberdyne_backend.application.learning import ListPaths
 from cyberdyne_backend.application.marketplace import GetProduct
 from cyberdyne_backend.domain.ai_chat import KnowledgeSearchPort, ToolCall
 from cyberdyne_backend.domain.ai_chat.ports import ToolSchema
+from cyberdyne_backend.domain.auth_identity import UserProfile
 from cyberdyne_backend.domain.leads import (
     AskChannel,
     AskRepository,
@@ -176,6 +177,10 @@ class ToolContext:
     ask_repo: AskRepository
     captcha: CaptchaPort
     ask_notifier: EmailNotifierPort
+    # The signed-in user (if any). Lead-capture tools fall back to this
+    # email/handle when the LLM omits it, so an authenticated user never
+    # has to re-type contact details we already hold.
+    user: UserProfile | None = None
 
 
 class ToolDispatcher:
@@ -284,9 +289,21 @@ class ToolDispatcher:
         result = await self._ctx.knowledge.search(query)
         return json.dumps({"summary": result})
 
+    def _fill_identity(self, name: str, email: str) -> tuple[str, str]:
+        """Back-fill name/email from the signed-in profile when the LLM
+        left them blank, so an authenticated user isn't asked for what
+        we already have."""
+        user = self._ctx.user
+        if not email and user and user.email:
+            email = user.email
+        if not name and user:
+            name = user.display_name or (user.email or "")
+        return name.strip(), email.strip()
+
     async def _create_ask(self, args: dict[str, object]) -> str:
-        name = cast(str, args.get("name", "")).strip()
-        email = cast(str, args.get("email", "")).strip()
+        name, email = self._fill_identity(
+            cast(str, args.get("name", "")), cast(str, args.get("email", ""))
+        )
         body = cast(str, args.get("body", "")).strip()
         product_slug = cast(str | None, args.get("product_slug"))
         if not (name and email and body):
@@ -310,8 +327,9 @@ class ToolDispatcher:
         """Structured lead capture. Bundles the structured fields into a
         deterministic markdown-ish body so the admin /asks list view
         renders it sensibly without a new column schema."""
-        name = cast(str, args.get("name", "")).strip()
-        email = cast(str, args.get("email", "")).strip()
+        name, email = self._fill_identity(
+            cast(str, args.get("name", "")), cast(str, args.get("email", ""))
+        )
         title = cast(str, args.get("project_title", "")).strip()
         description = cast(str, args.get("description", "")).strip()
         if not (name and email and title and description):

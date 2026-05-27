@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from cyberdyne_backend import __version__
@@ -101,7 +101,7 @@ from cyberdyne_backend.adapters.inbound.api.marketplace.router import (
     webhook_router as marketplace_webhook_router,
 )
 from cyberdyne_backend.adapters.inbound.health.router import router as health_router
-from cyberdyne_backend.adapters.inbound.middleware.auth import AuthMiddleware
+from cyberdyne_backend.adapters.inbound.middleware.auth import AuthMiddleware, extract_token
 from cyberdyne_backend.adapters.outbound.persistence.ai_chat.repository import (
     SqlAlchemyChatRepository,
 )
@@ -167,6 +167,7 @@ from cyberdyne_backend.application.marketplace import (
     ListProducts as ListMarketplaceProducts,
 )
 from cyberdyne_backend.application.marketplace.use_cases import GetProduct
+from cyberdyne_backend.domain.auth_identity import UserPrincipal, UserProfile
 from cyberdyne_backend.infrastructure.container import Container
 from cyberdyne_backend.infrastructure.database.engine import (
     dispose_engine,
@@ -363,7 +364,17 @@ def create_app() -> FastAPI:
         async with session_scope() as session:
             yield GetChatHistory(repo=SqlAlchemyChatRepository(session))
 
-    async def _run_turn_dep() -> AsyncIterator[RunChatTurn]:
+    async def _run_turn_dep(request: Request) -> AsyncIterator[RunChatTurn]:
+        # Best-effort profile enrichment: if the caller is a signed-in
+        # user, fetch their /users/me so the agent can personalize and
+        # pre-fill leads. Service tokens / anonymous / upstream errors
+        # all resolve to None and the turn runs un-personalized.
+        principal = getattr(request.state, "principal", None)
+        profile: UserProfile | None = None
+        if isinstance(principal, UserPrincipal):
+            token = extract_token(request)
+            if token:
+                profile = await container.user_profile_port.get_profile(token)
         async with session_scope() as session:
             chat_repo = SqlAlchemyChatRepository(session)
             tools_ctx = ToolContext(
@@ -375,11 +386,13 @@ def create_app() -> FastAPI:
                 ask_repo=SqlAlchemyAskRepository(session),
                 captcha=container.captcha_port,
                 ask_notifier=container.email_notifier,
+                user=profile,
             )
             yield RunChatTurn(
                 repo=chat_repo,
                 llm=container.chat_llm,
                 dispatcher=ToolDispatcher(tools_ctx),
+                user=profile,
             )
 
     app.dependency_overrides[get_list_team_uc] = _list_team_dep
