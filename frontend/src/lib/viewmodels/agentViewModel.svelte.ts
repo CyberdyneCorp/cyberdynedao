@@ -23,11 +23,20 @@ import {
 
 const STORAGE_KEY = 'cyberdyne.agent.v1';
 
+export interface AgentPlot {
+	/** data: URL (base64 PNG) — renderable directly in an <img src>. */
+	dataUrl: string;
+	caption: string;
+}
+
 export interface AgentBubble {
 	id: string;
 	role: 'user' | 'assistant';
 	content: string;
 	toolCalls: AgentToolCall[];
+	/** Figures produced by matlab_plot/matlab_repl tool calls made by
+	 *  this assistant turn, captured inline so they survive a refresh. */
+	plots: AgentPlot[];
 	model: string | null;
 	createdAt: string;
 	pending: boolean;
@@ -92,11 +101,58 @@ function toBubble(m: AgentMessage): AgentBubble {
 		role: m.role === 'assistant' ? 'assistant' : 'user',
 		content: m.content,
 		toolCalls: m.toolCalls ?? [],
+		plots: [],
 		model: m.model,
 		createdAt: m.createdAt,
 		pending: false,
 		error: null
 	};
+}
+
+/** Pull an inline figure out of a matlab tool-result JSON, if present. */
+function extractPlot(toolResultContent: string): AgentPlot | null {
+	try {
+		const parsed = JSON.parse(toolResultContent) as {
+			image_base64?: string;
+			image_content_type?: string;
+		};
+		if (!parsed.image_base64) return null;
+		const ct = parsed.image_content_type || 'image/png';
+		return {
+			dataUrl: `data:${ct};base64,${parsed.image_base64}`,
+			caption: 'MATLAB figure'
+		};
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Build the visible bubble list from a full message history. Tool
+ * messages aren't rendered as their own bubbles, but their results
+ * are mined for inline figures and attached to the assistant turn
+ * that called them (matched by tool_call_id).
+ */
+function bubblesFromMessages(messages: AgentMessage[]): AgentBubble[] {
+	const toolResultsById = new Map<string, AgentMessage>();
+	for (const m of messages) {
+		if (m.role === 'tool' && m.toolCallId) toolResultsById.set(m.toolCallId, m);
+	}
+	const out: AgentBubble[] = [];
+	for (const m of messages) {
+		if (m.role !== 'user' && m.role !== 'assistant') continue;
+		const bubble = toBubble(m);
+		if (m.role === 'assistant') {
+			for (const tc of bubble.toolCalls) {
+				const res = toolResultsById.get(tc.id);
+				if (!res) continue;
+				const plot = extractPlot(res.content);
+				if (plot) bubble.plots.push(plot);
+			}
+		}
+		out.push(bubble);
+	}
+	return out;
 }
 
 export interface AgentViewModel {
@@ -152,9 +208,7 @@ export function createAgentVM(): AgentViewModel {
 				// here are non-fatal — we keep the cached bubbles.
 				try {
 					const remote = await getHistory(persisted.sessionId);
-					bubbles = remote.messages
-						.filter((m) => m.role === 'user' || m.role === 'assistant')
-						.map(toBubble);
+					bubbles = bubblesFromMessages(remote.messages);
 					persist();
 				} catch {
 					/* offline / 404 — keep local cache */
@@ -177,6 +231,7 @@ export function createAgentVM(): AgentViewModel {
 			role: 'user',
 			content: text,
 			toolCalls: [],
+			plots: [],
 			model: null,
 			createdAt: nowIso(),
 			pending: false,
@@ -187,6 +242,7 @@ export function createAgentVM(): AgentViewModel {
 			role: 'assistant',
 			content: '',
 			toolCalls: [],
+			plots: [],
 			model: null,
 			createdAt: nowIso(),
 			pending: true,
@@ -206,6 +262,19 @@ export function createAgentVM(): AgentViewModel {
 				createdAt: reply.createdAt,
 				pending: false
 			});
+			// The send response is just the final assistant message —
+			// it doesn't carry the intermediate tool results (where the
+			// figures live). If this turn used tools, re-read history so
+			// any matlab_plot images attach to their bubble.
+			if ((reply.toolCalls ?? []).length > 0) {
+				try {
+					const remote = await getHistory(sid);
+					bubbles = bubblesFromMessages(remote.messages);
+					persist();
+				} catch {
+					/* keep optimistic bubbles on refresh failure */
+				}
+			}
 		} catch (err) {
 			const message =
 				err instanceof AgentApiError

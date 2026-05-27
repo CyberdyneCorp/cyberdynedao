@@ -29,6 +29,8 @@ from cyberdyne_backend.domain.ai_chat.ports import (
     ChatRepository,
     KnowledgeSearchPort,
     LLMResponse,
+    MatlabPort,
+    MatlabRunResult,
 )
 
 __all__ = [
@@ -41,6 +43,8 @@ __all__ = [
     "ChatSessionNotFoundError",
     "KnowledgeSearchPort",
     "LLMResponse",
+    "MatlabPort",
+    "MatlabRunResult",
     "ToolCall",
     "new_assistant_message",
     "new_session",

@@ -33,6 +33,7 @@ from cyberdyne_backend.adapters.outbound.llm.openai_client import (
     StaticChatClient,
     StubKnowledgeSearch,
 )
+from cyberdyne_backend.adapters.outbound.matlab.client import MatlabBackendClient
 from cyberdyne_backend.adapters.outbound.stripe.checkout_client import (
     MockStripeCheckoutClient,
     StripeCheckoutClient,
@@ -41,7 +42,7 @@ from cyberdyne_backend.adapters.outbound.stripe.webhook_verifier import (
     MockStripeWebhookVerifier,
     StripeWebhookVerifier,
 )
-from cyberdyne_backend.domain.ai_chat import ChatLLMPort, KnowledgeSearchPort
+from cyberdyne_backend.domain.ai_chat import ChatLLMPort, KnowledgeSearchPort, MatlabPort
 from cyberdyne_backend.domain.auth_identity import AuthPort, UserProfilePort
 from cyberdyne_backend.domain.dao_treasury import ChainReaderPort
 from cyberdyne_backend.domain.leads import CaptchaPort, EmailNotifierPort
@@ -72,6 +73,7 @@ class Container:
         self._license_email_notifier: LicenseEmailNotifierPort | None = None
         self._chat_llm: ChatLLMPort | None = None
         self._knowledge_search: KnowledgeSearchPort | None = None
+        self._matlab: MatlabPort | None = None
 
     # ── HTTP ──────────────────────────────────────────────────────────
     @property
@@ -247,6 +249,15 @@ class Container:
         else:
             self._chat_llm = StaticChatClient()
         return self._chat_llm
+
+    @property
+    def matlab(self) -> MatlabPort:
+        if self._matlab is None:
+            self._matlab = MatlabBackendClient(
+                base_url=self._settings.matlab_backend_url,
+                http_client=self.http_client,
+            )
+        return self._matlab
 
     @property
     def knowledge_search(self) -> KnowledgeSearchPort:

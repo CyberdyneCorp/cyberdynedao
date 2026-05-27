@@ -70,6 +70,43 @@ describe('agentViewModel', () => {
 		expect(vm.bubbles[0].content).toBe('hello');
 	});
 
+	it('attaches a matlab_plot figure to its assistant bubble', async () => {
+		sessionStorage.setItem(
+			'cyberdyne.agent.v1',
+			JSON.stringify({ sessionId: 's-plot', bubbles: [] })
+		);
+		vi.spyOn(agentApi, 'getHistory').mockResolvedValue({
+			sessionId: 's-plot',
+			messages: [
+				{
+					id: 'u1', sessionId: 's-plot', role: 'user', content: 'plot a sine',
+					toolCalls: [], toolCallId: null, tokensIn: 0, tokensOut: 0, model: null,
+					createdAt: '2026-05-27T09:00:00Z'
+				},
+				{
+					id: 'a1', sessionId: 's-plot', role: 'assistant', content: 'Here you go.',
+					toolCalls: [{ id: 'call_1', name: 'matlab_plot', argumentsJson: '{}' }],
+					toolCallId: null, tokensIn: 0, tokensOut: 0, model: 'gpt-4o-mini',
+					createdAt: '2026-05-27T09:00:01Z'
+				},
+				{
+					id: 't1', sessionId: 's-plot', role: 'tool',
+					content: JSON.stringify({ ok: true, image_base64: 'aGk=', image_content_type: 'image/png' }),
+					toolCalls: [], toolCallId: 'call_1', tokensIn: 0, tokensOut: 0, model: null,
+					createdAt: '2026-05-27T09:00:02Z'
+				}
+			]
+		});
+		const vm = createAgentVM();
+		await vm.bootstrap();
+		// tool message is not its own bubble
+		expect(vm.bubbles).toHaveLength(2);
+		const assistant = vm.bubbles[1];
+		expect(assistant.role).toBe('assistant');
+		expect(assistant.plots).toHaveLength(1);
+		expect(assistant.plots[0].dataUrl).toBe('data:image/png;base64,aGk=');
+	});
+
 	it('bootstrap keeps local cache when remote history fetch fails', async () => {
 		sessionStorage.setItem(
 			'cyberdyne.agent.v1',

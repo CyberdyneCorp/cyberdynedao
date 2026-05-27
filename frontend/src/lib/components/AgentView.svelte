@@ -9,6 +9,14 @@
 	let bottomSentinelEl = $state<HTMLElement | null>(null);
 	let textareaEl = $state<HTMLTextAreaElement | null>(null);
 	let expandedTools = $state<Set<string>>(new Set());
+	let expandedPlots = $state<Set<string>>(new Set());
+
+	function togglePlot(key: string): void {
+		const next = new Set(expandedPlots);
+		if (next.has(key)) next.delete(key);
+		else next.add(key);
+		expandedPlots = next;
+	}
 
 	onMount(async () => {
 		await vm.bootstrap();
@@ -132,6 +140,26 @@
 						<p class="bubble__error">{bubble.error}</p>
 					{:else}
 						<p class="bubble__content">{bubble.content}</p>
+					{/if}
+
+					{#if bubble.plots.length > 0}
+						<div class="plots">
+							{#each bubble.plots as plot, i (bubble.id + '-' + i)}
+								{@const key = bubble.id + '-' + i}
+								{@const expanded = expandedPlots.has(key)}
+								<figure class="plot" class:plot--expanded={expanded}>
+									<button
+										type="button"
+										class="plot__zoom"
+										aria-label={expanded ? 'Collapse figure' : 'Expand figure'}
+										onclick={() => togglePlot(key)}
+									>
+										<img src={plot.dataUrl} alt={plot.caption} loading="lazy" />
+									</button>
+									<figcaption>{plot.caption} · click to {expanded ? 'collapse' : 'expand'}</figcaption>
+								</figure>
+							{/each}
+						</div>
 					{/if}
 
 					{#if bubble.toolCalls.length > 0}
@@ -421,5 +449,48 @@
 		justify-content: space-between;
 		gap: 8px;
 		flex-wrap: wrap;
+	}
+
+	/* ---------- Inline MATLAB figures ---------- */
+	.plots {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		margin-top: 8px;
+	}
+	.plot {
+		margin: 0;
+		background: #ffffff;
+		border: 2px solid #000;
+		box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.4);
+		padding: 8px;
+	}
+	.plot__zoom {
+		all: unset;
+		display: block;
+		width: 100%;
+		cursor: zoom-in;
+	}
+	.plot--expanded .plot__zoom {
+		cursor: zoom-out;
+	}
+	.plot__zoom:focus-visible {
+		outline: 2px solid #7e22ce;
+		outline-offset: 2px;
+	}
+	.plot img {
+		display: block;
+		width: 100%;
+		height: auto;
+		max-height: 240px;
+		object-fit: contain;
+	}
+	.plot--expanded img {
+		max-height: 70vh;
+	}
+	.plot figcaption {
+		font-size: 0.7rem;
+		color: #6b7280;
+		margin-top: 4px;
 	}
 </style>

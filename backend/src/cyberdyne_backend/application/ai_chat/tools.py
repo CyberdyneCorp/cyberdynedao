@@ -24,7 +24,7 @@ from typing import cast
 from cyberdyne_backend.application.content.use_cases import ListProjects
 from cyberdyne_backend.application.learning import ListPaths
 from cyberdyne_backend.application.marketplace import GetProduct
-from cyberdyne_backend.domain.ai_chat import KnowledgeSearchPort, ToolCall
+from cyberdyne_backend.domain.ai_chat import KnowledgeSearchPort, MatlabPort, ToolCall
 from cyberdyne_backend.domain.ai_chat.ports import ToolSchema
 from cyberdyne_backend.domain.auth_identity import UserProfile
 from cyberdyne_backend.domain.leads import (
@@ -161,6 +161,41 @@ CYBERDYNE_TOOLS: list[ToolSchema] = [
             "required": ["name", "email", "project_title", "description"],
         },
     ),
+    ToolSchema(
+        name="matlab_repl",
+        description=(
+            "Execute MATLAB source on the live MATLAB-LLVM engine and return stdout/stderr. "
+            "The session is stateful across calls in this conversation — variables defined in "
+            "one call persist to the next. Use for computation, defining variables, inspecting "
+            "results. If the code draws a figure, prefer ``matlab_plot`` so the image is captured."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "source": {"type": "string", "description": "MATLAB source to run."},
+            },
+            "required": ["source"],
+        },
+    ),
+    ToolSchema(
+        name="matlab_plot",
+        description=(
+            "Run MATLAB source that produces a figure and capture it as a PNG so it renders "
+            "inline in the chat. Use whenever the user wants to see a plot/chart/figure. Shares "
+            "the same stateful session as ``matlab_repl`` (variables carry over). You don't need "
+            "to call saveas — the engine captures the current figure automatically."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "source": {
+                    "type": "string",
+                    "description": 'MATLAB plotting source, e.g. "x = linspace(0,2*pi,200); plot(x, sin(x))".',
+                },
+            },
+            "required": ["source"],
+        },
+    ),
 ]
 
 
@@ -181,6 +216,10 @@ class ToolContext:
     # email/handle when the LLM omits it, so an authenticated user never
     # has to re-type contact details we already hold.
     user: UserProfile | None = None
+    # MATLAB-LLVM engine for the matlab_repl / matlab_plot tools, plus
+    # the user's bearer (forwarded so figures land in their workspace).
+    matlab: MatlabPort | None = None
+    bearer: str | None = None
 
 
 class ToolDispatcher:
@@ -191,7 +230,7 @@ class ToolDispatcher:
     def __init__(self, ctx: ToolContext) -> None:
         self._ctx = ctx
 
-    async def dispatch(self, call: ToolCall) -> str:
+    async def dispatch(self, call: ToolCall, *, chat_session_id: str = "") -> str:
         try:
             args = cast(dict[str, object], json.loads(call.arguments_json or "{}"))
         except json.JSONDecodeError:
@@ -211,6 +250,10 @@ class ToolDispatcher:
                 return await self._create_ask(args)
             if call.name == "capture_project_idea":
                 return await self._capture_project_idea(args)
+            if call.name == "matlab_repl":
+                return await self._matlab_run(cast(str, args.get("source", "")), chat_session_id, plot=False)
+            if call.name == "matlab_plot":
+                return await self._matlab_run(cast(str, args.get("source", "")), chat_session_id, plot=True)
         except Exception as exc:
             logger.exception("tool %s failed", call.name)
             return json.dumps({"error": "tool_failed", "detail": str(exc)})
@@ -288,6 +331,40 @@ class ToolDispatcher:
             return json.dumps({"error": "empty_query"})
         result = await self._ctx.knowledge.search(query)
         return json.dumps({"summary": result})
+
+    async def _matlab_run(self, source: str, chat_session_id: str, *, plot: bool) -> str:
+        if not source.strip():
+            return json.dumps({"error": "empty_source"})
+        if self._ctx.matlab is None:
+            return json.dumps({"error": "matlab_unavailable"})
+        # One stable workspace per conversation so variables persist
+        # across tool calls in the same chat.
+        session_id = f"agent-{chat_session_id}" if chat_session_id else "agent-default"
+        if plot:
+            res = await self._ctx.matlab.run_plot(
+                source=source, session_id=session_id, bearer=self._ctx.bearer
+            )
+        else:
+            res = await self._ctx.matlab.run_repl(
+                source=source, session_id=session_id, bearer=self._ctx.bearer
+            )
+        # The image is the heavy part — keep it out of the text the LLM
+        # reads on its next round (it only needs to know a figure was
+        # produced), but include it in the JSON so the frontend renders
+        # it inline.
+        return json.dumps(
+            {
+                "ok": res.ok,
+                "stdout": res.stdout,
+                "stderr": res.stderr,
+                "timed_out": res.timed_out,
+                "artifacts": list(res.artifacts),
+                "session_id": res.session_id,
+                "image_base64": res.image_base64,
+                "image_content_type": res.image_content_type,
+                "has_figure": res.image_base64 is not None,
+            }
+        )
 
     def _fill_identity(self, name: str, email: str) -> tuple[str, str]:
         """Back-fill name/email from the signed-in profile when the LLM

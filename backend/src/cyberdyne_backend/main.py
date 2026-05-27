@@ -387,6 +387,10 @@ def create_app() -> FastAPI:
                 captcha=container.captcha_port,
                 ask_notifier=container.email_notifier,
                 user=profile,
+                matlab=container.matlab,
+                # Forward the user's bearer so the agent's MATLAB calls
+                # run in that user's per-session workspace.
+                bearer=extract_token(request),
             )
             yield RunChatTurn(
                 repo=chat_repo,
