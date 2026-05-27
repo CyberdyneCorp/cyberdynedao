@@ -13,7 +13,15 @@
 		learnWelcomeBody,
 		resourceGroups
 	} from '$lib/data/learn';
-	import { fetchLearningModules, fetchLearningPaths } from '$lib/api/contentApi';
+	import {
+		fetchLearningModules,
+		fetchLearningPaths,
+		fetchMyLearningState,
+		enrollInPath,
+		updateModuleProgress,
+		type LearningCertificate
+	} from '$lib/api/contentApi';
+	import { authVM } from '$lib/auth/authViewModel.svelte';
 
 	const vm = createLearnViewModel();
 	const { selectedModule, selectedPath, activeTab } = vm;
@@ -23,6 +31,28 @@
 	let learningModules = $state<LearningModule[]>(vm.modules);
 	let learningPaths = $state<LearningPath[]>(vm.paths);
 
+	// ── Authenticated learning state ──────────────────────────────────
+	// Enrolled path slugs, per-module completion %, and earned
+	// certificates — loaded from /learning/me once the user is signed in.
+	let enrolledPaths = $state<string[]>([]);
+	let moduleProgress = $state<Record<string, number>>({});
+	let certificates = $state<LearningCertificate[]>([]);
+	let stateLoaded = $state(false);
+	let busy = $state(false);
+	let actionError = $state<string | null>(null);
+
+	const authReady = $derived(authVM.isRestored && authVM.isAuthenticated);
+
+	function isEnrolled(slug: string): boolean {
+		return enrolledPaths.includes(slug);
+	}
+	function isComplete(moduleSlug: string): boolean {
+		return (moduleProgress[moduleSlug] ?? 0) >= 100;
+	}
+	function certFor(pathSlug: string): LearningCertificate | undefined {
+		return certificates.find((c) => c.pathSlug === pathSlug);
+	}
+
 	onMount(async () => {
 		const [modules, paths] = await Promise.all([
 			fetchLearningModules(),
@@ -31,6 +61,55 @@
 		learningModules = modules;
 		learningPaths = paths;
 	});
+
+	// Load per-user state once auth is restored + present. Guarded so it
+	// runs a single time; re-runs only if the user signs in mid-session.
+	$effect(() => {
+		if (authReady && !stateLoaded) {
+			stateLoaded = true;
+			void loadMyState();
+		}
+	});
+
+	async function loadMyState() {
+		try {
+			const state = await fetchMyLearningState();
+			enrolledPaths = state.enrollments.map((e) => e.pathSlug);
+			moduleProgress = Object.fromEntries(state.progress.map((p) => [p.moduleSlug, p.percent]));
+			certificates = state.certificates;
+		} catch (err) {
+			console.warn('[LearnView] my-state load failed:', err);
+		}
+	}
+
+	async function doEnroll(slug: string) {
+		if (!authReady || busy) return;
+		busy = true;
+		actionError = null;
+		try {
+			await enrollInPath(slug);
+			if (!enrolledPaths.includes(slug)) enrolledPaths = [...enrolledPaths, slug];
+		} catch (err) {
+			actionError = err instanceof Error ? err.message : 'Enroll failed';
+		} finally {
+			busy = false;
+		}
+	}
+
+	async function doToggleComplete(moduleSlug: string) {
+		if (!authReady || busy) return;
+		busy = true;
+		actionError = null;
+		const next = isComplete(moduleSlug) ? 0 : 100;
+		try {
+			const result = await updateModuleProgress(moduleSlug, next);
+			moduleProgress = { ...moduleProgress, [moduleSlug]: result.percent };
+		} catch (err) {
+			actionError = err instanceof Error ? err.message : 'Update failed';
+		} finally {
+			busy = false;
+		}
+	}
 
 	function selectModule(module: LearningModule) { vm.selectModule(module); }
 	function selectPath(path: LearningPath) { vm.selectPath(path); }
@@ -66,7 +145,7 @@
 			class:tab--active={$activeTab === 'modules'}
 			role="tab"
 			aria-selected={$activeTab === 'modules'}
-			on:click={() => vm.setTab('modules')}
+			onclick={() => vm.setTab('modules')}
 		>
 			<span class="tab__icon" aria-hidden="true">📚</span>
 			Modules
@@ -77,7 +156,7 @@
 			class:tab--active={$activeTab === 'paths'}
 			role="tab"
 			aria-selected={$activeTab === 'paths'}
-			on:click={() => vm.setTab('paths')}
+			onclick={() => vm.setTab('paths')}
 		>
 			<span class="tab__icon" aria-hidden="true">🗺️</span>
 			Paths
@@ -88,7 +167,7 @@
 			class:tab--active={$activeTab === 'resources'}
 			role="tab"
 			aria-selected={$activeTab === 'resources'}
-			on:click={() => vm.setTab('resources')}
+			onclick={() => vm.setTab('resources')}
 		>
 			<span class="tab__icon" aria-hidden="true">📖</span>
 			Resources
@@ -108,11 +187,14 @@
 							class="module-card"
 							class:module-card--active={$selectedModule?.id === module.id}
 							style={cardStyle(catPal)}
-							on:click={() => selectModule(module)}
+							onclick={() => selectModule(module)}
 						>
 							<div class="module-card__head">
 								<span class="module-card__icon" aria-hidden="true">{module.icon}</span>
 								<h3 class="module-card__title">{module.title}</h3>
+								{#if isComplete(module.id)}
+									<span class="module-card__done" title="Completed" aria-label="Completed">✓</span>
+								{/if}
 							</div>
 							<div class="module-card__meta">
 								<span class="chip chip--cat" style={cardStyle(catPal)}>{module.category}</span>
@@ -131,7 +213,7 @@
 							class="path-card"
 							class:path-card--active={$selectedPath?.id === path.id}
 							style={cardStyle(pal)}
-							on:click={() => selectPath(path)}
+							onclick={() => selectPath(path)}
 						>
 							<div class="path-card__head">
 								<span class="path-card__icon" aria-hidden="true">{path.icon}</span>
@@ -198,9 +280,33 @@
 					</div>
 
 					<div class="actions">
-						<button type="button" class="btn btn--primary" style={cardStyle(catPal)}>Start Learning</button>
-						<button type="button" class="btn btn--ghost">Add to Favorites</button>
+						{#if !authReady}
+							<span class="hint">Sign in to track your progress.</span>
+						{:else if isComplete($selectedModule.id)}
+							<span class="done-pill">✓ Completed</span>
+							<button
+								type="button"
+								class="btn btn--ghost"
+								disabled={busy}
+								onclick={() => doToggleComplete($selectedModule!.id)}
+							>
+								Mark incomplete
+							</button>
+						{:else}
+							<button
+								type="button"
+								class="btn btn--primary"
+								style={cardStyle(catPal)}
+								disabled={busy}
+								onclick={() => doToggleComplete($selectedModule!.id)}
+							>
+								Mark complete
+							</button>
+						{/if}
 					</div>
+					{#if actionError}
+						<p class="action-error">{actionError}</p>
+					{/if}
 				</article>
 			{:else if $selectedPath}
 				{@const pal: LearnPalette = 'purple'}
@@ -236,10 +342,37 @@
 						</ol>
 					</div>
 
+					{#if certFor($selectedPath.id)}
+						{@const cert = certFor($selectedPath.id)}
+						<div class="cert" style={cardStyle('green')}>
+							<span class="cert__icon" aria-hidden="true">🏆</span>
+							<div>
+								<div class="cert__title">Certificate issued</div>
+								<div class="cert__hash">verify: {cert!.verificationHash.slice(0, 16)}…</div>
+							</div>
+						</div>
+					{/if}
+
 					<div class="actions">
-						<button type="button" class="btn btn--primary" style={cardStyle(pal)}>Start Learning Path</button>
-						<button type="button" class="btn btn--ghost">Save for Later</button>
+						{#if !authReady}
+							<span class="hint">Sign in to enroll and track this path.</span>
+						{:else if isEnrolled($selectedPath.id)}
+							<span class="done-pill">✓ Enrolled</span>
+						{:else}
+							<button
+								type="button"
+								class="btn btn--primary"
+								style={cardStyle(pal)}
+								disabled={busy}
+								onclick={() => doEnroll($selectedPath!.id)}
+							>
+								Enroll in path
+							</button>
+						{/if}
 					</div>
+					{#if actionError}
+						<p class="action-error">{actionError}</p>
+					{/if}
 				</article>
 			{:else}
 				<div class="welcome">
@@ -759,6 +892,78 @@
 		background: #f3f4f6;
 		transform: translate(-1px, -1px);
 		box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.4);
+	}
+
+	/* ---------- Learning-state affordances ---------- */
+	.module-card__done {
+		flex: 0 0 auto;
+		width: 18px;
+		height: 18px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 12px;
+		font-weight: 800;
+		color: #fff;
+		background: #15803d;
+		border: 1.5px solid #000;
+	}
+	.hint {
+		font-size: 0.8125rem;
+		color: #6b7280;
+		font-style: italic;
+	}
+	.done-pill {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 0.8125rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: #15803d;
+		background: #f0fdf4;
+		border: 2px solid #000;
+		box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.4);
+		padding: 7px 12px;
+	}
+	.action-error {
+		margin: 8px 0 0;
+		font-size: 0.75rem;
+		color: #b91c1c;
+		font-weight: 600;
+	}
+	.cert {
+		position: relative;
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		background: #f0fdf4;
+		border: 2px solid #000;
+		box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.35);
+		padding: 10px 14px 10px 18px;
+	}
+	.cert::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		width: 6px;
+		background: var(--accent);
+		border-right: 2px solid #000;
+	}
+	.cert__icon { font-size: 1.5rem; }
+	.cert__title {
+		font-size: 0.875rem;
+		font-weight: 800;
+		color: #15803d;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+	.cert__hash {
+		font-size: 0.6875rem;
+		color: #4b5563;
 	}
 
 	/* ---------- Welcome ---------- */

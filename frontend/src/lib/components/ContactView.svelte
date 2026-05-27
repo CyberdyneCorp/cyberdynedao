@@ -6,7 +6,8 @@
 		contactMethods as staticContactMethods,
 		type ContactMethod
 	} from '$lib/data/contact';
-	import { fetchContactPage } from '$lib/api/contentApi';
+	import { PixelButton } from '@cyberdynecorp/svelte-ui-core';
+	import { fetchContactPage, postAsk } from '$lib/api/contentApi';
 
 	const vm = createContactViewModel();
 
@@ -22,6 +23,45 @@
 		contactMethods = page.methods;
 		contactIntro = page.intro;
 	});
+
+	// ── Message form → POST /api/v1/asks ──────────────────────────────
+	let formName = $state('');
+	let formEmail = $state('');
+	let formBody = $state('');
+	let sending = $state(false);
+	let sent = $state(false);
+	let formError = $state<string | null>(null);
+
+	const emailValid = $derived(/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(formEmail.trim()));
+	const canSend = $derived(
+		!sending && formName.trim().length > 0 && emailValid && formBody.trim().length > 0
+	);
+
+	async function submitMessage(e: SubmitEvent) {
+		e.preventDefault();
+		if (!canSend) return;
+		sending = true;
+		formError = null;
+		const res = await postAsk({
+			name: formName.trim(),
+			email: formEmail.trim(),
+			body: formBody.trim(),
+			channel: 'contact_form',
+			// The backend requires a non-empty captcha token; this deployment
+			// runs CyberdyneAuth's mock (always-pass) provider. If Turnstile is
+			// enabled later, swap this for a real widget token.
+			captchaToken: 'contact-form'
+		});
+		sending = false;
+		if (res.ok) {
+			sent = true;
+			formName = '';
+			formEmail = '';
+			formBody = '';
+		} else {
+			formError = res.error ?? 'Something went wrong. Try a channel above.';
+		}
+	}
 </script>
 
 <div class="contact-view">
@@ -70,7 +110,7 @@
 					<button
 						type="button"
 						class="channel__cta"
-						on:click={() => vm.openContact(method)}
+						onclick={() => vm.openContact(method)}
 					>
 						<span class="channel__cta-bracket">[</span>
 						<span>{method.action}</span>
@@ -79,6 +119,72 @@
 				</article>
 			{/each}
 		</div>
+
+		<!-- Direct message form -->
+		<section class="msg">
+			<div class="msg__head">
+				<span class="msg__icon" aria-hidden="true">✉</span>
+				<h2 class="msg__title">SEND A DIRECT MESSAGE</h2>
+			</div>
+			{#if sent}
+				<div class="msg__sent" role="status">
+					<span class="msg__sent-icon" aria-hidden="true">✓</span>
+					<div>
+						<p class="msg__sent-title">Message received.</p>
+						<p class="msg__sent-body">We read everything that lands — expect a reply by email.</p>
+					</div>
+					<button type="button" class="msg__again" onclick={() => (sent = false)}>
+						Send another
+					</button>
+				</div>
+			{:else}
+				<form class="msg__form" onsubmit={submitMessage}>
+					<div class="msg__row">
+						<label class="msg__field">
+							<span class="msg__label">Name</span>
+							<input
+								class="msg__input"
+								type="text"
+								bind:value={formName}
+								maxlength="128"
+								autocomplete="name"
+								placeholder="Sarah Connor"
+							/>
+						</label>
+						<label class="msg__field">
+							<span class="msg__label">Email</span>
+							<input
+								class="msg__input"
+								class:msg__input--bad={formEmail.length > 0 && !emailValid}
+								type="email"
+								bind:value={formEmail}
+								maxlength="256"
+								autocomplete="email"
+								placeholder="you@domain.com"
+							/>
+						</label>
+					</div>
+					<label class="msg__field">
+						<span class="msg__label">Message</span>
+						<textarea
+							class="msg__input msg__textarea"
+							bind:value={formBody}
+							maxlength="4000"
+							rows="5"
+							placeholder="Tell us what you're building or what you need."
+						></textarea>
+					</label>
+					{#if formError}
+						<p class="msg__error">{formError}</p>
+					{/if}
+					<div class="msg__actions">
+						<PixelButton variant="solid" size="md" type="submit" disabled={!canSend}>
+							{sending ? 'Sending…' : 'Transmit message'}
+						</PixelButton>
+					</div>
+				</form>
+			{/if}
+		</section>
 
 		<!-- Trust footer -->
 		<section class="trust">
@@ -402,5 +508,135 @@
 		font-size: 0.75rem;
 		color: #94a3b8;
 		line-height: 1.45;
+	}
+
+	/* ---------- Message form ---------- */
+	.msg {
+		border: 2px solid #000;
+		background: #111827;
+		box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.6);
+		padding: 16px 18px;
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+	}
+	.msg__head {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
+	.msg__icon {
+		font-size: 1.1rem;
+		color: #22c55e;
+	}
+	.msg__title {
+		font-size: 0.95rem;
+		font-weight: 800;
+		letter-spacing: 0.1em;
+		margin: 0;
+		color: #e5e7eb;
+	}
+	.msg__form {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+	.msg__row {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 12px;
+	}
+	@media (max-width: 560px) {
+		.msg__row { grid-template-columns: 1fr; }
+	}
+	.msg__field {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+	.msg__label {
+		font-size: 0.6875rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: #94a3b8;
+	}
+	.msg__input {
+		font-family: inherit;
+		font-size: 0.875rem;
+		color: #e5e7eb;
+		background: #0b1120;
+		border: 2px solid #334155;
+		padding: 8px 10px;
+		outline: none;
+		transition: border-color 0.12s ease;
+	}
+	.msg__input:focus {
+		border-color: #22c55e;
+	}
+	.msg__input::placeholder {
+		color: #475569;
+	}
+	.msg__input--bad {
+		border-color: #ef4444;
+	}
+	.msg__textarea {
+		resize: vertical;
+		min-height: 96px;
+		line-height: 1.5;
+	}
+	.msg__error {
+		margin: 0;
+		font-size: 0.8125rem;
+		color: #fca5a5;
+		font-weight: 600;
+	}
+	.msg__actions {
+		display: flex;
+		justify-content: flex-end;
+	}
+	.msg__sent {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		background: #052e16;
+		border: 2px solid #15803d;
+		padding: 12px 14px;
+	}
+	.msg__sent-icon {
+		flex: 0 0 auto;
+		width: 28px;
+		height: 28px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-weight: 800;
+		color: #052e16;
+		background: #22c55e;
+		border: 2px solid #000;
+	}
+	.msg__sent-title {
+		margin: 0;
+		font-weight: 700;
+		color: #bbf7d0;
+	}
+	.msg__sent-body {
+		margin: 2px 0 0;
+		font-size: 0.8125rem;
+		color: #86efac;
+	}
+	.msg__again {
+		margin-left: auto;
+		font-family: inherit;
+		font-size: 0.75rem;
+		font-weight: 700;
+		color: #bbf7d0;
+		background: transparent;
+		border: 1.5px solid #15803d;
+		padding: 6px 10px;
+		cursor: pointer;
+	}
+	.msg__again:hover {
+		background: #064e3b;
 	}
 </style>
