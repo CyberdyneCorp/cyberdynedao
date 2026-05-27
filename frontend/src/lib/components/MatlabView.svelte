@@ -7,6 +7,7 @@
 	const vm = createMatlabTerminalVM();
 
 	let scrollEl = $state<HTMLElement | null>(null);
+	let bottomSentinelEl = $state<HTMLElement | null>(null);
 	let textareaEl = $state<HTMLTextAreaElement | null>(null);
 	let uploadInputEl = $state<HTMLInputElement | null>(null);
 	let workspaceOpen = $state<boolean>(true);
@@ -23,12 +24,23 @@
 	}
 
 	// Auto-scroll the cell log to the bottom whenever a new cell lands
-	// or finishes streaming.
-	const cellCount = $derived(vm.cells.length);
+	// AND when any in-flight cell finishes filling in (plots, stdout,
+	// status). Tracking just ``length`` misses the second wave of
+	// updates, which is why a new REPL result didn't always pull the
+	// viewport down. Hash the trailing cell's mutable fields so the
+	// effect re-runs on each populate; ``scrollIntoView`` on a sentinel
+	// at the very bottom is more robust than poking ``scrollTop`` on
+	// the wrapper (the actual scrollable element lives inside
+	// PixelScrollArea).
+	const scrollSignal = $derived.by(() => {
+		const last = vm.cells[vm.cells.length - 1];
+		if (!last) return '';
+		return `${vm.cells.length}|${last.status}|${last.stdout.length}|${last.stderr.length}|${last.plots.length}`;
+	});
 	$effect(() => {
-		void cellCount;
+		void scrollSignal;
 		void tick().then(() => {
-			if (scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight;
+			bottomSentinelEl?.scrollIntoView({ block: 'end', inline: 'nearest' });
 		});
 	});
 
@@ -58,9 +70,9 @@
 	}
 
 	function onKeydown(e: KeyboardEvent) {
-		// Cmd/Ctrl+Enter → Run (matches notebook conventions). Plain
-		// Enter inserts a newline so multi-line snippets stay readable.
-		if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+		// Shift+Enter → Run (matches Jupyter). Plain Enter inserts a
+		// newline so multi-line snippets stay readable.
+		if (e.shiftKey && e.key === 'Enter') {
 			e.preventDefault();
 			void vm.submitRepl();
 		}
@@ -134,7 +146,7 @@
 			</button>
 		</div>
 		<p class="hero__tagline">
-			Stateful MATLAB on a remote LLVM engine. Plots render inline. <kbd>⌘/Ctrl + Enter</kbd> to run.
+			Stateful MATLAB on a remote LLVM engine. Plots render inline. <kbd>Shift + Enter</kbd> to run.
 		</p>
 	</header>
 
@@ -236,6 +248,10 @@ x = linspace(0, 2*pi, 200); plot(x, sin(x).*cos(2*x))</pre>
 					{/if}
 				</article>
 			{/each}
+			<!-- Auto-scroll anchor. ``scrollIntoView`` from here walks
+			     ancestors to whichever element is actually overflowing
+			     (the PixelScrollArea's inner wrapper) and pulls it down. -->
+			<div class="cells__bottom" bind:this={bottomSentinelEl} aria-hidden="true"></div>
 		</PixelScrollArea>
 	</div>
 
@@ -365,7 +381,7 @@ x = linspace(0, 2*pi, 200); plot(x, sin(x).*cos(2*x))</pre>
 			spellcheck="false"
 			autocomplete="off"
 			autocapitalize="off"
-			placeholder={authReady ? 'MATLAB source…  (⌘/Ctrl + Enter to run)' : 'Sign in to enable the REPL'}
+			placeholder={authReady ? 'MATLAB source…  (Shift + Enter to run)' : 'Sign in to enable the REPL'}
 			disabled={!authReady || vm.running}
 		></textarea>
 	</form>
