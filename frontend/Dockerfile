@@ -97,7 +97,14 @@ server {
   # /api/v1/auth/login. (A variable-form proxy_pass disables this URI
   # rewriting — don't switch back to it without adding an explicit
   # \`rewrite\` directive.)
-  location /api/auth/ {
+  # ^~ stops nginx from continuing to the static-asset regex location
+  # below. Without it, any proxied path whose URI ends in a static
+  # extension (e.g. /api/matlab/v1/files/plot_xyz.png) matches the
+  # \`\\.(png|js|css|…)$\` regex first and is served from the SPA's
+  # html root → 404 with the nginx default HTML page. Auth paths are
+  # all JSON today, but mark this ^~ defensively so the same trap
+  # can't bite later.
+  location ^~ /api/auth/ {
     proxy_pass https://auth.backend.coolify.cyberdynecorp.ai/;
     proxy_set_header Host auth.backend.coolify.cyberdynecorp.ai;
     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -115,7 +122,7 @@ server {
   # as /api/auth: the slash on proxy_pass strips the location prefix.
   # The REPL can run for tens of seconds (figure rendering); raise the
   # read timeout accordingly.
-  location /api/matlab/ {
+  location ^~ /api/matlab/ {
     proxy_pass https://matlab-backend.coolify.cyberdynecorp.ai/;
     proxy_set_header Host matlab-backend.coolify.cyberdynecorp.ai;
     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
