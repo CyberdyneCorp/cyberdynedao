@@ -29,7 +29,9 @@ export interface ReplResponse {
 	stderr: string;
 	timed_out: boolean;
 	truncated: boolean;
-	stateful: boolean;
+	/** Present on /v1/repl, omitted by /v1/plot — both surface through
+	 *  this shape in the VM. */
+	stateful?: boolean;
 	/** New figure/file paths — fetch each via `downloadArtifact()`. */
 	artifacts: string[];
 }
@@ -118,6 +120,13 @@ export function repl(req: ReplRequest): Promise<ReplResponse> {
 	return postJson<ReplResponse>('/v1/repl', { stateful: true, ...req });
 }
 
+/**
+ * Render a plot on the upstream. As of leonardoaraujosantos/matlab_llvm#56
+ * (PR #63) the endpoint returns the same JSON shape as /v1/repl, with
+ * the produced figure path in ``artifacts``; PR #64 (issue #55) made
+ * those artifacts resolvable through ``/v1/files`` against the same
+ * ``session_id``. Callers download via {@link downloadArtifact}.
+ */
 export function plot(req: PlotRequest): Promise<ReplResponse> {
 	return postJson<ReplResponse>('/v1/plot', { format: 'png', ...req });
 }
