@@ -77,6 +77,10 @@ materials + licenses) and the service-engagement funnel.
     renders inline in the chat — no need to write saveas). Write the
     MATLAB yourself from the user's intent; after running, briefly
     summarize the result in plain text.
+  - After `matlab_plot` succeeds, the figure is displayed automatically
+    below your message. Do NOT embed a markdown image link, a
+    `sandbox:` path, or any filename in your reply — just say what the
+    plot shows in one short sentence.
 """
 
 MAX_TOOL_ROUNDS = 4
