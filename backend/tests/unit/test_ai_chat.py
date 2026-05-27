@@ -555,6 +555,37 @@ class TestToolDispatcher:
         assert "image_base64" not in data
         assert matlab.plot_calls[0]["session_id"] == "agent-sess-2"
 
+    async def test_matlab_repl_on_plotting_source_routes_to_plot(self) -> None:
+        # The agent often picks matlab_repl for "write a program that
+        # plots…". Plain /v1/repl won't capture a figure, so drawing
+        # code is routed through run_plot.
+        matlab = _FakeMatlab()
+        ctx = _build_ctx(matlab=matlab, bearer="tok")
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x",
+                name="matlab_repl",
+                arguments_json=json.dumps({"source": "x=linspace(0,1); plot(x, sin(x))"}),
+            ),
+            chat_session_id="sess-3",
+        )
+        data = json.loads(result)
+        assert data["has_figure"] is True
+        assert len(matlab.plot_calls) == 1
+        assert len(matlab.repl_calls) == 0
+
+    async def test_matlab_repl_non_plot_stays_repl(self) -> None:
+        matlab = _FakeMatlab()
+        ctx = _build_ctx(matlab=matlab, bearer="tok")
+        await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x", name="matlab_repl", arguments_json=json.dumps({"source": "A = magic(5)"})
+            ),
+            chat_session_id="s",
+        )
+        assert len(matlab.repl_calls) == 1
+        assert len(matlab.plot_calls) == 0
+
     async def test_matlab_empty_source_rejected(self) -> None:
         ctx = _build_ctx(matlab=_FakeMatlab())
         result = await ToolDispatcher(ctx).dispatch(
