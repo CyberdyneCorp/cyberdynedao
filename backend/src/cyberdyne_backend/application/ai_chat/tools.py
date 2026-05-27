@@ -251,9 +251,13 @@ class ToolDispatcher:
             if call.name == "capture_project_idea":
                 return await self._capture_project_idea(args)
             if call.name == "matlab_repl":
-                return await self._matlab_run(cast(str, args.get("source", "")), chat_session_id, plot=False)
+                return await self._matlab_run(
+                    cast(str, args.get("source", "")), chat_session_id, plot=False
+                )
             if call.name == "matlab_plot":
-                return await self._matlab_run(cast(str, args.get("source", "")), chat_session_id, plot=True)
+                return await self._matlab_run(
+                    cast(str, args.get("source", "")), chat_session_id, plot=True
+                )
         except Exception as exc:
             logger.exception("tool %s failed", call.name)
             return json.dumps({"error": "tool_failed", "detail": str(exc)})
