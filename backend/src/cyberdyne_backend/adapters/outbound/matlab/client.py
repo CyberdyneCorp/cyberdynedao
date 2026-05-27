@@ -19,7 +19,12 @@ from typing import Any, cast
 
 import httpx
 
-from cyberdyne_backend.domain.ai_chat import MatlabRunResult
+from cyberdyne_backend.domain.ai_chat import (
+    MatlabCheckResult,
+    MatlabCodegenResult,
+    MatlabDiagnostic,
+    MatlabRunResult,
+)
 
 logger = logging.getLogger("cyberdyne_backend.matlab")
 
@@ -59,6 +64,47 @@ class MatlabBackendClient:
         }
         body = await self._post("/v1/plot", payload, bearer)
         return self._to_result(body, session_id)
+
+    async def check(self, *, source: str, session_id: str, bearer: str | None) -> MatlabCheckResult:
+        payload: dict[str, object] = {"source": source, "session_id": session_id}
+        body = await self._post("/v1/check", payload, bearer)
+        return MatlabCheckResult(
+            ok=bool(body.get("ok")),
+            diagnostics=self._diagnostics(body.get("diagnostics")),
+            stdout=str(body.get("stdout") or ""),
+            stderr=str(body.get("stderr") or ""),
+        )
+
+    async def codegen(
+        self, *, source: str, target: str, session_id: str, bearer: str | None
+    ) -> MatlabCodegenResult:
+        payload: dict[str, object] = {"source": source, "session_id": session_id}
+        body = await self._post(f"/v1/codegen/{target}", payload, bearer)
+        return MatlabCodegenResult(
+            ok=bool(body.get("ok")),
+            language=str(body.get("language") or target),
+            code=str(body.get("code") or ""),
+            diagnostics=self._diagnostics(body.get("diagnostics")),
+            stderr=str(body.get("stderr") or ""),
+        )
+
+    @staticmethod
+    def _diagnostics(raw: object) -> tuple[MatlabDiagnostic, ...]:
+        if not isinstance(raw, list):
+            return ()
+        out: list[MatlabDiagnostic] = []
+        for d in raw:
+            if not isinstance(d, dict):
+                continue
+            out.append(
+                MatlabDiagnostic(
+                    severity=str(d.get("severity") or "error"),
+                    message=str(d.get("message") or ""),
+                    line=d.get("line") if isinstance(d.get("line"), int) else None,
+                    col=d.get("col") if isinstance(d.get("col"), int) else None,
+                )
+            )
+        return tuple(out)
 
     @staticmethod
     def _to_result(body: dict[str, Any], session_id: str) -> MatlabRunResult:

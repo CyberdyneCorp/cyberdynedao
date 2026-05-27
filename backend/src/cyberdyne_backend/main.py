@@ -377,11 +377,13 @@ def create_app() -> FastAPI:
                 profile = await container.user_profile_port.get_profile(token)
         async with session_scope() as session:
             chat_repo = SqlAlchemyChatRepository(session)
+            learning_repo = SqlAlchemyLearningRepository(session)
+            blog_repo = SqlAlchemyBlogRepository(session)
             tools_ctx = ToolContext(
                 list_projects=ListProjects(repo=SqlAlchemyContentRepository(session)),
-                list_paths=ListPaths(repo=SqlAlchemyLearningRepository(session)),
+                list_paths=ListPaths(repo=learning_repo),
                 get_product=GetProduct(repo=SqlAlchemyMarketplaceRepository(session)),
-                learning_repo=SqlAlchemyLearningRepository(session),
+                learning_repo=learning_repo,
                 knowledge=container.knowledge_search,
                 ask_repo=SqlAlchemyAskRepository(session),
                 captcha=container.captcha_port,
@@ -391,6 +393,19 @@ def create_app() -> FastAPI:
                 # Forward the user's bearer so the agent's MATLAB calls
                 # run in that user's per-session workspace.
                 bearer=extract_token(request),
+                # A-tools: DAO treasury (HTTP-only), blog (read), and
+                # learning actions that run as the signed-in user.
+                dao_overview=GetDaoOverview(
+                    reader=container.chain_reader,
+                    treasury_address=settings.dao_treasury_address,
+                    holders=settings.dao_holders_count,
+                ),
+                list_blog_posts=ListBlogPosts(repo=blog_repo),
+                get_blog_post=GetBlogPost(repo=blog_repo),
+                enroll_in_path=EnrollInPath(repo=learning_repo),
+                get_my_learning=GetMyLearningState(repo=learning_repo),
+                update_progress=UpdateModuleProgress(repo=learning_repo),
+                user_id=profile.user_id if profile else None,
             )
             yield RunChatTurn(
                 repo=chat_repo,

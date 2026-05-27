@@ -66,6 +66,31 @@ class MatlabRunResult:
     timed_out: bool = False
 
 
+@dataclass(frozen=True, slots=True)
+class MatlabDiagnostic:
+    severity: str
+    message: str
+    line: int | None = None
+    col: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class MatlabCheckResult:
+    ok: bool
+    diagnostics: tuple[MatlabDiagnostic, ...] = ()
+    stdout: str = ""
+    stderr: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class MatlabCodegenResult:
+    ok: bool
+    language: str
+    code: str
+    diagnostics: tuple[MatlabDiagnostic, ...] = ()
+    stderr: str = ""
+
+
 @runtime_checkable
 class MatlabPort(Protocol):
     """Thin client over the MATLAB-LLVM backend. The agent calls it as
@@ -79,6 +104,14 @@ class MatlabPort(Protocol):
     async def run_plot(
         self, *, source: str, session_id: str, bearer: str | None, fmt: str = "png"
     ) -> MatlabRunResult: ...
+
+    async def check(
+        self, *, source: str, session_id: str, bearer: str | None
+    ) -> MatlabCheckResult: ...
+
+    async def codegen(
+        self, *, source: str, target: str, session_id: str, bearer: str | None
+    ) -> MatlabCodegenResult: ...
 
 
 @runtime_checkable
