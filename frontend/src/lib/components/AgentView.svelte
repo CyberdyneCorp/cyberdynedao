@@ -6,6 +6,7 @@
 	const vm = createAgentVM();
 
 	let scrollEl = $state<HTMLElement | null>(null);
+	let bottomSentinelEl = $state<HTMLElement | null>(null);
 	let textareaEl = $state<HTMLTextAreaElement | null>(null);
 	let expandedTools = $state<Set<string>>(new Set());
 
@@ -16,12 +17,24 @@
 
 	async function scrollToBottom(): Promise<void> {
 		await tick();
-		if (scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight;
+		// Outer ``.log`` div isn't the actual overflow element —
+		// PixelScrollArea wraps the scrollable container inside. Using
+		// scrollIntoView on a sentinel walks ancestors and pulls the
+		// real one down regardless.
+		bottomSentinelEl?.scrollIntoView({ block: 'end', inline: 'nearest' });
 	}
 
-	const bubbleCount = $derived(vm.bubbles.length);
+	// Re-scroll on every populate — not just on bubble-count change.
+	// The assistant bubble is appended *pending* first; ``content`` /
+	// ``pending`` flip when the reply lands. Watching just ``length``
+	// missed that second update and the user had to scroll manually.
+	const scrollSignal = $derived.by(() => {
+		const last = vm.bubbles[vm.bubbles.length - 1];
+		if (!last) return '';
+		return `${vm.bubbles.length}|${last.pending}|${last.content.length}|${last.error ?? ''}`;
+	});
 	$effect(() => {
-		void bubbleCount;
+		void scrollSignal;
 		void scrollToBottom();
 	});
 
@@ -32,7 +45,11 @@
 	}
 
 	function onKeydown(e: KeyboardEvent): void {
-		if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+		// ChatGPT-style: Enter sends, Shift+Enter inserts a newline.
+		// The matlab REPL uses Shift+Enter for the inverse reason —
+		// multi-line scripts there default to "just type", here single
+		// turns are the norm.
+		if (e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
 			e.preventDefault();
 			void vm.send();
 		}
@@ -66,7 +83,7 @@
 		</div>
 		<p class="hero__tagline">
 			Ask about Cyberdyne — projects, training, DAO, marketplace — or pitch a project idea.
-			Replies are LLM-backed and route to real backend tools. <kbd>⌘/Ctrl + Enter</kbd> to send.
+			Replies are LLM-backed and route to real backend tools. <kbd>Enter</kbd> to send, <kbd>Shift + Enter</kbd> for a new line.
 		</p>
 	</header>
 
@@ -141,6 +158,10 @@
 					{/if}
 				</article>
 			{/each}
+			<!-- Auto-scroll anchor. scrollIntoView walks ancestors to
+			     whichever element is actually overflowing inside
+			     PixelScrollArea. -->
+			<div class="log__bottom" bind:this={bottomSentinelEl} aria-hidden="true"></div>
 		</PixelScrollArea>
 	</div>
 
