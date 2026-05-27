@@ -8,7 +8,12 @@
 		StartMenu,
 		ErrorBoundary
 	} from '@cyberdynecorp/svelte-ui-core';
-	import { closeWindow, bringToFront, toggleWindowSlide } from '$lib/stores/windowStore';
+	import {
+		closeWindow,
+		bringToFront,
+		toggleWindowSlide,
+		updateWindow
+	} from '$lib/stores/windowStore';
 	import { navItems } from '$lib/constants/navigation';
 	import { CYBERDYNE_ASCII_LOGO } from '$lib/constants/asciiLogo';
 	import { createShellViewModel } from '$lib/viewmodels/shellViewModel';
@@ -135,10 +140,10 @@
 				<RetroWindow
 					title={w.title}
 					open
-					x={w.x}
-					y={w.y}
-					width={w.width}
-					height={w.height}
+					bind:x={() => w.x, (v) => updateWindow(w.id, { x: v })}
+					bind:y={() => w.y, (v) => updateWindow(w.id, { y: v })}
+					bind:width={() => w.width, (v) => updateWindow(w.id, { width: v })}
+					bind:height={() => w.height, (v) => updateWindow(w.id, { height: v })}
 					draggable
 					resizable
 					onClose={() => closeWindow(w.id)}

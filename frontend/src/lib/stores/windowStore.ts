@@ -62,6 +62,17 @@ export function closeWindow(id: string) {
 	windows.update(wins => wins.filter(w => w.id !== id));
 }
 
+/**
+ * Patch one window's fields. Used by the shell's bind:setters on
+ * RetroWindow so the user's drag/resize syncs back into the store —
+ * without this, RetroWindow mutates its own internal state and the
+ * next store update (e.g. bringToFront on click) overwrites it with
+ * the original creation-time dimensions.
+ */
+export function updateWindow(id: string, patch: Partial<WindowState>) {
+	windows.update(wins => wins.map(w => (w.id === id ? { ...w, ...patch } : w)));
+}
+
 export function closeAllWindows() {
 	windows.set([]);
 }
