@@ -91,7 +91,7 @@ describe('agentViewModel', () => {
 				},
 				{
 					id: 't1', sessionId: 's-plot', role: 'tool',
-					content: JSON.stringify({ ok: true, image_base64: 'aGk=', image_content_type: 'image/png' }),
+					content: JSON.stringify({ ok: true, has_figure: true, figures: ['plot_abc.png'], session_id: 'agent-s-plot' }),
 					toolCalls: [], toolCallId: 'call_1', tokensIn: 0, tokensOut: 0, model: null,
 					createdAt: '2026-05-27T09:00:02Z'
 				}
@@ -104,7 +104,8 @@ describe('agentViewModel', () => {
 		const assistant = vm.bubbles[1];
 		expect(assistant.role).toBe('assistant');
 		expect(assistant.plots).toHaveLength(1);
-		expect(assistant.plots[0].dataUrl).toBe('data:image/png;base64,aGk=');
+		expect(assistant.plots[0].artifactPath).toBe('plot_abc.png');
+		expect(assistant.plots[0].sessionId).toBe('agent-s-plot');
 	});
 
 	it('bootstrap keeps local cache when remote history fetch fails', async () => {

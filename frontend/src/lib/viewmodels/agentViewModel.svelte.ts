@@ -24,8 +24,11 @@ import {
 const STORAGE_KEY = 'cyberdyne.agent.v1';
 
 export interface AgentPlot {
-	/** data: URL (base64 PNG) — renderable directly in an <img src>. */
-	dataUrl: string;
+	/** Artifact filename in the MATLAB workspace (e.g. plot_abc.png). */
+	artifactPath: string;
+	/** The agent's MATLAB session (agent-<chatSessionId>) the figure
+	 *  lives in. The view downloads it via the authed /api/matlab proxy. */
+	sessionId: string;
 	caption: string;
 }
 
@@ -109,21 +112,23 @@ function toBubble(m: AgentMessage): AgentBubble {
 	};
 }
 
-/** Pull an inline figure out of a matlab tool-result JSON, if present. */
-function extractPlot(toolResultContent: string): AgentPlot | null {
+/** Pull figure references out of a matlab tool-result JSON. */
+function extractPlots(toolResultContent: string): AgentPlot[] {
 	try {
 		const parsed = JSON.parse(toolResultContent) as {
-			image_base64?: string;
-			image_content_type?: string;
+			figures?: string[];
+			session_id?: string;
 		};
-		if (!parsed.image_base64) return null;
-		const ct = parsed.image_content_type || 'image/png';
-		return {
-			dataUrl: `data:${ct};base64,${parsed.image_base64}`,
-			caption: 'MATLAB figure'
-		};
+		const figures = parsed.figures ?? [];
+		const sessionId = parsed.session_id ?? '';
+		if (!figures.length || !sessionId) return [];
+		return figures.map((artifactPath, i) => ({
+			artifactPath,
+			sessionId,
+			caption: figures.length > 1 ? `MATLAB figure ${i + 1}` : 'MATLAB figure'
+		}));
 	} catch {
-		return null;
+		return [];
 	}
 }
 
@@ -146,8 +151,7 @@ function bubblesFromMessages(messages: AgentMessage[]): AgentBubble[] {
 			for (const tc of bubble.toolCalls) {
 				const res = toolResultsById.get(tc.id);
 				if (!res) continue;
-				const plot = extractPlot(res.content);
-				if (plot) bubble.plots.push(plot);
+				bubble.plots.push(...extractPlots(res.content));
 			}
 		}
 		out.push(bubble);

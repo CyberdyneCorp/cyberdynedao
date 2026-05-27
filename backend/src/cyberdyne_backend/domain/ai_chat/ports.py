@@ -52,17 +52,16 @@ class KnowledgeSearchPort(Protocol):
 
 @dataclass(frozen=True, slots=True)
 class MatlabRunResult:
-    """One MATLAB-LLVM execution. ``image_base64`` carries the first
-    produced figure (PNG) so the chat agent can hand a renderable
-    artifact straight back to the frontend without a second authed
-    round-trip."""
+    """One MATLAB-LLVM execution. Figures are referenced by ``artifacts``
+    + ``session_id`` (NOT inlined) — the frontend downloads them through
+    the authed /api/matlab proxy. Embedding the PNG here would feed it
+    straight back into the next LLM round, bloating the prompt and
+    risking the call."""
 
     ok: bool
     stdout: str
     stderr: str
     artifacts: tuple[str, ...] = ()
-    image_base64: str | None = None
-    image_content_type: str | None = None
     session_id: str = ""
     timed_out: bool = False
 

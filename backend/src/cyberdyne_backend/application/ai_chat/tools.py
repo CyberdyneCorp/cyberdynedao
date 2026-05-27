@@ -348,10 +348,13 @@ class ToolDispatcher:
             res = await self._ctx.matlab.run_repl(
                 source=source, session_id=session_id, bearer=self._ctx.bearer
             )
-        # The image is the heavy part — keep it out of the text the LLM
-        # reads on its next round (it only needs to know a figure was
-        # produced), but include it in the JSON so the frontend renders
-        # it inline.
+        # Reference the figure by artifact path + session id only — the
+        # frontend downloads it through the authed proxy. Inlining the
+        # PNG would feed it back into the next LLM round (big prompt,
+        # transport errors). ``has_figure`` is the only signal the LLM
+        # needs to know a plot was produced.
+        image_exts = (".png", ".jpg", ".jpeg", ".svg")
+        figures = [a for a in res.artifacts if a.lower().endswith(image_exts)]
         return json.dumps(
             {
                 "ok": res.ok,
@@ -359,10 +362,9 @@ class ToolDispatcher:
                 "stderr": res.stderr,
                 "timed_out": res.timed_out,
                 "artifacts": list(res.artifacts),
+                "figures": figures,
                 "session_id": res.session_id,
-                "image_base64": res.image_base64,
-                "image_content_type": res.image_content_type,
-                "has_figure": res.image_base64 is not None,
+                "has_figure": len(figures) > 0,
             }
         )
 

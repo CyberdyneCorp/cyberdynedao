@@ -259,8 +259,6 @@ class _FakeMatlab:
             stdout="",
             stderr="",
             artifacts=("plot_abc.png",),
-            image_base64="aGVsbG8=",
-            image_content_type="image/png",
             session_id=session_id,
         )
 
@@ -553,8 +551,10 @@ class TestToolDispatcher:
         data = json.loads(result)
         assert data["ok"] is True
         assert data["has_figure"] is True
-        assert data["image_base64"] == "aGVsbG8="
-        assert data["image_content_type"] == "image/png"
+        assert data["figures"] == ["plot_abc.png"]
+        assert data["session_id"] == "agent-sess-2"
+        # No inline base64 — the frontend downloads via the proxy.
+        assert "image_base64" not in data
         assert matlab.plot_calls[0]["session_id"] == "agent-sess-2"
 
     async def test_matlab_empty_source_rejected(self) -> None:
