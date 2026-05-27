@@ -129,7 +129,18 @@ class _FakeLearningRepo:
         ]
 
     async def get_path(self, slug: str):
-        raise NotImplementedError
+        if slug == "cyberdyne-stack":
+            return LearningPath(
+                slug="cyberdyne-stack",
+                title="Build Like Cyberdyne",
+                description="Hexagonal cores + MCP.",
+                module_slugs=("mcp-servers",),
+                estimated_time="10w",
+                icon="⚡",
+            )
+        from cyberdyne_backend.domain.learning import LearningContentNotFoundError
+
+        raise LearningContentNotFoundError(slug)
 
     async def upsert_enrollment(self, e):
         return e
@@ -260,6 +271,45 @@ class _FakeMatlab:
             session_id=session_id,
         )
 
+    async def check(self, *, source, session_id, bearer):
+        from cyberdyne_backend.domain.ai_chat import MatlabCheckResult, MatlabDiagnostic
+
+        return MatlabCheckResult(
+            ok=False,
+            diagnostics=(MatlabDiagnostic(severity="error", message="undefined var", line=2),),
+            stdout="",
+            stderr="error",
+        )
+
+    async def codegen(self, *, source, target, session_id, bearer):
+        from cyberdyne_backend.domain.ai_chat import MatlabCodegenResult
+
+        return MatlabCodegenResult(
+            ok=True, language=target, code="int main(){return 0;}", stderr=""
+        )
+
+
+class _FakeBlogRepo:
+    def __init__(self, posts=None) -> None:
+        self._posts = posts or []
+
+    async def list_posts(self, **_kw):
+        return self._posts, len(self._posts)
+
+    async def get_by_slug(self, slug, *, include_drafts=False):
+        for p in self._posts:
+            if p.slug == slug:
+                return p
+        from cyberdyne_backend.domain.blog import BlogPostNotFoundError
+
+        raise BlogPostNotFoundError(slug)
+
+    async def save(self, post) -> None:
+        self._posts.append(post)
+
+    async def list_categories(self):
+        return []
+
 
 class _CapturingLLM:
     """Records the system_prompt of the last call, returns a fixed reply."""
@@ -280,10 +330,29 @@ def _build_ctx(
     user: object | None = None,
     matlab: object | None = None,
     bearer: str | None = None,
+    blog_posts: list | None = None,
+    dao: bool = False,
+    user_id: object | None = None,
 ) -> ToolContext:
+    from cyberdyne_backend.application.blog import GetBlogPost, ListBlogPosts
+    from cyberdyne_backend.application.dao_treasury import GetDaoOverview
+    from cyberdyne_backend.application.learning import (
+        EnrollInPath,
+        GetMyLearningState,
+        UpdateModuleProgress,
+    )
+
     content = _FakeContentRepo()
     learning = _FakeLearningRepo()
     market = _FakeMarketplaceRepo()
+    blog = _FakeBlogRepo(blog_posts)
+    dao_overview = None
+    if dao:
+        from cyberdyne_backend.adapters.outbound.chain.fake_reader import FakeChainReader
+
+        dao_overview = GetDaoOverview(
+            reader=FakeChainReader(), treasury_address="0xDA0", holders=42
+        )
     return ToolContext(
         list_projects=ListProjects(repo=content),
         list_paths=ListPaths(repo=learning),
@@ -296,6 +365,13 @@ def _build_ctx(
         user=user,  # type: ignore[arg-type]
         matlab=matlab,  # type: ignore[arg-type]
         bearer=bearer,
+        dao_overview=dao_overview,
+        list_blog_posts=ListBlogPosts(repo=blog),  # type: ignore[arg-type]
+        get_blog_post=GetBlogPost(repo=blog),  # type: ignore[arg-type]
+        enroll_in_path=EnrollInPath(repo=learning),
+        get_my_learning=GetMyLearningState(repo=learning),
+        update_progress=UpdateModuleProgress(repo=learning),
+        user_id=user_id,  # type: ignore[arg-type]
     )
 
 
@@ -593,6 +669,144 @@ class TestToolDispatcher:
             chat_session_id="s",
         )
         assert json.loads(result)["error"] == "empty_source"
+
+    async def test_matlab_check_returns_diagnostics(self) -> None:
+        ctx = _build_ctx(matlab=_FakeMatlab())
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(id="x", name="matlab_check", arguments_json=json.dumps({"source": "x="})),
+            chat_session_id="s",
+        )
+        data = json.loads(result)
+        assert data["ok"] is False
+        assert data["diagnostics"][0]["message"] == "undefined var"
+        assert data["diagnostics"][0]["line"] == 2
+
+    async def test_matlab_codegen_returns_code(self) -> None:
+        ctx = _build_ctx(matlab=_FakeMatlab())
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x",
+                name="matlab_codegen",
+                arguments_json=json.dumps({"source": "function y=f(x)\ny=x;\nend", "target": "c"}),
+            ),
+            chat_session_id="s",
+        )
+        data = json.loads(result)
+        assert data["ok"] is True
+        assert data["language"] == "c"
+        assert "int main" in data["code"]
+
+    async def test_get_dao_treasury(self) -> None:
+        ctx = _build_ctx(dao=True)
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(id="x", name="get_dao_treasury", arguments_json="{}")
+        )
+        data = json.loads(result)
+        assert data["holders"] == 42
+        assert isinstance(data["total_usd_value"], (int, float))
+        assert "token_balances" in data
+
+    async def test_list_and_lookup_blog_posts(self) -> None:
+        from datetime import UTC, datetime
+        from uuid import uuid4
+
+        from cyberdyne_backend.domain.blog import BlogPost, BlogPostStatus
+
+        post = BlogPost(
+            id=uuid4(),
+            slug="hello-web3",
+            title="Hello Web3",
+            body_md="# Hi\n\nbody",
+            excerpt="intro",
+            category_slug="defi",
+            author_user_id=None,
+            status=BlogPostStatus.PUBLISHED,
+            tags=("web3",),
+            created_at=datetime(2026, 5, 1, tzinfo=UTC),
+            published_at=datetime(2026, 5, 2, tzinfo=UTC),
+        )
+        ctx = _build_ctx(blog_posts=[post])
+        listed = json.loads(
+            await ToolDispatcher(ctx).dispatch(
+                ToolCall(id="x", name="list_blog_posts", arguments_json="{}")
+            )
+        )
+        assert listed["total"] == 1
+        assert listed["posts"][0]["slug"] == "hello-web3"
+
+        looked = json.loads(
+            await ToolDispatcher(ctx).dispatch(
+                ToolCall(
+                    id="x",
+                    name="lookup_blog_post",
+                    arguments_json=json.dumps({"slug": "hello-web3"}),
+                )
+            )
+        )
+        assert "body" in looked["body_md"]
+
+        miss = json.loads(
+            await ToolDispatcher(ctx).dispatch(
+                ToolCall(
+                    id="x", name="lookup_blog_post", arguments_json=json.dumps({"slug": "nope"})
+                )
+            )
+        )
+        assert miss["error"] == "not_found"
+
+    async def test_enroll_requires_sign_in(self) -> None:
+        ctx = _build_ctx(user_id=None)
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x",
+                name="enroll_in_path",
+                arguments_json=json.dumps({"path_slug": "cyberdyne-stack"}),
+            )
+        )
+        assert json.loads(result)["error"] == "sign_in_required"
+
+    async def test_enroll_in_path_for_signed_in_user(self) -> None:
+        ctx = _build_ctx(user_id=uuid.uuid4())
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x",
+                name="enroll_in_path",
+                arguments_json=json.dumps({"path_slug": "cyberdyne-stack"}),
+            )
+        )
+        data = json.loads(result)
+        assert data["ok"] is True
+        assert data["path_slug"] == "cyberdyne-stack"
+
+    async def test_enroll_unknown_path(self) -> None:
+        ctx = _build_ctx(user_id=uuid.uuid4())
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x", name="enroll_in_path", arguments_json=json.dumps({"path_slug": "ghost"})
+            )
+        )
+        assert json.loads(result)["error"] == "not_found"
+
+    async def test_set_module_progress(self) -> None:
+        ctx = _build_ctx(user_id=uuid.uuid4())
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x",
+                name="set_module_progress",
+                arguments_json=json.dumps({"module_slug": "mcp-servers", "percent": 100}),
+            )
+        )
+        data = json.loads(result)
+        assert data["ok"] is True
+        assert data["percent"] == 100
+
+    async def test_get_my_learning_signed_in(self) -> None:
+        ctx = _build_ctx(user_id=uuid.uuid4())
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(id="x", name="get_my_learning", arguments_json="{}")
+        )
+        data = json.loads(result)
+        assert "enrollments" in data and "progress" in data and "certificates" in data
 
     async def test_matlab_unavailable_when_no_port(self) -> None:
         result = await ToolDispatcher(_build_ctx()).dispatch(

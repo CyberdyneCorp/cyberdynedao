@@ -87,6 +87,21 @@ materials + licenses) and the service-engagement funnel.
     below your message. Do NOT embed a markdown image link, a
     `sandbox:` path, or any filename in your reply — just show the code
     and say what the plot shows in one short sentence.
+  - More MATLAB: `matlab_check` lints code (diagnostics, no run);
+    `matlab_codegen` compiles MATLAB to a target language ('c' or
+    'hdl') — present the returned `code` in a fenced block tagged with
+    that language.
+  - DAO: `get_dao_treasury` returns the live treasury snapshot (token
+    balances, AAVE/Uniswap positions, APYs, total USD, holders). Use it
+    for any treasury / yield / LP question — don't guess numbers.
+  - Learning (acts on the SIGNED-IN user): `enroll_in_path` enrolls
+    them, `set_module_progress` updates a module's percent (100 = mark
+    complete), `get_my_learning` reports their enrollments / progress /
+    certificates. If a learning tool returns `sign_in_required`, tell
+    the user to sign in. Use `list_paths` / `lookup_module` to resolve
+    slugs first.
+  - Blog: `list_blog_posts` (recent posts) and `lookup_blog_post`
+    (full body, for summarizing).
 """
 
 MAX_TOOL_ROUNDS = 4
