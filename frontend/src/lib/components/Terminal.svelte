@@ -1,234 +1,367 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { createTerminalViewModel } from '$lib/viewmodels/terminalViewModel';
-	import { sendChatMessage, startChatSession } from '$lib/api/contentApi';
+	import { onMount, tick } from 'svelte';
+	import { createTerminalViewModel } from '$lib/viewmodels/terminalViewModel.svelte';
 
 	const vm = createTerminalViewModel();
-	const terminalHistory = vm.history;
-	const currentUser = vm.user;
-	const currentHost = vm.host;
-	let terminalInput = '';
 
-	// Lazy chat session — created on first `ask` use.
-	let chatSessionId: string | null = null;
-	let isAsking = false;
+	let inputValue = $state('');
+	let completions = $state<string[]>([]);
+	// Autocomplete defence: the field starts readonly so Chrome/Safari
+	// won't fire their autofill heuristics on mount; focus flips it off
+	// so typing works. Combined with the data-*ignore attrs below this
+	// reliably kills the "save login / suggest password" popups that
+	// plagued the old terminal input.
+	let inputReadonly = $state(true);
 
-	async function handleSubmit() {
-		const raw = terminalInput.trim();
-		if (raw === '') return;
-		const inputForLog = terminalInput;
-		terminalInput = '';
+	let scrollEl = $state<HTMLElement | null>(null);
+	let inputEl = $state<HTMLInputElement | null>(null);
+	let viEl = $state<HTMLElement | null>(null);
+	let topEl = $state<HTMLElement | null>(null);
 
-		// `ask <question>` routes to the real AI chat backend. Everything
-		// else stays on the local command processor.
-		const parts = raw.split(' ');
-		const cmd = parts[0].toLowerCase();
-		const rest = parts.slice(1).join(' ').trim();
-		if (cmd === 'ask' && rest) {
-			vm.submit(inputForLog);
-			scrollToBottom();
-			await dispatchAsk(rest);
-			scrollToBottom();
-			setTimeout(() => focusInput(), 10);
+	// Auto-scroll the log whenever it grows.
+	$effect(() => {
+		void vm.lines.length;
+		void tick().then(() => {
+			if (scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight;
+		});
+	});
+
+	// Move focus to whichever surface is live.
+	$effect(() => {
+		const prog = vm.activeProgram;
+		void tick().then(() => {
+			if (prog === 'vi') viEl?.focus();
+			else if (prog === 'top') topEl?.focus();
+			else focusInput();
+		});
+	});
+
+	// `top` refreshes on a timer while it's the active program.
+	$effect(() => {
+		if (vm.activeProgram !== 'top') return;
+		const id = setInterval(() => vm.tickTop(), 1500);
+		return () => clearInterval(id);
+	});
+
+	onMount(() => {
+		setTimeout(focusInput, 150);
+	});
+
+	function focusInput() {
+		inputEl?.focus();
+	}
+
+	function onShellKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			completions = [];
+			vm.submit(inputValue);
+			inputValue = '';
 			return;
 		}
-
-		vm.submit(inputForLog);
-		scrollToBottom();
-		setTimeout(() => focusInput(), 10);
+		if (e.key === 'ArrowUp') {
+			e.preventDefault();
+			inputValue = vm.recallPrev(inputValue);
+			moveCaretToEnd();
+			return;
+		}
+		if (e.key === 'ArrowDown') {
+			e.preventDefault();
+			inputValue = vm.recallNext(inputValue);
+			moveCaretToEnd();
+			return;
+		}
+		if (e.key === 'Tab') {
+			e.preventDefault();
+			const r = vm.complete(inputValue);
+			inputValue = r.line;
+			completions = r.suggestions;
+			moveCaretToEnd();
+			return;
+		}
+		// any other key clears stale completion hints
+		if (completions.length) completions = [];
 	}
 
-	async function dispatchAsk(question: string) {
-		if (isAsking) return;
-		isAsking = true;
-		try {
-			if (!chatSessionId) {
-				const session = await startChatSession();
-				if (!session) {
-					vm.history.update((h) => [
-						...h,
-						{ type: 'output', text: 'ChatBot: chat backend unavailable — VITE_BACKEND_API_URL missing or backend down.' }
-					]);
-					return;
-				}
-				chatSessionId = session.sessionId;
+	function moveCaretToEnd() {
+		void tick().then(() => {
+			if (inputEl) {
+				const n = inputEl.value.length;
+				inputEl.setSelectionRange(n, n);
 			}
-			vm.history.update((h) => [
-				...h,
-				{ type: 'system', text: 'ChatBot: thinking…' }
-			]);
-			const reply = await sendChatMessage(chatSessionId, question);
-			vm.history.update((h) => {
-				// Drop the trailing "thinking…" line.
-				const trimmed = h[h.length - 1]?.text === 'ChatBot: thinking…' ? h.slice(0, -1) : h;
-				const text = reply?.content?.trim() || 'ChatBot: (no reply)';
-				return [...trimmed, { type: 'output', text: `ChatBot: ${text}` }];
-			});
-		} finally {
-			isAsking = false;
-		}
+		});
 	}
-	
-	function scrollToBottom() {
-		setTimeout(() => {
-			const terminal = document.querySelector('.terminal-content');
-			if (terminal) {
-				terminal.scrollTop = terminal.scrollHeight;
+
+	// ── vi key bridge ────────────────────────────────────────────────
+	function onViKeydown(e: KeyboardEvent) {
+		// Let browser shortcuts (copy/paste, devtools) through.
+		if (e.metaKey || e.ctrlKey || e.altKey) return;
+		const key = e.key;
+		const handled = [
+			'Enter',
+			'Backspace',
+			'Escape',
+			'Tab',
+			'ArrowUp',
+			'ArrowDown',
+			'ArrowLeft',
+			'ArrowRight'
+		];
+		if (key.length === 1 || handled.includes(key)) {
+			e.preventDefault();
+			// vi has no Tab insert here; treat it as two spaces in insert.
+			if (key === 'Tab') {
+				vm.feedEditor(' ');
+				vm.feedEditor(' ');
+			} else {
+				vm.feedEditor(key);
 			}
-		}, 10);
-	}
-	
-	function handleKeyDown(event: KeyboardEvent) {
-		if (event.key === 'Enter') {
-			event.preventDefault();
-			event.stopPropagation();
-			handleSubmit();
-		}
-	}
-	
-	function focusInput() {
-		const input = document.querySelector('.terminal-input') as HTMLInputElement;
-		if (input) {
-			input.focus();
 		}
 	}
 
-	function handleTerminalKeyDown(event: KeyboardEvent) {
-		if (event.key === 'Enter' || event.key === ' ') {
-			event.preventDefault();
-			focusInput();
+	// ── top key bridge ───────────────────────────────────────────────
+	function onTopKeydown(e: KeyboardEvent) {
+		if (e.key === 'q' || e.key === 'Escape') {
+			e.preventDefault();
+			vm.quitTop();
 		}
 	}
-	
-	// Auto-focus on mount
-	onMount(() => {
-		setTimeout(() => {
-			focusInput();
-		}, 200);
-	});
+
+	// Editor render helpers — split the cursor row so the block cursor
+	// can be highlighted at the right column.
+	function rowBefore(line: string, col: number): string {
+		return line.slice(0, col);
+	}
+	function rowAt(line: string, col: number): string {
+		return col < line.length ? line[col] : ' ';
+	}
+	function rowAfter(line: string, col: number): string {
+		return col < line.length ? line.slice(col + 1) : '';
+	}
 </script>
 
-<div class="flex flex-col h-full bg-black text-retro-green font-mono text-base terminal-container">
-	<div 
-		class="flex-1 overflow-y-auto p-4 min-h-0 cursor-text terminal-output" 
-		on:click={focusInput}
-		on:keydown={handleTerminalKeyDown}
-		role="button"
-		tabindex="0"
-		aria-label="Terminal output - click to focus input"
-	>
-		{#each $terminalHistory as line}
-			<div class="whitespace-pre-wrap mb-1">
-				{#if line.type === 'input'}
-					<span class="text-retro-green">{line.text}</span>
-				{:else if line.type === 'output'}
-					<span class="text-retro-green-dark">{line.text}</span>
-				{:else}
-					<span class="text-retro-green-darker">{line.text}</span>
-				{/if}
+<div class="term" role="application" aria-label="Linux terminal sandbox">
+	{#if vm.activeProgram === 'vi' && vm.editor}
+		<!-- vi full-screen editor -->
+		<div
+			class="vi"
+			tabindex="0"
+			role="textbox"
+			aria-label="vi editor"
+			aria-multiline="true"
+			bind:this={viEl}
+			onkeydown={onViKeydown}
+		>
+			{#key vm.programVersion}
+			<div class="vi-body">
+				{#each vm.editor.lines as line, i}
+					<div class="vi-line">
+						{#if i === vm.editor.row && vm.editor.mode !== 'command'}
+							<span>{rowBefore(line, vm.editor.col)}</span><span class="vi-cursor"
+								>{rowAt(line, vm.editor.col)}</span
+							><span>{rowAfter(line, vm.editor.col)}</span>
+						{:else}
+							<span>{line === '' ? ' ' : line}</span>
+						{/if}
+					</div>
+				{/each}
+				{#each Array(Math.max(0, 18 - vm.editor.lines.length)) as _}
+					<div class="vi-line vi-tilde">~</div>
+				{/each}
 			</div>
-		{/each}
-	</div>
-	
-	<div class="border-t border-retro-border p-4 flex items-center terminal-input-container">
-		<span class="text-retro-green mr-2 terminal-prompt">{currentUser}@{currentHost} $ </span>
-		<input 
-			bind:value={terminalInput}
-			on:keydown={handleKeyDown}
-			class="flex-1 terminal-input"
-			placeholder=""
-			autocomplete="off"
-			autocapitalize="off"
-			autocorrect="off"
-			spellcheck="false"
-			type="text"
-			name="terminal-command"
-			data-form-type="other"
-		/>
-	</div>
+			<div class="vi-status">
+				<span>{vm.editor.status || (vm.editor.mode === 'insert' ? '-- INSERT --' : '')}</span>
+				<span class="vi-pos">{vm.editor.filename}  {vm.editor.row + 1},{vm.editor.col + 1}</span>
+			</div>
+			{/key}
+		</div>
+	{:else if vm.activeProgram === 'top' && vm.top}
+		<!-- top live process view -->
+		<div
+			class="top"
+			tabindex="0"
+			role="textbox"
+			aria-readonly="true"
+			aria-label="top process viewer"
+			bind:this={topEl}
+			onkeydown={onTopKeydown}
+		>
+			{#key vm.programVersion}<pre class="top-pre">{vm.top.render()}</pre>{/key}
+			<div class="top-hint">press <b>q</b> to quit</div>
+		</div>
+	{:else}
+		<!-- interactive shell -->
+		<div
+			class="screen"
+			bind:this={scrollEl}
+			role="button"
+			tabindex="0"
+			aria-label="terminal output, click to focus"
+			onclick={focusInput}
+			onkeydown={(e) => {
+				if (e.key === 'Enter') focusInput();
+			}}
+		>
+			{#each vm.lines as line}
+				<div class="line {line.type}">{line.text === '' ? ' ' : line.text}</div>
+			{/each}
+			{#if completions.length}
+				<div class="line completions">{completions.join('   ')}</div>
+			{/if}
+			<div class="prompt-row">
+				<span class="prompt">{vm.prompt}</span>
+				<input
+					class="cmd"
+					bind:this={inputEl}
+					bind:value={inputValue}
+					onkeydown={onShellKeydown}
+					onfocus={() => (inputReadonly = false)}
+					readonly={inputReadonly}
+					type="text"
+					name="cyberdyne-shell-cmd"
+					autocomplete="off"
+					autocapitalize="off"
+					autocorrect="off"
+					spellcheck="false"
+					aria-autocomplete="none"
+					data-lpignore="true"
+					data-1p-ignore
+					data-form-type="other"
+					inputmode="text"
+				/>
+			</div>
+		</div>
+	{/if}
 </div>
 
 <style>
-	.terminal-container {
-		min-height: 200px;
-		background: #000 !important;
-		color: #00ff00 !important;
+	.term {
+		height: 100%;
+		min-height: 240px;
+		background: #050805;
+		color: #00ff66;
+		font-family: 'Courier New', ui-monospace, 'SF Mono', Menlo, monospace;
+		font-size: 14px;
+		line-height: 1.45;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
 	}
-	.terminal-container :global(.text-retro-green) {
-		color: #00ff00 !important;
-	}
-	.terminal-container :global(.text-retro-green-dark) {
-		color: #00dd00 !important;
-	}
-	.terminal-container :global(.text-retro-green-darker) {
-		color: #00aa00 !important;
-	}
-	.terminal-container :global(.border-retro-border) {
-		border-color: #166534 !important;
-	}
-	
-	.terminal-output {
+
+	/* ── shell ─────────────────────────────────────────────────────── */
+	.screen {
+		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
+		padding: 12px 14px;
+		cursor: text;
 		scrollbar-width: thin;
-		scrollbar-color: #00aa00 #001100;
+		scrollbar-color: #00aa44 #001a0a;
 	}
-	
-	.terminal-prompt {
-		flex-shrink: 0;
+	.line {
+		white-space: pre-wrap;
+		word-break: break-word;
+	}
+	.line.output {
+		color: #00dd55;
+	}
+	.line.error {
+		color: #ff5555;
+	}
+	.line.system {
+		color: #00aa44;
+	}
+	.line.input {
+		color: #9dffc0;
+	}
+	.line.completions {
+		color: #66ffaa;
+		opacity: 0.8;
+	}
+	.prompt-row {
+		display: flex;
+		align-items: baseline;
+		gap: 8px;
+	}
+	.prompt {
+		color: #57ff8f;
 		white-space: nowrap;
-	}
-	
-	.terminal-input-container {
 		flex-shrink: 0;
-		min-height: 48px;
-		align-items: center;
 	}
-	
-	/* Mobile optimizations */
-	@media (max-width: 768px) {
-		.terminal-container {
-			font-size: 14px;
-		}
-		
-		.terminal-output {
-			padding: 8px 12px;
-		}
-		
-		.terminal-input-container {
-			padding: 8px 12px;
-			min-height: 44px;
-		}
-		
-		.terminal-prompt {
-			font-size: 13px;
-			margin-right: 8px;
-		}
+	.cmd {
+		flex: 1;
+		background: transparent;
+		border: none;
+		outline: none;
+		color: #eaffea;
+		font: inherit;
+		caret-color: #00ff66;
+		padding: 0;
 	}
-	
+
+	/* ── vi ────────────────────────────────────────────────────────── */
+	.vi {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		outline: none;
+		min-height: 0;
+	}
+	.vi-body {
+		flex: 1;
+		overflow-y: auto;
+		padding: 4px 8px;
+	}
+	.vi-line {
+		white-space: pre-wrap;
+		min-height: 1.45em;
+	}
+	.vi-tilde {
+		color: #1c6b3a;
+	}
+	.vi-cursor {
+		background: #00ff66;
+		color: #050805;
+	}
+	.vi-status {
+		display: flex;
+		justify-content: space-between;
+		background: #0c1f12;
+		color: #b9ffce;
+		padding: 2px 8px;
+		border-top: 1px solid #123322;
+	}
+	.vi-pos {
+		opacity: 0.8;
+	}
+
+	/* ── top ───────────────────────────────────────────────────────── */
+	.top {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		outline: none;
+		min-height: 0;
+	}
+	.top-pre {
+		flex: 1;
+		margin: 0;
+		padding: 8px 10px;
+		overflow: auto;
+		white-space: pre;
+		color: #c9ffd9;
+		font: inherit;
+	}
+	.top-hint {
+		background: #0c1f12;
+		color: #8fffb6;
+		padding: 2px 8px;
+		border-top: 1px solid #123;
+	}
+
 	@media (max-width: 480px) {
-		.terminal-container {
-			font-size: 13px;
-		}
-		
-		.terminal-output {
-			padding: 6px 8px;
-		}
-		
-		.terminal-input-container {
-			padding: 6px 8px;
-			min-height: 40px;
-		}
-		
-		.terminal-prompt {
+		.term {
 			font-size: 12px;
-			margin-right: 6px;
-		}
-	}
-	
-	/* Improve touch targets on mobile */
-	@media (hover: none) and (pointer: coarse) {
-		.terminal-input-container {
-			min-height: 48px;
 		}
 	}
 </style>
-
