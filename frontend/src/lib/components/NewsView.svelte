@@ -7,7 +7,7 @@
 		createNewsViewModel,
 		truncateTitle
 	} from '$lib/viewmodels/newsViewModel';
-	import { fetchBlogPosts, type BlogPostSummary } from '$lib/api/contentApi';
+	import { fetchBlogPosts, fetchBlogPost, type BlogPostSummary } from '$lib/api/contentApi';
 
 	let { isMobile = false }: { isMobile?: boolean } = $props();
 	// Layout adapts via CSS media queries — keep the prop for caller
@@ -19,6 +19,11 @@
 	const { categories, featuredPosts } = vm;
 
 	let blogPosts = $state<BlogPost[]>(vm.posts);
+
+	// Full body of the selected post (markdown), lazy-loaded on select.
+	let bodyBlocks = $state<MdBlock[]>([]);
+	let bodyLoading = $state(false);
+	let bodyError = $state(false);
 
 	onMount(async () => {
 		const list = await fetchBlogPosts({ pageSize: 50 });
@@ -42,8 +47,96 @@
 		};
 	}
 
-	function selectPost(post: BlogPost) {
+	async function selectPost(post: BlogPost) {
 		vm.selectPost(post);
+		// Pull the full body. `post.id` is the slug (set in apiPostToFrontend).
+		bodyBlocks = [];
+		bodyError = false;
+		bodyLoading = true;
+		try {
+			const detail = await fetchBlogPost(post.id);
+			if (detail && detail.bodyMd) {
+				bodyBlocks = parseMarkdown(detail.bodyMd);
+			} else {
+				bodyError = !detail;
+			}
+		} finally {
+			bodyLoading = false;
+		}
+	}
+
+	// ── Minimal, XSS-safe markdown → block list ───────────────────────
+	// We render the returned blocks with Svelte markup (no {@html}), so
+	// nothing in the post body can inject script. Supports headings,
+	// unordered lists, fenced code, and paragraphs — enough for our posts.
+	type MdBlock =
+		| { kind: 'h'; level: number; text: string }
+		| { kind: 'p'; text: string }
+		| { kind: 'ul'; items: string[] }
+		| { kind: 'code'; text: string };
+
+	function parseMarkdown(md: string): MdBlock[] {
+		const blocks: MdBlock[] = [];
+		const lines = md.replace(/\r\n/g, '\n').split('\n');
+		let para: string[] = [];
+		let list: string[] = [];
+		let code: string[] | null = null;
+
+		const flushPara = () => {
+			if (para.length) {
+				blocks.push({ kind: 'p', text: para.join(' ').trim() });
+				para = [];
+			}
+		};
+		const flushList = () => {
+			if (list.length) {
+				blocks.push({ kind: 'ul', items: list.slice() });
+				list = [];
+			}
+		};
+
+		for (const raw of lines) {
+			const line = raw;
+			if (line.trim().startsWith('```')) {
+				if (code === null) {
+					flushPara();
+					flushList();
+					code = [];
+				} else {
+					blocks.push({ kind: 'code', text: code.join('\n') });
+					code = null;
+				}
+				continue;
+			}
+			if (code !== null) {
+				code.push(line);
+				continue;
+			}
+			const heading = /^(#{1,4})\s+(.*)$/.exec(line.trim());
+			if (heading) {
+				flushPara();
+				flushList();
+				blocks.push({ kind: 'h', level: heading[1].length, text: heading[2].trim() });
+				continue;
+			}
+			const item = /^[-*]\s+(.*)$/.exec(line.trim());
+			if (item) {
+				flushPara();
+				list.push(item[1].trim());
+				continue;
+			}
+			if (line.trim() === '') {
+				flushPara();
+				flushList();
+				continue;
+			}
+			flushList();
+			para.push(line.trim());
+		}
+		if (code !== null) blocks.push({ kind: 'code', text: code.join('\n') });
+		flushPara();
+		flushList();
+		return blocks;
 	}
 
 	// ── Palette + per-category accent mapping (mirrors CyberddyneView) ─
@@ -202,6 +295,34 @@
 
 					<p class="article__excerpt">{$selectedPost.excerpt}</p>
 
+					{#if bodyLoading}
+						<p class="article__loading">Loading article…</p>
+					{:else if bodyBlocks.length > 0}
+						<div class="article__body">
+							{#each bodyBlocks as block}
+								{#if block.kind === 'h'}
+									{#if block.level <= 2}
+										<h3 class="body-h">{block.text}</h3>
+									{:else}
+										<h4 class="body-h body-h--sm">{block.text}</h4>
+									{/if}
+								{:else if block.kind === 'ul'}
+									<ul class="body-ul">
+										{#each block.items as it}
+											<li>{it}</li>
+										{/each}
+									</ul>
+								{:else if block.kind === 'code'}
+									<pre class="body-code">{block.text}</pre>
+								{:else}
+									<p class="body-p">{block.text}</p>
+								{/if}
+							{/each}
+						</div>
+					{:else if bodyError}
+						<p class="article__loading">Full article unavailable right now.</p>
+					{/if}
+
 					{#if $selectedPost.tags && $selectedPost.tags.length > 0}
 						<div class="tags">
 							<h3 class="subsection-title">Tags</h3>
@@ -214,7 +335,6 @@
 					{/if}
 
 					<div class="article__cta">
-						<PixelButton variant="solid" size="md">Read Full Article</PixelButton>
 						<PixelButton variant="outline" size="md">👍 Like</PixelButton>
 						<PixelButton variant="outline" size="md">🔗 Share</PixelButton>
 					</div>
@@ -515,6 +635,62 @@
 		line-height: 1.65;
 		color: #1f2937;
 		margin: 0;
+		font-weight: 600;
+	}
+	.article__loading {
+		font-size: 0.875rem;
+		color: #6b7280;
+		font-style: italic;
+		margin: 0;
+	}
+	.article__body {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		border-top: 2px solid #000;
+		padding-top: 14px;
+	}
+	.body-h {
+		font-size: 1.05rem;
+		font-weight: 800;
+		color: #000;
+		margin: 6px 0 0;
+		line-height: 1.3;
+	}
+	.body-h--sm {
+		font-size: 0.9rem;
+		color: var(--accent-dark);
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+	.body-p {
+		font-size: 0.9375rem;
+		line-height: 1.65;
+		color: #1f2937;
+		margin: 0;
+	}
+	.body-ul {
+		margin: 0;
+		padding-left: 20px;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+	.body-ul li {
+		font-size: 0.9375rem;
+		line-height: 1.5;
+		color: #1f2937;
+		list-style: square;
+	}
+	.body-code {
+		margin: 0;
+		padding: 10px 12px;
+		background: #0b1120;
+		color: #c9ffd9;
+		border: 2px solid #000;
+		font-size: 0.8125rem;
+		overflow-x: auto;
+		white-space: pre;
 	}
 	.tags {
 		display: flex;

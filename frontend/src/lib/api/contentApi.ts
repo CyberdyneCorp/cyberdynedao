@@ -11,6 +11,7 @@
  * pydantic alias_generator=to_camel.
  */
 
+import { withAuth } from '$lib/auth/authToken';
 import type { TeamMember } from '$lib/data/team';
 import { teamMembers as staticTeamMembers } from '$lib/data/team';
 import {
@@ -493,6 +494,75 @@ export async function fetchLearningPaths(): Promise<LearningPath[]> {
 }
 
 
+// ── Authenticated learning state (enroll / progress / certificates) ──
+// These hit endpoints gated by CyberdyneAuth's user token — `withAuth()`
+// injects the bearer. Callers must check the auth VM before invoking;
+// an unauthenticated call returns 401 and surfaces as an error.
+
+export interface LearningEnrollment {
+	id: string;
+	pathSlug: string;
+	startedAt: string;
+	status: 'active' | 'completed' | 'dropped';
+}
+
+export interface LearningModuleProgress {
+	moduleSlug: string;
+	percent: number;
+	startedAt: string;
+	completedAt: string | null;
+}
+
+export interface LearningCertificate {
+	id: string;
+	pathSlug: string;
+	issuedAt: string;
+	verificationHash: string;
+}
+
+export interface MyLearningState {
+	enrollments: LearningEnrollment[];
+	progress: LearningModuleProgress[];
+	certificates: LearningCertificate[];
+}
+
+async function authedJson<T>(path: string, init: RequestInit): Promise<T> {
+	if (!API_BASE) throw new Error('VITE_BACKEND_API_URL is not configured');
+	const headers = withAuth({ 'Content-Type': 'application/json', Accept: 'application/json' });
+	const response = await fetch(`${API_BASE}${path}`, { ...init, headers });
+	if (!response.ok) {
+		const detail = (await response.json().catch(() => null)) as { detail?: unknown } | null;
+		const msg = typeof detail?.detail === 'string' ? detail.detail : `HTTP ${response.status}`;
+		throw new Error(msg);
+	}
+	return (await response.json()) as T;
+}
+
+/** Fetch the signed-in user's enrollments, progress, and certificates. */
+export async function fetchMyLearningState(): Promise<MyLearningState> {
+	return authedJson<MyLearningState>('/api/v1/learning/me', { method: 'GET' });
+}
+
+/** Enroll the signed-in user in a learning path. */
+export async function enrollInPath(slug: string): Promise<LearningEnrollment> {
+	return authedJson<LearningEnrollment>(
+		`/api/v1/learning/paths/${encodeURIComponent(slug)}/enroll`,
+		{ method: 'POST' }
+	);
+}
+
+/** Set the signed-in user's progress for a module (0–100). */
+export async function updateModuleProgress(
+	slug: string,
+	percent: number
+): Promise<LearningModuleProgress> {
+	return authedJson<LearningModuleProgress>(
+		`/api/v1/learning/modules/${encodeURIComponent(slug)}/progress`,
+		{ method: 'PATCH', body: JSON.stringify({ percent }) }
+	);
+}
+
+
 // ── Phase 5 fetchers (DAO treasury) ─────────────────────────────────
 
 
@@ -556,7 +626,7 @@ export async function fetchDaoOverview(): Promise<DaoOverview | null> {
 }
 
 
-// ── Phase 6 fetchers (marketplace + chat) ───────────────────────────
+// ── Phase 6 fetchers (marketplace) ──────────────────────────────────
 
 
 import type { MarketplaceItem } from '$lib/types/components';
@@ -608,68 +678,5 @@ export async function fetchMarketplaceItems(): Promise<MarketplaceItem[]> {
 	} catch (err) {
 		console.warn('[contentApi] marketplace fetch failed, using static fallback:', err);
 		return staticMarketplaceItems;
-	}
-}
-
-
-export interface ChatSessionStart {
-	sessionId: string;
-	createdAt: string;
-}
-
-export interface ChatMessagePayload {
-	id: string;
-	sessionId: string;
-	role: 'user' | 'assistant' | 'tool' | 'system';
-	content: string;
-	toolCalls: { id: string; name: string; argumentsJson: string }[];
-	toolCallId: string | null;
-	tokensIn: number;
-	tokensOut: number;
-	model: string | null;
-	createdAt: string;
-}
-
-export async function startChatSession(): Promise<ChatSessionStart | null> {
-	if (!API_BASE) {
-		console.warn('[contentApi] chat disabled — VITE_BACKEND_API_URL not configured');
-		return null;
-	}
-	try {
-		const response = await fetch(`${API_BASE}/api/v1/chat/sessions`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json', Accept: 'application/json' }
-		});
-		if (!response.ok) {
-			throw new Error(`HTTP ${response.status}`);
-		}
-		return (await response.json()) as ChatSessionStart;
-	} catch (err) {
-		console.warn('[contentApi] startChatSession failed:', err);
-		return null;
-	}
-}
-
-export async function sendChatMessage(
-	sessionId: string,
-	content: string
-): Promise<ChatMessagePayload | null> {
-	if (!API_BASE) return null;
-	try {
-		const response = await fetch(
-			`${API_BASE}/api/v1/chat/sessions/${encodeURIComponent(sessionId)}/messages`,
-			{
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-				body: JSON.stringify({ content })
-			}
-		);
-		if (!response.ok) {
-			throw new Error(`HTTP ${response.status}`);
-		}
-		return (await response.json()) as ChatMessagePayload;
-	} catch (err) {
-		console.warn('[contentApi] sendChatMessage failed:', err);
-		return null;
 	}
 }
