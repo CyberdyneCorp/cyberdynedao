@@ -235,6 +235,36 @@ class _StubKnowledge:
         return f"stub:{query}"
 
 
+class _FakeMatlab:
+    """Records calls; returns a canned figure for plots."""
+
+    def __init__(self) -> None:
+        self.repl_calls: list[dict[str, object]] = []
+        self.plot_calls: list[dict[str, object]] = []
+
+    async def run_repl(self, *, source, session_id, bearer):
+        from cyberdyne_backend.domain.ai_chat import MatlabRunResult
+
+        self.repl_calls.append({"source": source, "session_id": session_id, "bearer": bearer})
+        return MatlabRunResult(
+            ok=True, stdout="ans = 4\n", stderr="", session_id=session_id
+        )
+
+    async def run_plot(self, *, source, session_id, bearer, fmt="png"):
+        from cyberdyne_backend.domain.ai_chat import MatlabRunResult
+
+        self.plot_calls.append({"source": source, "session_id": session_id, "bearer": bearer})
+        return MatlabRunResult(
+            ok=True,
+            stdout="",
+            stderr="",
+            artifacts=("plot_abc.png",),
+            image_base64="aGVsbG8=",
+            image_content_type="image/png",
+            session_id=session_id,
+        )
+
+
 class _CapturingLLM:
     """Records the system_prompt of the last call, returns a fixed reply."""
 
@@ -252,6 +282,8 @@ def _build_ctx(
     ask_repo: _FakeAskRepo | None = None,
     ask_notifier: _RecordingAskNotifier | None = None,
     user: object | None = None,
+    matlab: object | None = None,
+    bearer: str | None = None,
 ) -> ToolContext:
     content = _FakeContentRepo()
     learning = _FakeLearningRepo()
@@ -266,6 +298,8 @@ def _build_ctx(
         captcha=_AlwaysPassCaptcha(),
         ask_notifier=ask_notifier or _RecordingAskNotifier(),
         user=user,  # type: ignore[arg-type]
+        matlab=matlab,  # type: ignore[arg-type]
+        bearer=bearer,
     )
 
 
@@ -490,6 +524,53 @@ class TestToolDispatcher:
             ToolCall(id="x", name="does_not_exist", arguments_json="{}")
         )
         assert json.loads(result)["error"] == "unknown_tool"
+
+    async def test_matlab_repl_runs_in_session_workspace(self) -> None:
+        matlab = _FakeMatlab()
+        ctx = _build_ctx(matlab=matlab, bearer="tok-123")
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(id="x", name="matlab_repl", arguments_json=json.dumps({"source": "2+2"})),
+            chat_session_id="sess-1",
+        )
+        data = json.loads(result)
+        assert data["ok"] is True
+        assert "ans = 4" in data["stdout"]
+        # stable per-conversation workspace + forwarded bearer
+        assert matlab.repl_calls[0]["session_id"] == "agent-sess-1"
+        assert matlab.repl_calls[0]["bearer"] == "tok-123"
+
+    async def test_matlab_plot_returns_inline_image(self) -> None:
+        matlab = _FakeMatlab()
+        ctx = _build_ctx(matlab=matlab, bearer="tok")
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x",
+                name="matlab_plot",
+                arguments_json=json.dumps({"source": "plot(rand(10))"}),
+            ),
+            chat_session_id="sess-2",
+        )
+        data = json.loads(result)
+        assert data["ok"] is True
+        assert data["has_figure"] is True
+        assert data["image_base64"] == "aGVsbG8="
+        assert data["image_content_type"] == "image/png"
+        assert matlab.plot_calls[0]["session_id"] == "agent-sess-2"
+
+    async def test_matlab_empty_source_rejected(self) -> None:
+        ctx = _build_ctx(matlab=_FakeMatlab())
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(id="x", name="matlab_repl", arguments_json=json.dumps({"source": "  "})),
+            chat_session_id="s",
+        )
+        assert json.loads(result)["error"] == "empty_source"
+
+    async def test_matlab_unavailable_when_no_port(self) -> None:
+        result = await ToolDispatcher(_build_ctx()).dispatch(
+            ToolCall(id="x", name="matlab_plot", arguments_json=json.dumps({"source": "plot(1)"})),
+            chat_session_id="s",
+        )
+        assert json.loads(result)["error"] == "matlab_unavailable"
 
     async def test_capture_project_idea_persists_structured_body(self) -> None:
         ask_repo = _FakeAskRepo()

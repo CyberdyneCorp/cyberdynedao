@@ -130,6 +130,11 @@ class Settings(BaseSettings):
     # follow-up adapter (see docs/backend-roadmap.md §5.6).
     cyberrag_mcp_url: str | None = None
 
+    # MATLAB-LLVM backend the chat agent's matlab_repl / matlab_plot
+    # tools call (as the signed-in user). Same upstream the frontend's
+    # matlabApi.ts proxies to.
+    matlab_backend_url: str = "https://matlab-backend.coolify.cyberdynecorp.ai"
+
     @field_validator("log_level")
     @classmethod
     def _upper_log_level(cls, value: str) -> str:

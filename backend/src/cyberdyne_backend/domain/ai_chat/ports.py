@@ -50,6 +50,36 @@ class KnowledgeSearchPort(Protocol):
     async def search(self, query: str, *, mode: str = "hybrid") -> str: ...
 
 
+@dataclass(frozen=True, slots=True)
+class MatlabRunResult:
+    """One MATLAB-LLVM execution. ``image_base64`` carries the first
+    produced figure (PNG) so the chat agent can hand a renderable
+    artifact straight back to the frontend without a second authed
+    round-trip."""
+
+    ok: bool
+    stdout: str
+    stderr: str
+    artifacts: tuple[str, ...] = ()
+    image_base64: str | None = None
+    image_content_type: str | None = None
+    session_id: str = ""
+    timed_out: bool = False
+
+
+@runtime_checkable
+class MatlabPort(Protocol):
+    """Thin client over the MATLAB-LLVM backend. The agent calls it as
+    the signed-in user (``bearer`` is the user's CyberdyneAuth token),
+    so figures land in that user's per-session workspace."""
+
+    async def run_repl(self, *, source: str, session_id: str, bearer: str | None) -> MatlabRunResult: ...
+
+    async def run_plot(
+        self, *, source: str, session_id: str, bearer: str | None, fmt: str = "png"
+    ) -> MatlabRunResult: ...
+
+
 @runtime_checkable
 class ChatRepository(Protocol):
     async def save_session(self, session: ChatSession) -> None: ...
