@@ -133,10 +133,15 @@ function extractPlots(toolResultContent: string): AgentPlot[] {
 }
 
 /**
- * Build the visible bubble list from a full message history. Tool
- * messages aren't rendered as their own bubbles, but their results
- * are mined for inline figures and attached to the assistant turn
- * that called them (matched by tool_call_id).
+ * Build the visible bubble list from a full message history.
+ *
+ * A tool-using turn produces several backend messages: an intermediate
+ * assistant message that *only* carries tool_calls (empty text), the
+ * tool result messages, then the final assistant message with the
+ * actual text reply. We don't want to render the empty intermediate
+ * bubble, and the figure should land on the final text bubble — so we
+ * accumulate figures as we walk the turn and flush them onto the next
+ * assistant message that actually has content.
  */
 function bubblesFromMessages(messages: AgentMessage[]): AgentBubble[] {
 	const toolResultsById = new Map<string, AgentMessage>();
@@ -144,17 +149,31 @@ function bubblesFromMessages(messages: AgentMessage[]): AgentBubble[] {
 		if (m.role === 'tool' && m.toolCallId) toolResultsById.set(m.toolCallId, m);
 	}
 	const out: AgentBubble[] = [];
+	let pendingPlots: AgentPlot[] = [];
 	for (const m of messages) {
-		if (m.role !== 'user' && m.role !== 'assistant') continue;
-		const bubble = toBubble(m);
+		if (m.role === 'tool' || m.role === 'system') continue;
 		if (m.role === 'assistant') {
-			for (const tc of bubble.toolCalls) {
+			// Collect figures from any tool calls this message made.
+			for (const tc of m.toolCalls ?? []) {
 				const res = toolResultsById.get(tc.id);
-				if (!res) continue;
-				bubble.plots.push(...extractPlots(res.content));
+				if (res) pendingPlots.push(...extractPlots(res.content));
 			}
+			// Skip the empty tool-call-only round; keep its figures
+			// pending for the final text bubble.
+			if (m.content.trim() === '') continue;
+			const bubble = toBubble(m);
+			bubble.plots = pendingPlots;
+			pendingPlots = [];
+			out.push(bubble);
+		} else {
+			out.push(toBubble(m));
 		}
-		out.push(bubble);
+	}
+	// Figures with no trailing text bubble (rare) — attach to the last
+	// assistant bubble so they aren't lost.
+	if (pendingPlots.length) {
+		const lastAssistant = [...out].reverse().find((b) => b.role === 'assistant');
+		if (lastAssistant) lastAssistant.plots = [...lastAssistant.plots, ...pendingPlots];
 	}
 	return out;
 }
@@ -266,18 +285,19 @@ export function createAgentVM(): AgentViewModel {
 				createdAt: reply.createdAt,
 				pending: false
 			});
-			// The send response is just the final assistant message —
-			// it doesn't carry the intermediate tool results (where the
-			// figures live). If this turn used tools, re-read history so
-			// any matlab_plot images attach to their bubble.
-			if ((reply.toolCalls ?? []).length > 0) {
-				try {
-					const remote = await getHistory(sid);
-					bubbles = bubblesFromMessages(remote.messages);
-					persist();
-				} catch {
-					/* keep optimistic bubbles on refresh failure */
-				}
+			// The send response is only the FINAL assistant message — and
+			// on a tool-using turn that message has empty tool_calls (the
+			// calls live on an earlier intermediate message). So we can't
+			// tell from the reply whether a figure was produced. Re-read
+			// the full history so any matlab figures attach to their
+			// bubble. The text is already shown via the patch above, so
+			// this just enriches; failure is non-fatal.
+			try {
+				const remote = await getHistory(sid);
+				bubbles = bubblesFromMessages(remote.messages);
+				persist();
+			} catch {
+				/* keep optimistic bubbles on refresh failure */
 			}
 		} catch (err) {
 			const message =

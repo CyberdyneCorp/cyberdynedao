@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from dataclasses import dataclass
 from typing import cast
 
@@ -38,6 +39,20 @@ from cyberdyne_backend.domain.learning import LearningContentNotFoundError, Lear
 from cyberdyne_backend.domain.marketplace import ProductNotFoundError
 
 logger = logging.getLogger("cyberdyne_backend.ai_chat.tools")
+
+# Plotting verbs — if matlab_repl source draws, we route it through
+# /v1/plot so a figure is actually captured (plain /v1/repl doesn't
+# auto-save figures). Mirrors the frontend's looksLikePlot heuristic.
+_PLOT_VERB = re.compile(
+    r"(^|[\s;])(plot3?|figure|imshow|imagesc|surf|mesh|contourf?|histogram|barh?|"
+    r"scatter3?|stem|stairs|loglog|semilog[xy]|polar(plot)?|pie|area|heatmap|"
+    r"fplot|fsurf|fmesh|quiver3?|geoplot|geoscatter|plotmatrix|spy)\s*\(",
+    re.IGNORECASE,
+)
+
+
+def looks_like_plot(source: str) -> bool:
+    return bool(_PLOT_VERB.search(source))
 
 
 CYBERDYNE_TOOLS: list[ToolSchema] = [
@@ -344,7 +359,12 @@ class ToolDispatcher:
         # One stable workspace per conversation so variables persist
         # across tool calls in the same chat.
         session_id = f"agent-{chat_session_id}" if chat_session_id else "agent-default"
-        if plot:
+        # Route through /v1/plot when the agent explicitly plots, OR when
+        # it used matlab_repl on drawing code — /v1/repl alone doesn't
+        # capture a figure, so the user would get "no plot". This way a
+        # figure is captured regardless of which tool the model picked.
+        use_plot = plot or looks_like_plot(source)
+        if use_plot:
             res = await self._ctx.matlab.run_plot(
                 source=source, session_id=session_id, bearer=self._ctx.bearer
             )

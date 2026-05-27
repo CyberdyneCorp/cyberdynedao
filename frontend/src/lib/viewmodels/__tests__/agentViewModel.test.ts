@@ -108,6 +108,50 @@ describe('agentViewModel', () => {
 		expect(assistant.plots[0].sessionId).toBe('agent-s-plot');
 	});
 
+	it('attaches the figure to the final text bubble, skipping the empty tool-call round', async () => {
+		sessionStorage.setItem(
+			'cyberdyne.agent.v1',
+			JSON.stringify({ sessionId: 's-turn', bubbles: [] })
+		);
+		vi.spyOn(agentApi, 'getHistory').mockResolvedValue({
+			sessionId: 's-turn',
+			messages: [
+				{
+					id: 'u', sessionId: 's-turn', role: 'user', content: 'plot it',
+					toolCalls: [], toolCallId: null, tokensIn: 0, tokensOut: 0, model: null,
+					createdAt: '2026-05-27T09:00:00Z'
+				},
+				// intermediate tool-call round — empty text, carries the call
+				{
+					id: 'a-int', sessionId: 's-turn', role: 'assistant', content: '',
+					toolCalls: [{ id: 'call_9', name: 'matlab_plot', argumentsJson: '{}' }],
+					toolCallId: null, tokensIn: 0, tokensOut: 0, model: 'm',
+					createdAt: '2026-05-27T09:00:01Z'
+				},
+				{
+					id: 't', sessionId: 's-turn', role: 'tool',
+					content: JSON.stringify({ ok: true, has_figure: true, figures: ['p.png'], session_id: 'agent-s-turn' }),
+					toolCalls: [], toolCallId: 'call_9', tokensIn: 0, tokensOut: 0, model: null,
+					createdAt: '2026-05-27T09:00:02Z'
+				},
+				// final text reply — no tool calls
+				{
+					id: 'a-final', sessionId: 's-turn', role: 'assistant', content: 'Here is the plot.',
+					toolCalls: [], toolCallId: null, tokensIn: 0, tokensOut: 0, model: 'm',
+					createdAt: '2026-05-27T09:00:03Z'
+				}
+			]
+		});
+		const vm = createAgentVM();
+		await vm.bootstrap();
+		// empty intermediate bubble is dropped → user + final assistant only
+		expect(vm.bubbles).toHaveLength(2);
+		const finalBubble = vm.bubbles[1];
+		expect(finalBubble.content).toBe('Here is the plot.');
+		expect(finalBubble.plots).toHaveLength(1);
+		expect(finalBubble.plots[0].artifactPath).toBe('p.png');
+	});
+
 	it('bootstrap keeps local cache when remote history fetch fails', async () => {
 		sessionStorage.setItem(
 			'cyberdyne.agent.v1',
