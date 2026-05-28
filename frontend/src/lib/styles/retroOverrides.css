@@ -119,6 +119,3 @@
 	color: #000 !important;
 }
 
-/* ---- StartMenu: now owned by $lib/components/StartMenu.svelte (custom).
-       The svelte-ui-core .cy-start__* overrides used to live here; deleted
-       since that component is no longer rendered. ---- */

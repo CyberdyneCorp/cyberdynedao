@@ -5,9 +5,9 @@
 		DesktopIcon,
 		RetroWindow,
 		Taskbar,
+		LauncherMenu,
 		ErrorBoundary
 	} from '@cyberdynecorp/svelte-ui-core';
-	import StartMenu from '$lib/components/StartMenu.svelte';
 	import { authVM } from '$lib/auth/authViewModel.svelte';
 	import {
 		closeWindow,
@@ -91,11 +91,11 @@
 		class="retro-topbar flex items-center justify-between px-6 py-3 border-b-4 border-black gap-3"
 		style="background: var(--retro-taskbar-gradient, linear-gradient(to right,#1e3a8a,#3b82f6));"
 	>
-		<StartMenu
+		<LauncherMenu
 			sections={liveStartSections}
 			bind:open={startOpen}
 			header="CYBERDYNE OS"
-			tagline="Open infra for AI + Web3"
+			tagline="Open infrastructure for AI, Web3, DeFi and beyond."
 			connected={authVM.isAuthenticated}
 			identity={authVM.user
 				? shortAddr(authVM.user.wallet_address) || authVM.user.email
