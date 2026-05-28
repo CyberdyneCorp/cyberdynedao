@@ -14,7 +14,9 @@ import {
 } from '$lib/stores/windowStore';
 import { viewMap, type NavItem } from '$lib/constants/navigation';
 import { cart, marketplaceItemToCartItem } from '$lib/viewmodels/cartViewModel';
+import { authVM } from '$lib/auth/authViewModel.svelte';
 import type { MarketplaceItem } from '$lib/types/components';
+import type { StartMenuSection } from '$lib/components/StartMenu.types';
 
 export interface StartMenuItemConfig {
 	id: string;
@@ -38,6 +40,8 @@ export interface ShellViewModel {
 	windows: typeof windows;
 	cartCount: Readable<number>;
 	startMenuItems: StartMenuItemConfig[];
+	/** Sectioned items for the redesigned StartMenu (MAIN/BUSINESS/CONTENT/SYSTEM). */
+	startMenuSections: StartMenuSection[];
 	openWindowFor(name: string): void;
 	openWindowByNavItem(item: NavItem): void;
 	openCart(): void;
@@ -47,30 +51,75 @@ export interface ShellViewModel {
 	handleDesktopBgClick(e: Event): void;
 }
 
-// A real launcher: every app the desktop can open, plus the utility
-// actions. Item ids match the navigation names so ``openWindowFor``
-// resolves them through ``viewMap``; ``terminal`` / ``close-all`` are
-// handled specially. (StartMenu renders ``icon`` as text, so these are
-// emoji, not the SVG desktop icons.)
-const DEFAULT_START_MENU: StartMenuItemConfig[] = [
-	{ id: 'Cyberdyne', label: 'About Cyberdyne', icon: '🏢' },
-	{ id: 'Agent', label: 'AI Agent', icon: '🤖' },
-	{ id: 'MATLAB', label: 'MATLAB REPL', icon: '🔢' },
-	{ id: 'Blog', label: 'Blog', icon: '📰' },
-	{ id: 'Learn', label: 'Academy', icon: '🎓' },
-	{ id: 'DAO', label: 'DAO Treasury', icon: '🏦' },
-	{ id: 'Investments', label: 'Investments', icon: '📈' },
-	{ id: 'Marketplace', label: 'Marketplace', icon: '🛒' },
-	{ id: 'Products', label: 'Products', icon: '📦' },
-	{ id: 'Services', label: 'Services', icon: '🛠️' },
-	{ id: 'Team', label: 'Our Team', icon: '👥' },
-	{ id: 'Contact Us', label: 'Contact', icon: '✉️' },
-	{ id: 'terminal', label: 'Terminal', icon: '💻' },
-	{ id: 'close-all', label: 'Close All Windows', icon: '❌' }
+// Sectioned launcher data backing the redesigned StartMenu.
+// Item ids match navigation names so ``openWindowFor`` routes through
+// ``viewMap``; special ids are handled in ``handleStartSelect``
+// (cart / terminal / close-all / settings / disconnect).
+const DEFAULT_START_SECTIONS: StartMenuSection[] = [
+	{
+		id: 'main',
+		label: 'MAIN',
+		items: [
+			{ id: 'Cyberdyne', label: 'About Cyberdyne', icon: '🏢' },
+			{ id: 'Agent', label: 'AI Agent', icon: '🤖' },
+			{ id: 'MATLAB', label: 'MATLAB REPL', icon: '🔢' },
+			{ id: 'terminal', label: 'Terminal', icon: '💻' }
+		]
+	},
+	{
+		id: 'business',
+		label: 'BUSINESS',
+		items: [
+			{
+				id: 'Products',
+				label: 'Products',
+				icon: '📦',
+				children: [
+					{ id: 'Agent', label: 'AI Knowledge Systems', icon: '🤖' },
+					{ id: 'Cyberdyne', label: 'Geospatial Platform', icon: '🛰' },
+					{ id: 'MATLAB', label: 'MATLAB LLVM Compiler', icon: '🔢' },
+					{ id: 'DAO', label: 'DAO / DeFi Tools', icon: '🏦' },
+					{ id: 'Services', label: 'Developer Services', icon: '🛠️' },
+					{ id: 'Products', label: 'View all Products →', icon: '↗' }
+				]
+			},
+			{ id: 'Marketplace', label: 'Marketplace', icon: '🛒' },
+			{ id: 'Investments', label: 'Investments', icon: '📈' },
+			{ id: 'DAO', label: 'DAO Treasury', icon: '🏦' }
+		]
+	},
+	{
+		id: 'content',
+		label: 'CONTENT',
+		items: [
+			{ id: 'Blog', label: 'Blog', icon: '📰' },
+			{ id: 'Learn', label: 'Academy', icon: '🎓' }
+		]
+	},
+	{
+		id: 'system',
+		label: 'SYSTEM',
+		items: [
+			{ id: 'cart', label: 'Your Bag', icon: '🛍️' },
+			{ id: 'settings', label: 'Settings', icon: '⚙️' },
+			{ id: 'disconnect', label: 'Disconnect', icon: '🔌' },
+			{ id: 'close-all', label: 'Close All Windows', icon: '❌' }
+		]
+	}
 ];
 
+// Flattened legacy view for back-compat — the old flat StartMenu API
+// is still consumed by tests and any caller that doesn't know about
+// sections.
+function flatten(sections: StartMenuSection[]): StartMenuItemConfig[] {
+	return sections.flatMap((s) => s.items.map((i) => ({ id: i.id, label: i.label, icon: i.icon })));
+}
+
+const DEFAULT_START_MENU: StartMenuItemConfig[] = flatten(DEFAULT_START_SECTIONS);
+
 export function createShellViewModel(
-	startMenuItems: StartMenuItemConfig[] = DEFAULT_START_MENU
+	startMenuItems: StartMenuItemConfig[] = DEFAULT_START_MENU,
+	startMenuSections: StartMenuSection[] = DEFAULT_START_SECTIONS
 ): ShellViewModel {
 	const cartCount = cart.count;
 
@@ -95,7 +144,11 @@ export function createShellViewModel(
 	function handleStartSelect(id: string) {
 		if (id === 'terminal') storeCreateWindow('terminal', 'Terminal');
 		else if (id === 'close-all') closeAllWindows();
-		else if (id in viewMap) openWindowFor(id);
+		else if (id === 'cart') openCart();
+		else if (id === 'disconnect') void authVM.logout();
+		else if (id === 'settings') {
+			/* settings window not built yet — no-op until then */
+		} else if (id in viewMap) openWindowFor(id);
 		// Unknown id → no-op.
 	}
 
@@ -113,6 +166,7 @@ export function createShellViewModel(
 		windows,
 		cartCount,
 		startMenuItems,
+		startMenuSections,
 		openWindowFor,
 		openWindowByNavItem,
 		openCart,
@@ -140,4 +194,4 @@ function getWindowCount(): number {
 }
 
 // Exported for tests
-export const _internals = { DEFAULT_START_MENU };
+export const _internals = { DEFAULT_START_MENU, DEFAULT_START_SECTIONS };

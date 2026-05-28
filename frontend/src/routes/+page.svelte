@@ -5,9 +5,10 @@
 		DesktopIcon,
 		RetroWindow,
 		Taskbar,
-		StartMenu,
 		ErrorBoundary
 	} from '@cyberdynecorp/svelte-ui-core';
+	import StartMenu from '$lib/components/StartMenu.svelte';
+	import { authVM } from '$lib/auth/authViewModel.svelte';
 	import {
 		closeWindow,
 		bringToFront,
@@ -22,20 +23,40 @@
 	import { isMobileDevice } from '$lib/utils/mobileDetection';
 
 	const shell = createShellViewModel();
-	const { windows, cartCount, startMenuItems } = shell;
+	const { windows, cartCount, startMenuSections } = shell;
 
-	let cartCountValue = 0;
+	// Pipe the live cart count into the SYSTEM section's "Your Bag"
+	// item so the menu renders the badge in real time.
+	let liveStartSections = $state(startMenuSections);
+	$effect(() => {
+		liveStartSections = startMenuSections.map((s) =>
+			s.id === 'system'
+				? {
+						...s,
+						items: s.items.map((i) => (i.id === 'cart' ? { ...i, badge: cartCountValue } : i))
+					}
+				: s
+		);
+	});
+
+	function shortAddr(a: string | null | undefined): string | null {
+		return a ? `${a.slice(0, 5)}…${a.slice(-4)}` : null;
+	}
+
+	let cartCountValue = $state(0);
 	const unsubCart = cartCount.subscribe((v) => (cartCountValue = v));
 
-	let isMobile = false;
-	let startOpen = false;
+	let isMobile = $state(false);
+	let startOpen = $state(false);
 
-	$: taskbarItems = $windows.map((w) => ({
-		id: w.id,
-		label: w.title,
-		active: !w.minimized,
-		icon: undefined as string | undefined
-	}));
+	const taskbarItems = $derived(
+		$windows.map((w) => ({
+			id: w.id,
+			label: w.title,
+			active: !w.minimized,
+			icon: undefined as string | undefined
+		}))
+	);
 
 	function onStartSelect(id: string) {
 		startOpen = false;
@@ -71,10 +92,15 @@
 		style="background: var(--retro-taskbar-gradient, linear-gradient(to right,#1e3a8a,#3b82f6));"
 	>
 		<StartMenu
-			label="Start"
-			header="Cyberdyne"
-			items={startMenuItems}
+			sections={liveStartSections}
 			bind:open={startOpen}
+			header="CYBERDYNE OS"
+			tagline="Open infra for AI + Web3"
+			connected={authVM.isAuthenticated}
+			identity={authVM.user
+				? shortAddr(authVM.user.wallet_address) || authVM.user.email
+				: null}
+			identityFull={authVM.user?.wallet_address || authVM.user?.email || null}
 			onItemSelect={onStartSelect}
 		/>
 		<div class="w-48 sm:w-32"><Web3Wallet /></div>
@@ -87,8 +113,8 @@
 			type="button"
 			class="absolute inset-0 w-full h-full bg-transparent border-0 p-0 m-0 cursor-default"
 			aria-label="Toggle window slide"
-			on:click={shell.handleDesktopBgClick}
-			on:keydown={onSlideToggleKey}
+			onclick={shell.handleDesktopBgClick}
+			onkeydown={onSlideToggleKey}
 			style="z-index:1;"
 		></button>
 

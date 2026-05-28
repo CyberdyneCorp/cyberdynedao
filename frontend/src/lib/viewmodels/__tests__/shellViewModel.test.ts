@@ -13,16 +13,25 @@ describe('shellViewModel', () => {
 	it('exposes a full app launcher with utility actions', () => {
 		const shell = createShellViewModel();
 		const ids = shell.startMenuItems.map((i) => i.id);
-		// All the apps plus the two utilities.
+		// All the apps plus the system utilities.
 		expect(ids).toContain('Cyberdyne');
 		expect(ids).toContain('MATLAB');
 		expect(ids).toContain('Agent');
 		expect(ids).toContain('terminal');
+		expect(ids).toContain('cart');
+		expect(ids).toContain('disconnect');
 		expect(ids).toContain('close-all');
-		// Utilities are last.
-		expect(ids.slice(-2)).toEqual(['terminal', 'close-all']);
-		// Every non-utility id resolves through viewMap.
-		expect(shell.startMenuItems.length).toBeGreaterThan(10);
+		expect(shell.startMenuItems.length).toBeGreaterThan(12);
+	});
+
+	it('exposes sectioned start menu data', () => {
+		const shell = createShellViewModel();
+		const sectionIds = shell.startMenuSections.map((s) => s.id);
+		expect(sectionIds).toEqual(['main', 'business', 'content', 'system']);
+		const business = shell.startMenuSections.find((s) => s.id === 'business')!;
+		const products = business.items.find((i) => i.id === 'Products')!;
+		// Products has a hover submenu.
+		expect(products.children?.length).toBeGreaterThan(3);
 	});
 
 	it('accepts custom start menu items', () => {
@@ -63,6 +72,18 @@ describe('shellViewModel', () => {
 		const shell = createShellViewModel();
 		shell.handleStartSelect('MATLAB');
 		expect(get(windows)[0].content).toBe('matlab');
+	});
+
+	it('handleStartSelect("cart") opens the cart window', () => {
+		const shell = createShellViewModel();
+		shell.handleStartSelect('cart');
+		expect(get(windows)[0].content).toBe('cart');
+	});
+
+	it('handleStartSelect("settings") is a no-op (window not built yet)', () => {
+		const shell = createShellViewModel();
+		shell.handleStartSelect('settings');
+		expect(get(windows)).toHaveLength(0);
 	});
 
 	it('handleStartSelect("close-all") clears all windows', () => {
