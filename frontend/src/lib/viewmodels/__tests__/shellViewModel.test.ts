@@ -10,10 +10,19 @@ describe('shellViewModel', () => {
 		cart.clear();
 	});
 
-	it('exposes default start menu items', () => {
+	it('exposes a full app launcher with utility actions', () => {
 		const shell = createShellViewModel();
-		expect(shell.startMenuItems).toHaveLength(3);
-		expect(shell.startMenuItems.map((i) => i.id)).toEqual(['team', 'terminal', 'close-all']);
+		const ids = shell.startMenuItems.map((i) => i.id);
+		// All the apps plus the two utilities.
+		expect(ids).toContain('Cyberdyne');
+		expect(ids).toContain('MATLAB');
+		expect(ids).toContain('Agent');
+		expect(ids).toContain('terminal');
+		expect(ids).toContain('close-all');
+		// Utilities are last.
+		expect(ids.slice(-2)).toEqual(['terminal', 'close-all']);
+		// Every non-utility id resolves through viewMap.
+		expect(shell.startMenuItems.length).toBeGreaterThan(10);
 	});
 
 	it('accepts custom start menu items', () => {
@@ -44,10 +53,16 @@ describe('shellViewModel', () => {
 		expect(get(windows)[0].content).toBe('terminal');
 	});
 
-	it('handleStartSelect("team") opens team window', () => {
+	it('handleStartSelect("Team") opens the team window', () => {
 		const shell = createShellViewModel();
-		shell.handleStartSelect('team');
+		shell.handleStartSelect('Team');
 		expect(get(windows)[0].content).toBe('team');
+	});
+
+	it('handleStartSelect routes an app id through viewMap', () => {
+		const shell = createShellViewModel();
+		shell.handleStartSelect('MATLAB');
+		expect(get(windows)[0].content).toBe('matlab');
 	});
 
 	it('handleStartSelect("close-all") clears all windows', () => {
