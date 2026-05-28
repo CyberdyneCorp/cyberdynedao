@@ -281,12 +281,17 @@
 	.trigger {
 		display: inline-flex;
 		align-items: center;
-		gap: 8px;
-		padding: 6px 14px;
+		gap: 10px;
+		/* Match the height of the wallet/account button on the right of
+		   the topbar (~36 px) so the bar reads as one row, not two. */
+		padding: 10px 18px;
+		min-height: 36px;
 		background: rgba(255, 255, 255, 0.18);
 		border: 2px solid #000;
 		color: #fff;
-		font-weight: 600;
+		font-weight: 700;
+		font-size: 0.8125rem;
+		letter-spacing: 0.02em;
 		font-family: inherit;
 		cursor: pointer;
 	}
