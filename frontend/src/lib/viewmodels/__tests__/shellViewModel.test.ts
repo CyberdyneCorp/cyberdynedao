@@ -27,11 +27,12 @@ describe('shellViewModel', () => {
 	it('exposes sectioned start menu data', () => {
 		const shell = createShellViewModel();
 		const sectionIds = shell.startMenuSections.map((s) => s.id);
-		expect(sectionIds).toEqual(['main', 'business', 'content', 'system']);
-		const business = shell.startMenuSections.find((s) => s.id === 'business')!;
-		const products = business.items.find((i) => i.id === 'Products')!;
-		// Products has a hover submenu.
+		expect(sectionIds).toEqual(['core', 'ecosystem', 'learn', 'system']);
+		const ecosystem = shell.startMenuSections.find((s) => s.id === 'ecosystem')!;
+		const products = ecosystem.items.find((i) => i.id === 'Products')!;
+		// Products has a hover submenu with title + subtitle items.
 		expect(products.children?.length).toBeGreaterThan(3);
+		expect(products.children?.[0].subtitle).toBeTruthy();
 	});
 
 	it('accepts custom start menu items', () => {

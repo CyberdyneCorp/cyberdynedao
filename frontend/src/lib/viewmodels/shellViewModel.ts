@@ -57,30 +57,54 @@ export interface ShellViewModel {
 // (cart / terminal / close-all / settings / disconnect).
 const DEFAULT_START_SECTIONS: StartMenuSection[] = [
 	{
-		id: 'main',
-		label: 'MAIN',
+		id: 'core',
+		label: 'CORE',
 		items: [
 			{ id: 'Cyberdyne', label: 'About Cyberdyne', icon: '🏢' },
 			{ id: 'Agent', label: 'AI Agent', icon: '🤖' },
-			{ id: 'MATLAB', label: 'MATLAB REPL', icon: '🔢' },
-			{ id: 'terminal', label: 'Terminal', icon: '💻' }
+			{ id: 'MATLAB', label: 'MATLAB REPL', icon: '🔢' }
 		]
 	},
 	{
-		id: 'business',
-		label: 'BUSINESS',
+		id: 'ecosystem',
+		label: 'ECOSYSTEM',
 		items: [
 			{
 				id: 'Products',
 				label: 'Products',
 				icon: '📦',
 				children: [
-					{ id: 'Agent', label: 'AI Knowledge Systems', icon: '🤖' },
-					{ id: 'Cyberdyne', label: 'Geospatial Platform', icon: '🛰' },
-					{ id: 'MATLAB', label: 'MATLAB LLVM Compiler', icon: '🔢' },
-					{ id: 'DAO', label: 'DAO / DeFi Tools', icon: '🏦' },
-					{ id: 'Services', label: 'Developer Services', icon: '🛠️' },
-					{ id: 'Products', label: 'View all Products →', icon: '↗' }
+					{
+						id: 'Agent',
+						label: 'AI Knowledge Systems',
+						icon: '🤖',
+						subtitle: 'RAG, Agents, MCP'
+					},
+					{
+						id: 'Cyberdyne',
+						label: 'Geospatial Platform',
+						icon: '🛰',
+						subtitle: 'Satellite, Risk, Analytics'
+					},
+					{
+						id: 'MATLAB',
+						label: 'MATLAB LLVM Compiler',
+						icon: '🔢',
+						subtitle: 'High performance infra'
+					},
+					{
+						id: 'DAO',
+						label: 'DAO / DeFi Tools',
+						icon: '🏦',
+						subtitle: 'Yield, Treasury, Governance'
+					},
+					{
+						id: 'Services',
+						label: 'Developer Services',
+						icon: '🛠️',
+						subtitle: 'APIs, SDKs, Infrastructure'
+					},
+					{ id: 'Products', label: 'View all products', icon: '↗' }
 				]
 			},
 			{ id: 'Marketplace', label: 'Marketplace', icon: '🛒' },
@@ -89,8 +113,8 @@ const DEFAULT_START_SECTIONS: StartMenuSection[] = [
 		]
 	},
 	{
-		id: 'content',
-		label: 'CONTENT',
+		id: 'learn',
+		label: 'LEARN',
 		items: [
 			{ id: 'Blog', label: 'Blog', icon: '📰' },
 			{ id: 'Learn', label: 'Academy', icon: '🎓' }
@@ -101,8 +125,14 @@ const DEFAULT_START_SECTIONS: StartMenuSection[] = [
 		label: 'SYSTEM',
 		items: [
 			{ id: 'cart', label: 'Your Bag', icon: '🛍️' },
+			{ id: 'terminal', label: 'Terminal', icon: '💻', subtitle: 'Linux sandbox shell' },
 			{ id: 'settings', label: 'Settings', icon: '⚙️' },
-			{ id: 'disconnect', label: 'Disconnect', icon: '🔌' },
+			{
+				id: 'disconnect',
+				label: 'Disconnect',
+				icon: '⎋',
+				subtitle: 'Log out of Cyberdyne'
+			},
 			{ id: 'close-all', label: 'Close All Windows', icon: '❌' }
 		]
 	}

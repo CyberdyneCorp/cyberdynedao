@@ -7,6 +7,9 @@ export interface StartMenuEntry {
 	id: string;
 	label: string;
 	icon: string;
+	/** Optional second line under the label (used for the submenu items
+	 *  + things like Disconnect's "Log out of Cyberdyne"). */
+	subtitle?: string;
 	badge?: number;
 	children?: StartMenuEntry[];
 }
