@@ -16,7 +16,8 @@ import { viewMap, type NavItem } from '$lib/constants/navigation';
 import { cart, marketplaceItemToCartItem } from '$lib/viewmodels/cartViewModel';
 import { authVM } from '$lib/auth/authViewModel.svelte';
 import type { MarketplaceItem } from '$lib/types/components';
-import type { StartMenuSection } from '$lib/components/StartMenu.types';
+import type { LauncherMenuSection } from '@cyberdynecorp/svelte-ui-core';
+type StartMenuSection = LauncherMenuSection;
 
 export interface StartMenuItemConfig {
 	id: string;
