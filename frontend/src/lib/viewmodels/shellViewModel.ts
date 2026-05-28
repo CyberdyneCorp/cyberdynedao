@@ -47,8 +47,24 @@ export interface ShellViewModel {
 	handleDesktopBgClick(e: Event): void;
 }
 
+// A real launcher: every app the desktop can open, plus the utility
+// actions. Item ids match the navigation names so ``openWindowFor``
+// resolves them through ``viewMap``; ``terminal`` / ``close-all`` are
+// handled specially. (StartMenu renders ``icon`` as text, so these are
+// emoji, not the SVG desktop icons.)
 const DEFAULT_START_MENU: StartMenuItemConfig[] = [
-	{ id: 'team', label: 'Our Team', icon: '👥' },
+	{ id: 'Cyberdyne', label: 'About Cyberdyne', icon: '🏢' },
+	{ id: 'Agent', label: 'AI Agent', icon: '🤖' },
+	{ id: 'MATLAB', label: 'MATLAB REPL', icon: '🔢' },
+	{ id: 'Blog', label: 'Blog', icon: '📰' },
+	{ id: 'Learn', label: 'Academy', icon: '🎓' },
+	{ id: 'DAO', label: 'DAO Treasury', icon: '🏦' },
+	{ id: 'Investments', label: 'Investments', icon: '📈' },
+	{ id: 'Marketplace', label: 'Marketplace', icon: '🛒' },
+	{ id: 'Products', label: 'Products', icon: '📦' },
+	{ id: 'Services', label: 'Services', icon: '🛠️' },
+	{ id: 'Team', label: 'Our Team', icon: '👥' },
+	{ id: 'Contact Us', label: 'Contact', icon: '✉️' },
 	{ id: 'terminal', label: 'Terminal', icon: '💻' },
 	{ id: 'close-all', label: 'Close All Windows', icon: '❌' }
 ];
@@ -78,8 +94,9 @@ export function createShellViewModel(
 
 	function handleStartSelect(id: string) {
 		if (id === 'terminal') storeCreateWindow('terminal', 'Terminal');
-		else if (id === 'team') openWindowFor('Team');
 		else if (id === 'close-all') closeAllWindows();
+		else if (id in viewMap) openWindowFor(id);
+		// Unknown id → no-op.
 	}
 
 	function shouldSlideOnClick(target: EventTarget | null): boolean {

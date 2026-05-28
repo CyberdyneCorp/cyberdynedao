@@ -138,14 +138,41 @@
 .cy-start__menu {
 	background: #ffffff !important;
 	border: 2px solid #000 !important;
+	box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.45) !important;
+	min-width: 248px !important;
+	/* Full app launcher is tall — cap height and scroll instead of
+	   overflowing the viewport. */
+	max-height: min(70vh, 460px);
+	overflow-y: auto;
+	padding-bottom: 4px;
 }
 .cy-start__header {
 	background: var(--retro-titlebar-gradient) !important;
 	color: #ffffff !important;
+	letter-spacing: 0.04em;
+	/* Pin the header while the item list scrolls under it. */
+	position: sticky;
+	top: 0;
+	z-index: 1;
 }
 .cy-start__item {
 	color: #000000 !important;
+	gap: 12px !important;
+	padding: 9px 14px !important;
+	border-left: 4px solid transparent;
+	transition: background 0.1s ease, border-color 0.1s ease;
 }
 .cy-start__item:hover {
-	background: #f3f4f6 !important;
+	background: #eef2ff !important;
+	border-left-color: var(--retro-accent, #4f46e5);
+}
+.cy-start__icon {
+	width: 1.4em;
+	text-align: center;
+	font-size: 1.05rem;
+	flex: 0 0 auto;
+}
+/* Set off the two utility actions at the bottom (Terminal, Close All). */
+.cy-start__item:nth-last-child(2) {
+	border-top: 2px solid #e5e7eb;
 }
