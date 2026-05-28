@@ -43,6 +43,23 @@
 	let hoveredId = $state<string | null>(null);
 	let copied = $state(false);
 	let searchEl = $state<HTMLInputElement | null>(null);
+	// Submenu anchors against the viewport (position: fixed) so the
+	// inner scroll container can't clip it. Position is recomputed on
+	// each hover; auto-flips to the left of the item when there isn't
+	// room on the right.
+	let submenuTop = $state(0);
+	let submenuLeft = $state(0);
+	const SUBMENU_W = 280;
+	const SUBMENU_GAP = 8;
+
+	function placeSubmenu(target: EventTarget | null): void {
+		const btn = target instanceof Element ? (target.closest('.item') as HTMLElement | null) : null;
+		if (!btn) return;
+		const r = btn.getBoundingClientRect();
+		const wouldOverflow = r.right + SUBMENU_GAP + SUBMENU_W > window.innerWidth;
+		submenuLeft = wouldOverflow ? r.left - SUBMENU_GAP - SUBMENU_W : r.right + SUBMENU_GAP;
+		submenuTop = r.top;
+	}
 
 	const filteredSections = $derived.by(() => {
 		const q = search.trim().toLowerCase();
@@ -158,7 +175,10 @@
 							<div
 								class="item"
 								class:item--has-sub={!!item.children}
-								onmouseenter={() => (hoveredId = item.id)}
+								onmouseenter={(e) => {
+									hoveredId = item.id;
+									if (item.children) placeSubmenu(e.currentTarget);
+								}}
 								onmouseleave={() => {
 									if (hoveredId === item.id) hoveredId = null;
 								}}
@@ -168,7 +188,10 @@
 									class="item__main"
 									role="menuitem"
 									onclick={() => pick(item.id)}
-									onfocus={() => (hoveredId = item.id)}
+									onfocus={(e) => {
+										hoveredId = item.id;
+										if (item.children) placeSubmenu(e.currentTarget);
+									}}
 								>
 									<span class="item__icon" aria-hidden="true">{item.icon}</span>
 									<span class="item__text">
@@ -185,7 +208,12 @@
 									{/if}
 								</button>
 								{#if item.children && hoveredId === item.id}
-									<div class="submenu" role="menu" aria-label={`${item.label} submenu`}>
+									<div
+										class="submenu"
+										role="menu"
+										aria-label={`${item.label} submenu`}
+										style="top: {submenuTop}px; left: {submenuLeft}px; width: {SUBMENU_W}px;"
+									>
 										{#each item.children as sub (sub.id)}
 											{@const isViewAll = sub.id === item.id && sub.icon === '↗'}
 											<button
@@ -276,17 +304,21 @@
 		top: calc(100% + 6px);
 		left: 0;
 		width: 360px;
-		max-height: min(86vh, 720px);
-		overflow-y: auto;
+		/* No overflow on the panel itself — the inner ``.sections``
+		   container scrolls. This lets the absolute-positioned submenu
+		   render outside the panel without being clipped. */
+		overflow: visible;
 		background: #070a25;
 		color: #e0e7ff;
-		border: 2px solid #000;
-		box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.55);
+		/* Lighter chrome than retro windows, so the menu reads as a
+		   menu rather than a third window. */
+		border: 1px solid #1e293b;
+		box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55), 0 2px 0 rgba(0, 0, 0, 0.4);
 		z-index: 200;
 		padding: 12px;
 		display: flex;
 		flex-direction: column;
-		gap: 12px;
+		gap: 10px;
 	}
 
 	/* ── Header tile ──────────────────────────────────────────────── */
@@ -367,6 +399,14 @@
 		display: flex;
 		flex-direction: column;
 		gap: 4px;
+		/* Scroll here, not on the panel — so the submenu (rendered
+		   position: fixed) can escape the panel's viewport. */
+		max-height: clamp(220px, 60vh, 520px);
+		overflow-y: auto;
+		overflow-x: hidden;
+		/* Subtle scrollbar to match the dark panel. */
+		scrollbar-width: thin;
+		scrollbar-color: #1e293b transparent;
 	}
 	.section {
 		display: flex;
@@ -463,20 +503,18 @@
 
 	/* ── Submenu ──────────────────────────────────────────────────── */
 	.submenu {
-		position: absolute;
-		top: -6px;
-		left: 100%;
-		margin-left: 6px;
-		width: 280px;
+		/* Anchored to the viewport via JS-computed top/left so the
+		   panel's scrolling/clipping never affects it. */
+		position: fixed;
 		background: #070a25;
 		color: #e0e7ff;
-		border: 2px solid #000;
-		box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.55);
+		border: 1px solid #1e293b;
+		box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55);
 		padding: 6px;
 		display: flex;
 		flex-direction: column;
 		gap: 2px;
-		z-index: 1;
+		z-index: 250;
 	}
 	.submenu__item {
 		all: unset;
