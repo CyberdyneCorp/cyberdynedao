@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from cyberdyne_backend.adapters.inbound.api.learning.schemas import (
     CertificateResponse,
+    CertificateVerificationResponse,
     EnrollmentResponse,
     LearningModuleResponse,
     LearningPathResponse,
@@ -22,12 +23,14 @@ from cyberdyne_backend.adapters.inbound.middleware.auth import (
     require_principal,
 )
 from cyberdyne_backend.application.learning import (
+    CertificateVerification,
     EnrollInPath,
     GetMyLearningState,
     IssueCertificate,
     ListModules,
     ListPaths,
     UpdateModuleProgress,
+    VerifyCertificate,
 )
 from cyberdyne_backend.domain.auth_identity import UserPrincipal
 from cyberdyne_backend.domain.learning import (
@@ -67,6 +70,10 @@ async def get_my_state_uc() -> GetMyLearningState:  # pragma: no cover - overrid
 
 
 async def get_issue_certificate_uc() -> IssueCertificate:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_verify_certificate_uc() -> VerifyCertificate:  # pragma: no cover - override target
     raise NotImplementedError
 
 
@@ -127,6 +134,13 @@ def _certificate_response(c: Certificate) -> CertificateResponse:
     )
 
 
+def _verification_response(v: CertificateVerification) -> CertificateVerificationResponse:
+    return CertificateVerificationResponse(
+        valid=v.valid,
+        certificate=_certificate_response(v.certificate) if v.certificate else None,
+    )
+
+
 # ── Public catalogue ─────────────────────────────────────────────────
 
 
@@ -152,6 +166,20 @@ async def list_paths(
 ) -> list[LearningPathResponse]:
     paths = await use_case.execute()
     return [_path_response(p) for p in paths]
+
+
+@public_router.get(
+    "/certificates/{certificate_id}/verify",
+    response_model=CertificateVerificationResponse,
+    response_model_by_alias=True,
+)
+async def verify_certificate(
+    certificate_id: UUID,
+    use_case: Annotated[VerifyCertificate, Depends(get_verify_certificate_uc)],
+) -> CertificateVerificationResponse:
+    # Public: anyone with the certificate id can check authenticity.
+    result = await use_case.execute(certificate_id)
+    return _verification_response(result)
 
 
 # ── Authenticated user state ─────────────────────────────────────────

@@ -121,3 +121,26 @@ class IssueCertificate:
         )
         await self.repo.save_certificate(cert)
         return cert
+
+
+@dataclass(slots=True)
+class CertificateVerification:
+    valid: bool
+    certificate: Certificate | None
+
+
+@dataclass(slots=True)
+class VerifyCertificate:
+    """Public verification of a certificate by id. ``valid`` is true iff
+    the certificate exists and its stored signature matches its
+    verification hash (i.e. the claims weren't tampered with)."""
+
+    repo: LearningRepository
+    signer: CertificateSigner
+
+    async def execute(self, certificate_id: UUID) -> CertificateVerification:
+        cert = await self.repo.get_certificate_by_id(certificate_id)
+        if cert is None:
+            return CertificateVerification(valid=False, certificate=None)
+        valid = self.signer.verify(cert.verification_hash, cert.signed_payload)
+        return CertificateVerification(valid=valid, certificate=cert)

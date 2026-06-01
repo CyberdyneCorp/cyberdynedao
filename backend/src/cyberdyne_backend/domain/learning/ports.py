@@ -46,10 +46,20 @@ class LearningRepository(Protocol):
         self, user_id: UUID, path_slug: str
     ) -> Certificate | None: ...
 
+    async def get_certificate_by_id(self, certificate_id: UUID) -> Certificate | None:
+        """Load a certificate by its id, for public verification. None if
+        no such certificate."""
+        ...
+
 
 @runtime_checkable
 class CertificateSigner(Protocol):
-    """Signs the certificate's verification hash. Real impl uses
-    Ed25519 over the env-loaded private key."""
+    """Signs (and verifies) the certificate's verification hash. Real
+    impl uses HMAC-SHA256 over the env-loaded shared secret."""
 
     def sign(self, message: str) -> str: ...
+
+    def verify(self, message: str, signature: str) -> bool:
+        """True iff ``signature`` is this signer's signature of
+        ``message`` — i.e. the certificate hasn't been tampered with."""
+        ...

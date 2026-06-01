@@ -61,6 +61,11 @@ class CertificateResponse(_CamelModel):
     signed_payload: str
 
 
+class CertificateVerificationResponse(_CamelModel):
+    valid: bool
+    certificate: CertificateResponse | None = None
+
+
 class MyLearningStateResponse(_CamelModel):
     enrollments: list[EnrollmentResponse]
     progress: list[ModuleProgressResponse]
