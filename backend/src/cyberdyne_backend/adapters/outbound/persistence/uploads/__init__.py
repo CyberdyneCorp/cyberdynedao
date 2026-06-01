@@ -1,1 +1,0 @@
-"""Uploads persistence adapter."""
