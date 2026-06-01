@@ -90,8 +90,17 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
       CYBERRAG_MCP_URL: ${CYBERRAG_MCP_URL}
+
+      # ---- Uploads / media (Phase 7) ----
+      # Course/lesson media is written here and served read-only under
+      # MEDIA_URL_PREFIX. Backed by the uploads_data volume below so files
+      # survive redeploys.
+      MEDIA_ROOT: ${MEDIA_ROOT:-/data/uploads}
+      MEDIA_URL_PREFIX: ${MEDIA_URL_PREFIX:-/media}
     expose:
       - "8000"
+    volumes:
+      - uploads_data:/data/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -148,3 +157,4 @@ services:
 
 volumes:
   postgres_data:
+  uploads_data:

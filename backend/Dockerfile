@@ -37,9 +37,12 @@ COPY alembic/ alembic/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
-# Non-root runtime user
+# Non-root runtime user. Pre-create the media dir owned by appuser so the
+# uploads_data named volume (mounted at /data/uploads) initialises with
+# appuser ownership and is writable by the non-root process.
 RUN adduser --disabled-password --gecos '' appuser && \
-    chown -R appuser:appuser /app
+    mkdir -p /data/uploads && \
+    chown -R appuser:appuser /app /data
 USER appuser
 
 EXPOSE 8000
