@@ -1,0 +1,1 @@
+"""Courses persistence adapter."""

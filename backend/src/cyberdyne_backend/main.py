@@ -48,6 +48,25 @@ from cyberdyne_backend.adapters.inbound.api.content.router import (
 from cyberdyne_backend.adapters.inbound.api.content.router import (
     router as content_router,
 )
+from cyberdyne_backend.adapters.inbound.api.courses.router import (
+    admin_router as courses_admin_router,
+)
+from cyberdyne_backend.adapters.inbound.api.courses.router import (
+    get_add_lesson_uc,
+    get_course_uc,
+    get_create_course_uc,
+    get_delete_course_uc,
+    get_delete_lesson_uc,
+    get_list_courses_uc,
+    get_reorder_courses_uc,
+    get_reorder_lessons_uc,
+    get_set_published_uc,
+    get_update_course_uc,
+    get_update_lesson_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.courses.router import (
+    public_router as courses_public_router,
+)
 from cyberdyne_backend.adapters.inbound.api.dao.router import (
     get_dao_overview_uc,
 )
@@ -111,6 +130,9 @@ from cyberdyne_backend.adapters.outbound.persistence.blog.repository import (
 from cyberdyne_backend.adapters.outbound.persistence.content.repository import (
     SqlAlchemyContentRepository,
 )
+from cyberdyne_backend.adapters.outbound.persistence.courses.repository import (
+    SqlAlchemyCourseRepository,
+)
 from cyberdyne_backend.adapters.outbound.persistence.leads.repository import (
     SqlAlchemyAskRepository,
 )
@@ -141,6 +163,19 @@ from cyberdyne_backend.application.content.use_cases import (
     ListProjects,
     ListResourceGroups,
     ListTeam,
+)
+from cyberdyne_backend.application.courses import (
+    AddLesson,
+    CreateCourse,
+    DeleteCourse,
+    DeleteLesson,
+    GetCourse,
+    ListCourses,
+    ReorderCourses,
+    ReorderLessons,
+    SetCoursePublished,
+    UpdateCourse,
+    UpdateLesson,
 )
 from cyberdyne_backend.application.dao_treasury import GetDaoOverview
 from cyberdyne_backend.application.leads import (
@@ -285,6 +320,50 @@ def create_app() -> FastAPI:
                 site_url=settings.public_site_url,
             )
 
+    async def _list_courses_dep() -> AsyncIterator[ListCourses]:
+        async with session_scope() as session:
+            yield ListCourses(repo=SqlAlchemyCourseRepository(session))
+
+    async def _get_course_dep() -> AsyncIterator[GetCourse]:
+        async with session_scope() as session:
+            yield GetCourse(repo=SqlAlchemyCourseRepository(session))
+
+    async def _create_course_dep() -> AsyncIterator[CreateCourse]:
+        async with session_scope() as session:
+            yield CreateCourse(repo=SqlAlchemyCourseRepository(session))
+
+    async def _update_course_dep() -> AsyncIterator[UpdateCourse]:
+        async with session_scope() as session:
+            yield UpdateCourse(repo=SqlAlchemyCourseRepository(session))
+
+    async def _set_published_dep() -> AsyncIterator[SetCoursePublished]:
+        async with session_scope() as session:
+            yield SetCoursePublished(repo=SqlAlchemyCourseRepository(session))
+
+    async def _delete_course_dep() -> AsyncIterator[DeleteCourse]:
+        async with session_scope() as session:
+            yield DeleteCourse(repo=SqlAlchemyCourseRepository(session))
+
+    async def _reorder_courses_dep() -> AsyncIterator[ReorderCourses]:
+        async with session_scope() as session:
+            yield ReorderCourses(repo=SqlAlchemyCourseRepository(session))
+
+    async def _add_lesson_dep() -> AsyncIterator[AddLesson]:
+        async with session_scope() as session:
+            yield AddLesson(repo=SqlAlchemyCourseRepository(session))
+
+    async def _update_lesson_dep() -> AsyncIterator[UpdateLesson]:
+        async with session_scope() as session:
+            yield UpdateLesson(repo=SqlAlchemyCourseRepository(session))
+
+    async def _delete_lesson_dep() -> AsyncIterator[DeleteLesson]:
+        async with session_scope() as session:
+            yield DeleteLesson(repo=SqlAlchemyCourseRepository(session))
+
+    async def _reorder_lessons_dep() -> AsyncIterator[ReorderLessons]:
+        async with session_scope() as session:
+            yield ReorderLessons(repo=SqlAlchemyCourseRepository(session))
+
     async def _list_modules_dep() -> AsyncIterator[ListModules]:
         async with session_scope() as session:
             yield ListModules(repo=SqlAlchemyLearningRepository(session))
@@ -428,6 +507,17 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_create_post_uc] = _create_blog_post_dep
     app.dependency_overrides[get_publish_post_uc] = _publish_blog_post_dep
     app.dependency_overrides[get_rss_uc] = _rss_feed_dep
+    app.dependency_overrides[get_list_courses_uc] = _list_courses_dep
+    app.dependency_overrides[get_course_uc] = _get_course_dep
+    app.dependency_overrides[get_create_course_uc] = _create_course_dep
+    app.dependency_overrides[get_update_course_uc] = _update_course_dep
+    app.dependency_overrides[get_set_published_uc] = _set_published_dep
+    app.dependency_overrides[get_delete_course_uc] = _delete_course_dep
+    app.dependency_overrides[get_reorder_courses_uc] = _reorder_courses_dep
+    app.dependency_overrides[get_add_lesson_uc] = _add_lesson_dep
+    app.dependency_overrides[get_update_lesson_uc] = _update_lesson_dep
+    app.dependency_overrides[get_delete_lesson_uc] = _delete_lesson_dep
+    app.dependency_overrides[get_reorder_lessons_uc] = _reorder_lessons_dep
     app.dependency_overrides[get_list_modules_uc] = _list_modules_dep
     app.dependency_overrides[get_list_paths_uc] = _list_paths_dep
     app.dependency_overrides[get_enroll_uc] = _enroll_dep
@@ -454,6 +544,8 @@ def create_app() -> FastAPI:
     app.include_router(blog_admin_router)
     app.include_router(learning_public_router)
     app.include_router(learning_admin_router)
+    app.include_router(courses_public_router)
+    app.include_router(courses_admin_router)
     app.include_router(dao_router)
     app.include_router(marketplace_public_router)
     app.include_router(marketplace_me_router)
