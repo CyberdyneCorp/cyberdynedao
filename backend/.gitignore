@@ -9,3 +9,5 @@ htmlcov/
 .env
 .env.local
 .DS_Store
+# Local uploaded media (served from a persistent volume in prod)
+uploads/
