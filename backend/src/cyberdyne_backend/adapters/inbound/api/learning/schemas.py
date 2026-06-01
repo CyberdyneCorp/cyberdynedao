@@ -43,6 +43,7 @@ class EnrollmentResponse(_CamelModel):
     path_slug: str
     started_at: datetime
     status: Literal["active", "completed", "dropped"]
+    due_at: datetime | None = None
 
 
 class ModuleProgressResponse(_CamelModel):
@@ -59,6 +60,27 @@ class CertificateResponse(_CamelModel):
     issued_at: datetime
     verification_hash: str
     signed_payload: str
+
+
+DeadlineStatusLiteral = Literal["none", "upcoming", "urgent", "overdue"]
+
+
+class EnrollmentDeadlineResponse(_CamelModel):
+    path_slug: str
+    due_at: datetime | None = None
+    status: DeadlineStatusLiteral
+    days_remaining: int | None = None
+
+
+class SetDeadlineRequest(_CamelModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        extra="forbid",
+    )
+
+    # null clears the deadline.
+    due_at: datetime | None = None
 
 
 class MyLearningStateResponse(_CamelModel):
