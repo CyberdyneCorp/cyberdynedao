@@ -3,16 +3,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from uuid import UUID
 
 from cyberdyne_backend.domain.learning import (
     Certificate,
     CertificateSigner,
     Enrollment,
+    EnrollmentDeadline,
     LearningModule,
     LearningPath,
     LearningRepository,
     ModuleProgress,
+    days_remaining,
+    deadline_status,
     new_certificate,
     new_enrollment,
     new_progress,
@@ -121,3 +125,41 @@ class IssueCertificate:
         )
         await self.repo.save_certificate(cert)
         return cert
+
+
+@dataclass(slots=True)
+class SetEnrollmentDeadline:
+    """Admin-only. Sets (or clears, with ``due_at=None``) the deadline on
+    a user's path enrollment."""
+
+    repo: LearningRepository
+
+    async def execute(
+        self, *, user_id: UUID, path_slug: str, due_at: datetime | None
+    ) -> Enrollment:
+        return await self.repo.set_enrollment_deadline(
+            user_id=user_id, path_slug=path_slug, due_at=due_at
+        )
+
+
+@dataclass(slots=True)
+class GetMyDeadlines:
+    """A learner's enrollments with their computed deadline status
+    (overdue / urgent / upcoming / none)."""
+
+    repo: LearningRepository
+
+    async def execute(
+        self, user_id: UUID, *, now: datetime | None = None
+    ) -> list[EnrollmentDeadline]:
+        moment = now or datetime.now(tz=UTC)
+        enrollments = await self.repo.list_enrollments_for_user(user_id)
+        return [
+            EnrollmentDeadline(
+                path_slug=e.path_slug,
+                due_at=e.due_at,
+                status=deadline_status(e.due_at, now=moment),
+                days_remaining=days_remaining(e.due_at, now=moment),
+            )
+            for e in enrollments
+        ]

@@ -92,7 +92,9 @@ from cyberdyne_backend.adapters.inbound.api.learning.router import (
     get_issue_certificate_uc,
     get_list_modules_uc,
     get_list_paths_uc,
+    get_my_deadlines_uc,
     get_my_state_uc,
+    get_set_deadline_uc,
     get_update_progress_uc,
 )
 from cyberdyne_backend.adapters.inbound.api.learning.router import (
@@ -201,10 +203,12 @@ from cyberdyne_backend.application.leads import (
 )
 from cyberdyne_backend.application.learning import (
     EnrollInPath,
+    GetMyDeadlines,
     GetMyLearningState,
     IssueCertificate,
     ListModules,
     ListPaths,
+    SetEnrollmentDeadline,
     UpdateModuleProgress,
 )
 from cyberdyne_backend.application.marketplace import (
@@ -434,6 +438,14 @@ def create_app() -> FastAPI:
                 signer=container.certificate_signer,
             )
 
+    async def _my_deadlines_dep() -> AsyncIterator[GetMyDeadlines]:
+        async with session_scope() as session:
+            yield GetMyDeadlines(repo=SqlAlchemyLearningRepository(session))
+
+    async def _set_deadline_dep() -> AsyncIterator[SetEnrollmentDeadline]:
+        async with session_scope() as session:
+            yield SetEnrollmentDeadline(repo=SqlAlchemyLearningRepository(session))
+
     async def _dao_overview_dep() -> AsyncIterator[GetDaoOverview]:
         # No DB session needed — chain reads are HTTP-only.
         yield GetDaoOverview(
@@ -572,6 +584,8 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_update_progress_uc] = _update_progress_dep
     app.dependency_overrides[get_my_state_uc] = _my_state_dep
     app.dependency_overrides[get_issue_certificate_uc] = _issue_certificate_dep
+    app.dependency_overrides[get_my_deadlines_uc] = _my_deadlines_dep
+    app.dependency_overrides[get_set_deadline_uc] = _set_deadline_dep
     app.dependency_overrides[get_dao_overview_uc] = _dao_overview_dep
     app.dependency_overrides[get_list_products_uc] = _list_marketplace_products_dep
     app.dependency_overrides[get_create_checkout_uc] = _create_checkout_dep

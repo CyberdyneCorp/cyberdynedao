@@ -10,11 +10,13 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from cyberdyne_backend.adapters.inbound.api.learning.schemas import (
     CertificateResponse,
+    EnrollmentDeadlineResponse,
     EnrollmentResponse,
     LearningModuleResponse,
     LearningPathResponse,
     ModuleProgressResponse,
     MyLearningStateResponse,
+    SetDeadlineRequest,
     UpdateProgressRequest,
 )
 from cyberdyne_backend.adapters.inbound.middleware.auth import (
@@ -23,10 +25,12 @@ from cyberdyne_backend.adapters.inbound.middleware.auth import (
 )
 from cyberdyne_backend.application.learning import (
     EnrollInPath,
+    GetMyDeadlines,
     GetMyLearningState,
     IssueCertificate,
     ListModules,
     ListPaths,
+    SetEnrollmentDeadline,
     UpdateModuleProgress,
 )
 from cyberdyne_backend.domain.auth_identity import UserPrincipal
@@ -34,6 +38,8 @@ from cyberdyne_backend.domain.learning import (
     Certificate,
     CertificateNotEligibleError,
     Enrollment,
+    EnrollmentDeadline,
+    EnrollmentNotFoundError,
     LearningContentNotFoundError,
     LearningModule,
     LearningPath,
@@ -67,6 +73,14 @@ async def get_my_state_uc() -> GetMyLearningState:  # pragma: no cover - overrid
 
 
 async def get_issue_certificate_uc() -> IssueCertificate:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_my_deadlines_uc() -> GetMyDeadlines:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_set_deadline_uc() -> SetEnrollmentDeadline:  # pragma: no cover - override target
     raise NotImplementedError
 
 
@@ -104,6 +118,16 @@ def _enrollment_response(e: Enrollment) -> EnrollmentResponse:
         path_slug=e.path_slug,
         started_at=e.started_at,
         status=e.status.value,
+        due_at=e.due_at,
+    )
+
+
+def _deadline_response(d: EnrollmentDeadline) -> EnrollmentDeadlineResponse:
+    return EnrollmentDeadlineResponse(
+        path_slug=d.path_slug,
+        due_at=d.due_at,
+        status=d.status.value,
+        days_remaining=d.days_remaining,
     )
 
 
@@ -220,6 +244,24 @@ async def update_module_progress(
     return _progress_response(progress)
 
 
+# ── Deadlines ────────────────────────────────────────────────────────
+
+
+@public_router.get(
+    "/deadlines",
+    response_model=list[EnrollmentDeadlineResponse],
+    response_model_by_alias=True,
+)
+async def my_deadlines(
+    use_case: Annotated[GetMyDeadlines, Depends(get_my_deadlines_uc)],
+    principal: Annotated[UserPrincipal, Depends(require_principal)],
+) -> list[EnrollmentDeadlineResponse]:
+    if not isinstance(principal, UserPrincipal):
+        raise HTTPException(status_code=403, detail="user token required")
+    deadlines = await use_case.execute(principal.user_id)
+    return [_deadline_response(d) for d in deadlines]
+
+
 # ── Admin — issue certificate ────────────────────────────────────────
 
 
@@ -242,6 +284,25 @@ async def issue_certificate(
     except CertificateNotEligibleError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return _certificate_response(cert)
+
+
+@admin_router.patch(
+    "/enrollments/{user_id}/{slug}/deadline",
+    response_model=EnrollmentResponse,
+    response_model_by_alias=True,
+)
+async def set_enrollment_deadline(
+    user_id: UUID,
+    slug: str,
+    body: SetDeadlineRequest,
+    use_case: Annotated[SetEnrollmentDeadline, Depends(get_set_deadline_uc)],
+    _principal: Annotated[UserPrincipal, Depends(require_editor)],
+) -> EnrollmentResponse:
+    try:
+        enrollment = await use_case.execute(user_id=user_id, path_slug=slug, due_at=body.due_at)
+    except EnrollmentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return _enrollment_response(enrollment)
 
 
 __all__ = ["admin_router", "public_router"]

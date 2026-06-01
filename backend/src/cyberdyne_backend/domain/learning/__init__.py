@@ -8,6 +8,12 @@ Certificates in v1 are signed-JSON blobs (Ed25519). NFT minting is
 deferred to Phase 7+.
 """
 
+from cyberdyne_backend.domain.learning.deadlines import (
+    DeadlineStatus,
+    EnrollmentDeadline,
+    days_remaining,
+    deadline_status,
+)
 from cyberdyne_backend.domain.learning.entities import (
     Certificate,
     Enrollment,
@@ -35,7 +41,9 @@ __all__ = [
     "Certificate",
     "CertificateNotEligibleError",
     "CertificateSigner",
+    "DeadlineStatus",
     "Enrollment",
+    "EnrollmentDeadline",
     "EnrollmentNotFoundError",
     "EnrollmentStatus",
     "LearningContentNotFoundError",
@@ -45,6 +53,8 @@ __all__ = [
     "ModuleProgress",
     "ProgressOutOfRangeError",
     "certificate_eligible",
+    "days_remaining",
+    "deadline_status",
     "new_certificate",
     "new_enrollment",
     "new_progress",

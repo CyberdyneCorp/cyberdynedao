@@ -56,6 +56,8 @@ class Enrollment:
     path_slug: str
     started_at: datetime
     status: EnrollmentStatus = EnrollmentStatus.ACTIVE
+    # Optional enrollment-level deadline. None = no deadline set.
+    due_at: datetime | None = None
 
 
 @dataclass(slots=True)
