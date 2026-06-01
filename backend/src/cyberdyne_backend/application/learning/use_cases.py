@@ -14,12 +14,15 @@ from cyberdyne_backend.domain.learning import (
     LearningModule,
     LearningPath,
     LearningRepository,
+    ModuleGate,
     ModuleProgress,
+    compute_path_gates,
     days_remaining,
     deadline_status,
     new_certificate,
     new_enrollment,
     new_progress,
+    next_unlocked_module,
 )
 
 
@@ -163,3 +166,62 @@ class GetMyDeadlines:
             )
             for e in enrollments
         ]
+
+
+@dataclass(slots=True)
+class GetPathGating:
+    """Per-module lock state for a user against a path — backs the
+    player's prerequisite gating (level + sequential) and the lock
+    tooltips. Read-only; computed from the catalogue + the user's
+    progress."""
+
+    repo: LearningRepository
+
+    async def execute(self, *, user_id: UUID, path_slug: str) -> list[ModuleGate]:
+        # Raises LearningContentNotFoundError if the path is unknown.
+        path = await self.repo.get_path(path_slug)
+        modules = await self.repo.list_modules()
+        modules_by_slug = {m.slug: m for m in modules}
+        progress = await self.repo.get_progress_map_for_user(user_id)
+        return compute_path_gates(path, modules_by_slug, progress)
+
+
+@dataclass(slots=True)
+class EligibilityResult:
+    eligible: bool
+    already_enrolled: bool
+    next_module: str | None
+    reason: str | None
+
+
+@dataclass(slots=True)
+class CheckEnrollmentEligibility:
+    """Eligibility pre-check for enrolling in a path. A path is
+    enrollable when it resolves to at least one module; surfaces whether
+    the user is already enrolled and the first module they'd start on."""
+
+    repo: LearningRepository
+
+    async def execute(self, *, user_id: UUID, path_slug: str) -> EligibilityResult:
+        path = await self.repo.get_path(path_slug)
+        modules = await self.repo.list_modules()
+        modules_by_slug = {m.slug: m for m in modules}
+        progress = await self.repo.get_progress_map_for_user(user_id)
+        gates = compute_path_gates(path, modules_by_slug, progress)
+
+        enrollments = await self.repo.list_enrollments_for_user(user_id)
+        already_enrolled = any(e.path_slug == path_slug for e in enrollments)
+
+        if not gates:
+            return EligibilityResult(
+                eligible=False,
+                already_enrolled=already_enrolled,
+                next_module=None,
+                reason="path has no resolvable modules",
+            )
+        return EligibilityResult(
+            eligible=True,
+            already_enrolled=already_enrolled,
+            next_module=next_unlocked_module(gates),
+            reason=None,
+        )

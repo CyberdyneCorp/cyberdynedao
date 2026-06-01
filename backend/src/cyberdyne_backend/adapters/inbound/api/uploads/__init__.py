@@ -1,0 +1,1 @@
+"""Uploads HTTP adapter."""

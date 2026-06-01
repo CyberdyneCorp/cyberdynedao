@@ -5,7 +5,7 @@ a deadline; status (overdue / urgent / upcoming) is computed in the
 domain from ``due_at`` vs now.
 
 Revision ID: 202605270007
-Revises: 202605270006
+Revises: 202605270006u
 Create Date: 2026-06-01 01:00:00
 """
 
@@ -17,7 +17,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "202605270007"
-down_revision: str | Sequence[str] | None = "202605270006"
+down_revision: str | Sequence[str] | None = "202605270006u"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

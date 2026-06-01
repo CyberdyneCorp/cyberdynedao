@@ -12,6 +12,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from cyberdyne_backend import __version__
 from cyberdyne_backend.adapters.inbound.api.ai_chat.router import (
@@ -23,6 +24,16 @@ from cyberdyne_backend.adapters.inbound.api.ai_chat.router import (
 )
 from cyberdyne_backend.adapters.inbound.api.ai_chat.router import (
     router as chat_router,
+)
+from cyberdyne_backend.adapters.inbound.api.analytics.router import (
+    admin_router as analytics_admin_router,
+)
+from cyberdyne_backend.adapters.inbound.api.analytics.router import (
+    get_admin_overview_uc,
+    get_learner_dashboard_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.analytics.router import (
+    public_router as analytics_public_router,
 )
 from cyberdyne_backend.adapters.inbound.api.blog.router import (
     admin_router as blog_admin_router,
@@ -88,12 +99,14 @@ from cyberdyne_backend.adapters.inbound.api.learning.router import (
     admin_router as learning_admin_router,
 )
 from cyberdyne_backend.adapters.inbound.api.learning.router import (
+    get_eligibility_uc,
     get_enroll_uc,
     get_issue_certificate_uc,
     get_list_modules_uc,
     get_list_paths_uc,
     get_my_deadlines_uc,
     get_my_state_uc,
+    get_path_gating_uc,
     get_set_deadline_uc,
     get_update_progress_uc,
 )
@@ -134,10 +147,24 @@ from cyberdyne_backend.adapters.inbound.api.quizzes.router import (
 from cyberdyne_backend.adapters.inbound.api.quizzes.router import (
     player_router as quizzes_player_router,
 )
+from cyberdyne_backend.adapters.inbound.api.uploads.router import (
+    admin_router as uploads_admin_router,
+)
+from cyberdyne_backend.adapters.inbound.api.uploads.router import (
+    get_save_upload_uc,
+    get_save_uploads_uc,
+    get_upload_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.uploads.router import (
+    public_router as uploads_public_router,
+)
 from cyberdyne_backend.adapters.inbound.health.router import router as health_router
 from cyberdyne_backend.adapters.inbound.middleware.auth import AuthMiddleware, extract_token
 from cyberdyne_backend.adapters.outbound.persistence.ai_chat.repository import (
     SqlAlchemyChatRepository,
+)
+from cyberdyne_backend.adapters.outbound.persistence.analytics.repository import (
+    SqlAlchemyAnalyticsRepository,
 )
 from cyberdyne_backend.adapters.outbound.persistence.blog.repository import (
     SqlAlchemyBlogRepository,
@@ -160,12 +187,20 @@ from cyberdyne_backend.adapters.outbound.persistence.marketplace.repository impo
 from cyberdyne_backend.adapters.outbound.persistence.quizzes.repository import (
     SqlAlchemyQuizRepository,
 )
+from cyberdyne_backend.adapters.outbound.persistence.uploads.repository import (
+    SqlAlchemyUploadRepository,
+)
+from cyberdyne_backend.adapters.outbound.storage.local import LocalFileStorage
 from cyberdyne_backend.application.ai_chat import (
     GetChatHistory,
     RunChatTurn,
     StartChatSession,
     ToolContext,
     ToolDispatcher,
+)
+from cyberdyne_backend.application.analytics import (
+    GetAdminOverview,
+    GetLearnerDashboard,
 )
 from cyberdyne_backend.application.blog import (
     CreateBlogPost,
@@ -202,9 +237,11 @@ from cyberdyne_backend.application.leads import (
     CreateAsk,
 )
 from cyberdyne_backend.application.learning import (
+    CheckEnrollmentEligibility,
     EnrollInPath,
     GetMyDeadlines,
     GetMyLearningState,
+    GetPathGating,
     IssueCertificate,
     ListModules,
     ListPaths,
@@ -229,6 +266,11 @@ from cyberdyne_backend.application.quizzes import (
     SubmitQuizAttempt,
     UpsertQuiz,
 )
+from cyberdyne_backend.application.uploads import (
+    GetUpload,
+    SaveUpload,
+    SaveUploads,
+)
 from cyberdyne_backend.domain.auth_identity import UserPrincipal, UserProfile
 from cyberdyne_backend.infrastructure.container import Container
 from cyberdyne_backend.infrastructure.database.engine import (
@@ -243,6 +285,8 @@ def create_app() -> FastAPI:
     settings = get_settings()
     configure_logging(settings.log_level)
     container = Container(settings)
+    # Shared file-storage adapter (creates the media root if missing).
+    file_storage = LocalFileStorage(settings.media_root)
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
@@ -323,6 +367,14 @@ def create_app() -> FastAPI:
     async def _admin_update_ask_dep() -> AsyncIterator[AdminUpdateAsk]:
         async with session_scope() as session:
             yield AdminUpdateAsk(repo=SqlAlchemyAskRepository(session))
+
+    async def _learner_dashboard_dep() -> AsyncIterator[GetLearnerDashboard]:
+        async with session_scope() as session:
+            yield GetLearnerDashboard(repo=SqlAlchemyAnalyticsRepository(session))
+
+    async def _admin_overview_dep() -> AsyncIterator[GetAdminOverview]:
+        async with session_scope() as session:
+            yield GetAdminOverview(repo=SqlAlchemyAnalyticsRepository(session))
 
     async def _list_blog_posts_dep() -> AsyncIterator[ListBlogPosts]:
         async with session_scope() as session:
@@ -411,6 +463,28 @@ def create_app() -> FastAPI:
         async with session_scope() as session:
             yield ListMyAttempts(repo=SqlAlchemyQuizRepository(session))
 
+    async def _save_upload_dep() -> AsyncIterator[SaveUpload]:
+        async with session_scope() as session:
+            yield SaveUpload(
+                repo=SqlAlchemyUploadRepository(session),
+                storage=file_storage,
+                media_url_prefix=settings.media_url_prefix,
+            )
+
+    async def _save_uploads_dep() -> AsyncIterator[SaveUploads]:
+        async with session_scope() as session:
+            yield SaveUploads(
+                inner=SaveUpload(
+                    repo=SqlAlchemyUploadRepository(session),
+                    storage=file_storage,
+                    media_url_prefix=settings.media_url_prefix,
+                )
+            )
+
+    async def _get_upload_dep() -> AsyncIterator[GetUpload]:
+        async with session_scope() as session:
+            yield GetUpload(repo=SqlAlchemyUploadRepository(session))
+
     async def _list_modules_dep() -> AsyncIterator[ListModules]:
         async with session_scope() as session:
             yield ListModules(repo=SqlAlchemyLearningRepository(session))
@@ -430,6 +504,14 @@ def create_app() -> FastAPI:
     async def _my_state_dep() -> AsyncIterator[GetMyLearningState]:
         async with session_scope() as session:
             yield GetMyLearningState(repo=SqlAlchemyLearningRepository(session))
+
+    async def _path_gating_dep() -> AsyncIterator[GetPathGating]:
+        async with session_scope() as session:
+            yield GetPathGating(repo=SqlAlchemyLearningRepository(session))
+
+    async def _eligibility_dep() -> AsyncIterator[CheckEnrollmentEligibility]:
+        async with session_scope() as session:
+            yield CheckEnrollmentEligibility(repo=SqlAlchemyLearningRepository(session))
 
     async def _issue_certificate_dep() -> AsyncIterator[IssueCertificate]:
         async with session_scope() as session:
@@ -557,6 +639,8 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_create_ask_uc] = _create_ask_dep
     app.dependency_overrides[get_admin_list_asks_uc] = _admin_list_asks_dep
     app.dependency_overrides[get_admin_update_ask_uc] = _admin_update_ask_dep
+    app.dependency_overrides[get_learner_dashboard_uc] = _learner_dashboard_dep
+    app.dependency_overrides[get_admin_overview_uc] = _admin_overview_dep
     app.dependency_overrides[get_list_posts_uc] = _list_blog_posts_dep
     app.dependency_overrides[get_post_uc] = _get_blog_post_dep
     app.dependency_overrides[get_create_post_uc] = _create_blog_post_dep
@@ -578,11 +662,16 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_delete_quiz_uc] = _delete_quiz_dep
     app.dependency_overrides[get_submit_attempt_uc] = _submit_attempt_dep
     app.dependency_overrides[get_list_attempts_uc] = _list_attempts_dep
+    app.dependency_overrides[get_save_upload_uc] = _save_upload_dep
+    app.dependency_overrides[get_save_uploads_uc] = _save_uploads_dep
+    app.dependency_overrides[get_upload_uc] = _get_upload_dep
     app.dependency_overrides[get_list_modules_uc] = _list_modules_dep
     app.dependency_overrides[get_list_paths_uc] = _list_paths_dep
     app.dependency_overrides[get_enroll_uc] = _enroll_dep
     app.dependency_overrides[get_update_progress_uc] = _update_progress_dep
     app.dependency_overrides[get_my_state_uc] = _my_state_dep
+    app.dependency_overrides[get_path_gating_uc] = _path_gating_dep
+    app.dependency_overrides[get_eligibility_uc] = _eligibility_dep
     app.dependency_overrides[get_issue_certificate_uc] = _issue_certificate_dep
     app.dependency_overrides[get_my_deadlines_uc] = _my_deadlines_dep
     app.dependency_overrides[get_set_deadline_uc] = _set_deadline_dep
@@ -602,6 +691,8 @@ def create_app() -> FastAPI:
     app.include_router(content_router)
     app.include_router(leads_public_router)
     app.include_router(leads_admin_router)
+    app.include_router(analytics_public_router)
+    app.include_router(analytics_admin_router)
     app.include_router(blog_public_router)
     app.include_router(blog_admin_router)
     app.include_router(learning_public_router)
@@ -610,6 +701,15 @@ def create_app() -> FastAPI:
     app.include_router(courses_admin_router)
     app.include_router(quizzes_player_router)
     app.include_router(quizzes_admin_router)
+    app.include_router(uploads_admin_router)
+    app.include_router(uploads_public_router)
+    # Serve uploaded media read-only. check_dir=False so the mount is
+    # valid even before the first upload creates a category subdir.
+    app.mount(
+        settings.media_url_prefix,
+        StaticFiles(directory=settings.media_root, check_dir=False),
+        name="media",
+    )
     app.include_router(dao_router)
     app.include_router(marketplace_public_router)
     app.include_router(marketplace_me_router)
