@@ -120,6 +120,19 @@ from cyberdyne_backend.adapters.inbound.api.marketplace.router import (
 from cyberdyne_backend.adapters.inbound.api.marketplace.router import (
     webhook_router as marketplace_webhook_router,
 )
+from cyberdyne_backend.adapters.inbound.api.quizzes.router import (
+    admin_router as quizzes_admin_router,
+)
+from cyberdyne_backend.adapters.inbound.api.quizzes.router import (
+    get_delete_quiz_uc,
+    get_list_attempts_uc,
+    get_quiz_uc,
+    get_submit_attempt_uc,
+    get_upsert_quiz_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.quizzes.router import (
+    player_router as quizzes_player_router,
+)
 from cyberdyne_backend.adapters.inbound.api.uploads.router import (
     admin_router as uploads_admin_router,
 )
@@ -153,6 +166,9 @@ from cyberdyne_backend.adapters.outbound.persistence.learning.repository import 
 )
 from cyberdyne_backend.adapters.outbound.persistence.marketplace.repository import (
     SqlAlchemyMarketplaceRepository,
+)
+from cyberdyne_backend.adapters.outbound.persistence.quizzes.repository import (
+    SqlAlchemyQuizRepository,
 )
 from cyberdyne_backend.adapters.outbound.persistence.uploads.repository import (
     SqlAlchemyUploadRepository,
@@ -218,6 +234,13 @@ from cyberdyne_backend.application.marketplace import (
     ListProducts as ListMarketplaceProducts,
 )
 from cyberdyne_backend.application.marketplace.use_cases import GetProduct
+from cyberdyne_backend.application.quizzes import (
+    DeleteQuiz,
+    GetQuiz,
+    ListMyAttempts,
+    SubmitQuizAttempt,
+    UpsertQuiz,
+)
 from cyberdyne_backend.application.uploads import (
     GetUpload,
     SaveUpload,
@@ -386,6 +409,26 @@ def create_app() -> FastAPI:
     async def _reorder_lessons_dep() -> AsyncIterator[ReorderLessons]:
         async with session_scope() as session:
             yield ReorderLessons(repo=SqlAlchemyCourseRepository(session))
+
+    async def _get_quiz_dep() -> AsyncIterator[GetQuiz]:
+        async with session_scope() as session:
+            yield GetQuiz(repo=SqlAlchemyQuizRepository(session))
+
+    async def _upsert_quiz_dep() -> AsyncIterator[UpsertQuiz]:
+        async with session_scope() as session:
+            yield UpsertQuiz(repo=SqlAlchemyQuizRepository(session))
+
+    async def _delete_quiz_dep() -> AsyncIterator[DeleteQuiz]:
+        async with session_scope() as session:
+            yield DeleteQuiz(repo=SqlAlchemyQuizRepository(session))
+
+    async def _submit_attempt_dep() -> AsyncIterator[SubmitQuizAttempt]:
+        async with session_scope() as session:
+            yield SubmitQuizAttempt(repo=SqlAlchemyQuizRepository(session))
+
+    async def _list_attempts_dep() -> AsyncIterator[ListMyAttempts]:
+        async with session_scope() as session:
+            yield ListMyAttempts(repo=SqlAlchemyQuizRepository(session))
 
     async def _save_upload_dep() -> AsyncIterator[SaveUpload]:
         async with session_scope() as session:
@@ -563,6 +606,11 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_update_lesson_uc] = _update_lesson_dep
     app.dependency_overrides[get_delete_lesson_uc] = _delete_lesson_dep
     app.dependency_overrides[get_reorder_lessons_uc] = _reorder_lessons_dep
+    app.dependency_overrides[get_quiz_uc] = _get_quiz_dep
+    app.dependency_overrides[get_upsert_quiz_uc] = _upsert_quiz_dep
+    app.dependency_overrides[get_delete_quiz_uc] = _delete_quiz_dep
+    app.dependency_overrides[get_submit_attempt_uc] = _submit_attempt_dep
+    app.dependency_overrides[get_list_attempts_uc] = _list_attempts_dep
     app.dependency_overrides[get_save_upload_uc] = _save_upload_dep
     app.dependency_overrides[get_save_uploads_uc] = _save_uploads_dep
     app.dependency_overrides[get_upload_uc] = _get_upload_dep
@@ -594,6 +642,8 @@ def create_app() -> FastAPI:
     app.include_router(learning_admin_router)
     app.include_router(courses_public_router)
     app.include_router(courses_admin_router)
+    app.include_router(quizzes_player_router)
+    app.include_router(quizzes_admin_router)
     app.include_router(uploads_admin_router)
     app.include_router(uploads_public_router)
     # Serve uploaded media read-only. check_dir=False so the mount is
