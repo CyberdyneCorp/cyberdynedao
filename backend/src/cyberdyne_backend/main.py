@@ -88,11 +88,13 @@ from cyberdyne_backend.adapters.inbound.api.learning.router import (
     admin_router as learning_admin_router,
 )
 from cyberdyne_backend.adapters.inbound.api.learning.router import (
+    get_eligibility_uc,
     get_enroll_uc,
     get_issue_certificate_uc,
     get_list_modules_uc,
     get_list_paths_uc,
     get_my_state_uc,
+    get_path_gating_uc,
     get_update_progress_uc,
 )
 from cyberdyne_backend.adapters.inbound.api.learning.router import (
@@ -184,8 +186,10 @@ from cyberdyne_backend.application.leads import (
     CreateAsk,
 )
 from cyberdyne_backend.application.learning import (
+    CheckEnrollmentEligibility,
     EnrollInPath,
     GetMyLearningState,
+    GetPathGating,
     IssueCertificate,
     ListModules,
     ListPaths,
@@ -384,6 +388,14 @@ def create_app() -> FastAPI:
         async with session_scope() as session:
             yield GetMyLearningState(repo=SqlAlchemyLearningRepository(session))
 
+    async def _path_gating_dep() -> AsyncIterator[GetPathGating]:
+        async with session_scope() as session:
+            yield GetPathGating(repo=SqlAlchemyLearningRepository(session))
+
+    async def _eligibility_dep() -> AsyncIterator[CheckEnrollmentEligibility]:
+        async with session_scope() as session:
+            yield CheckEnrollmentEligibility(repo=SqlAlchemyLearningRepository(session))
+
     async def _issue_certificate_dep() -> AsyncIterator[IssueCertificate]:
         async with session_scope() as session:
             yield IssueCertificate(
@@ -523,6 +535,8 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_enroll_uc] = _enroll_dep
     app.dependency_overrides[get_update_progress_uc] = _update_progress_dep
     app.dependency_overrides[get_my_state_uc] = _my_state_dep
+    app.dependency_overrides[get_path_gating_uc] = _path_gating_dep
+    app.dependency_overrides[get_eligibility_uc] = _eligibility_dep
     app.dependency_overrides[get_issue_certificate_uc] = _issue_certificate_dep
     app.dependency_overrides[get_dao_overview_uc] = _dao_overview_dep
     app.dependency_overrides[get_list_products_uc] = _list_marketplace_products_dep

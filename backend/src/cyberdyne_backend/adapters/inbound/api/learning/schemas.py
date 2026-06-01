@@ -75,3 +75,20 @@ class UpdateProgressRequest(_CamelModel):
     )
 
     percent: int = Field(ge=0, le=100)
+
+
+class ModuleGateResponse(_CamelModel):
+    module_slug: str
+    level: str
+    position: int
+    unlocked: bool
+    completed: bool
+    blocked_by: str | None = None
+    reason: Literal["level", "sequential"] | None = None
+
+
+class EligibilityResponse(_CamelModel):
+    eligible: bool
+    already_enrolled: bool
+    next_module: str | None = None
+    reason: str | None = None
