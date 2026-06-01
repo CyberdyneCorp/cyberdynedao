@@ -9,3 +9,7 @@ htmlcov/
 .env
 .env.local
 .DS_Store
+# Local uploaded media (served from a persistent volume in prod).
+# Anchored to the backend root so it only ignores the media dir, NOT the
+# source packages named `uploads/` under src/ and tests/.
+/uploads/
