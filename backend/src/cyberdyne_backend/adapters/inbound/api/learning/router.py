@@ -11,11 +11,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from cyberdyne_backend.adapters.inbound.api.learning.schemas import (
     CertificateResponse,
     CertificateVerificationResponse,
+    EligibilityResponse,
+    EnrollmentDeadlineResponse,
     EnrollmentResponse,
     LearningModuleResponse,
     LearningPathResponse,
+    ModuleGateResponse,
     ModuleProgressResponse,
     MyLearningStateResponse,
+    SetDeadlineRequest,
     UpdateProgressRequest,
 )
 from cyberdyne_backend.adapters.inbound.middleware.auth import (
@@ -24,11 +28,16 @@ from cyberdyne_backend.adapters.inbound.middleware.auth import (
 )
 from cyberdyne_backend.application.learning import (
     CertificateVerification,
+    CheckEnrollmentEligibility,
+    EligibilityResult,
     EnrollInPath,
+    GetMyDeadlines,
     GetMyLearningState,
+    GetPathGating,
     IssueCertificate,
     ListModules,
     ListPaths,
+    SetEnrollmentDeadline,
     UpdateModuleProgress,
     VerifyCertificate,
 )
@@ -37,9 +46,12 @@ from cyberdyne_backend.domain.learning import (
     Certificate,
     CertificateNotEligibleError,
     Enrollment,
+    EnrollmentDeadline,
+    EnrollmentNotFoundError,
     LearningContentNotFoundError,
     LearningModule,
     LearningPath,
+    ModuleGate,
     ModuleProgress,
     ProgressOutOfRangeError,
 )
@@ -77,6 +89,22 @@ async def get_verify_certificate_uc() -> VerifyCertificate:  # pragma: no cover 
     raise NotImplementedError
 
 
+async def get_my_deadlines_uc() -> GetMyDeadlines:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_set_deadline_uc() -> SetEnrollmentDeadline:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_path_gating_uc() -> GetPathGating:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_eligibility_uc() -> CheckEnrollmentEligibility:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
 # ── Response builders ────────────────────────────────────────────────
 
 
@@ -111,6 +139,16 @@ def _enrollment_response(e: Enrollment) -> EnrollmentResponse:
         path_slug=e.path_slug,
         started_at=e.started_at,
         status=e.status.value,
+        due_at=e.due_at,
+    )
+
+
+def _deadline_response(d: EnrollmentDeadline) -> EnrollmentDeadlineResponse:
+    return EnrollmentDeadlineResponse(
+        path_slug=d.path_slug,
+        due_at=d.due_at,
+        status=d.status.value,
+        days_remaining=d.days_remaining,
     )
 
 
@@ -248,6 +286,86 @@ async def update_module_progress(
     return _progress_response(progress)
 
 
+# ── Deadlines ────────────────────────────────────────────────────────
+
+
+@public_router.get(
+    "/deadlines",
+    response_model=list[EnrollmentDeadlineResponse],
+    response_model_by_alias=True,
+)
+async def my_deadlines(
+    use_case: Annotated[GetMyDeadlines, Depends(get_my_deadlines_uc)],
+    principal: Annotated[UserPrincipal, Depends(require_principal)],
+) -> list[EnrollmentDeadlineResponse]:
+    if not isinstance(principal, UserPrincipal):
+        raise HTTPException(status_code=403, detail="user token required")
+    deadlines = await use_case.execute(principal.user_id)
+    return [_deadline_response(d) for d in deadlines]
+
+
+# ── Prerequisites & gating ───────────────────────────────────────────
+
+
+def _gate_response(gate: ModuleGate) -> ModuleGateResponse:
+    return ModuleGateResponse(
+        module_slug=gate.module_slug,
+        level=gate.level,
+        position=gate.position,
+        unlocked=gate.unlocked,
+        completed=gate.completed,
+        blocked_by=gate.blocked_by,
+        reason=gate.reason,
+    )
+
+
+def _eligibility_response(result: EligibilityResult) -> EligibilityResponse:
+    return EligibilityResponse(
+        eligible=result.eligible,
+        already_enrolled=result.already_enrolled,
+        next_module=result.next_module,
+        reason=result.reason,
+    )
+
+
+@public_router.get(
+    "/paths/{slug}/gating",
+    response_model=list[ModuleGateResponse],
+    response_model_by_alias=True,
+)
+async def get_path_gating(
+    slug: str,
+    use_case: Annotated[GetPathGating, Depends(get_path_gating_uc)],
+    principal: Annotated[UserPrincipal, Depends(require_principal)],
+) -> list[ModuleGateResponse]:
+    if not isinstance(principal, UserPrincipal):
+        raise HTTPException(status_code=403, detail="user token required")
+    try:
+        gates = await use_case.execute(user_id=principal.user_id, path_slug=slug)
+    except LearningContentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return [_gate_response(g) for g in gates]
+
+
+@public_router.get(
+    "/paths/{slug}/eligibility",
+    response_model=EligibilityResponse,
+    response_model_by_alias=True,
+)
+async def check_path_eligibility(
+    slug: str,
+    use_case: Annotated[CheckEnrollmentEligibility, Depends(get_eligibility_uc)],
+    principal: Annotated[UserPrincipal, Depends(require_principal)],
+) -> EligibilityResponse:
+    if not isinstance(principal, UserPrincipal):
+        raise HTTPException(status_code=403, detail="user token required")
+    try:
+        result = await use_case.execute(user_id=principal.user_id, path_slug=slug)
+    except LearningContentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return _eligibility_response(result)
+
+
 # ── Admin — issue certificate ────────────────────────────────────────
 
 
@@ -270,6 +388,25 @@ async def issue_certificate(
     except CertificateNotEligibleError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return _certificate_response(cert)
+
+
+@admin_router.patch(
+    "/enrollments/{user_id}/{slug}/deadline",
+    response_model=EnrollmentResponse,
+    response_model_by_alias=True,
+)
+async def set_enrollment_deadline(
+    user_id: UUID,
+    slug: str,
+    body: SetDeadlineRequest,
+    use_case: Annotated[SetEnrollmentDeadline, Depends(get_set_deadline_uc)],
+    _principal: Annotated[UserPrincipal, Depends(require_editor)],
+) -> EnrollmentResponse:
+    try:
+        enrollment = await use_case.execute(user_id=user_id, path_slug=slug, due_at=body.due_at)
+    except EnrollmentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return _enrollment_response(enrollment)
 
 
 __all__ = ["admin_router", "public_router"]

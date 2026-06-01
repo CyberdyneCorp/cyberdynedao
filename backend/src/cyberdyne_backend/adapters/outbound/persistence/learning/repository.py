@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import select
@@ -17,6 +18,7 @@ from cyberdyne_backend.adapters.outbound.persistence.learning.models import (
 from cyberdyne_backend.domain.learning import (
     Certificate,
     Enrollment,
+    EnrollmentNotFoundError,
     EnrollmentStatus,
     LearningContentNotFoundError,
     LearningModule,
@@ -49,6 +51,15 @@ def _row_to_path(row: LearningPathRow) -> LearningPath:
     )
 
 
+def _as_utc(value: datetime | None) -> datetime | None:
+    """SQLite drops tzinfo on read; re-attach UTC so domain comparisons
+    against an aware ``now`` don't blow up. Postgres rows are already
+    aware, so this is a no-op there."""
+    if value is not None and value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value
+
+
 def _row_to_enrollment(row: EnrollmentRow) -> Enrollment:
     return Enrollment(
         id=row.id,
@@ -56,6 +67,7 @@ def _row_to_enrollment(row: EnrollmentRow) -> Enrollment:
         path_slug=row.path_slug,
         started_at=row.started_at,
         status=EnrollmentStatus(row.status),
+        due_at=_as_utc(row.due_at),
     )
 
 
@@ -140,10 +152,28 @@ class SqlAlchemyLearningRepository:
                 path_slug=enrollment.path_slug,
                 started_at=enrollment.started_at,
                 status=enrollment.status.value,
+                due_at=enrollment.due_at,
             )
         )
         await self._session.flush()
         return enrollment
+
+    async def set_enrollment_deadline(
+        self, *, user_id: UUID, path_slug: str, due_at: datetime | None
+    ) -> Enrollment:
+        existing = (
+            await self._session.execute(
+                select(EnrollmentRow).where(
+                    EnrollmentRow.user_id == user_id,
+                    EnrollmentRow.path_slug == path_slug,
+                )
+            )
+        ).scalar_one_or_none()
+        if existing is None:
+            raise EnrollmentNotFoundError(f"user {user_id} is not enrolled in {path_slug!r}")
+        existing.due_at = due_at
+        await self._session.flush()
+        return _row_to_enrollment(existing)
 
     async def list_enrollments_for_user(self, user_id: UUID) -> list[Enrollment]:
         rows = (

@@ -3,19 +3,26 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from uuid import UUID
 
 from cyberdyne_backend.domain.learning import (
     Certificate,
     CertificateSigner,
     Enrollment,
+    EnrollmentDeadline,
     LearningModule,
     LearningPath,
     LearningRepository,
+    ModuleGate,
     ModuleProgress,
+    compute_path_gates,
+    days_remaining,
+    deadline_status,
     new_certificate,
     new_enrollment,
     new_progress,
+    next_unlocked_module,
 )
 
 
@@ -144,3 +151,100 @@ class VerifyCertificate:
             return CertificateVerification(valid=False, certificate=None)
         valid = self.signer.verify(cert.verification_hash, cert.signed_payload)
         return CertificateVerification(valid=valid, certificate=cert)
+
+
+@dataclass(slots=True)
+class SetEnrollmentDeadline:
+    """Admin-only. Sets (or clears, with ``due_at=None``) the deadline on
+    a user's path enrollment."""
+
+    repo: LearningRepository
+
+    async def execute(
+        self, *, user_id: UUID, path_slug: str, due_at: datetime | None
+    ) -> Enrollment:
+        return await self.repo.set_enrollment_deadline(
+            user_id=user_id, path_slug=path_slug, due_at=due_at
+        )
+
+
+@dataclass(slots=True)
+class GetMyDeadlines:
+    """A learner's enrollments with their computed deadline status
+    (overdue / urgent / upcoming / none)."""
+
+    repo: LearningRepository
+
+    async def execute(
+        self, user_id: UUID, *, now: datetime | None = None
+    ) -> list[EnrollmentDeadline]:
+        moment = now or datetime.now(tz=UTC)
+        enrollments = await self.repo.list_enrollments_for_user(user_id)
+        return [
+            EnrollmentDeadline(
+                path_slug=e.path_slug,
+                due_at=e.due_at,
+                status=deadline_status(e.due_at, now=moment),
+                days_remaining=days_remaining(e.due_at, now=moment),
+            )
+            for e in enrollments
+        ]
+
+
+@dataclass(slots=True)
+class GetPathGating:
+    """Per-module lock state for a user against a path — backs the
+    player's prerequisite gating (level + sequential) and the lock
+    tooltips. Read-only; computed from the catalogue + the user's
+    progress."""
+
+    repo: LearningRepository
+
+    async def execute(self, *, user_id: UUID, path_slug: str) -> list[ModuleGate]:
+        # Raises LearningContentNotFoundError if the path is unknown.
+        path = await self.repo.get_path(path_slug)
+        modules = await self.repo.list_modules()
+        modules_by_slug = {m.slug: m for m in modules}
+        progress = await self.repo.get_progress_map_for_user(user_id)
+        return compute_path_gates(path, modules_by_slug, progress)
+
+
+@dataclass(slots=True)
+class EligibilityResult:
+    eligible: bool
+    already_enrolled: bool
+    next_module: str | None
+    reason: str | None
+
+
+@dataclass(slots=True)
+class CheckEnrollmentEligibility:
+    """Eligibility pre-check for enrolling in a path. A path is
+    enrollable when it resolves to at least one module; surfaces whether
+    the user is already enrolled and the first module they'd start on."""
+
+    repo: LearningRepository
+
+    async def execute(self, *, user_id: UUID, path_slug: str) -> EligibilityResult:
+        path = await self.repo.get_path(path_slug)
+        modules = await self.repo.list_modules()
+        modules_by_slug = {m.slug: m for m in modules}
+        progress = await self.repo.get_progress_map_for_user(user_id)
+        gates = compute_path_gates(path, modules_by_slug, progress)
+
+        enrollments = await self.repo.list_enrollments_for_user(user_id)
+        already_enrolled = any(e.path_slug == path_slug for e in enrollments)
+
+        if not gates:
+            return EligibilityResult(
+                eligible=False,
+                already_enrolled=already_enrolled,
+                next_module=None,
+                reason="path has no resolvable modules",
+            )
+        return EligibilityResult(
+            eligible=True,
+            already_enrolled=already_enrolled,
+            next_module=next_unlocked_module(gates),
+            reason=None,
+        )
