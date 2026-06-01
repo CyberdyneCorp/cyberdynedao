@@ -26,6 +26,7 @@ ignore_imports =
     cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.captcha.providers
     cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.email.notifiers
     cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.certificates.signer
+    cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.certificates.pdf
     cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.chain.caching_reader
     cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.chain.fake_reader
     cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.chain.web3py_reader

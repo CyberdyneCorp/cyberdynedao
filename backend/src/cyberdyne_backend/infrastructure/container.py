@@ -17,6 +17,9 @@ from cyberdyne_backend.adapters.outbound.captcha.providers import (
     AlwaysPassCaptchaProvider,
     CloudflareTurnstileProvider,
 )
+from cyberdyne_backend.adapters.outbound.certificates.pdf import (
+    ReportlabCertificateRenderer,
+)
 from cyberdyne_backend.adapters.outbound.certificates.signer import (
     EphemeralCertificateSigner,
     HmacCertificateSigner,
@@ -46,7 +49,7 @@ from cyberdyne_backend.domain.ai_chat import ChatLLMPort, KnowledgeSearchPort, M
 from cyberdyne_backend.domain.auth_identity import AuthPort, UserProfilePort
 from cyberdyne_backend.domain.dao_treasury import ChainReaderPort
 from cyberdyne_backend.domain.leads import CaptchaPort, EmailNotifierPort
-from cyberdyne_backend.domain.learning import CertificateSigner
+from cyberdyne_backend.domain.learning import CertificatePdfRenderer, CertificateSigner
 from cyberdyne_backend.domain.marketplace import (
     LicenseEmailNotifierPort,
     StripeCheckoutPort,
@@ -67,6 +70,7 @@ class Container:
         self._captcha_port: CaptchaPort | None = None
         self._email_notifier: EmailNotifierPort | None = None
         self._certificate_signer: CertificateSigner | None = None
+        self._certificate_pdf_renderer: CertificatePdfRenderer | None = None
         self._chain_reader: ChainReaderPort | None = None
         self._stripe_checkout: StripeCheckoutPort | None = None
         self._stripe_webhook_verifier: StripeWebhookVerifierPort | None = None
@@ -180,6 +184,12 @@ class Container:
                 environment=self._settings.environment
             )
         return self._certificate_signer
+
+    @property
+    def certificate_pdf_renderer(self) -> CertificatePdfRenderer:
+        if self._certificate_pdf_renderer is None:
+            self._certificate_pdf_renderer = ReportlabCertificateRenderer()
+        return self._certificate_pdf_renderer
 
     # ── DAO treasury (Phase 5) ───────────────────────────────────────
     @property

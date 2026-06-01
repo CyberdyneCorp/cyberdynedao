@@ -107,6 +107,7 @@ from cyberdyne_backend.adapters.inbound.api.learning.router import (
     get_my_deadlines_uc,
     get_my_state_uc,
     get_path_gating_uc,
+    get_render_pdf_uc,
     get_set_deadline_uc,
     get_update_progress_uc,
     get_verify_certificate_uc,
@@ -246,6 +247,7 @@ from cyberdyne_backend.application.learning import (
     IssueCertificate,
     ListModules,
     ListPaths,
+    RenderCertificatePdf,
     SetEnrollmentDeadline,
     UpdateModuleProgress,
     VerifyCertificate,
@@ -529,6 +531,14 @@ def create_app() -> FastAPI:
                 signer=container.certificate_signer,
             )
 
+    async def _render_pdf_dep() -> AsyncIterator[RenderCertificatePdf]:
+        async with session_scope() as session:
+            yield RenderCertificatePdf(
+                repo=SqlAlchemyLearningRepository(session),
+                renderer=container.certificate_pdf_renderer,
+                verify_url_base=settings.public_site_url,
+            )
+
     async def _my_deadlines_dep() -> AsyncIterator[GetMyDeadlines]:
         async with session_scope() as session:
             yield GetMyDeadlines(repo=SqlAlchemyLearningRepository(session))
@@ -683,6 +693,7 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_eligibility_uc] = _eligibility_dep
     app.dependency_overrides[get_issue_certificate_uc] = _issue_certificate_dep
     app.dependency_overrides[get_verify_certificate_uc] = _verify_certificate_dep
+    app.dependency_overrides[get_render_pdf_uc] = _render_pdf_dep
     app.dependency_overrides[get_my_deadlines_uc] = _my_deadlines_dep
     app.dependency_overrides[get_set_deadline_uc] = _set_deadline_dep
     app.dependency_overrides[get_dao_overview_uc] = _dao_overview_dep

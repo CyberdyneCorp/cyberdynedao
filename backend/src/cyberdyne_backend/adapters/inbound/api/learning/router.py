@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 
 from cyberdyne_backend.adapters.inbound.api.learning.schemas import (
     CertificateResponse,
@@ -37,6 +37,7 @@ from cyberdyne_backend.application.learning import (
     IssueCertificate,
     ListModules,
     ListPaths,
+    RenderCertificatePdf,
     SetEnrollmentDeadline,
     UpdateModuleProgress,
     VerifyCertificate,
@@ -45,6 +46,7 @@ from cyberdyne_backend.domain.auth_identity import UserPrincipal
 from cyberdyne_backend.domain.learning import (
     Certificate,
     CertificateNotEligibleError,
+    CertificateNotFoundError,
     Enrollment,
     EnrollmentDeadline,
     EnrollmentNotFoundError,
@@ -86,6 +88,10 @@ async def get_issue_certificate_uc() -> IssueCertificate:  # pragma: no cover - 
 
 
 async def get_verify_certificate_uc() -> VerifyCertificate:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_render_pdf_uc() -> RenderCertificatePdf:  # pragma: no cover - override target
     raise NotImplementedError
 
 
@@ -218,6 +224,27 @@ async def verify_certificate(
     # Public: anyone with the certificate id can check authenticity.
     result = await use_case.execute(certificate_id)
     return _verification_response(result)
+
+
+@public_router.get(
+    "/certificates/{certificate_id}/pdf",
+    response_class=Response,
+    responses={200: {"content": {"application/pdf": {}}}},
+)
+async def download_certificate_pdf(
+    certificate_id: UUID,
+    use_case: Annotated[RenderCertificatePdf, Depends(get_render_pdf_uc)],
+) -> Response:
+    # Public download — the certificate id is the bearer token, same as verify.
+    try:
+        pdf = await use_case.execute(certificate_id)
+    except CertificateNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="certificate not found") from exc
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="certificate-{certificate_id}.pdf"'},
+    )
 
 
 # ── Authenticated user state ─────────────────────────────────────────

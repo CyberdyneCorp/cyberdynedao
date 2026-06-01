@@ -8,9 +8,12 @@ from uuid import UUID
 
 from cyberdyne_backend.domain.learning import (
     Certificate,
+    CertificateNotFoundError,
+    CertificatePdfRenderer,
     CertificateSigner,
     Enrollment,
     EnrollmentDeadline,
+    LearningContentNotFoundError,
     LearningModule,
     LearningPath,
     LearningRepository,
@@ -151,6 +154,31 @@ class VerifyCertificate:
             return CertificateVerification(valid=False, certificate=None)
         valid = self.signer.verify(cert.verification_hash, cert.signed_payload)
         return CertificateVerification(valid=valid, certificate=cert)
+
+
+@dataclass(slots=True)
+class RenderCertificatePdf:
+    """Render a downloadable PDF for a certificate. The PDF carries the
+    path title and a verify URL so a holder can prove authenticity."""
+
+    repo: LearningRepository
+    renderer: CertificatePdfRenderer
+    verify_url_base: str
+
+    async def execute(self, certificate_id: UUID) -> bytes:
+        cert = await self.repo.get_certificate_by_id(certificate_id)
+        if cert is None:
+            raise CertificateNotFoundError(str(certificate_id))
+        try:
+            path = await self.repo.get_path(cert.path_slug)
+            path_title = path.title
+        except LearningContentNotFoundError:
+            # Path was retired since issuance — fall back to the slug.
+            path_title = cert.path_slug
+        verify_url = (
+            f"{self.verify_url_base.rstrip('/')}/api/v1/learning/certificates/{cert.id}/verify"
+        )
+        return self.renderer.render(certificate=cert, path_title=path_title, verify_url=verify_url)
 
 
 @dataclass(slots=True)
