@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Protocol, runtime_checkable
 from uuid import UUID
 
@@ -29,6 +30,14 @@ class LearningRepository(Protocol):
         ...
 
     async def list_enrollments_for_user(self, user_id: UUID) -> list[Enrollment]: ...
+
+    async def set_enrollment_deadline(
+        self, *, user_id: UUID, path_slug: str, due_at: datetime | None
+    ) -> Enrollment:
+        """Set (or clear, with ``None``) the deadline on an existing
+        enrollment. Raises ``EnrollmentNotFoundError`` if the user isn't
+        enrolled in the path."""
+        ...
 
     async def upsert_progress(self, progress: ModuleProgress) -> ModuleProgress:
         """Insert or update by ``(user_id, module_slug)``. Returns the

@@ -46,6 +46,7 @@ class EnrollmentRow(Base):
     path_slug: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")
+    due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class ModuleProgressRow(Base):

@@ -28,6 +28,9 @@ from cyberdyne_backend.adapters.outbound.persistence.courses import (  # noqa: F
 from cyberdyne_backend.adapters.outbound.persistence.leads import (  # noqa: F401
     models as _leads_models,
 )
+from cyberdyne_backend.adapters.outbound.persistence.uploads import (  # noqa: F401
+    models as _uploads_models,
+)
 from cyberdyne_backend.adapters.outbound.persistence.learning import (  # noqa: F401
     models as _learning_models,
 )
