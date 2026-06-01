@@ -109,6 +109,7 @@ from cyberdyne_backend.adapters.inbound.api.learning.router import (
     get_path_gating_uc,
     get_set_deadline_uc,
     get_update_progress_uc,
+    get_verify_certificate_uc,
 )
 from cyberdyne_backend.adapters.inbound.api.learning.router import (
     public_router as learning_public_router,
@@ -247,6 +248,7 @@ from cyberdyne_backend.application.learning import (
     ListPaths,
     SetEnrollmentDeadline,
     UpdateModuleProgress,
+    VerifyCertificate,
 )
 from cyberdyne_backend.application.marketplace import (
     CreateCheckoutSession,
@@ -520,6 +522,13 @@ def create_app() -> FastAPI:
                 signer=container.certificate_signer,
             )
 
+    async def _verify_certificate_dep() -> AsyncIterator[VerifyCertificate]:
+        async with session_scope() as session:
+            yield VerifyCertificate(
+                repo=SqlAlchemyLearningRepository(session),
+                signer=container.certificate_signer,
+            )
+
     async def _my_deadlines_dep() -> AsyncIterator[GetMyDeadlines]:
         async with session_scope() as session:
             yield GetMyDeadlines(repo=SqlAlchemyLearningRepository(session))
@@ -673,6 +682,7 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_path_gating_uc] = _path_gating_dep
     app.dependency_overrides[get_eligibility_uc] = _eligibility_dep
     app.dependency_overrides[get_issue_certificate_uc] = _issue_certificate_dep
+    app.dependency_overrides[get_verify_certificate_uc] = _verify_certificate_dep
     app.dependency_overrides[get_my_deadlines_uc] = _my_deadlines_dep
     app.dependency_overrides[get_set_deadline_uc] = _set_deadline_dep
     app.dependency_overrides[get_dao_overview_uc] = _dao_overview_dep

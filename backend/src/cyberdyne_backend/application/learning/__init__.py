@@ -1,6 +1,7 @@
 """Learning use cases."""
 
 from cyberdyne_backend.application.learning.use_cases import (
+    CertificateVerification,
     CheckEnrollmentEligibility,
     EligibilityResult,
     EnrollInPath,
@@ -12,9 +13,11 @@ from cyberdyne_backend.application.learning.use_cases import (
     ListPaths,
     SetEnrollmentDeadline,
     UpdateModuleProgress,
+    VerifyCertificate,
 )
 
 __all__ = [
+    "CertificateVerification",
     "CheckEnrollmentEligibility",
     "EligibilityResult",
     "EnrollInPath",
@@ -26,4 +29,5 @@ __all__ = [
     "ListPaths",
     "SetEnrollmentDeadline",
     "UpdateModuleProgress",
+    "VerifyCertificate",
 ]

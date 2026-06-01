@@ -62,6 +62,11 @@ class CertificateResponse(_CamelModel):
     signed_payload: str
 
 
+class CertificateVerificationResponse(_CamelModel):
+    valid: bool
+    certificate: CertificateResponse | None = None
+
+
 DeadlineStatusLiteral = Literal["none", "upcoming", "urgent", "overdue"]
 
 

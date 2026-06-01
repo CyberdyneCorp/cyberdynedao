@@ -271,3 +271,7 @@ class SqlAlchemyLearningRepository:
             )
         ).scalar_one_or_none()
         return _row_to_cert(row) if row else None
+
+    async def get_certificate_by_id(self, certificate_id: UUID) -> Certificate | None:
+        row = await self._session.get(CertificateRow, certificate_id)
+        return _row_to_cert(row) if row else None
