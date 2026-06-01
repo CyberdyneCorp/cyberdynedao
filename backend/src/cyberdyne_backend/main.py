@@ -25,6 +25,16 @@ from cyberdyne_backend.adapters.inbound.api.ai_chat.router import (
 from cyberdyne_backend.adapters.inbound.api.ai_chat.router import (
     router as chat_router,
 )
+from cyberdyne_backend.adapters.inbound.api.analytics.router import (
+    admin_router as analytics_admin_router,
+)
+from cyberdyne_backend.adapters.inbound.api.analytics.router import (
+    get_admin_overview_uc,
+    get_learner_dashboard_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.analytics.router import (
+    public_router as analytics_public_router,
+)
 from cyberdyne_backend.adapters.inbound.api.blog.router import (
     admin_router as blog_admin_router,
 )
@@ -151,6 +161,9 @@ from cyberdyne_backend.adapters.inbound.middleware.auth import AuthMiddleware, e
 from cyberdyne_backend.adapters.outbound.persistence.ai_chat.repository import (
     SqlAlchemyChatRepository,
 )
+from cyberdyne_backend.adapters.outbound.persistence.analytics.repository import (
+    SqlAlchemyAnalyticsRepository,
+)
 from cyberdyne_backend.adapters.outbound.persistence.blog.repository import (
     SqlAlchemyBlogRepository,
 )
@@ -182,6 +195,10 @@ from cyberdyne_backend.application.ai_chat import (
     StartChatSession,
     ToolContext,
     ToolDispatcher,
+)
+from cyberdyne_backend.application.analytics import (
+    GetAdminOverview,
+    GetLearnerDashboard,
 )
 from cyberdyne_backend.application.blog import (
     CreateBlogPost,
@@ -346,6 +363,14 @@ def create_app() -> FastAPI:
     async def _admin_update_ask_dep() -> AsyncIterator[AdminUpdateAsk]:
         async with session_scope() as session:
             yield AdminUpdateAsk(repo=SqlAlchemyAskRepository(session))
+
+    async def _learner_dashboard_dep() -> AsyncIterator[GetLearnerDashboard]:
+        async with session_scope() as session:
+            yield GetLearnerDashboard(repo=SqlAlchemyAnalyticsRepository(session))
+
+    async def _admin_overview_dep() -> AsyncIterator[GetAdminOverview]:
+        async with session_scope() as session:
+            yield GetAdminOverview(repo=SqlAlchemyAnalyticsRepository(session))
 
     async def _list_blog_posts_dep() -> AsyncIterator[ListBlogPosts]:
         async with session_scope() as session:
@@ -602,6 +627,8 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_create_ask_uc] = _create_ask_dep
     app.dependency_overrides[get_admin_list_asks_uc] = _admin_list_asks_dep
     app.dependency_overrides[get_admin_update_ask_uc] = _admin_update_ask_dep
+    app.dependency_overrides[get_learner_dashboard_uc] = _learner_dashboard_dep
+    app.dependency_overrides[get_admin_overview_uc] = _admin_overview_dep
     app.dependency_overrides[get_list_posts_uc] = _list_blog_posts_dep
     app.dependency_overrides[get_post_uc] = _get_blog_post_dep
     app.dependency_overrides[get_create_post_uc] = _create_blog_post_dep
@@ -650,6 +677,8 @@ def create_app() -> FastAPI:
     app.include_router(content_router)
     app.include_router(leads_public_router)
     app.include_router(leads_admin_router)
+    app.include_router(analytics_public_router)
+    app.include_router(analytics_admin_router)
     app.include_router(blog_public_router)
     app.include_router(blog_admin_router)
     app.include_router(learning_public_router)
