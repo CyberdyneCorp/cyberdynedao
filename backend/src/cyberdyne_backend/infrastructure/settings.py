@@ -135,6 +135,13 @@ class Settings(BaseSettings):
     # matlabApi.ts proxies to.
     matlab_backend_url: str = "https://matlab-backend.coolify.cyberdynecorp.ai"
 
+    # ── Uploads / media (Phase 8 — course content) ────────────────────
+    # Where uploaded course/lesson media is written. In prod point this
+    # at the Coolify persistent volume mount; locally it defaults to a
+    # gitignored ./uploads dir. Served read-only under ``media_url_prefix``.
+    media_root: str = "./uploads"
+    media_url_prefix: str = "/media"
+
     @field_validator("log_level")
     @classmethod
     def _upper_log_level(cls, value: str) -> str:
