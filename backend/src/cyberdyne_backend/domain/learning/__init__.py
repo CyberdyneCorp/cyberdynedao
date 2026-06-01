@@ -26,12 +26,21 @@ from cyberdyne_backend.domain.learning.errors import (
     LearningContentNotFoundError,
     ProgressOutOfRangeError,
 )
+from cyberdyne_backend.domain.learning.gating import (
+    LEVEL_ORDER,
+    ModuleGate,
+    compute_path_gates,
+    is_module_unlocked,
+    level_rank,
+    next_unlocked_module,
+)
 from cyberdyne_backend.domain.learning.ports import (
     CertificateSigner,
     LearningRepository,
 )
 
 __all__ = [
+    "LEVEL_ORDER",
     "Certificate",
     "CertificateNotEligibleError",
     "CertificateSigner",
@@ -42,10 +51,15 @@ __all__ = [
     "LearningModule",
     "LearningPath",
     "LearningRepository",
+    "ModuleGate",
     "ModuleProgress",
     "ProgressOutOfRangeError",
     "certificate_eligible",
+    "compute_path_gates",
+    "is_module_unlocked",
+    "level_rank",
     "new_certificate",
     "new_enrollment",
     "new_progress",
+    "next_unlocked_module",
 ]
