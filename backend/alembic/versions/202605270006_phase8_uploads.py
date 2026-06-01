@@ -5,7 +5,7 @@ The bytes live on disk (local volume / persistent mount); this table is
 the queryable record + public URL.
 
 Revision ID: 202605270006u
-Revises: 202605270005
+Revises: 202605270006
 Create Date: 2026-06-01 00:45:00
 """
 
@@ -17,7 +17,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "202605270006u"
-down_revision: str | Sequence[str] | None = "202605270005"
+down_revision: str | Sequence[str] | None = "202605270006"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
