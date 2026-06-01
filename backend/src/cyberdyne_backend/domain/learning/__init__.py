@@ -22,11 +22,13 @@ from cyberdyne_backend.domain.learning.entities import (
 )
 from cyberdyne_backend.domain.learning.errors import (
     CertificateNotEligibleError,
+    CertificateNotFoundError,
     EnrollmentNotFoundError,
     LearningContentNotFoundError,
     ProgressOutOfRangeError,
 )
 from cyberdyne_backend.domain.learning.ports import (
+    CertificatePdfRenderer,
     CertificateSigner,
     LearningRepository,
 )
@@ -34,6 +36,8 @@ from cyberdyne_backend.domain.learning.ports import (
 __all__ = [
     "Certificate",
     "CertificateNotEligibleError",
+    "CertificateNotFoundError",
+    "CertificatePdfRenderer",
     "CertificateSigner",
     "Enrollment",
     "EnrollmentNotFoundError",

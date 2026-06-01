@@ -63,3 +63,10 @@ class CertificateSigner(Protocol):
         """True iff ``signature`` is this signer's signature of
         ``message`` — i.e. the certificate hasn't been tampered with."""
         ...
+
+
+@runtime_checkable
+class CertificatePdfRenderer(Protocol):
+    """Renders a certificate to a downloadable PDF document."""
+
+    def render(self, *, certificate: Certificate, path_title: str, verify_url: str) -> bytes: ...

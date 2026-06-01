@@ -7,6 +7,7 @@ from cyberdyne_backend.application.learning.use_cases import (
     IssueCertificate,
     ListModules,
     ListPaths,
+    RenderCertificatePdf,
     UpdateModuleProgress,
     VerifyCertificate,
 )
@@ -18,6 +19,7 @@ __all__ = [
     "IssueCertificate",
     "ListModules",
     "ListPaths",
+    "RenderCertificatePdf",
     "UpdateModuleProgress",
     "VerifyCertificate",
 ]

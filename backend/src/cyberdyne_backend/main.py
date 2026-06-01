@@ -93,6 +93,7 @@ from cyberdyne_backend.adapters.inbound.api.learning.router import (
     get_list_modules_uc,
     get_list_paths_uc,
     get_my_state_uc,
+    get_render_pdf_uc,
     get_update_progress_uc,
     get_verify_certificate_uc,
 )
@@ -206,6 +207,7 @@ from cyberdyne_backend.application.learning import (
     IssueCertificate,
     ListModules,
     ListPaths,
+    RenderCertificatePdf,
     UpdateModuleProgress,
     VerifyCertificate,
 )
@@ -443,6 +445,14 @@ def create_app() -> FastAPI:
                 signer=container.certificate_signer,
             )
 
+    async def _render_pdf_dep() -> AsyncIterator[RenderCertificatePdf]:
+        async with session_scope() as session:
+            yield RenderCertificatePdf(
+                repo=SqlAlchemyLearningRepository(session),
+                renderer=container.certificate_pdf_renderer,
+                verify_url_base=settings.public_site_url,
+            )
+
     async def _dao_overview_dep() -> AsyncIterator[GetDaoOverview]:
         # No DB session needed — chain reads are HTTP-only.
         yield GetDaoOverview(
@@ -582,6 +592,7 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_my_state_uc] = _my_state_dep
     app.dependency_overrides[get_issue_certificate_uc] = _issue_certificate_dep
     app.dependency_overrides[get_verify_certificate_uc] = _verify_certificate_dep
+    app.dependency_overrides[get_render_pdf_uc] = _render_pdf_dep
     app.dependency_overrides[get_dao_overview_uc] = _dao_overview_dep
     app.dependency_overrides[get_list_products_uc] = _list_marketplace_products_dep
     app.dependency_overrides[get_create_checkout_uc] = _create_checkout_dep

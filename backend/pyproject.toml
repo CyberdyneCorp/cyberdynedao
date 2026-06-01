@@ -16,6 +16,7 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0.30",
     "asyncpg>=0.29.0",
     "alembic>=1.13.0",
+    "reportlab>=4.5.1",
 ]
 
 [project.optional-dependencies]
@@ -114,3 +115,8 @@ exclude = ["alembic/versions"]
 module = "tests.*"
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
+
+# reportlab ships no type stubs.
+[[tool.mypy.overrides]]
+module = "reportlab.*"
+ignore_missing_imports = true
