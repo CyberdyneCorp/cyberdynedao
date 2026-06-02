@@ -5,11 +5,14 @@ import {
 	createCourse,
 	deleteCourse,
 	deleteLesson,
+	deleteQuiz,
+	getQuiz,
 	publishCourse,
 	reorderCourses,
 	unpublishCourse,
 	updateCourse,
-	uploadFile
+	uploadFile,
+	upsertQuiz
 } from '../adminApi';
 import { clearAuthToken, setAuthToken } from '$lib/auth/authToken';
 
@@ -136,5 +139,43 @@ describe('adminApi — lessons + uploads', () => {
 		expect(headers.get('authorization')).toBe('Bearer ed');
 		// Must NOT pin JSON — the browser sets the multipart boundary.
 		expect(headers.get('content-type')).toBeNull();
+	});
+});
+
+describe('adminApi — quiz authoring', () => {
+	it('getQuiz GETs the admin editor quiz route', async () => {
+		mockJsonOnce(200, { id: 'q-1', lessonId: 'l-1', passingScore: 70, questions: [] });
+		await getQuiz('l-1');
+		const [url, init] = lastCall();
+		expect(init.method).toBe('GET');
+		expect(String(url)).toMatch(/\/api\/v1\/admin\/lessons\/l-1\/quiz$/);
+	});
+
+	it('getQuiz throws AdminApiError 404 when the lesson has no quiz', async () => {
+		mockJsonOnce(404, { detail: 'quiz not found' });
+		await expect(getQuiz('l-1')).rejects.toMatchObject({ name: 'AdminApiError', status: 404 });
+	});
+
+	it('upsertQuiz PUTs the questions body', async () => {
+		mockJsonOnce(200, { id: 'q-1', lessonId: 'l-1', passingScore: 80, questions: [] });
+		await upsertQuiz('l-1', {
+			passingScore: 80,
+			questions: [{ prompt: '2+2?', options: [{ text: '4', isCorrect: true }] }]
+		});
+		const [url, init] = lastCall();
+		expect(init.method).toBe('PUT');
+		expect(String(url)).toMatch(/\/api\/v1\/admin\/lessons\/l-1\/quiz$/);
+		expect(JSON.parse(init.body as string)).toEqual({
+			passingScore: 80,
+			questions: [{ prompt: '2+2?', options: [{ text: '4', isCorrect: true }] }]
+		});
+	});
+
+	it('deleteQuiz DELETEs the quiz', async () => {
+		(globalThis.fetch as unknown as FetchMock).mockResolvedValueOnce(new Response(null, { status: 204 }));
+		await deleteQuiz('l-1');
+		const [url, init] = lastCall();
+		expect(init.method).toBe('DELETE');
+		expect(String(url)).toMatch(/\/api\/v1\/admin\/lessons\/l-1\/quiz$/);
 	});
 });

@@ -17,16 +17,22 @@ import {
 	type CourseSummary
 } from '$lib/api/coursesApi';
 import {
+	AdminApiError,
 	addLesson as apiAddLesson,
 	createCourse as apiCreateCourse,
 	deleteCourse as apiDeleteCourse,
 	deleteLesson as apiDeleteLesson,
+	deleteQuiz as apiDeleteQuiz,
+	getQuiz as apiGetQuiz,
 	publishCourse as apiPublishCourse,
 	unpublishCourse as apiUnpublishCourse,
+	upsertQuiz as apiUpsertQuiz,
 	uploadFile as apiUploadFile,
 	type AddLessonInput,
 	type CreateCourseInput,
-	type UploadResult
+	type EditorQuiz,
+	type UploadResult,
+	type UpsertQuizInput
 } from '$lib/api/adminApi';
 
 function message(err: unknown): string {
@@ -43,6 +49,9 @@ export interface AdminViewModelDeps {
 	addLesson: typeof apiAddLesson;
 	deleteLesson: typeof apiDeleteLesson;
 	uploadFile: typeof apiUploadFile;
+	getQuiz: typeof apiGetQuiz;
+	upsertQuiz: typeof apiUpsertQuiz;
+	deleteQuiz: typeof apiDeleteQuiz;
 }
 
 const defaultDeps: AdminViewModelDeps = {
@@ -54,7 +63,10 @@ const defaultDeps: AdminViewModelDeps = {
 	deleteCourse: apiDeleteCourse,
 	addLesson: apiAddLesson,
 	deleteLesson: apiDeleteLesson,
-	uploadFile: apiUploadFile
+	uploadFile: apiUploadFile,
+	getQuiz: apiGetQuiz,
+	upsertQuiz: apiUpsertQuiz,
+	deleteQuiz: apiDeleteQuiz
 };
 
 export interface AdminViewModel {
@@ -73,6 +85,10 @@ export interface AdminViewModel {
 	addLesson: (input: AddLessonInput) => Promise<boolean>;
 	removeLesson: (lessonId: string) => Promise<void>;
 	upload: (file: File) => Promise<UploadResult | null>;
+	/** Load a lesson's quiz, or `null` when it has none yet (author fresh). */
+	loadQuiz: (lessonId: string) => Promise<EditorQuiz | null>;
+	saveQuiz: (lessonId: string, input: UpsertQuizInput) => Promise<boolean>;
+	removeQuiz: (lessonId: string) => Promise<boolean>;
 }
 
 export function createAdminViewModel(deps: AdminViewModelDeps = defaultDeps): AdminViewModel {
@@ -161,6 +177,50 @@ export function createAdminViewModel(deps: AdminViewModelDeps = defaultDeps): Ad
 		}
 	}
 
+	async function loadQuiz(lessonId: string): Promise<EditorQuiz | null> {
+		busy.set(true);
+		error.set(null);
+		try {
+			return await deps.getQuiz(lessonId);
+		} catch (err) {
+			// A lesson with no quiz yet is the "author a fresh one" case,
+			// not an error to surface.
+			if (err instanceof AdminApiError && err.status === 404) return null;
+			error.set(message(err));
+			return null;
+		} finally {
+			busy.set(false);
+		}
+	}
+
+	async function saveQuiz(lessonId: string, input: UpsertQuizInput): Promise<boolean> {
+		busy.set(true);
+		error.set(null);
+		try {
+			await deps.upsertQuiz(lessonId, input);
+			return true;
+		} catch (err) {
+			error.set(message(err));
+			return false;
+		} finally {
+			busy.set(false);
+		}
+	}
+
+	async function removeQuiz(lessonId: string): Promise<boolean> {
+		busy.set(true);
+		error.set(null);
+		try {
+			await deps.deleteQuiz(lessonId);
+			return true;
+		} catch (err) {
+			error.set(message(err));
+			return false;
+		} finally {
+			busy.set(false);
+		}
+	}
+
 	return {
 		courses,
 		selected,
@@ -184,6 +244,9 @@ export function createAdminViewModel(deps: AdminViewModelDeps = defaultDeps): Ad
 		removeLesson: async (lessonId) => {
 			await mutateSelected(() => deps.deleteLesson(selectedSlug as string, lessonId));
 		},
-		upload
+		upload,
+		loadQuiz,
+		saveQuiz,
+		removeQuiz
 	};
 }
