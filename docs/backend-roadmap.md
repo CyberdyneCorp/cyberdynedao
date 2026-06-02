@@ -14,11 +14,12 @@
 > volume), **prerequisite/level/sequential gating + enrollment
 > eligibility**, **enrollment deadlines**, **learner + admin analytics**,
 > **certificate verify-by-id + PDF**, and a **learning-aware chat agent**
-> (see [`agents_capabilities.md`](agents_capabilities.md)). Remaining 🔜:
-> the AI phases (companion / contextual feedback / recommendations) and
-> the code-interpreter lesson type — both delivered via the agent + MATLAB
-> backend. Per-context detail lives in each bounded context under
-> `backend/src/cyberdyne_backend/`.
+> (see [`agents_capabilities.md`](agents_capabilities.md)), and the
+> **code-interpreter lesson type** (`code` lessons run on the MATLAB-LLVM
+> engine via `POST /api/v1/lessons/{id}/code/run`). Remaining 🔜: the AI
+> contextual-feedback + recommendation use cases — delivered via the
+> agent + MATLAB backend. Per-context detail lives in each bounded context
+> under `backend/src/cyberdyne_backend/`.
 
 This doc is the plan, not a spec. Anything declared here is the default; anything in **Open Questions** is unblocked work that needs a decision before Phase 2 starts.
 
