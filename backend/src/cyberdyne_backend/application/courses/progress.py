@@ -9,11 +9,12 @@ touching progress.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from uuid import UUID
 
 from cyberdyne_backend.domain.courses import (
     Course,
+    CourseCertificateAwarder,
     CourseProgress,
     CourseProgressRepository,
     CourseRepository,
@@ -37,6 +38,9 @@ def _course_progress(course: Course, rows: list[LessonProgress]) -> CourseProgre
 class SetLessonProgress:
     courses: CourseRepository
     progress: CourseProgressRepository
+    # Optional: when the course tips into "complete", auto-award its
+    # certificate. None keeps progress self-contained (e.g. in tests).
+    awarder: CourseCertificateAwarder | None = field(default=None)
 
     async def execute(
         self, *, user_id: UUID, slug: str, lesson_id: UUID, percent: int
@@ -56,7 +60,10 @@ class SetLessonProgress:
             existing.update(percent)
         await self.progress.upsert_lesson_progress(existing)
         rows = await self.progress.list_course_progress(user_id=user_id, course_id=course.id)
-        return _course_progress(course, rows)
+        result = _course_progress(course, rows)
+        if result.completed and self.awarder is not None:
+            await self.awarder.award_if_complete(user_id=user_id, course_id=course.id)
+        return result
 
 
 @dataclass(slots=True)
@@ -78,6 +85,9 @@ class CourseLessonCompleter:
     safe no-op."""
 
     progress: CourseProgressRepository
+    # Optional: auto-award the course certificate if this completion
+    # finishes the course (e.g. the last lesson was a passed quiz).
+    awarder: CourseCertificateAwarder | None = field(default=None)
 
     async def complete_lesson(self, *, user_id: UUID, lesson_id: UUID) -> None:
         course_id = await self.progress.get_lesson_course_id(lesson_id)
@@ -91,6 +101,8 @@ class CourseLessonCompleter:
         else:
             existing.update(100)
         await self.progress.upsert_lesson_progress(existing)
+        if self.awarder is not None:
+            await self.awarder.award_if_complete(user_id=user_id, course_id=course_id)
 
 
 __all__ = [

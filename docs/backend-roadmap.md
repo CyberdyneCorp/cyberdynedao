@@ -22,7 +22,8 @@
 > (the learner dashboard now also reports completed + in-progress
 > courses, derived from lesson progress), **certificate verify-by-id +
 > PDF** (path certificates) plus **course completion certificates**
-> (learner-claimed once every lesson is done, idempotent, signed +
+> (auto-issued the moment every lesson is complete - via progress or a
+> passed quiz - and also learner-claimable; idempotent, signed +
 > publicly verifiable + downloadable PDF: `POST/GET
 > /api/v1/courses/{slug}/certificate`,
 > `GET /api/v1/courses/certificates/{id}/verify`,

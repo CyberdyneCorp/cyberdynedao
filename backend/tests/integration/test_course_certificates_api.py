@@ -113,6 +113,68 @@ def test_certificate_issued_on_completion_and_verifies(authed_client: TestClient
 
 
 @pytest.mark.usefixtures("_prepared_schema")
+def test_certificate_auto_issued_on_progress_completion(authed_client: TestClient) -> None:
+    lesson_ids = _make_published_course(authed_client)
+    # Complete every lesson via the progress endpoint — no explicit claim.
+    for lid in lesson_ids:
+        authed_client.put(
+            f"/api/v1/courses/cert-course/lessons/{lid}/progress", json={"percent": 100}
+        )
+    # The certificate now exists without the learner POSTing to claim it.
+    mine = authed_client.get("/api/v1/courses/cert-course/certificate")
+    assert mine.status_code == 200
+    assert mine.json()["courseSlug"] == "cert-course"
+
+
+@pytest.mark.usefixtures("_prepared_schema")
+def test_certificate_auto_issued_when_quiz_completes_course(authed_client: TestClient) -> None:
+    # Single quiz lesson — passing it completes the only lesson, so the
+    # course completes and the certificate is auto-issued.
+    assert (
+        authed_client.post(
+            "/api/v1/admin/courses",
+            json={"title": "Quiz Only", "description": "d", "level": "Beginner"},
+        ).status_code
+        == 201
+    )
+    lesson = authed_client.post(
+        "/api/v1/admin/courses/quiz-only/lessons",
+        json={"title": "Assessment", "lessonType": "quiz"},
+    )
+    lesson_id = lesson.json()["id"]
+    authed_client.post("/api/v1/admin/courses/quiz-only/publish")
+    authed_client.put(
+        f"/api/v1/admin/lessons/{lesson_id}/quiz",
+        json={
+            "passingScore": 70,
+            "questions": [
+                {
+                    "prompt": "2 + 2 = ?",
+                    "explanation": "Addition.",
+                    "options": [
+                        {"text": "3", "isCorrect": False},
+                        {"text": "4", "isCorrect": True},
+                    ],
+                }
+            ],
+        },
+    )
+    editor_view = authed_client.get(f"/api/v1/admin/lessons/{lesson_id}/quiz").json()
+    answers = {
+        q["id"]: next(o["id"] for o in q["options"] if o["isCorrect"])
+        for q in editor_view["questions"]
+    }
+    assert (
+        authed_client.post(
+            f"/api/v1/lessons/{lesson_id}/quiz/attempts", json={"answers": answers}
+        ).json()["passed"]
+        is True
+    )
+    # Course auto-completed by the quiz pass -> certificate exists.
+    assert authed_client.get("/api/v1/courses/quiz-only/certificate").status_code == 200
+
+
+@pytest.mark.usefixtures("_prepared_schema")
 def test_get_certificate_404_before_issue(authed_client: TestClient) -> None:
     _make_published_course(authed_client)
     assert authed_client.get("/api/v1/courses/cert-course/certificate").status_code == 404
