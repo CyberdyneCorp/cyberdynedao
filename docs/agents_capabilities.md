@@ -89,14 +89,23 @@ agent uses `matlab_repl('whos')`.
 - After `matlab_plot`, the figure renders automatically — the agent
   describes it rather than emitting an image link.
 
-## Planned (learning-companion / AI phases)
+## Learning-companion / AI phases
 
 The agent is the delivery vehicle for the Academy's AI features. Built so
 far: the learning-catalogue + progress + deadlines + gating + quiz
-player-view + dashboard tools above. Next, in order:
+player-view + dashboard tools above, plus the three shipped AI phases
+below. All planned phases are now delivered.
 
-- LLM course recommendations - a thin use case over the
-  dashboard/catalogue data.
+**Shipped:** **LLM course recommendations** - `GET /api/v1/recommendations/me`
+(authed learner, read-only). Ranks the published course catalogue against
+the learner's own dashboard signals (modules completed, quizzes passed,
+certificates earned) with a *deterministic* heuristic - mandatory first,
+then nearest to the learner's level on the Beginner->Advanced ladder -
+then asks the chat LLM (`container.chat_llm`) for a short personalized
+intro on top of that fixed shortlist. The *which courses* decision is
+pure code (stable + unit-tested); the LLM only adds the narrative. One
+LLM call per request, skipped entirely when the catalogue is empty. Use
+case: `RecommendCourses` (application/recommendations).
 
 **Shipped:** **AI contextual feedback** - after a learner submits quiz
 answers, `POST /api/v1/lessons/{id}/quiz/feedback` grades them

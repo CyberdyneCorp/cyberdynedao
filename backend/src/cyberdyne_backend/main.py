@@ -156,6 +156,12 @@ from cyberdyne_backend.adapters.inbound.api.quizzes.router import (
 from cyberdyne_backend.adapters.inbound.api.quizzes.router import (
     player_router as quizzes_player_router,
 )
+from cyberdyne_backend.adapters.inbound.api.recommendations.router import (
+    get_recommend_courses_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.recommendations.router import (
+    public_router as recommendations_router,
+)
 from cyberdyne_backend.adapters.inbound.api.uploads.router import (
     admin_router as uploads_admin_router,
 )
@@ -279,6 +285,7 @@ from cyberdyne_backend.application.quizzes import (
     SubmitQuizAttempt,
     UpsertQuiz,
 )
+from cyberdyne_backend.application.recommendations import RecommendCourses
 from cyberdyne_backend.application.uploads import (
     GetUpload,
     SaveUpload,
@@ -388,6 +395,14 @@ def create_app() -> FastAPI:
     async def _admin_overview_dep() -> AsyncIterator[GetAdminOverview]:
         async with session_scope() as session:
             yield GetAdminOverview(repo=SqlAlchemyAnalyticsRepository(session))
+
+    async def _recommend_courses_dep() -> AsyncIterator[RecommendCourses]:
+        async with session_scope() as session:
+            yield RecommendCourses(
+                courses=SqlAlchemyCourseRepository(session),
+                analytics=SqlAlchemyAnalyticsRepository(session),
+                llm=container.chat_llm,
+            )
 
     async def _list_blog_posts_dep() -> AsyncIterator[ListBlogPosts]:
         async with session_scope() as session:
@@ -687,6 +702,7 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_admin_list_asks_uc] = _admin_list_asks_dep
     app.dependency_overrides[get_admin_update_ask_uc] = _admin_update_ask_dep
     app.dependency_overrides[get_learner_dashboard_uc] = _learner_dashboard_dep
+    app.dependency_overrides[get_recommend_courses_uc] = _recommend_courses_dep
     app.dependency_overrides[get_admin_overview_uc] = _admin_overview_dep
     app.dependency_overrides[get_list_posts_uc] = _list_blog_posts_dep
     app.dependency_overrides[get_post_uc] = _get_blog_post_dep
@@ -744,6 +760,7 @@ def create_app() -> FastAPI:
     app.include_router(leads_admin_router)
     app.include_router(analytics_public_router)
     app.include_router(analytics_admin_router)
+    app.include_router(recommendations_router)
     app.include_router(blog_public_router)
     app.include_router(blog_admin_router)
     app.include_router(learning_public_router)

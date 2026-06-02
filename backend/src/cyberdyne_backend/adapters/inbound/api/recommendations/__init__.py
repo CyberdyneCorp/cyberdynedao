@@ -1,0 +1,1 @@
+"""Course-recommendations inbound API."""
