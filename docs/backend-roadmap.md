@@ -5,6 +5,21 @@
 > **Repo:** new `cyberdynedao/backend/` sibling to `frontend/`
 > **Audience:** Leo coming back cold in 3 weeks, plus contributors who already know the Cyberdyne stack (CyberdyneAuth, CyberRAG, OrgPilot)
 
+> **Shipped beyond this v1 plan (2026-06-01).** Phases 1–6 below are live.
+> The learning platform has since grown well past the original Phase-4
+> sketch — all of the following are merged, tested, and deployed:
+> **courses & lessons** (admin CRUD, levels, publish, reorder, typed
+> lessons), **quizzes** (player + attempts + static feedback),
+> **file uploads** (MIME routing, size caps, traversal guards, persistent
+> volume), **prerequisite/level/sequential gating + enrollment
+> eligibility**, **enrollment deadlines**, **learner + admin analytics**,
+> **certificate verify-by-id + PDF**, and a **learning-aware chat agent**
+> (see [`agents_capabilities.md`](agents_capabilities.md)). Remaining 🔜:
+> the AI phases (companion / contextual feedback / recommendations) and
+> the code-interpreter lesson type — both delivered via the agent + MATLAB
+> backend. Per-context detail lives in each bounded context under
+> `backend/src/cyberdyne_backend/`.
+
 This doc is the plan, not a spec. Anything declared here is the default; anything in **Open Questions** is unblocked work that needs a decision before Phase 2 starts.
 
 ---

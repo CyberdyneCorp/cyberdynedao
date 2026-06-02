@@ -28,8 +28,6 @@ the same application services the REST API uses.
 | Tool | What it does |
 |---|---|
 | `list_projects` | List Cyberdyne's projects/products (what the company builds). |
-| `list_paths` | List Cyberdyne Academy learning paths. |
-| `lookup_module` | A single learning module by slug. |
 | `lookup_product` | A single marketplace product (service / training / license) by slug. |
 | `search_cyberdyne_knowledge` | Semantic search over docs/blog/projects. **Stub today** — returns "no semantic index"; real CyberRAG client is a follow-up. |
 
@@ -44,16 +42,26 @@ the same application services the REST API uses.
 |---|---|
 | `get_dao_treasury` | Live treasury snapshot on Base: token balances, AAVE v3 supply/borrow positions + APYs, Uniswap v4 LP positions, total USD value, holder count. (Uses the configured chain reader — `fake` until the web3py reader is enabled.) |
 
-### Learning (acts on the signed-in user)
+### Learning — catalogue (anonymous OK)
+| Tool | What it does |
+|---|---|
+| `list_paths` | List Cyberdyne Academy learning paths. |
+| `lookup_module` | A single learning module by slug. |
+| `list_courses` | Published courses (title, level, lesson count); optional level filter. |
+| `get_course` | A published course by slug with its ordered lessons (title + type). |
+
+### Learning — acts on the signed-in user
 | Tool | What it does |
 |---|---|
 | `enroll_in_path` | Enroll the signed-in user in a path (idempotent). |
 | `set_module_progress` | Set a module's progress 0–100 (100 = mark complete). |
 | `get_my_learning` | The user's enrollments, per-module progress, and earned certificates. |
+| `get_my_deadlines` | Enrollment deadlines with status (overdue / urgent / upcoming / none) + days remaining. |
+| `get_path_gating` | Per-module lock state in a path (unlocked/locked) and the reason (level / sequential prerequisite). |
 
-Each returns `sign_in_required` when the caller is anonymous; the agent
-then asks the user to sign in. (Certificate *issuance* stays admin-only
-and is not an agent tool.)
+User-scoped tools return `sign_in_required` when the caller is anonymous;
+the agent then asks the user to sign in. (Certificate *issuance* stays
+admin-only and is not an agent tool; public verify/PDF are REST-only.)
 
 ### Blog
 | Tool | What it does |
@@ -78,6 +86,22 @@ agent uses `matlab_repl('whos')`.
   show code it wrote for the user.
 - After `matlab_plot`, the figure renders automatically — the agent
   describes it rather than emitting an image link.
+
+## Planned (learning-companion / AI phases)
+
+The agent is the delivery vehicle for the Academy's AI features. Built so
+far: the learning-catalogue + progress + deadlines + gating tools above.
+Next, in order:
+
+- `get_lesson_quiz` — the **player view** of a lesson's quiz (no correct
+  flags / explanations) so the companion can discuss questions without
+  leaking answers.
+- `get_my_dashboard` — the learner analytics summary, enabling an
+  LLM-written narrative performance summary.
+- AI contextual feedback (post-attempt "why it's wrong") and LLM course
+  recommendations — thin use cases over the quiz/dashboard/catalogue data.
+- Code-interpreter lessons reuse the existing `matlab_*` tools + the
+  MATLAB-LLVM `/v1/repl` engine.
 
 ## Known gaps / follow-ups
 
