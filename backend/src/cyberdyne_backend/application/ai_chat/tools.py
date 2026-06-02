@@ -31,7 +31,7 @@ from cyberdyne_backend.application.blog.use_cases import (
     ListBlogPostsQuery,
 )
 from cyberdyne_backend.application.content.use_cases import ListProjects
-from cyberdyne_backend.application.courses import GetCourse, ListCourses
+from cyberdyne_backend.application.courses import GetCourse, GetMyCourseProgress, ListCourses
 from cyberdyne_backend.application.dao_treasury.use_cases import GetDaoOverview
 from cyberdyne_backend.application.learning import (
     EnrollInPath,
@@ -423,6 +423,22 @@ CYBERDYNE_TOOLS: list[ToolSchema] = [
         ),
         parameters={"type": "object", "properties": {}, "required": []},
     ),
+    ToolSchema(
+        name="get_my_course_progress",
+        description=(
+            "Get the signed-in learner's progress through a single course: per-lesson "
+            "completion, completed-lesson count, overall percent, and whether the course is "
+            "finished. Use when the learner asks how they're doing in a specific course. Get "
+            "the course slug from ``get_course`` / ``list_courses``. Requires authentication."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "slug": {"type": "string", "description": "Course slug from get_course."}
+            },
+            "required": ["slug"],
+        },
+    ),
 ]
 
 
@@ -459,6 +475,7 @@ class ToolContext:
     # can act as a learning companion / recommender.
     list_courses: ListCourses | None = None
     get_course: GetCourse | None = None
+    get_my_course_progress: GetMyCourseProgress | None = None
     get_my_deadlines: GetMyDeadlines | None = None
     path_gating: GetPathGating | None = None
     get_quiz: GetQuiz | None = None
@@ -538,6 +555,8 @@ class ToolDispatcher:
                 return await self._get_lesson_quiz(cast(str, args.get("lesson_id", "")))
             if call.name == "get_my_dashboard":
                 return await self._get_my_dashboard()
+            if call.name == "get_my_course_progress":
+                return await self._get_my_course_progress(cast(str, args.get("slug", "")))
         except Exception as exc:
             logger.exception("tool %s failed", call.name)
             return json.dumps({"error": "tool_failed", "detail": str(exc)})
@@ -993,6 +1012,33 @@ class ToolDispatcher:
                 "certificates": d.certificates,
                 "completed_courses": d.completed_courses,
                 "in_progress_courses": d.in_progress_courses,
+            }
+        )
+
+    async def _get_my_course_progress(self, slug: str) -> str:
+        if self._ctx.get_my_course_progress is None:
+            return json.dumps({"error": "courses_unavailable"})
+        if self._ctx.user_id is None:
+            return json.dumps({"error": "sign_in_required"})
+        if not slug.strip():
+            return json.dumps({"error": "missing_slug"})
+        try:
+            progress = await self._ctx.get_my_course_progress.execute(
+                user_id=self._ctx.user_id, slug=slug
+            )
+        except CourseNotFoundError:
+            return json.dumps({"error": "not_found", "slug": slug})
+        return json.dumps(
+            {
+                "slug": progress.slug,
+                "total_lessons": progress.total_lessons,
+                "completed_lessons": progress.completed_lessons,
+                "percent": progress.percent,
+                "completed": progress.completed,
+                "lessons": [
+                    {"title": view.title, "percent": view.percent, "completed": view.completed}
+                    for view in progress.lessons
+                ],
             }
         )
 
