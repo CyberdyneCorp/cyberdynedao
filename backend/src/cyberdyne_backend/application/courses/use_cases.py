@@ -9,6 +9,7 @@ whole ``Course`` (lessons included) back to the repository to persist.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from uuid import UUID
 
 from cyberdyne_backend.domain.courses import (
@@ -119,6 +120,21 @@ class SetCoursePublished:
             course.publish()
         else:
             course.unpublish()
+        await self.repo.save(course)
+        return course
+
+
+@dataclass(slots=True)
+class SetCourseDeadline:
+    """Admin-only. Set (or clear, with ``due_at=None``) a course's
+    completion deadline. The overdue/urgent/upcoming status is derived at
+    the read boundary, not stored."""
+
+    repo: CourseRepository
+
+    async def execute(self, slug: str, *, due_at: datetime | None) -> Course:
+        course = await self.repo.get_by_slug(slug, include_drafts=True)
+        course.set_deadline(due_at)
         await self.repo.save(course)
         return course
 
@@ -254,6 +270,7 @@ __all__ = [
     "ListCourses",
     "ReorderCourses",
     "ReorderLessons",
+    "SetCourseDeadline",
     "SetCoursePublished",
     "UpdateCourse",
     "UpdateCourseCommand",

@@ -136,10 +136,18 @@ class Course:
     created_at: datetime
     published_at: datetime | None = None
     updated_at: datetime | None = None
+    # Optional course-level deadline; the overdue/urgent/upcoming status
+    # is derived from this relative to now at the read boundary.
+    due_at: datetime | None = None
     lessons: list[Lesson] = field(default_factory=list)
 
     def is_visible_to_anonymous(self) -> bool:
         return self.status is CourseStatus.PUBLISHED and self.published_at is not None
+
+    def set_deadline(self, due_at: datetime | None, now: datetime | None = None) -> None:
+        """Set or clear (``due_at=None``) the course's completion deadline."""
+        self.due_at = due_at
+        self.updated_at = now or datetime.now(tz=UTC)
 
     def publish(self, now: datetime | None = None) -> None:
         moment = now or datetime.now(tz=UTC)
@@ -177,6 +185,7 @@ def new_course(
     slug: str | None = None,
     mandatory: bool = False,
     sort_order: int = 0,
+    due_at: datetime | None = None,
     now: datetime | None = None,
 ) -> Course:
     if not title.strip():
@@ -196,6 +205,7 @@ def new_course(
         mandatory=mandatory,
         sort_order=sort_order,
         created_at=created_at,
+        due_at=due_at,
     )
 
 

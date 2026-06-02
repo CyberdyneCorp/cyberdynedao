@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID
 
@@ -17,6 +18,7 @@ from cyberdyne_backend.adapters.inbound.api.courses.schemas import (
     LessonResponse,
     ReorderCoursesRequest,
     ReorderLessonsRequest,
+    SetCourseDeadlineRequest,
     SetLessonProgressRequest,
     UpdateCourseRequest,
     UpdateLessonRequest,
@@ -38,6 +40,7 @@ from cyberdyne_backend.application.courses import (
     ListCourses,
     ReorderCourses,
     ReorderLessons,
+    SetCourseDeadline,
     SetCoursePublished,
     SetLessonProgress,
     UpdateCourse,
@@ -57,6 +60,7 @@ from cyberdyne_backend.domain.courses import (
     LessonNotFoundError,
     parse_level,
 )
+from cyberdyne_backend.domain.learning import days_remaining, deadline_status
 
 public_router = APIRouter(prefix="/api/v1/courses", tags=["courses"])
 admin_router = APIRouter(prefix="/api/v1/admin/courses", tags=["courses-admin"])
@@ -115,6 +119,10 @@ async def get_my_course_progress_uc() -> GetMyCourseProgress:  # pragma: no cove
     raise NotImplementedError
 
 
+async def get_set_course_deadline_uc() -> SetCourseDeadline:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
 def _viewer_can_see_drafts(request: Request) -> bool:
     principal = getattr(request.state, "principal", None)
     return isinstance(principal, UserPrincipal) and EDITOR_SCOPE in principal.scopes
@@ -157,6 +165,7 @@ def _lesson_response(lesson: Lesson) -> LessonResponse:
 
 
 def _summary(course: Course) -> CourseSummaryResponse:
+    now = datetime.now(tz=UTC)
     return CourseSummaryResponse(
         id=course.id,
         slug=course.slug,
@@ -169,6 +178,9 @@ def _summary(course: Course) -> CourseSummaryResponse:
         lesson_count=len(course.lessons),
         created_at=course.created_at,
         published_at=course.published_at,
+        due_at=course.due_at,
+        deadline_status=deadline_status(course.due_at, now=now).value,
+        days_remaining=days_remaining(course.due_at, now=now),
     )
 
 
@@ -354,6 +366,24 @@ async def unpublish_course(
 ) -> CourseDetailResponse:
     try:
         course = await use_case.execute(slug, published=False)
+    except CourseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="course not found") from exc
+    return _detail(course)
+
+
+@admin_router.put(
+    "/{slug}/deadline",
+    response_model=CourseDetailResponse,
+    response_model_by_alias=True,
+)
+async def set_course_deadline(
+    slug: str,
+    body: SetCourseDeadlineRequest,
+    use_case: Annotated[SetCourseDeadline, Depends(get_set_course_deadline_uc)],
+    _principal: Annotated[UserPrincipal, Depends(require_editor)],
+) -> CourseDetailResponse:
+    try:
+        course = await use_case.execute(slug, due_at=body.due_at)
     except CourseNotFoundError as exc:
         raise HTTPException(status_code=404, detail="course not found") from exc
     return _detail(course)

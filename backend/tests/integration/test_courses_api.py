@@ -74,6 +74,46 @@ def test_course_lifecycle(editor_client: TestClient) -> None:
 
 
 @pytest.mark.usefixtures("_prepared_schema")
+def test_course_deadline_set_status_and_clear(editor_client: TestClient) -> None:
+    editor_client.post(
+        "/api/v1/admin/courses",
+        json={"title": "Deadline Course", "description": "d", "level": "Beginner"},
+    )
+    detail = editor_client.put(
+        "/api/v1/admin/courses/deadline-course/deadline",
+        json={"dueAt": "2999-01-01T00:00:00Z"},
+    )
+    assert detail.status_code == 200, detail.text
+    body = detail.json()
+    assert body["dueAt"] is not None
+    assert body["deadlineStatus"] == "upcoming"
+    assert body["daysRemaining"] > 0
+
+    # A past due date reads as overdue with negative days remaining.
+    overdue = editor_client.put(
+        "/api/v1/admin/courses/deadline-course/deadline",
+        json={"dueAt": "2000-01-01T00:00:00Z"},
+    ).json()
+    assert overdue["deadlineStatus"] == "overdue"
+    assert overdue["daysRemaining"] < 0
+
+    # Clearing resets to none.
+    cleared = editor_client.put(
+        "/api/v1/admin/courses/deadline-course/deadline",
+        json={"dueAt": None},
+    ).json()
+    assert cleared["dueAt"] is None
+    assert cleared["deadlineStatus"] == "none"
+    assert cleared["daysRemaining"] is None
+
+
+@pytest.mark.usefixtures("_prepared_schema")
+def test_course_deadline_unknown_course_404(editor_client: TestClient) -> None:
+    resp = editor_client.put("/api/v1/admin/courses/ghost/deadline", json={"dueAt": None})
+    assert resp.status_code == 404
+
+
+@pytest.mark.usefixtures("_prepared_schema")
 def test_invalid_lesson_content_is_422(editor_client: TestClient) -> None:
     editor_client.post(
         "/api/v1/admin/courses",

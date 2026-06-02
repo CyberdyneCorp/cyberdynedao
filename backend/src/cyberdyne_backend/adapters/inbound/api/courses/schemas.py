@@ -28,6 +28,7 @@ class _StrictCamelModel(_CamelModel):
 LevelLiteral = Literal["Beginner", "Intermediate", "Advanced"]
 StatusLiteral = Literal["draft", "published"]
 LessonTypeLiteral = Literal["video", "pdf", "presentation", "text", "quiz", "code"]
+DeadlineStatusLiteral = Literal["none", "upcoming", "urgent", "overdue"]
 
 
 # ── Responses ─────────────────────────────────────────────────────────
@@ -56,6 +57,10 @@ class CourseSummaryResponse(_CamelModel):
     lesson_count: int
     created_at: datetime
     published_at: datetime | None = None
+    due_at: datetime | None = None
+    # Derived from due_at vs now at read time (not stored).
+    deadline_status: DeadlineStatusLiteral = "none"
+    days_remaining: int | None = None
 
 
 class CourseDetailResponse(CourseSummaryResponse):
@@ -106,6 +111,11 @@ class UpdateLessonRequest(_StrictCamelModel):
 class ReorderLessonsRequest(_StrictCamelModel):
     # {lessonId: sort_order}
     order: dict[UUID, int]
+
+
+class SetCourseDeadlineRequest(_StrictCamelModel):
+    # null clears the deadline.
+    due_at: datetime | None = None
 
 
 # ── Learner progress ──────────────────────────────────────────────────
