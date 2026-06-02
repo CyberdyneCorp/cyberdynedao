@@ -3,6 +3,7 @@
 	import { createCoursesViewModel } from '$lib/viewmodels/coursesViewModel';
 	import type { CourseLevel, DeadlineStatus } from '$lib/api/coursesApi';
 	import { authVM } from '$lib/auth/authViewModel.svelte';
+	import QuizPlayer from './QuizPlayer.svelte';
 
 	// The view-model owns all backend orchestration (catalogue, detail,
 	// progress, mark-complete) over the new /api/v1/courses endpoints.
@@ -10,6 +11,9 @@
 	const { courses, selected, progress, loading, error } = vm;
 
 	const authReady = $derived(authVM.isRestored && authVM.isAuthenticated);
+
+	// Lesson id whose quiz the learner is currently taking (inline player).
+	let takingQuiz = $state<string | null>(null);
 
 	onMount(() => {
 		void vm.loadCatalogue();
@@ -22,6 +26,13 @@
 	function markComplete(lessonId: string): void {
 		const course = $selected;
 		if (course) void vm.completeLesson(course.slug, lessonId);
+	}
+
+	function onQuizDone(): void {
+		const slug = $selected?.slug;
+		takingQuiz = null;
+		// A passed quiz auto-completes its lesson server-side; refresh.
+		if (slug && authReady) void vm.refreshProgress(slug);
 	}
 
 	function lessonCompleted(lessonId: string): boolean {
@@ -87,18 +98,31 @@
 
 			<ol class="lessons">
 				{#each course.lessons as lesson (lesson.id)}
-					<li class="lesson" class:lesson--done={lessonCompleted(lesson.id)}>
-						<span class="lesson__type">{lesson.lessonType}</span>
-						<span class="lesson__title">{lesson.title}</span>
-						{#if lesson.duration}<span class="lesson__dur">{lesson.duration}</span>{/if}
-						{#if authReady}
-							{#if lessonCompleted(lesson.id)}
-								<span class="lesson__done">✓ done</span>
-							{:else}
-								<button class="lesson__btn" onclick={() => markComplete(lesson.id)}>
-									Mark complete
-								</button>
+					<li class="lesson-wrap">
+						<div class="lesson" class:lesson--done={lessonCompleted(lesson.id)}>
+							<span class="lesson__type">{lesson.lessonType}</span>
+							<span class="lesson__title">{lesson.title}</span>
+							{#if lesson.duration}<span class="lesson__dur">{lesson.duration}</span>{/if}
+							{#if authReady}
+								{#if lesson.lessonType === 'quiz'}
+									<button
+										class="lesson__btn"
+										onclick={() => (takingQuiz = takingQuiz === lesson.id ? null : lesson.id)}
+									>
+										{takingQuiz === lesson.id ? 'Hide quiz' : 'Take quiz'}
+									</button>
+								{/if}
+								{#if lessonCompleted(lesson.id)}
+									<span class="lesson__done">✓ done</span>
+								{:else if lesson.lessonType !== 'quiz'}
+									<button class="lesson__btn" onclick={() => markComplete(lesson.id)}>
+										Mark complete
+									</button>
+								{/if}
 							{/if}
+						</div>
+						{#if takingQuiz === lesson.id}
+							<QuizPlayer lessonId={lesson.id} onDone={onQuizDone} />
 						{/if}
 					</li>
 				{/each}
@@ -308,6 +332,10 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.4rem;
+	}
+	.lesson-wrap {
+		display: flex;
+		flex-direction: column;
 	}
 	.lesson {
 		display: flex;
