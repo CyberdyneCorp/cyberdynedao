@@ -139,6 +139,42 @@ def test_quiz_lifecycle_and_no_answer_leak(authed_client: TestClient) -> None:
 
 
 @pytest.mark.usefixtures("_prepared_schema")
+def test_ai_contextual_feedback(authed_client: TestClient) -> None:
+    lesson_id = _make_quiz_lesson(authed_client)
+    authed_client.put(f"/api/v1/admin/lessons/{lesson_id}/quiz", json=_QUIZ_BODY)
+
+    editor_view = authed_client.get(f"/api/v1/admin/lessons/{lesson_id}/quiz").json()
+    q0, q1 = editor_view["questions"]
+    wrong = next(o["id"] for o in q0["options"] if not o["isCorrect"])
+    right = next(o["id"] for o in q1["options"] if o["isCorrect"])
+    answers = {q0["id"]: wrong, q1["id"]: right}
+
+    resp = authed_client.post(
+        f"/api/v1/lessons/{lesson_id}/quiz/feedback", json={"answers": answers}
+    )
+    assert resp.status_code == 200, resp.text
+    by_q = {f["questionId"]: f for f in resp.json()}
+
+    wrong_fb = by_q[q0["id"]]
+    assert wrong_fb["isCorrect"] is False
+    assert wrong_fb["aiExplanation"]  # offline canned reply, non-empty
+    assert wrong_fb["staticExplanation"] == "Addition."
+
+    right_fb = by_q[q1["id"]]
+    assert right_fb["isCorrect"] is True
+    assert right_fb["aiExplanation"] is None
+
+    # Feedback is read-only: it must not record an attempt.
+    assert authed_client.get(f"/api/v1/lessons/{lesson_id}/quiz/attempts").json() == []
+
+
+@pytest.mark.usefixtures("_prepared_schema")
+def test_feedback_missing_quiz_is_404(authed_client: TestClient) -> None:
+    resp = authed_client.post(f"/api/v1/lessons/{uuid.uuid4()}/quiz/feedback", json={"answers": {}})
+    assert resp.status_code == 404
+
+
+@pytest.mark.usefixtures("_prepared_schema")
 def test_invalid_quiz_is_422(authed_client: TestClient) -> None:
     lesson_id = _make_quiz_lesson(authed_client)
     # Two correct options on one question — schema allows it, domain rejects.

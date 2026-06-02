@@ -128,3 +128,17 @@ class AttemptSummaryResponse(_CamelModel):
     passed: bool
     attempt_number: int
     submitted_at: datetime
+
+
+# ── AI contextual feedback ───────────────────────────────────────────
+
+
+class AnswerFeedbackResponse(_CamelModel):
+    question_id: UUID
+    prompt: str
+    is_correct: bool
+    selected_option_id: UUID | None
+    correct_option_id: UUID
+    static_explanation: str
+    # The personalized LLM explanation; null for answers the learner got right.
+    ai_explanation: str | None
