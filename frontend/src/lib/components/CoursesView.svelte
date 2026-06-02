@@ -8,6 +8,7 @@
 	} from '$lib/api/coursesApi';
 	import { authVM } from '$lib/auth/authViewModel.svelte';
 	import QuizPlayer from './QuizPlayer.svelte';
+	import LessonContent from './LessonContent.svelte';
 
 	// The view-model owns all backend orchestration (catalogue, detail,
 	// progress, mark-complete, certificate) over the new /api/v1/courses
@@ -19,6 +20,8 @@
 
 	// Lesson id whose quiz the learner is currently taking (inline player).
 	let takingQuiz = $state<string | null>(null);
+	// Lesson id whose content is expanded for viewing.
+	let openLesson = $state<string | null>(null);
 
 	onMount(() => {
 		void vm.loadCatalogue();
@@ -129,6 +132,14 @@
 							<span class="lesson__type">{lesson.lessonType}</span>
 							<span class="lesson__title">{lesson.title}</span>
 							{#if lesson.duration}<span class="lesson__dur">{lesson.duration}</span>{/if}
+							{#if lesson.lessonType !== 'quiz'}
+								<button
+									class="lesson__btn"
+									onclick={() => (openLesson = openLesson === lesson.id ? null : lesson.id)}
+								>
+									{openLesson === lesson.id ? 'Hide' : 'View'}
+								</button>
+							{/if}
 							{#if authReady}
 								{#if lesson.lessonType === 'quiz'}
 									<button
@@ -147,6 +158,9 @@
 								{/if}
 							{/if}
 						</div>
+						{#if openLesson === lesson.id}
+							<LessonContent {lesson} />
+						{/if}
 						{#if takingQuiz === lesson.id}
 							<QuizPlayer lessonId={lesson.id} onDone={onQuizDone} />
 						{/if}

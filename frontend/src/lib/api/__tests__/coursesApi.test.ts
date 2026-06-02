@@ -10,6 +10,7 @@ import {
 	fetchMyCourseProgress,
 	fetchQuizFeedback,
 	fetchRecommendations,
+	runLessonCode,
 	setLessonProgress,
 	submitQuizAttempt,
 	verifyCourseCertificate
@@ -146,6 +147,16 @@ describe('coursesApi — quiz player', () => {
 		expect(init.method).toBe('POST');
 		expect(String(url)).toMatch(/\/api\/v1\/lessons\/l-1\/quiz\/feedback$/);
 		expect(JSON.parse(init.body as string)).toEqual({ answers: { q1: 'o1' } });
+	});
+
+	it('runLessonCode POSTs the source to the code-run route', async () => {
+		mockJsonOnce(200, { ok: true, stdout: '4', stderr: '', artifacts: [], sessionId: 's', timedOut: false });
+		const res = await runLessonCode('l-1', 'disp(2+2)');
+		expect(res.stdout).toBe('4');
+		const [url, init] = lastCall();
+		expect(init.method).toBe('POST');
+		expect(String(url)).toMatch(/\/api\/v1\/lessons\/l-1\/code\/run$/);
+		expect(JSON.parse(init.body as string)).toEqual({ source: 'disp(2+2)' });
 	});
 });
 
