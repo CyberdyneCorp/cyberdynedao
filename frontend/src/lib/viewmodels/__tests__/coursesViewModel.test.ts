@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { get } from 'svelte/store';
 import { createCoursesViewModel, type CoursesViewModelDeps } from '../coursesViewModel';
-import type { CourseDetail, CourseProgress, CourseSummary } from '$lib/api/coursesApi';
+import { CoursesApiError } from '$lib/api/coursesApi';
+import type {
+	CourseCertificate,
+	CourseDetail,
+	CourseProgress,
+	CourseSummary
+} from '$lib/api/coursesApi';
 
 const summary: CourseSummary = {
 	id: 'c-1',
@@ -46,12 +52,22 @@ const progress: CourseProgress = {
 	lessons: [{ lessonId: 'l-1', title: 'Intro', percent: 100, completed: true }]
 };
 
+const certificate: CourseCertificate = {
+	id: 'cert-1',
+	userId: 'u-1',
+	courseSlug: 'solidity-101',
+	issuedAt: '2026-01-02T00:00:00Z',
+	verificationHash: 'abc'
+};
+
 function fakeDeps(over: Partial<CoursesViewModelDeps> = {}): CoursesViewModelDeps {
 	return {
 		fetchCourses: vi.fn().mockResolvedValue([summary]),
 		fetchCourse: vi.fn().mockResolvedValue(detail),
 		fetchMyCourseProgress: vi.fn().mockResolvedValue(progress),
 		setLessonProgress: vi.fn().mockResolvedValue({ ...progress, completedLessons: 2, completed: true }),
+		fetchMyCertificate: vi.fn().mockRejectedValue(new CoursesApiError(404, 'certificate not found')),
+		claimCertificate: vi.fn().mockResolvedValue(certificate),
 		...over
 	};
 }
@@ -150,13 +166,63 @@ describe('coursesViewModel — progress actions', () => {
 	});
 });
 
+describe('coursesViewModel — certificate', () => {
+	it('open loads an existing certificate when present', async () => {
+		const vm = createCoursesViewModel(
+			fakeDeps({ fetchMyCertificate: vi.fn().mockResolvedValue(certificate) })
+		);
+		await vm.open('solidity-101', { withProgress: true });
+		expect(get(vm.certificate)).toEqual(certificate);
+	});
+
+	it('a 404 certificate is treated as "not earned", not an error', async () => {
+		const vm = createCoursesViewModel(fakeDeps()); // default cert dep → 404
+		await vm.open('solidity-101', { withProgress: true });
+		expect(get(vm.certificate)).toBeNull();
+		expect(get(vm.error)).toBeNull();
+	});
+
+	it('does not load a certificate when anonymous (no progress)', async () => {
+		const deps = fakeDeps();
+		const vm = createCoursesViewModel(deps);
+		await vm.open('solidity-101');
+		expect(deps.fetchMyCertificate).not.toHaveBeenCalled();
+		expect(get(vm.certificate)).toBeNull();
+	});
+
+	it('claimCertificate sets the certificate', async () => {
+		const deps = fakeDeps();
+		const vm = createCoursesViewModel(deps);
+		await vm.claimCertificate('solidity-101');
+		expect(deps.claimCertificate).toHaveBeenCalledWith('solidity-101');
+		expect(get(vm.certificate)).toEqual(certificate);
+	});
+
+	it('claimCertificate records errors (e.g. 409 not eligible)', async () => {
+		const vm = createCoursesViewModel(
+			fakeDeps({ claimCertificate: vi.fn().mockRejectedValue(new Error('not eligible')) })
+		);
+		await vm.claimCertificate('x');
+		expect(get(vm.error)).toBe('not eligible');
+	});
+
+	it('completeLesson refreshes the certificate (auto-issued on completion)', async () => {
+		const deps = fakeDeps({ fetchMyCertificate: vi.fn().mockResolvedValue(certificate) });
+		const vm = createCoursesViewModel(deps);
+		await vm.completeLesson('solidity-101', 'l-1');
+		expect(deps.fetchMyCertificate).toHaveBeenCalledWith('solidity-101');
+		expect(get(vm.certificate)).toEqual(certificate);
+	});
+});
+
 describe('coursesViewModel — close', () => {
-	it('clears selected, progress and error', async () => {
+	it('clears selected, progress, certificate and error', async () => {
 		const vm = createCoursesViewModel(fakeDeps());
 		await vm.open('solidity-101', { withProgress: true });
 		vm.close();
 		expect(get(vm.selected)).toBeNull();
 		expect(get(vm.progress)).toBeNull();
+		expect(get(vm.certificate)).toBeNull();
 		expect(get(vm.error)).toBeNull();
 	});
 });
