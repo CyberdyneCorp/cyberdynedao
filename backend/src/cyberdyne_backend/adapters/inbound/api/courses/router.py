@@ -9,18 +9,22 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from cyberdyne_backend.adapters.inbound.api.courses.schemas import (
     CourseDetailResponse,
+    CourseProgressResponse,
     CourseSummaryResponse,
     CreateCourseRequest,
     CreateLessonRequest,
+    LessonProgressResponse,
     LessonResponse,
     ReorderCoursesRequest,
     ReorderLessonsRequest,
+    SetLessonProgressRequest,
     UpdateCourseRequest,
     UpdateLessonRequest,
 )
 from cyberdyne_backend.adapters.inbound.middleware.auth import (
     EDITOR_SCOPE,
     require_editor,
+    require_principal,
 )
 from cyberdyne_backend.application.courses import (
     AddLesson,
@@ -30,10 +34,12 @@ from cyberdyne_backend.application.courses import (
     DeleteCourse,
     DeleteLesson,
     GetCourse,
+    GetMyCourseProgress,
     ListCourses,
     ReorderCourses,
     ReorderLessons,
     SetCoursePublished,
+    SetLessonProgress,
     UpdateCourse,
     UpdateCourseCommand,
     UpdateLesson,
@@ -43,6 +49,7 @@ from cyberdyne_backend.domain.auth_identity import UserPrincipal
 from cyberdyne_backend.domain.courses import (
     Course,
     CourseNotFoundError,
+    CourseProgress,
     DuplicateCourseSlugError,
     InvalidCourseLevelError,
     InvalidLessonContentError,
@@ -100,9 +107,37 @@ async def get_reorder_lessons_uc() -> ReorderLessons:  # pragma: no cover - over
     raise NotImplementedError
 
 
+async def get_set_lesson_progress_uc() -> SetLessonProgress:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_my_course_progress_uc() -> GetMyCourseProgress:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
 def _viewer_can_see_drafts(request: Request) -> bool:
     principal = getattr(request.state, "principal", None)
     return isinstance(principal, UserPrincipal) and EDITOR_SCOPE in principal.scopes
+
+
+def _progress_response(progress: CourseProgress) -> CourseProgressResponse:
+    return CourseProgressResponse(
+        course_id=progress.course_id,
+        slug=progress.slug,
+        total_lessons=progress.total_lessons,
+        completed_lessons=progress.completed_lessons,
+        percent=progress.percent,
+        completed=progress.completed,
+        lessons=[
+            LessonProgressResponse(
+                lesson_id=view.lesson_id,
+                title=view.title,
+                percent=view.percent,
+                completed=view.completed,
+            )
+            for view in progress.lessons
+        ],
+    )
 
 
 # ── Response builders ────────────────────────────────────────────────
@@ -185,6 +220,53 @@ async def get_course(
     except CourseNotFoundError as exc:
         raise HTTPException(status_code=404, detail="course not found") from exc
     return _detail(course)
+
+
+# ── Learner progress ─────────────────────────────────────────────────
+
+
+@public_router.get(
+    "/{slug}/progress",
+    response_model=CourseProgressResponse,
+    response_model_by_alias=True,
+)
+async def get_my_course_progress(
+    slug: str,
+    use_case: Annotated[GetMyCourseProgress, Depends(get_my_course_progress_uc)],
+    principal: Annotated[UserPrincipal, Depends(require_principal)],
+) -> CourseProgressResponse:
+    if not isinstance(principal, UserPrincipal):
+        raise HTTPException(status_code=403, detail="user token required")
+    try:
+        progress = await use_case.execute(user_id=principal.user_id, slug=slug)
+    except CourseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="course not found") from exc
+    return _progress_response(progress)
+
+
+@public_router.put(
+    "/{slug}/lessons/{lesson_id}/progress",
+    response_model=CourseProgressResponse,
+    response_model_by_alias=True,
+)
+async def set_lesson_progress(
+    slug: str,
+    lesson_id: UUID,
+    body: SetLessonProgressRequest,
+    use_case: Annotated[SetLessonProgress, Depends(get_set_lesson_progress_uc)],
+    principal: Annotated[UserPrincipal, Depends(require_principal)],
+) -> CourseProgressResponse:
+    if not isinstance(principal, UserPrincipal):
+        raise HTTPException(status_code=403, detail="user token required")
+    try:
+        progress = await use_case.execute(
+            user_id=principal.user_id, slug=slug, lesson_id=lesson_id, percent=body.percent
+        )
+    except CourseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="course not found") from exc
+    except LessonNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="lesson not found") from exc
+    return _progress_response(progress)
 
 
 # ── Admin — course authoring ─────────────────────────────────────────

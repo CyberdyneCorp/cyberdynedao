@@ -6,6 +6,7 @@ from typing import Protocol, runtime_checkable
 from uuid import UUID
 
 from cyberdyne_backend.domain.courses.entities import Course, CourseLevel
+from cyberdyne_backend.domain.courses.progress import LessonProgress
 
 
 @runtime_checkable
@@ -37,4 +38,22 @@ class CourseRepository(Protocol):
 
     async def delete(self, course_id: UUID) -> None:
         """Delete a course and its lessons. No-op if absent."""
+        ...
+
+
+@runtime_checkable
+class CourseProgressRepository(Protocol):
+    """Persists per-lesson learner progress for the courses context."""
+
+    async def get_lesson_progress(self, *, user_id: UUID, lesson_id: UUID) -> LessonProgress | None:
+        """The learner's row for a single lesson, or ``None`` if they
+        have not started it."""
+        ...
+
+    async def upsert_lesson_progress(self, progress: LessonProgress) -> None:
+        """Insert or update a learner's progress for one lesson."""
+        ...
+
+    async def list_course_progress(self, *, user_id: UUID, course_id: UUID) -> list[LessonProgress]:
+        """Every lesson-progress row the learner has within a course."""
         ...

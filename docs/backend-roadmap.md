@@ -9,7 +9,10 @@
 > The learning platform has since grown well past the original Phase-4
 > sketch — all of the following are merged, tested, and deployed:
 > **courses & lessons** (admin CRUD, levels, publish, reorder, typed
-> lessons), **quizzes** (player + attempts + static feedback),
+> lessons), **per-lesson progress + per-course auto-completion**
+> (`PUT /api/v1/courses/{slug}/lessons/{id}/progress`,
+> `GET /api/v1/courses/{slug}/progress` - course-scoped, complete iff
+> every lesson is), **quizzes** (player + attempts + static feedback),
 > **file uploads** (MIME routing, size caps, traversal guards, persistent
 > volume), **prerequisite/level/sequential gating + enrollment
 > eligibility**, **enrollment deadlines**, **learner + admin analytics**,
