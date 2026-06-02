@@ -1,12 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	AdminApiError,
+	addLesson,
 	createCourse,
 	deleteCourse,
+	deleteLesson,
 	publishCourse,
 	reorderCourses,
 	unpublishCourse,
-	updateCourse
+	updateCourse,
+	uploadFile
 } from '../adminApi';
 import { clearAuthToken, setAuthToken } from '$lib/auth/authToken';
 
@@ -94,5 +97,44 @@ describe('adminApi — course authoring', () => {
 		await expect(createCourse({ title: 'Dup', level: 'Beginner' })).rejects.toMatchObject({
 			status: 409
 		});
+	});
+});
+
+describe('adminApi — lessons + uploads', () => {
+	it('addLesson POSTs to the course lessons route', async () => {
+		mockJsonOnce(201, { id: 'l-1', title: 'Intro', lessonType: 'text' });
+		await addLesson('solidity-101', { title: 'Intro', lessonType: 'text', textBody: 'hi' });
+		const [url, init] = lastCall();
+		expect(init.method).toBe('POST');
+		expect(String(url)).toMatch(/\/api\/v1\/admin\/courses\/solidity-101\/lessons$/);
+		expect(JSON.parse(init.body as string)).toEqual({
+			title: 'Intro',
+			lessonType: 'text',
+			textBody: 'hi'
+		});
+	});
+
+	it('deleteLesson DELETEs the lesson', async () => {
+		(globalThis.fetch as unknown as FetchMock).mockResolvedValueOnce(new Response(null, { status: 204 }));
+		await deleteLesson('solidity-101', 'l-1');
+		const [url, init] = lastCall();
+		expect(init.method).toBe('DELETE');
+		expect(String(url)).toMatch(/\/courses\/solidity-101\/lessons\/l-1$/);
+	});
+
+	it('uploadFile POSTs multipart form-data with the bearer (no JSON content-type)', async () => {
+		setAuthToken('ed');
+		mockJsonOnce(201, { id: 'u-1', url: 'https://cdn/x.mp4', originalFilename: 'x.mp4' });
+		const file = new File(['data'], 'x.mp4', { type: 'video/mp4' });
+		const res = await uploadFile(file);
+		expect(res.url).toBe('https://cdn/x.mp4');
+		const [url, init] = lastCall();
+		expect(String(url)).toMatch(/\/api\/v1\/admin\/uploads$/);
+		expect(init.method).toBe('POST');
+		expect(init.body).toBeInstanceOf(FormData);
+		const headers = init.headers as Headers;
+		expect(headers.get('authorization')).toBe('Bearer ed');
+		// Must NOT pin JSON — the browser sets the multipart boundary.
+		expect(headers.get('content-type')).toBeNull();
 	});
 });
