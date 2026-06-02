@@ -9,7 +9,6 @@
 	import DaoView from './DaoView.svelte';
 	import ServicesView from './ServicesView.svelte';
 	import CyberddyneView from './CyberddyneView.svelte';
-	import LearnView from './LearnView.svelte';
 	import CoursesView from './CoursesView.svelte';
 	import AdminView from './AdminView.svelte';
 	import ContactView from './ContactView.svelte';
@@ -40,8 +39,6 @@
 	<ServicesView />
 {:else if content === 'cyberdyne'}
 	<CyberddyneView />
-{:else if content === 'listen'}
-	<LearnView />
 {:else if content === 'courses'}
 	<CoursesView />
 {:else if content === 'admin'}
