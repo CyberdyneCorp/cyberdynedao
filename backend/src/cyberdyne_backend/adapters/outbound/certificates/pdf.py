@@ -8,22 +8,35 @@ design system.
 
 from __future__ import annotations
 
+from datetime import datetime
 from io import BytesIO
+from typing import Protocol, runtime_checkable
+from uuid import UUID
 
 from reportlab.lib.colors import HexColor
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 
-from cyberdyne_backend.domain.learning import Certificate
-
 _ACCENT = HexColor("#3B82F6")
 _INK = HexColor("#0F172A")
 _MUTED = HexColor("#64748B")
 
 
+@runtime_checkable
+class _CertificateView(Protocol):
+    """The certificate fields the PDF needs — satisfied by both the
+    learning ``Certificate`` and the courses ``CourseCertificate``."""
+
+    id: UUID
+    user_id: UUID
+    issued_at: datetime
+
+
 class ReportlabCertificateRenderer:
-    def render(self, *, certificate: Certificate, path_title: str, verify_url: str) -> bytes:
+    def render(
+        self, *, certificate: _CertificateView, subject_title: str, verify_url: str
+    ) -> bytes:
         buffer = BytesIO()
         width, height = landscape(A4)
         pdf = canvas.Canvas(buffer, pagesize=landscape(A4))
@@ -57,7 +70,7 @@ class ReportlabCertificateRenderer:
 
         pdf.setFillColor(_ACCENT)
         pdf.setFont("Helvetica-Bold", 24)
-        pdf.drawCentredString(center, height - 140 * mm, path_title)
+        pdf.drawCentredString(center, height - 140 * mm, subject_title)
 
         pdf.setFillColor(_MUTED)
         pdf.setFont("Helvetica", 12)

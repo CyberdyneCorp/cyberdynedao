@@ -44,8 +44,8 @@ class _FakeRenderer:
     def __init__(self) -> None:
         self.calls: list[tuple[str, str]] = []
 
-    def render(self, *, certificate: Certificate, path_title: str, verify_url: str) -> bytes:
-        self.calls.append((path_title, verify_url))
+    def render(self, *, certificate: Certificate, subject_title: str, verify_url: str) -> bytes:
+        self.calls.append((subject_title, verify_url))
         return b"%PDF-FAKE"
 
 
@@ -98,7 +98,7 @@ class TestReportlabRenderer:
     def test_produces_a_pdf(self) -> None:
         pdf = ReportlabCertificateRenderer().render(
             certificate=_cert(),
-            path_title="Blockchain Developer",
+            subject_title="Blockchain Developer",
             verify_url="https://x.test/verify",
         )
         assert pdf.startswith(b"%PDF")

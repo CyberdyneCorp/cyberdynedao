@@ -98,3 +98,13 @@ class CourseCertificateSigner(Protocol):
     def sign(self, message: str) -> str: ...
 
     def verify(self, message: str, signature: str) -> bool: ...
+
+
+@runtime_checkable
+class CourseCertificatePdfRenderer(Protocol):
+    """Renders a course certificate to a downloadable PDF. Structurally
+    satisfied by the shared reportlab renderer."""
+
+    def render(
+        self, *, certificate: CourseCertificate, subject_title: str, verify_url: str
+    ) -> bytes: ...

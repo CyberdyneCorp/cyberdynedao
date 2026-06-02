@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from cyberdyne_backend.adapters.inbound.api.courses.schemas import (
     CourseCertificateResponse,
@@ -42,6 +42,7 @@ from cyberdyne_backend.application.courses import (
     GetMyCourseProgress,
     IssueCourseCertificate,
     ListCourses,
+    RenderCourseCertificatePdf,
     ReorderCourses,
     ReorderLessons,
     SetCourseDeadline,
@@ -59,6 +60,7 @@ from cyberdyne_backend.domain.courses import (
     Course,
     CourseCertificate,
     CourseCertificateNotEligibleError,
+    CourseCertificateNotFoundError,
     CourseNotFoundError,
     CourseProgress,
     DuplicateCourseSlugError,
@@ -143,6 +145,12 @@ async def get_my_certificate_uc() -> GetMyCourseCertificate:  # pragma: no cover
 
 async def get_verify_certificate_uc() -> (
     VerifyCourseCertificate
+):  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_certificate_pdf_uc() -> (
+    RenderCourseCertificatePdf
 ):  # pragma: no cover - override target
     raise NotImplementedError
 
@@ -341,6 +349,27 @@ async def verify_course_certificate(
     """Public: confirm a course certificate's signature matches its
     claims. Unknown ids return ``valid: false`` (not 404)."""
     return _verification_response(await use_case.execute(certificate_id))
+
+
+@public_router.get(
+    "/certificates/{certificate_id}/pdf",
+    response_class=Response,
+    responses={200: {"content": {"application/pdf": {}}}},
+)
+async def download_course_certificate_pdf(
+    certificate_id: UUID,
+    use_case: Annotated[RenderCourseCertificatePdf, Depends(get_certificate_pdf_uc)],
+) -> Response:
+    # Public download — the certificate id is the bearer token, same as verify.
+    try:
+        pdf = await use_case.execute(certificate_id)
+    except CourseCertificateNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="certificate not found") from exc
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="certificate-{certificate_id}.pdf"'},
+    )
 
 
 @public_router.post(

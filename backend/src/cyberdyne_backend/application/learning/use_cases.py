@@ -178,7 +178,9 @@ class RenderCertificatePdf:
         verify_url = (
             f"{self.verify_url_base.rstrip('/')}/api/v1/learning/certificates/{cert.id}/verify"
         )
-        return self.renderer.render(certificate=cert, path_title=path_title, verify_url=verify_url)
+        return self.renderer.render(
+            certificate=cert, subject_title=path_title, verify_url=verify_url
+        )
 
 
 @dataclass(slots=True)
