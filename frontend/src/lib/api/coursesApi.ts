@@ -164,6 +164,16 @@ export interface QuizAnswerFeedback {
 /** Map of `questionId -> optionId` for a quiz submission. */
 export type QuizAnswers = Record<string, string>;
 
+// Code-interpreter (code lessons run on the MATLAB engine).
+export interface RunCodeResult {
+	ok: boolean;
+	stdout: string;
+	stderr: string;
+	artifacts: string[];
+	sessionId: string;
+	timedOut: boolean;
+}
+
 // ── Client ────────────────────────────────────────────────────────────
 
 export class CoursesApiError extends Error {
@@ -293,4 +303,10 @@ export function fetchQuizFeedback(
 	return sendJson<QuizAnswerFeedback[]>('POST', `/api/v1/lessons/${enc(lessonId)}/quiz/feedback`, {
 		answers
 	});
+}
+
+// ── Code lessons (me) ─────────────────────────────────────────────────
+
+export function runLessonCode(lessonId: string, source: string): Promise<RunCodeResult> {
+	return sendJson<RunCodeResult>('POST', `/api/v1/lessons/${enc(lessonId)}/code/run`, { source });
 }
