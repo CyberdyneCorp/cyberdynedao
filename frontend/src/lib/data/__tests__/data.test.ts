@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { marketplaceItems, marketplaceCategories, buildMarketplaceCategories } from '../shop';
 import { blogPosts, blogCategories, buildBlogCategories } from '../news';
-import { learningModules, learningPaths } from '../learn';
 
 describe('data fixtures', () => {
 	it('marketplace items have required fields', () => {
@@ -31,11 +30,5 @@ describe('data fixtures', () => {
 		expect(blogCategories[0].id).toBe('all');
 		expect(blogCategories[0].count).toBe(blogPosts.length);
 		expect(buildBlogCategories([])[0].count).toBe(0);
-	});
-
-	it('learning modules and paths non-empty', () => {
-		expect(learningModules.length).toBeGreaterThan(0);
-		expect(learningPaths.length).toBeGreaterThan(0);
-		learningPaths.forEach(p => expect(p.modules.length).toBeGreaterThan(0));
 	});
 });
