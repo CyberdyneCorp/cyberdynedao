@@ -9,6 +9,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from cyberdyne_backend.adapters.inbound.api.courses.schemas import (
+    CourseCertificateResponse,
+    CourseCertificateVerificationResponse,
     CourseDetailResponse,
     CourseProgressResponse,
     CourseSummaryResponse,
@@ -36,7 +38,9 @@ from cyberdyne_backend.application.courses import (
     DeleteCourse,
     DeleteLesson,
     GetCourse,
+    GetMyCourseCertificate,
     GetMyCourseProgress,
+    IssueCourseCertificate,
     ListCourses,
     ReorderCourses,
     ReorderLessons,
@@ -47,10 +51,14 @@ from cyberdyne_backend.application.courses import (
     UpdateCourseCommand,
     UpdateLesson,
     UpdateLessonCommand,
+    VerifyCourseCertificate,
 )
+from cyberdyne_backend.application.courses.certificates import CourseCertificateVerification
 from cyberdyne_backend.domain.auth_identity import UserPrincipal
 from cyberdyne_backend.domain.courses import (
     Course,
+    CourseCertificate,
+    CourseCertificateNotEligibleError,
     CourseNotFoundError,
     CourseProgress,
     DuplicateCourseSlugError,
@@ -123,9 +131,46 @@ async def get_set_course_deadline_uc() -> SetCourseDeadline:  # pragma: no cover
     raise NotImplementedError
 
 
+async def get_issue_certificate_uc() -> (
+    IssueCourseCertificate
+):  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_my_certificate_uc() -> GetMyCourseCertificate:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_verify_certificate_uc() -> (
+    VerifyCourseCertificate
+):  # pragma: no cover - override target
+    raise NotImplementedError
+
+
 def _viewer_can_see_drafts(request: Request) -> bool:
     principal = getattr(request.state, "principal", None)
     return isinstance(principal, UserPrincipal) and EDITOR_SCOPE in principal.scopes
+
+
+def _certificate_response(cert: CourseCertificate) -> CourseCertificateResponse:
+    return CourseCertificateResponse(
+        id=cert.id,
+        user_id=cert.user_id,
+        course_slug=cert.course_slug,
+        issued_at=cert.issued_at,
+        verification_hash=cert.verification_hash,
+    )
+
+
+def _verification_response(
+    result: CourseCertificateVerification,
+) -> CourseCertificateVerificationResponse:
+    return CourseCertificateVerificationResponse(
+        valid=result.valid,
+        certificate=(
+            _certificate_response(result.certificate) if result.certificate is not None else None
+        ),
+    )
 
 
 def _progress_response(progress: CourseProgress) -> CourseProgressResponse:
@@ -279,6 +324,66 @@ async def set_lesson_progress(
     except LessonNotFoundError as exc:
         raise HTTPException(status_code=404, detail="lesson not found") from exc
     return _progress_response(progress)
+
+
+# ── Certificates ─────────────────────────────────────────────────────
+
+
+@public_router.get(
+    "/certificates/{certificate_id}/verify",
+    response_model=CourseCertificateVerificationResponse,
+    response_model_by_alias=True,
+)
+async def verify_course_certificate(
+    certificate_id: UUID,
+    use_case: Annotated[VerifyCourseCertificate, Depends(get_verify_certificate_uc)],
+) -> CourseCertificateVerificationResponse:
+    """Public: confirm a course certificate's signature matches its
+    claims. Unknown ids return ``valid: false`` (not 404)."""
+    return _verification_response(await use_case.execute(certificate_id))
+
+
+@public_router.post(
+    "/{slug}/certificate",
+    response_model=CourseCertificateResponse,
+    response_model_by_alias=True,
+    status_code=201,
+)
+async def issue_course_certificate(
+    slug: str,
+    use_case: Annotated[IssueCourseCertificate, Depends(get_issue_certificate_uc)],
+    principal: Annotated[UserPrincipal, Depends(require_principal)],
+) -> CourseCertificateResponse:
+    """Claim the signed-in learner's certificate for a completed course.
+    Idempotent (returns the existing certificate); 409 if not every
+    lesson is complete yet."""
+    if not isinstance(principal, UserPrincipal):
+        raise HTTPException(status_code=403, detail="user token required")
+    try:
+        cert = await use_case.execute(user_id=principal.user_id, slug=slug)
+    except CourseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="course not found") from exc
+    except CourseCertificateNotEligibleError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return _certificate_response(cert)
+
+
+@public_router.get(
+    "/{slug}/certificate",
+    response_model=CourseCertificateResponse,
+    response_model_by_alias=True,
+)
+async def get_my_course_certificate(
+    slug: str,
+    use_case: Annotated[GetMyCourseCertificate, Depends(get_my_certificate_uc)],
+    principal: Annotated[UserPrincipal, Depends(require_principal)],
+) -> CourseCertificateResponse:
+    if not isinstance(principal, UserPrincipal):
+        raise HTTPException(status_code=403, detail="user token required")
+    cert = await use_case.execute(user_id=principal.user_id, course_slug=slug)
+    if cert is None:
+        raise HTTPException(status_code=404, detail="certificate not found")
+    return _certificate_response(cert)
 
 
 # ── Admin — course authoring ─────────────────────────────────────────

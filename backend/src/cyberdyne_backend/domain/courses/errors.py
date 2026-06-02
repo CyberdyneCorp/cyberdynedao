@@ -28,3 +28,12 @@ class InvalidCourseLevelError(ValueError):
 
 class ProgressOutOfRangeError(ValueError):
     """A lesson-progress percent fell outside the 0..100 range."""
+
+
+class CourseCertificateNotEligibleError(ValueError):
+    """The learner hasn't completed every lesson, so no certificate can
+    be issued for the course yet."""
+
+
+class CourseCertificateNotFoundError(LookupError):
+    """No course certificate with the requested id exists."""
