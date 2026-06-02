@@ -16,7 +16,9 @@
 > **quizzes** (player + attempts + static feedback),
 > **file uploads** (MIME routing, size caps, traversal guards, persistent
 > volume), **prerequisite/level/sequential gating + enrollment
-> eligibility**, **enrollment deadlines**, **learner + admin analytics**
+> eligibility**, **enrollment deadlines + course-level deadlines**
+> (`PUT /api/v1/admin/courses/{slug}/deadline`; overdue/urgent/upcoming
+> status derived at read time), **learner + admin analytics**
 > (the learner dashboard now also reports completed + in-progress
 > courses, derived from lesson progress), **certificate verify-by-id +
 > PDF**, and a **learning-aware chat agent**

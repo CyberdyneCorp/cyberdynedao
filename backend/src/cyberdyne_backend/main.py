@@ -78,6 +78,7 @@ from cyberdyne_backend.adapters.inbound.api.courses.router import (
     get_my_course_progress_uc,
     get_reorder_courses_uc,
     get_reorder_lessons_uc,
+    get_set_course_deadline_uc,
     get_set_lesson_progress_uc,
     get_set_published_uc,
     get_update_course_uc,
@@ -249,6 +250,7 @@ from cyberdyne_backend.application.courses import (
     ListCourses,
     ReorderCourses,
     ReorderLessons,
+    SetCourseDeadline,
     SetCoursePublished,
     SetLessonProgress,
     UpdateCourse,
@@ -454,6 +456,10 @@ def create_app() -> FastAPI:
     async def _set_published_dep() -> AsyncIterator[SetCoursePublished]:
         async with session_scope() as session:
             yield SetCoursePublished(repo=SqlAlchemyCourseRepository(session))
+
+    async def _set_course_deadline_dep() -> AsyncIterator[SetCourseDeadline]:
+        async with session_scope() as session:
+            yield SetCourseDeadline(repo=SqlAlchemyCourseRepository(session))
 
     async def _delete_course_dep() -> AsyncIterator[DeleteCourse]:
         async with session_scope() as session:
@@ -741,6 +747,7 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_create_course_uc] = _create_course_dep
     app.dependency_overrides[get_update_course_uc] = _update_course_dep
     app.dependency_overrides[get_set_published_uc] = _set_published_dep
+    app.dependency_overrides[get_set_course_deadline_uc] = _set_course_deadline_dep
     app.dependency_overrides[get_delete_course_uc] = _delete_course_dep
     app.dependency_overrides[get_reorder_courses_uc] = _reorder_courses_dep
     app.dependency_overrides[get_add_lesson_uc] = _add_lesson_dep

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import delete, select
@@ -21,6 +22,14 @@ from cyberdyne_backend.domain.courses import (
     Lesson,
     LessonType,
 )
+
+
+def _as_utc(value: datetime | None) -> datetime | None:
+    """SQLite drops tzinfo on read; re-attach UTC so deadline comparisons
+    against an aware ``now`` don't blow up. No-op on Postgres."""
+    if value is not None and value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value
 
 
 def _row_to_lesson(row: LessonRow) -> Lesson:
@@ -51,6 +60,7 @@ def _row_to_course(row: CourseRow, lessons: list[LessonRow]) -> Course:
         created_at=row.created_at,
         published_at=row.published_at,
         updated_at=row.updated_at,
+        due_at=_as_utc(row.due_at),
         lessons=[_row_to_lesson(les) for les in sorted(lessons, key=lambda x: x.sort_order)],
     )
 
@@ -78,6 +88,7 @@ class SqlAlchemyCourseRepository:
             existing.sort_order = course.sort_order
             existing.published_at = course.published_at
             existing.updated_at = course.updated_at
+            existing.due_at = course.due_at
         # Replace the lesson set wholesale — the aggregate root owns its
         # lessons, so a full rewrite keeps ordering + deletions correct
         # without diffing. Lesson counts per course are small.
@@ -151,6 +162,7 @@ def _course_to_row(course: Course) -> CourseRow:
         created_at=course.created_at,
         published_at=course.published_at,
         updated_at=course.updated_at,
+        due_at=course.due_at,
     )
 
 

@@ -73,6 +73,21 @@ class TestPublishUnpublish:
         assert course.is_visible_to_anonymous() is False
 
 
+class TestCourseDeadline:
+    def test_new_course_has_no_deadline(self) -> None:
+        course = new_course(title="x", description="d", level="Beginner")
+        assert course.due_at is None
+
+    def test_set_and_clear_deadline(self) -> None:
+        course = new_course(title="x", description="d", level="Beginner")
+        due = datetime(2030, 1, 1, tzinfo=UTC)
+        course.set_deadline(due, now=datetime(2029, 1, 1, tzinfo=UTC))
+        assert course.due_at == due
+        assert course.updated_at == datetime(2029, 1, 1, tzinfo=UTC)
+        course.set_deadline(None)
+        assert course.due_at is None
+
+
 class TestNewLesson:
     def _course_id(self) -> uuid.UUID:
         return uuid.uuid4()

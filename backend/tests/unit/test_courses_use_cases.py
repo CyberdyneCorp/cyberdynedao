@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
@@ -17,6 +18,7 @@ from cyberdyne_backend.application.courses import (
     ListCourses,
     ReorderCourses,
     ReorderLessons,
+    SetCourseDeadline,
     SetCoursePublished,
     UpdateCourse,
     UpdateCourseCommand,
@@ -104,6 +106,30 @@ class TestSetCoursePublished:
         uc = SetCoursePublished(repo=FakeCourseRepo())
         with pytest.raises(CourseNotFoundError):
             await uc.execute("missing", published=True)
+
+
+class TestSetCourseDeadline:
+    async def test_set_then_clear(self) -> None:
+        course = new_course(title="x", description="d", level="Beginner")
+        repo = FakeCourseRepo(seed=[course])
+        uc = SetCourseDeadline(repo=repo)
+        due = datetime(2030, 1, 1, tzinfo=UTC)
+        updated = await uc.execute(course.slug, due_at=due)
+        assert updated.due_at == due
+        cleared = await uc.execute(course.slug, due_at=None)
+        assert cleared.due_at is None
+
+    async def test_works_on_draft(self) -> None:
+        # Deadlines can be set before a course is published.
+        course = new_course(title="draft", description="d", level="Beginner")
+        repo = FakeCourseRepo(seed=[course])
+        due = datetime(2030, 6, 1, tzinfo=UTC)
+        updated = await SetCourseDeadline(repo=repo).execute(course.slug, due_at=due)
+        assert updated.due_at == due
+
+    async def test_missing_course_raises(self) -> None:
+        with pytest.raises(CourseNotFoundError):
+            await SetCourseDeadline(repo=FakeCourseRepo()).execute("missing", due_at=None)
 
 
 # ── GetCourse / ListCourses visibility ───────────────────────────────
