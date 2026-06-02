@@ -36,3 +36,16 @@ class QuizRepository(Protocol):
     async def count_attempts(self, *, user_id: UUID, quiz_id: UUID) -> int:
         """How many times the user has already attempted the quiz."""
         ...
+
+
+@runtime_checkable
+class LessonCompleter(Protocol):
+    """Marks a lesson complete for a learner. The quizzes context owns
+    this abstract seam so a passing attempt can auto-complete its lesson
+    without quizzes depending on the courses context; the concrete
+    implementation lives in the courses application layer."""
+
+    async def complete_lesson(self, *, user_id: UUID, lesson_id: UUID) -> None:
+        """Mark the lesson 100% complete for the learner. A no-op if the
+        lesson isn't part of a course (so non-course quizzes are safe)."""
+        ...

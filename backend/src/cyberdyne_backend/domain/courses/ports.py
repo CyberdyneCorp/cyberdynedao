@@ -57,3 +57,9 @@ class CourseProgressRepository(Protocol):
     async def list_course_progress(self, *, user_id: UUID, course_id: UUID) -> list[LessonProgress]:
         """Every lesson-progress row the learner has within a course."""
         ...
+
+    async def get_lesson_course_id(self, lesson_id: UUID) -> UUID | None:
+        """The course a lesson belongs to, or ``None`` if no such lesson
+        exists. Lets a cross-context caller (e.g. quiz completion) resolve
+        the owning course without holding a courses repository."""
+        ...

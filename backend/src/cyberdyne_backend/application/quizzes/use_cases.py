@@ -16,6 +16,7 @@ from cyberdyne_backend.domain.ai_chat import ChatLLMPort, ChatMessage, ChatRole
 from cyberdyne_backend.domain.quizzes import (
     DEFAULT_PASSING_SCORE,
     GradedAttempt,
+    LessonCompleter,
     Question,
     QuestionResult,
     Quiz,
@@ -135,6 +136,10 @@ class SubmitQuizAttempt:
     repo: QuizRepository
     # Reserved for a future per-quiz attempt cap; unlimited today.
     max_attempts: int | None = field(default=None)
+    # Optional seam: when set, a passing attempt auto-completes the
+    # quiz's lesson in the course-progress context. None keeps quizzes
+    # self-contained (e.g. quizzes not attached to a course).
+    lesson_completer: LessonCompleter | None = field(default=None)
 
     async def execute(
         self,
@@ -154,6 +159,8 @@ class SubmitQuizAttempt:
             attempt_number=prior + 1,
         )
         stored = await self.repo.add_attempt(attempt)
+        if graded.passed and self.lesson_completer is not None:
+            await self.lesson_completer.complete_lesson(user_id=user_id, lesson_id=lesson_id)
         return SubmittedAttempt(attempt=stored, graded=graded)
 
 

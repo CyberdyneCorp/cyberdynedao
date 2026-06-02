@@ -240,6 +240,7 @@ from cyberdyne_backend.application.content.use_cases import (
 )
 from cyberdyne_backend.application.courses import (
     AddLesson,
+    CourseLessonCompleter,
     CreateCourse,
     DeleteCourse,
     DeleteLesson,
@@ -506,7 +507,12 @@ def create_app() -> FastAPI:
 
     async def _submit_attempt_dep() -> AsyncIterator[SubmitQuizAttempt]:
         async with session_scope() as session:
-            yield SubmitQuizAttempt(repo=SqlAlchemyQuizRepository(session))
+            yield SubmitQuizAttempt(
+                repo=SqlAlchemyQuizRepository(session),
+                lesson_completer=CourseLessonCompleter(
+                    progress=SqlAlchemyCourseProgressRepository(session)
+                ),
+            )
 
     async def _list_attempts_dep() -> AsyncIterator[ListMyAttempts]:
         async with session_scope() as session:

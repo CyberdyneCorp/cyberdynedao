@@ -138,6 +138,99 @@ def test_lesson_not_in_course_is_404(authed_client: TestClient) -> None:
 
 
 @pytest.mark.usefixtures("_prepared_schema")
+def test_passing_quiz_auto_completes_its_lesson(authed_client: TestClient) -> None:
+    # Course with a single quiz-type lesson, published.
+    assert (
+        authed_client.post(
+            "/api/v1/admin/courses",
+            json={"title": "Quiz Progress", "description": "d", "level": "Beginner"},
+        ).status_code
+        == 201
+    )
+    lesson = authed_client.post(
+        "/api/v1/admin/courses/quiz-progress/lessons",
+        json={"title": "Assessment", "lessonType": "quiz"},
+    )
+    lesson_id = lesson.json()["id"]
+    assert authed_client.post("/api/v1/admin/courses/quiz-progress/publish").status_code == 200
+
+    # Author the quiz.
+    quiz_body = {
+        "passingScore": 70,
+        "questions": [
+            {
+                "prompt": "2 + 2 = ?",
+                "explanation": "Addition.",
+                "options": [
+                    {"text": "3", "isCorrect": False},
+                    {"text": "4", "isCorrect": True},
+                ],
+            }
+        ],
+    }
+    assert (
+        authed_client.put(f"/api/v1/admin/lessons/{lesson_id}/quiz", json=quiz_body).status_code
+        == 200
+    )
+
+    # Before any attempt: the quiz lesson is not complete.
+    assert authed_client.get("/api/v1/courses/quiz-progress/progress").json()["completed"] is False
+
+    # Submit a passing attempt -> the lesson auto-completes -> course completes.
+    editor_view = authed_client.get(f"/api/v1/admin/lessons/{lesson_id}/quiz").json()
+    answers = {
+        q["id"]: next(o["id"] for o in q["options"] if o["isCorrect"])
+        for q in editor_view["questions"]
+    }
+    attempt = authed_client.post(
+        f"/api/v1/lessons/{lesson_id}/quiz/attempts", json={"answers": answers}
+    )
+    assert attempt.status_code == 201
+    assert attempt.json()["passed"] is True
+
+    progress = authed_client.get("/api/v1/courses/quiz-progress/progress").json()
+    assert progress["completed"] is True
+    assert progress["lessons"][0]["completed"] is True
+
+
+@pytest.mark.usefixtures("_prepared_schema")
+def test_failing_quiz_does_not_complete_lesson(authed_client: TestClient) -> None:
+    assert (
+        authed_client.post(
+            "/api/v1/admin/courses",
+            json={"title": "Quiz Fail", "description": "d", "level": "Beginner"},
+        ).status_code
+        == 201
+    )
+    lesson = authed_client.post(
+        "/api/v1/admin/courses/quiz-fail/lessons",
+        json={"title": "Assessment", "lessonType": "quiz"},
+    )
+    lesson_id = lesson.json()["id"]
+    authed_client.post("/api/v1/admin/courses/quiz-fail/publish")
+    authed_client.put(
+        f"/api/v1/admin/lessons/{lesson_id}/quiz",
+        json={
+            "passingScore": 70,
+            "questions": [
+                {
+                    "prompt": "2 + 2 = ?",
+                    "explanation": "Addition.",
+                    "options": [
+                        {"text": "3", "isCorrect": False},
+                        {"text": "4", "isCorrect": True},
+                    ],
+                }
+            ],
+        },
+    )
+    # Empty answers -> fail -> lesson stays incomplete.
+    fail = authed_client.post(f"/api/v1/lessons/{lesson_id}/quiz/attempts", json={"answers": {}})
+    assert fail.json()["passed"] is False
+    assert authed_client.get("/api/v1/courses/quiz-fail/progress").json()["completed"] is False
+
+
+@pytest.mark.usefixtures("_prepared_schema")
 def test_unknown_course_is_404(authed_client: TestClient) -> None:
     assert authed_client.get("/api/v1/courses/ghost/progress").status_code == 404
 

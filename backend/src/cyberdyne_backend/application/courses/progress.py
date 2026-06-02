@@ -70,7 +70,31 @@ class GetMyCourseProgress:
         return _course_progress(course, rows)
 
 
+@dataclass(slots=True)
+class CourseLessonCompleter:
+    """Marks a lesson 100% complete — the courses-side implementation of
+    the quizzes ``LessonCompleter`` seam, so passing a quiz auto-completes
+    its lesson. A lesson outside any course (no owning course id) is a
+    safe no-op."""
+
+    progress: CourseProgressRepository
+
+    async def complete_lesson(self, *, user_id: UUID, lesson_id: UUID) -> None:
+        course_id = await self.progress.get_lesson_course_id(lesson_id)
+        if course_id is None:
+            return
+        existing = await self.progress.get_lesson_progress(user_id=user_id, lesson_id=lesson_id)
+        if existing is None:
+            existing = new_lesson_progress(
+                user_id=user_id, course_id=course_id, lesson_id=lesson_id, percent=100
+            )
+        else:
+            existing.update(100)
+        await self.progress.upsert_lesson_progress(existing)
+
+
 __all__ = [
+    "CourseLessonCompleter",
     "GetMyCourseProgress",
     "SetLessonProgress",
 ]

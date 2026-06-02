@@ -12,7 +12,8 @@
 > lessons), **per-lesson progress + per-course auto-completion**
 > (`PUT /api/v1/courses/{slug}/lessons/{id}/progress`,
 > `GET /api/v1/courses/{slug}/progress` - course-scoped, complete iff
-> every lesson is), **quizzes** (player + attempts + static feedback),
+> every lesson is; passing a lesson's quiz auto-completes that lesson),
+> **quizzes** (player + attempts + static feedback),
 > **file uploads** (MIME routing, size caps, traversal guards, persistent
 > volume), **prerequisite/level/sequential gating + enrollment
 > eligibility**, **enrollment deadlines**, **learner + admin analytics**,
