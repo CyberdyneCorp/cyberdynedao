@@ -49,6 +49,7 @@ the same application services the REST API uses.
 | `lookup_module` | A single learning module by slug. |
 | `list_courses` | Published courses (title, level, lesson count); optional level filter. |
 | `get_course` | A published course by slug with its ordered lessons (title + type). |
+| `get_lesson_quiz` | A lesson's quiz as the **player view** — questions + option texts only, **no correct flags or explanations**, so the agent can help reason through questions without leaking answers. |
 
 ### Learning — acts on the signed-in user
 | Tool | What it does |
@@ -93,9 +94,6 @@ The agent is the delivery vehicle for the Academy's AI features. Built so
 far: the learning-catalogue + progress + deadlines + gating tools above.
 Next, in order:
 
-- `get_lesson_quiz` — the **player view** of a lesson's quiz (no correct
-  flags / explanations) so the companion can discuss questions without
-  leaking answers.
 - `get_my_dashboard` — the learner analytics summary, enabling an
   LLM-written narrative performance summary.
 - AI contextual feedback (post-attempt "why it's wrong") and LLM course

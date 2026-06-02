@@ -41,6 +41,7 @@ from cyberdyne_backend.application.learning import (
     UpdateModuleProgress,
 )
 from cyberdyne_backend.application.marketplace import GetProduct
+from cyberdyne_backend.application.quizzes import GetQuiz
 from cyberdyne_backend.domain.ai_chat import (
     KnowledgeSearchPort,
     MatlabDiagnostic,
@@ -69,6 +70,7 @@ from cyberdyne_backend.domain.learning import (
     ProgressOutOfRangeError,
 )
 from cyberdyne_backend.domain.marketplace import ProductNotFoundError
+from cyberdyne_backend.domain.quizzes import QuizNotFoundError
 
 logger = logging.getLogger("cyberdyne_backend.ai_chat.tools")
 
@@ -393,6 +395,22 @@ CYBERDYNE_TOOLS: list[ToolSchema] = [
             "required": ["path_slug"],
         },
     ),
+    ToolSchema(
+        name="get_lesson_quiz",
+        description=(
+            "Get the quiz attached to a lesson, as the learner sees it BEFORE submitting: "
+            "questions and option texts only. It deliberately does NOT include which option is "
+            "correct or the explanations — so you can help a learner think through the questions "
+            "without giving away answers. Get the lesson id from ``get_course``."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "lesson_id": {"type": "string", "description": "Lesson UUID from get_course."}
+            },
+            "required": ["lesson_id"],
+        },
+    ),
 ]
 
 
@@ -431,6 +449,7 @@ class ToolContext:
     get_course: GetCourse | None = None
     get_my_deadlines: GetMyDeadlines | None = None
     path_gating: GetPathGating | None = None
+    get_quiz: GetQuiz | None = None
     user_id: UUID | None = None
 
 
@@ -502,6 +521,8 @@ class ToolDispatcher:
                 return await self._get_my_deadlines()
             if call.name == "get_path_gating":
                 return await self._get_path_gating(cast(str, args.get("path_slug", "")))
+            if call.name == "get_lesson_quiz":
+                return await self._get_lesson_quiz(cast(str, args.get("lesson_id", "")))
         except Exception as exc:
             logger.exception("tool %s failed", call.name)
             return json.dumps({"error": "tool_failed", "detail": str(exc)})
@@ -905,6 +926,34 @@ class ToolDispatcher:
                 }
                 for g in gates
             ]
+        )
+
+    async def _get_lesson_quiz(self, lesson_id: str) -> str:
+        if self._ctx.get_quiz is None:
+            return json.dumps({"error": "quiz_unavailable"})
+        try:
+            lid = UUID(lesson_id)
+        except (ValueError, TypeError, AttributeError):
+            return json.dumps({"error": "invalid_lesson_id"})
+        try:
+            quiz = await self._ctx.get_quiz.execute(lid)
+        except QuizNotFoundError:
+            return json.dumps({"error": "not_found", "lesson_id": lesson_id})
+        # PLAYER VIEW ONLY — deliberately omits is_correct + explanation so
+        # the agent can never leak answers to a learner before submission.
+        return json.dumps(
+            {
+                "lesson_id": str(quiz.lesson_id),
+                "passing_score": quiz.passing_score,
+                "questions": [
+                    {
+                        "id": str(q.id),
+                        "prompt": q.prompt,
+                        "options": [{"id": str(o.id), "text": o.text} for o in q.options],
+                    }
+                    for q in quiz.questions
+                ],
+            }
         )
 
     def _fill_identity(self, name: str, email: str) -> tuple[str, str]:

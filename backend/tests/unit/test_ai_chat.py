@@ -192,6 +192,46 @@ class _FakeCourseRepo:
         pass
 
 
+class _FakeQuizRepo:
+    LESSON_ID = uuid.UUID("aaaaaaaa-0000-0000-0000-000000000001")
+
+    def __init__(self) -> None:
+        from cyberdyne_backend.domain.quizzes import build_question, new_quiz
+
+        self._quiz = new_quiz(
+            lesson_id=self.LESSON_ID,
+            questions=[
+                build_question(
+                    prompt="2 + 2 = ?",
+                    explanation="basic addition",
+                    options=[("3", False), ("4", True)],
+                )
+            ],
+        )
+
+    async def get_by_lesson(self, lesson_id):
+        from cyberdyne_backend.domain.quizzes import QuizNotFoundError
+
+        if lesson_id == self.LESSON_ID:
+            return self._quiz
+        raise QuizNotFoundError(str(lesson_id))
+
+    async def upsert(self, quiz) -> None:
+        pass
+
+    async def delete_by_lesson(self, lesson_id) -> None:
+        pass
+
+    async def add_attempt(self, attempt):
+        return attempt
+
+    async def list_attempts(self, *, user_id, quiz_id):
+        return []
+
+    async def count_attempts(self, *, user_id, quiz_id):
+        return 0
+
+
 class _FakeMarketplaceRepo:
     def __init__(self) -> None:
         self.product = Product(
@@ -375,10 +415,12 @@ def _build_ctx(
         GetPathGating,
         UpdateModuleProgress,
     )
+    from cyberdyne_backend.application.quizzes import GetQuiz
 
     content = _FakeContentRepo()
     learning = _FakeLearningRepo()
     courses = _FakeCourseRepo()
+    quizzes = _FakeQuizRepo()
     market = _FakeMarketplaceRepo()
     blog = _FakeBlogRepo(blog_posts)
     dao_overview = None
@@ -410,6 +452,7 @@ def _build_ctx(
         get_course=GetCourse(repo=courses),  # type: ignore[arg-type]
         get_my_deadlines=GetMyDeadlines(repo=learning),
         path_gating=GetPathGating(repo=learning),
+        get_quiz=GetQuiz(repo=quizzes),  # type: ignore[arg-type]
         user_id=user_id,  # type: ignore[arg-type]
     )
 
@@ -1123,6 +1166,39 @@ class TestLearningAwarenessTools:
             )
         )
         assert json.loads(out)["error"] == "sign_in_required"
+
+    async def test_get_lesson_quiz_player_view_no_answer_leak(self) -> None:
+        lid = str(_FakeQuizRepo.LESSON_ID)
+        out = await ToolDispatcher(_build_ctx()).dispatch(
+            ToolCall(
+                id="x",
+                name="get_lesson_quiz",
+                arguments_json=json.dumps({"lesson_id": lid}),
+            )
+        )
+        # Player view present...
+        data = json.loads(out)
+        assert data["questions"][0]["prompt"] == "2 + 2 = ?"
+        assert {k for k in data["questions"][0]["options"][0]} == {"id", "text"}
+        # ...and the answer key is NOT leaked anywhere in the payload.
+        assert "is_correct" not in out
+        assert "explanation" not in out
+
+    async def test_get_lesson_quiz_not_found(self) -> None:
+        out = await ToolDispatcher(_build_ctx()).dispatch(
+            ToolCall(
+                id="x",
+                name="get_lesson_quiz",
+                arguments_json=json.dumps({"lesson_id": str(uuid.uuid4())}),
+            )
+        )
+        assert json.loads(out)["error"] == "not_found"
+
+    async def test_get_lesson_quiz_invalid_id(self) -> None:
+        out = await ToolDispatcher(_build_ctx()).dispatch(
+            ToolCall(id="x", name="get_lesson_quiz", arguments_json='{"lesson_id": "not-a-uuid"}')
+        )
+        assert json.loads(out)["error"] == "invalid_lesson_id"
 
 
 # Suppress unused-import warning.
