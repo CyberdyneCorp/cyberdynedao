@@ -23,8 +23,10 @@
 > courses, derived from lesson progress), **certificate verify-by-id +
 > PDF** (path certificates) plus **course completion certificates**
 > (learner-claimed once every lesson is done, idempotent, signed +
-> publicly verifiable: `POST/GET /api/v1/courses/{slug}/certificate`,
-> `GET /api/v1/courses/certificates/{id}/verify`), and a
+> publicly verifiable + downloadable PDF: `POST/GET
+> /api/v1/courses/{slug}/certificate`,
+> `GET /api/v1/courses/certificates/{id}/verify`,
+> `GET /api/v1/courses/certificates/{id}/pdf`), and a
 > **learning-aware chat agent**
 > (see [`agents_capabilities.md`](agents_capabilities.md)), and the
 > **code-interpreter lesson type** (`code` lessons run on the MATLAB-LLVM

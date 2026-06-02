@@ -105,6 +105,12 @@ def test_certificate_issued_on_completion_and_verifies(authed_client: TestClient
     assert body["valid"] is True
     assert body["certificate"]["id"] == cert_id
 
+    # The certificate renders as a downloadable PDF.
+    pdf = authed_client.get(f"/api/v1/courses/certificates/{cert_id}/pdf")
+    assert pdf.status_code == 200
+    assert pdf.headers["content-type"] == "application/pdf"
+    assert pdf.content.startswith(b"%PDF")
+
 
 @pytest.mark.usefixtures("_prepared_schema")
 def test_get_certificate_404_before_issue(authed_client: TestClient) -> None:
@@ -122,6 +128,11 @@ def test_verify_unknown_certificate_is_invalid(authed_client: TestClient) -> Non
     resp = authed_client.get(f"/api/v1/courses/certificates/{uuid.uuid4()}/verify")
     assert resp.status_code == 200
     assert resp.json()["valid"] is False
+
+
+@pytest.mark.usefixtures("_prepared_schema")
+def test_pdf_unknown_certificate_is_404(authed_client: TestClient) -> None:
+    assert authed_client.get(f"/api/v1/courses/certificates/{uuid.uuid4()}/pdf").status_code == 404
 
 
 def test_certificate_requires_auth(client: TestClient) -> None:

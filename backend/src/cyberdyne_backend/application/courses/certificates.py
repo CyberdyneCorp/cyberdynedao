@@ -13,8 +13,11 @@ from uuid import UUID
 
 from cyberdyne_backend.domain.courses import (
     CourseCertificate,
+    CourseCertificateNotFoundError,
+    CourseCertificatePdfRenderer,
     CourseCertificateRepository,
     CourseCertificateSigner,
+    CourseNotFoundError,
     CourseProgressRepository,
     CourseRepository,
     new_course_certificate,
@@ -80,9 +83,36 @@ class GetMyCourseCertificate:
         )
 
 
+@dataclass(slots=True)
+class RenderCourseCertificatePdf:
+    """Render a course certificate as a downloadable PDF. The PDF carries
+    the course title and a public verify URL."""
+
+    certificates: CourseCertificateRepository
+    courses: CourseRepository
+    renderer: CourseCertificatePdfRenderer
+    verify_url_base: str
+
+    async def execute(self, certificate_id: UUID) -> bytes:
+        cert = await self.certificates.get_by_id(certificate_id)
+        if cert is None:
+            raise CourseCertificateNotFoundError(str(certificate_id))
+        try:
+            course = await self.courses.get_by_slug(cert.course_slug, include_drafts=True)
+            title = course.title
+        except CourseNotFoundError:
+            # Course retired since issuance — fall back to the slug.
+            title = cert.course_slug
+        verify_url = (
+            f"{self.verify_url_base.rstrip('/')}/api/v1/courses/certificates/{cert.id}/verify"
+        )
+        return self.renderer.render(certificate=cert, subject_title=title, verify_url=verify_url)
+
+
 __all__ = [
     "CourseCertificateVerification",
     "GetMyCourseCertificate",
     "IssueCourseCertificate",
+    "RenderCourseCertificatePdf",
     "VerifyCourseCertificate",
 ]

@@ -34,6 +34,7 @@ from cyberdyne_backend.domain.courses.errors import (
     ProgressOutOfRangeError,
 )
 from cyberdyne_backend.domain.courses.ports import (
+    CourseCertificatePdfRenderer,
     CourseCertificateRepository,
     CourseCertificateSigner,
     CourseProgressRepository,
@@ -52,6 +53,7 @@ __all__ = [
     "CourseCertificate",
     "CourseCertificateNotEligibleError",
     "CourseCertificateNotFoundError",
+    "CourseCertificatePdfRenderer",
     "CourseCertificateRepository",
     "CourseCertificateSigner",
     "CourseLevel",

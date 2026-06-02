@@ -10,12 +10,14 @@ import pytest
 from cyberdyne_backend.application.courses import (
     GetMyCourseCertificate,
     IssueCourseCertificate,
+    RenderCourseCertificatePdf,
     VerifyCourseCertificate,
 )
 from cyberdyne_backend.domain.courses import (
     Course,
     CourseCertificate,
     CourseCertificateNotEligibleError,
+    CourseCertificateNotFoundError,
     CourseCertificateRepository,
     CourseNotFoundError,
     course_certificate_eligible,
@@ -256,3 +258,67 @@ class TestVerifyAndGet:
         )
         assert got is not None
         assert got.id == cert.id
+
+
+class _FakeRenderer:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str]] = []
+
+    def render(
+        self, *, certificate: CourseCertificate, subject_title: str, verify_url: str
+    ) -> bytes:
+        self.calls.append((subject_title, verify_url))
+        return b"%PDF-FAKE"
+
+
+class TestRenderCourseCertificatePdf:
+    async def _cert(self, certs: FakeCertRepo, course: Course) -> CourseCertificate:
+        user = uuid.uuid4()
+        cert = await IssueCourseCertificate(
+            courses=FakeCourseRepo(course),
+            progress=FakeProgressRepo(list(_all_completed(course, user).values())),
+            certificates=certs,
+            signer=FakeSigner(),
+        ).execute(user_id=user, slug=course.slug)
+        return cert
+
+    async def test_renders_with_course_title(self) -> None:
+        course = _course(1)
+        certs = FakeCertRepo()
+        cert = await self._cert(certs, course)
+        renderer = _FakeRenderer()
+        uc = RenderCourseCertificatePdf(
+            certificates=certs,
+            courses=FakeCourseRepo(course),
+            renderer=renderer,
+            verify_url_base="https://x.test/",
+        )
+        out = await uc.execute(cert.id)
+        assert out == b"%PDF-FAKE"
+        title, verify_url = renderer.calls[0]
+        assert title == course.title
+        assert verify_url == f"https://x.test/api/v1/courses/certificates/{cert.id}/verify"
+
+    async def test_falls_back_to_slug_when_course_gone(self) -> None:
+        course = _course(1)
+        certs = FakeCertRepo()
+        cert = await self._cert(certs, course)
+        renderer = _FakeRenderer()
+        uc = RenderCourseCertificatePdf(
+            certificates=certs,
+            courses=FakeCourseRepo(None),  # course retired
+            renderer=renderer,
+            verify_url_base="https://x.test",
+        )
+        await uc.execute(cert.id)
+        assert renderer.calls[0][0] == cert.course_slug
+
+    async def test_missing_certificate_raises(self) -> None:
+        uc = RenderCourseCertificatePdf(
+            certificates=FakeCertRepo(),
+            courses=FakeCourseRepo(None),
+            renderer=_FakeRenderer(),
+            verify_url_base="https://x.test",
+        )
+        with pytest.raises(CourseCertificateNotFoundError):
+            await uc.execute(uuid.uuid4())

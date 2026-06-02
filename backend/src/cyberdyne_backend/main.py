@@ -85,6 +85,9 @@ from cyberdyne_backend.adapters.inbound.api.courses.router import (
     get_update_lesson_uc,
 )
 from cyberdyne_backend.adapters.inbound.api.courses.router import (
+    get_certificate_pdf_uc as get_course_cert_pdf_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.courses.router import (
     get_issue_certificate_uc as get_issue_course_cert_uc,
 )
 from cyberdyne_backend.adapters.inbound.api.courses.router import (
@@ -262,6 +265,7 @@ from cyberdyne_backend.application.courses import (
     GetMyCourseProgress,
     IssueCourseCertificate,
     ListCourses,
+    RenderCourseCertificatePdf,
     ReorderCourses,
     ReorderLessons,
     SetCourseDeadline,
@@ -496,6 +500,15 @@ def create_app() -> FastAPI:
             yield VerifyCourseCertificate(
                 certificates=SqlAlchemyCourseCertificateRepository(session),
                 signer=container.certificate_signer,
+            )
+
+    async def _course_cert_pdf_dep() -> AsyncIterator[RenderCourseCertificatePdf]:
+        async with session_scope() as session:
+            yield RenderCourseCertificatePdf(
+                certificates=SqlAlchemyCourseCertificateRepository(session),
+                courses=SqlAlchemyCourseRepository(session),
+                renderer=container.certificate_pdf_renderer,
+                verify_url_base=settings.public_site_url,
             )
 
     async def _delete_course_dep() -> AsyncIterator[DeleteCourse]:
@@ -788,6 +801,7 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_issue_course_cert_uc] = _issue_course_cert_dep
     app.dependency_overrides[get_my_course_cert_uc] = _my_course_cert_dep
     app.dependency_overrides[get_verify_course_cert_uc] = _verify_course_cert_dep
+    app.dependency_overrides[get_course_cert_pdf_uc] = _course_cert_pdf_dep
     app.dependency_overrides[get_delete_course_uc] = _delete_course_dep
     app.dependency_overrides[get_reorder_courses_uc] = _reorder_courses_dep
     app.dependency_overrides[get_add_lesson_uc] = _add_lesson_dep

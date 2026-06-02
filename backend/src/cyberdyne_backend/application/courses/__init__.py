@@ -4,6 +4,7 @@ from cyberdyne_backend.application.courses.certificates import (
     CourseCertificateVerification,
     GetMyCourseCertificate,
     IssueCourseCertificate,
+    RenderCourseCertificatePdf,
     VerifyCourseCertificate,
 )
 from cyberdyne_backend.application.courses.progress import (
@@ -44,6 +45,7 @@ __all__ = [
     "GetMyCourseProgress",
     "IssueCourseCertificate",
     "ListCourses",
+    "RenderCourseCertificatePdf",
     "ReorderCourses",
     "ReorderLessons",
     "SetCourseDeadline",
