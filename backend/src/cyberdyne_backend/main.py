@@ -646,6 +646,7 @@ def create_app() -> FastAPI:
                 get_course=GetCourse(repo=course_repo),
                 get_my_deadlines=GetMyDeadlines(repo=learning_repo),
                 path_gating=GetPathGating(repo=learning_repo),
+                get_quiz=GetQuiz(repo=SqlAlchemyQuizRepository(session)),
                 user_id=profile.user_id if profile else None,
             )
             yield RunChatTurn(
