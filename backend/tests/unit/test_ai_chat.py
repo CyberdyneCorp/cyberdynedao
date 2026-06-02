@@ -204,6 +204,8 @@ class _FakeAnalyticsRepo:
             quizzes_passed=2,
             total_quiz_attempts=3,
             certificates=1,
+            completed_courses=1,
+            in_progress_courses=2,
         )
 
     async def platform_counts(self):
@@ -1236,6 +1238,8 @@ class TestLearningAwarenessTools:
         assert data["enrolled_paths"] == 2
         assert data["avg_quiz_score"] == 90.0  # mean(best 80, 100)
         assert data["quiz_pass_rate"] == 100.0  # 2/2 attempted quizzes passed
+        assert data["completed_courses"] == 1
+        assert data["in_progress_courses"] == 2
 
 
 # Suppress unused-import warning.

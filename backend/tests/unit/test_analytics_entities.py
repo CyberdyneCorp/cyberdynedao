@@ -24,6 +24,8 @@ class TestLearnerDashboard:
             best_quiz_scores=[100, 50, 60, 90],
             quizzes_passed=3,
             total_quiz_attempts=7,
+            completed_courses=2,
+            in_progress_courses=1,
         )
         d = build_learner_dashboard(counts)
         assert d.avg_module_percent == 50.0  # 300/6
@@ -31,6 +33,8 @@ class TestLearnerDashboard:
         assert d.quiz_pass_rate == 75.0  # 3/4
         assert d.avg_quiz_score == 75.0  # mean(100,50,60,90)
         assert d.total_quiz_attempts == 7
+        assert d.completed_courses == 2
+        assert d.in_progress_courses == 1
 
     def test_empty_learner_is_all_zero(self) -> None:
         d = build_learner_dashboard(LearnerCounts())
@@ -38,6 +42,8 @@ class TestLearnerDashboard:
         assert d.quiz_pass_rate == 0.0
         assert d.avg_quiz_score == 0.0
         assert d.quizzes_attempted == 0
+        assert d.completed_courses == 0
+        assert d.in_progress_courses == 0
 
     def test_no_quizzes_no_divide_by_zero(self) -> None:
         d = build_learner_dashboard(LearnerCounts(module_rows=2, module_percent_sum=150))

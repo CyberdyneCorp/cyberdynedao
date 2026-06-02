@@ -220,6 +220,9 @@ def test_learner_dashboard(seeded: None, learner_client: TestClient) -> None:
     assert d["avgQuizScore"] == 65.0  # mean(best 90, 40)
     assert d["totalQuizAttempts"] == 3
     assert d["certificates"] == 1
+    # No course lesson-progress seeded -> course counts are zero.
+    assert d["completedCourses"] == 0
+    assert d["inProgressCourses"] == 0
 
 
 def test_admin_overview(seeded: None, editor_client: TestClient) -> None:

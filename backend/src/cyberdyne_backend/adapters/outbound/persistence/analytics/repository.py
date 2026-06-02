@@ -15,7 +15,11 @@ from uuid import UUID
 from sqlalchemy import Integer, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from cyberdyne_backend.adapters.outbound.persistence.courses.models import CourseRow
+from cyberdyne_backend.adapters.outbound.persistence.courses.models import (
+    CourseRow,
+    LessonProgressRow,
+    LessonRow,
+)
 from cyberdyne_backend.adapters.outbound.persistence.learning.models import (
     CertificateRow,
     EnrollmentRow,
@@ -94,6 +98,40 @@ class SqlAlchemyAnalyticsRepository:
             await session.execute(select(func.count()).where(CertificateRow.user_id == user_id))
         ).scalar_one()
 
+        # Course standing from per-lesson progress: a course is complete
+        # iff the learner has completed every one of its lessons. Compare
+        # total lessons per course against the learner's completed count.
+        total_lessons_by_course: dict[UUID, int] = {
+            course_id: int(count)
+            for course_id, count in (
+                await session.execute(
+                    select(LessonRow.course_id, func.count()).group_by(LessonRow.course_id)
+                )
+            ).all()
+        }
+        user_course_rows = (
+            await session.execute(
+                select(
+                    LessonProgressRow.course_id,
+                    func.count(),
+                    func.coalesce(
+                        func.sum(cast(LessonProgressRow.completed_at.is_not(None), Integer)),
+                        0,
+                    ),
+                )
+                .where(LessonProgressRow.user_id == user_id)
+                .group_by(LessonProgressRow.course_id)
+            )
+        ).all()
+        completed_courses = 0
+        in_progress_courses = 0
+        for course_id, _touched, done in user_course_rows:
+            total = int(total_lessons_by_course.get(course_id, 0))
+            if total > 0 and int(done) >= total:
+                completed_courses += 1
+            else:
+                in_progress_courses += 1
+
         return LearnerCounts(
             enrolled_paths=enrolled,
             completed_paths=completed_paths,
@@ -106,6 +144,8 @@ class SqlAlchemyAnalyticsRepository:
             best_quiz_scores=best_quiz_scores,
             quizzes_passed=quizzes_passed,
             total_quiz_attempts=int(total_attempts),
+            completed_courses=completed_courses,
+            in_progress_courses=in_progress_courses,
         )
 
     async def platform_counts(self) -> PlatformCounts:

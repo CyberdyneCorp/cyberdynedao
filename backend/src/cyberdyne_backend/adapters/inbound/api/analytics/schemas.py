@@ -23,6 +23,8 @@ class LearnerDashboardResponse(_CamelModel):
     avg_quiz_score: float
     total_quiz_attempts: int
     certificates: int
+    completed_courses: int
+    in_progress_courses: int
 
 
 class AdminOverviewResponse(_CamelModel):
