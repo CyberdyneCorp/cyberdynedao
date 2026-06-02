@@ -114,6 +114,21 @@ class TestNewLesson:
         assert lesson.content_url is None
         assert lesson.text_body is None
 
+    def test_code_lesson_needs_no_content(self) -> None:
+        lesson = new_lesson(course_id=self._course_id(), title="Try it", lesson_type="code")
+        assert lesson.lesson_type is LessonType.CODE
+        assert lesson.content_url is None
+
+    def test_code_lesson_allows_instructions_in_text_body(self) -> None:
+        lesson = new_lesson(
+            course_id=self._course_id(),
+            title="Plot a sine wave",
+            lesson_type="code",
+            text_body="% starter\nx = linspace(0, 2*pi);",
+        )
+        assert lesson.lesson_type is LessonType.CODE
+        assert lesson.text_body is not None
+
     def test_empty_title_raises(self) -> None:
         with pytest.raises(ValueError, match="title cannot be empty"):
             new_lesson(course_id=self._course_id(), title=" ", lesson_type="quiz")

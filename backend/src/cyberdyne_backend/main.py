@@ -48,6 +48,12 @@ from cyberdyne_backend.adapters.inbound.api.blog.router import (
 from cyberdyne_backend.adapters.inbound.api.blog.router import (
     public_router as blog_public_router,
 )
+from cyberdyne_backend.adapters.inbound.api.code.router import (
+    get_run_code_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.code.router import (
+    player_router as code_player_router,
+)
 from cyberdyne_backend.adapters.inbound.api.content.router import (
     get_contact_page_uc,
     get_cyberdyne_page_uc,
@@ -211,6 +217,7 @@ from cyberdyne_backend.application.blog import (
     ListBlogPosts,
     PublishBlogPost,
 )
+from cyberdyne_backend.application.code import RunLessonCode
 from cyberdyne_backend.application.content.use_cases import (
     GetContactPage,
     GetCyberdynePage,
@@ -555,6 +562,10 @@ def create_app() -> FastAPI:
             holders=settings.dao_holders_count,
         )
 
+    async def _run_code_dep() -> AsyncIterator[RunLessonCode]:
+        # No DB session — execution is HTTP-only against the MATLAB engine.
+        yield RunLessonCode(matlab=container.matlab)
+
     async def _list_marketplace_products_dep() -> AsyncIterator[ListMarketplaceProducts]:
         async with session_scope() as session:
             yield ListMarketplaceProducts(repo=SqlAlchemyMarketplaceRepository(session))
@@ -705,6 +716,7 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_my_deadlines_uc] = _my_deadlines_dep
     app.dependency_overrides[get_set_deadline_uc] = _set_deadline_dep
     app.dependency_overrides[get_dao_overview_uc] = _dao_overview_dep
+    app.dependency_overrides[get_run_code_uc] = _run_code_dep
     app.dependency_overrides[get_list_products_uc] = _list_marketplace_products_dep
     app.dependency_overrides[get_create_checkout_uc] = _create_checkout_dep
     app.dependency_overrides[get_handle_webhook_uc] = _handle_webhook_dep
@@ -740,6 +752,7 @@ def create_app() -> FastAPI:
         name="media",
     )
     app.include_router(dao_router)
+    app.include_router(code_player_router)
     app.include_router(marketplace_public_router)
     app.include_router(marketplace_me_router)
     app.include_router(marketplace_webhook_router)

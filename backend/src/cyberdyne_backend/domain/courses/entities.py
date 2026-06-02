@@ -45,6 +45,10 @@ class LessonType(StrEnum):
     PRESENTATION = "presentation"
     TEXT = "text"
     QUIZ = "quiz"
+    # Interactive code lesson: runs against the MATLAB-LLVM engine. Like
+    # quiz, it's content-free at the lesson level (text_body may hold
+    # instructions / starter code, but neither field is required).
+    CODE = "code"
 
 
 # Lesson types whose content is an external/uploaded asset referenced by

@@ -27,7 +27,7 @@ class _StrictCamelModel(_CamelModel):
 
 LevelLiteral = Literal["Beginner", "Intermediate", "Advanced"]
 StatusLiteral = Literal["draft", "published"]
-LessonTypeLiteral = Literal["video", "pdf", "presentation", "text", "quiz"]
+LessonTypeLiteral = Literal["video", "pdf", "presentation", "text", "quiz", "code"]
 
 
 # ── Responses ─────────────────────────────────────────────────────────

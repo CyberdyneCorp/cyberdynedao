@@ -97,8 +97,12 @@ player-view + dashboard tools above. Next, in order:
 
 - AI contextual feedback (post-attempt "why it's wrong") and LLM course
   recommendations — thin use cases over the quiz/dashboard/catalogue data.
-- Code-interpreter lessons reuse the existing `matlab_*` tools + the
-  MATLAB-LLVM `/v1/repl` engine.
+
+**Shipped:** the **code-interpreter lesson type** (`code`) — a learner runs
+source against the MATLAB-LLVM engine via
+`POST /api/v1/lessons/{id}/code/run` (per-(lesson,user) workspace, keyed
+off the learner's bearer). Same engine the agent's `matlab_*` tools use,
+so the agent can also run/assist with a lesson's code conversationally.
 
 ## Known gaps / follow-ups
 
