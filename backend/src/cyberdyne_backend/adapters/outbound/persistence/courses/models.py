@@ -13,6 +13,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
     Uuid,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -60,3 +61,31 @@ class LessonRow(Base):
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     __table_args__ = (Index("ix_lessons_course_id", "course_id"),)
+
+
+class LessonProgressRow(Base):
+    """A learner's progress through one lesson (courses context)."""
+
+    __tablename__ = "lesson_progress"
+
+    id: Mapped[UUID] = mapped_column(Uuid(), primary_key=True)
+    user_id: Mapped[UUID] = mapped_column(Uuid(), nullable=False)
+    course_id: Mapped[UUID] = mapped_column(
+        Uuid(),
+        ForeignKey("courses.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    lesson_id: Mapped[UUID] = mapped_column(
+        Uuid(),
+        ForeignKey("lessons.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    percent: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "lesson_id", name="uq_lesson_progress_user_lesson"),
+        Index("ix_lesson_progress_user_course", "user_id", "course_id"),
+    )

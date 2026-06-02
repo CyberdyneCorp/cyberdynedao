@@ -106,3 +106,27 @@ class UpdateLessonRequest(_StrictCamelModel):
 class ReorderLessonsRequest(_StrictCamelModel):
     # {lessonId: sort_order}
     order: dict[UUID, int]
+
+
+# ── Learner progress ──────────────────────────────────────────────────
+
+
+class SetLessonProgressRequest(_StrictCamelModel):
+    percent: int = Field(ge=0, le=100)
+
+
+class LessonProgressResponse(_CamelModel):
+    lesson_id: UUID
+    title: str
+    percent: int
+    completed: bool
+
+
+class CourseProgressResponse(_CamelModel):
+    course_id: UUID
+    slug: str
+    total_lessons: int
+    completed_lessons: int
+    percent: int
+    completed: bool
+    lessons: list[LessonProgressResponse]

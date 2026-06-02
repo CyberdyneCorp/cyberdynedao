@@ -24,15 +24,26 @@ from cyberdyne_backend.domain.courses.errors import (
     InvalidCourseLevelError,
     InvalidLessonContentError,
     LessonNotFoundError,
+    ProgressOutOfRangeError,
 )
 from cyberdyne_backend.domain.courses.ports import (
+    CourseProgressRepository,
     CourseRepository,
+)
+from cyberdyne_backend.domain.courses.progress import (
+    CourseProgress,
+    LessonProgress,
+    LessonProgressView,
+    build_course_progress,
+    new_lesson_progress,
 )
 
 __all__ = [
     "Course",
     "CourseLevel",
     "CourseNotFoundError",
+    "CourseProgress",
+    "CourseProgressRepository",
     "CourseRepository",
     "CourseStatus",
     "DuplicateCourseSlugError",
@@ -40,9 +51,14 @@ __all__ = [
     "InvalidLessonContentError",
     "Lesson",
     "LessonNotFoundError",
+    "LessonProgress",
+    "LessonProgressView",
     "LessonType",
+    "ProgressOutOfRangeError",
+    "build_course_progress",
     "new_course",
     "new_lesson",
+    "new_lesson_progress",
     "normalize_slug",
     "parse_level",
 ]

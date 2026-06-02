@@ -1,5 +1,9 @@
 """Courses use cases."""
 
+from cyberdyne_backend.application.courses.progress import (
+    GetMyCourseProgress,
+    SetLessonProgress,
+)
 from cyberdyne_backend.application.courses.use_cases import (
     AddLesson,
     AddLessonCommand,
@@ -26,10 +30,12 @@ __all__ = [
     "DeleteCourse",
     "DeleteLesson",
     "GetCourse",
+    "GetMyCourseProgress",
     "ListCourses",
     "ReorderCourses",
     "ReorderLessons",
     "SetCoursePublished",
+    "SetLessonProgress",
     "UpdateCourse",
     "UpdateCourseCommand",
     "UpdateLesson",

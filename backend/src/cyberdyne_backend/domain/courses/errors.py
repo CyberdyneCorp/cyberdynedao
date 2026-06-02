@@ -24,3 +24,7 @@ class InvalidLessonContentError(ValueError):
 
 class InvalidCourseLevelError(ValueError):
     """The requested level is not one of Beginner/Intermediate/Advanced."""
+
+
+class ProgressOutOfRangeError(ValueError):
+    """A lesson-progress percent fell outside the 0..100 range."""
