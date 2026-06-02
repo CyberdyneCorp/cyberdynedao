@@ -16,11 +16,13 @@
 > **certificate verify-by-id + PDF**, and a **learning-aware chat agent**
 > (see [`agents_capabilities.md`](agents_capabilities.md)), and the
 > **code-interpreter lesson type** (`code` lessons run on the MATLAB-LLVM
-> engine via `POST /api/v1/lessons/{id}/code/run`), and **AI contextual
-> quiz feedback** (`POST /api/v1/lessons/{id}/quiz/feedback` -
-> LLM-personalized "why it's wrong" per incorrect answer). Remaining 🔜:
-> LLM course recommendations - a thin use case over the
-> dashboard/catalogue data. Per-context detail lives in each bounded
+> engine via `POST /api/v1/lessons/{id}/code/run`), **AI contextual quiz
+> feedback** (`POST /api/v1/lessons/{id}/quiz/feedback` - LLM-personalized
+> "why it's wrong" per incorrect answer), and **LLM course
+> recommendations** (`GET /api/v1/recommendations/me` - deterministic
+> catalogue ranking against the learner's dashboard + an LLM narrative).
+> All planned Academy AI phases are now delivered. Per-context detail
+> lives in each bounded
 > context under `backend/src/cyberdyne_backend/`.
 
 This doc is the plan, not a spec. Anything declared here is the default; anything in **Open Questions** is unblocked work that needs a decision before Phase 2 starts.
