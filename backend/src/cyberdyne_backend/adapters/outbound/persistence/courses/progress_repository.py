@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from cyberdyne_backend.adapters.outbound.persistence.courses.models import (
     LessonProgressRow,
+    LessonRow,
 )
 from cyberdyne_backend.domain.courses.progress import LessonProgress
 
@@ -81,3 +82,9 @@ class SqlAlchemyCourseProgressRepository:
             )
         )
         return [_row_to_progress(row) for row in result.scalars().all()]
+
+    async def get_lesson_course_id(self, lesson_id: UUID) -> UUID | None:
+        result = await self._session.execute(
+            select(LessonRow.course_id).where(LessonRow.id == lesson_id)
+        )
+        return result.scalar_one_or_none()

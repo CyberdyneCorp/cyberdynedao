@@ -78,6 +78,16 @@ class FakeQuizRepo:
         return len(await self.list_attempts(user_id=user_id, quiz_id=quiz_id))
 
 
+class _RecordingCompleter:
+    """Records (user_id, lesson_id) for each completion call."""
+
+    def __init__(self) -> None:
+        self.completed: list[tuple[UUID, UUID]] = []
+
+    async def complete_lesson(self, *, user_id: UUID, lesson_id: UUID) -> None:
+        self.completed.append((user_id, lesson_id))
+
+
 def test_fake_repo_matches_port() -> None:
     assert isinstance(FakeQuizRepo(), QuizRepository)
 
@@ -170,6 +180,29 @@ class TestSubmitAndAttempts:
         await SubmitQuizAttempt(repo=repo).execute(user_id=user_id, lesson_id=lesson_id, answers={})
         attempts = await ListMyAttempts(repo=repo).execute(user_id=user_id, lesson_id=lesson_id)
         assert len(attempts) == 1
+
+    async def test_passing_attempt_completes_lesson(self) -> None:
+        repo = FakeQuizRepo()
+        lesson_id = uuid.uuid4()
+        quiz = await UpsertQuiz(repo=repo).execute(lesson_id, _cmd())
+        completer = _RecordingCompleter()
+        user_id = uuid.uuid4()
+        answers = {q.id: q.correct_option_id for q in quiz.questions}
+        await SubmitQuizAttempt(repo=repo, lesson_completer=completer).execute(
+            user_id=user_id, lesson_id=lesson_id, answers=answers
+        )
+        assert completer.completed == [(user_id, lesson_id)]
+
+    async def test_failing_attempt_does_not_complete_lesson(self) -> None:
+        repo = FakeQuizRepo()
+        lesson_id = uuid.uuid4()
+        await UpsertQuiz(repo=repo).execute(lesson_id, _cmd())
+        completer = _RecordingCompleter()
+        # Empty answers -> score 0 -> fail -> no completion.
+        await SubmitQuizAttempt(repo=repo, lesson_completer=completer).execute(
+            user_id=uuid.uuid4(), lesson_id=lesson_id, answers={}
+        )
+        assert completer.completed == []
 
 
 class TestGetAndDelete:

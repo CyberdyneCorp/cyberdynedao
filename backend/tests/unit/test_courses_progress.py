@@ -8,7 +8,11 @@ from uuid import UUID
 
 import pytest
 
-from cyberdyne_backend.application.courses import GetMyCourseProgress, SetLessonProgress
+from cyberdyne_backend.application.courses import (
+    CourseLessonCompleter,
+    GetMyCourseProgress,
+    SetLessonProgress,
+)
 from cyberdyne_backend.domain.courses import (
     Course,
     CourseNotFoundError,
@@ -133,6 +137,8 @@ class FakeCourseRepo:
 class FakeProgressRepo:
     def __init__(self) -> None:
         self.rows: dict[tuple[UUID, UUID], LessonProgress] = {}
+        # lesson_id -> owning course_id, for get_lesson_course_id.
+        self.lesson_courses: dict[UUID, UUID] = {}
 
     async def get_lesson_progress(self, *, user_id: UUID, lesson_id: UUID) -> LessonProgress | None:
         return self.rows.get((user_id, lesson_id))
@@ -142,6 +148,9 @@ class FakeProgressRepo:
 
     async def list_course_progress(self, *, user_id: UUID, course_id: UUID) -> list[LessonProgress]:
         return [p for (u, _), p in self.rows.items() if u == user_id and p.course_id == course_id]
+
+    async def get_lesson_course_id(self, lesson_id: UUID) -> UUID | None:
+        return self.lesson_courses.get(lesson_id)
 
 
 def test_fake_progress_matches_port() -> None:
@@ -226,3 +235,36 @@ class TestGetMyCourseProgress:
         ).execute(user_id=uuid.uuid4(), slug=course.slug)
         assert cp.percent == 0
         assert all(v.completed is False for v in cp.lessons)
+
+
+class TestCourseLessonCompleter:
+    async def test_marks_lesson_complete(self) -> None:
+        prog = FakeProgressRepo()
+        user, course_id, lesson_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+        prog.lesson_courses[lesson_id] = course_id
+        await CourseLessonCompleter(progress=prog).complete_lesson(
+            user_id=user, lesson_id=lesson_id
+        )
+        row = prog.rows[(user, lesson_id)]
+        assert row.is_completed is True
+        assert row.course_id == course_id
+
+    async def test_idempotent_on_existing_row(self) -> None:
+        prog = FakeProgressRepo()
+        user, course_id, lesson_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+        prog.lesson_courses[lesson_id] = course_id
+        # Pre-seed an in-progress row; completing should lift it to 100.
+        prog.rows[(user, lesson_id)] = new_lesson_progress(
+            user_id=user, course_id=course_id, lesson_id=lesson_id, percent=40
+        )
+        await CourseLessonCompleter(progress=prog).complete_lesson(
+            user_id=user, lesson_id=lesson_id
+        )
+        assert prog.rows[(user, lesson_id)].percent == 100
+
+    async def test_lesson_without_course_is_noop(self) -> None:
+        prog = FakeProgressRepo()  # lesson_courses empty -> get_lesson_course_id None
+        await CourseLessonCompleter(progress=prog).complete_lesson(
+            user_id=uuid.uuid4(), lesson_id=uuid.uuid4()
+        )
+        assert prog.rows == {}

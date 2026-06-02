@@ -31,6 +31,7 @@ from cyberdyne_backend.domain.quizzes.errors import (
     QuizNotFoundError,
 )
 from cyberdyne_backend.domain.quizzes.ports import (
+    LessonCompleter,
     QuizRepository,
 )
 
@@ -43,6 +44,7 @@ __all__ = [
     "GradedAttempt",
     "InvalidAttemptError",
     "InvalidQuizError",
+    "LessonCompleter",
     "Question",
     "QuestionOption",
     "QuestionResult",
