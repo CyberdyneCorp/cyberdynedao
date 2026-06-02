@@ -1,14 +1,19 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { createCoursesViewModel } from '$lib/viewmodels/coursesViewModel';
-	import type { CourseLevel, DeadlineStatus } from '$lib/api/coursesApi';
+	import {
+		courseCertificatePdfUrl,
+		type CourseLevel,
+		type DeadlineStatus
+	} from '$lib/api/coursesApi';
 	import { authVM } from '$lib/auth/authViewModel.svelte';
 	import QuizPlayer from './QuizPlayer.svelte';
 
 	// The view-model owns all backend orchestration (catalogue, detail,
-	// progress, mark-complete) over the new /api/v1/courses endpoints.
+	// progress, mark-complete, certificate) over the new /api/v1/courses
+	// endpoints.
 	const vm = createCoursesViewModel();
-	const { courses, selected, progress, loading, error } = vm;
+	const { courses, selected, progress, certificate, loading, error } = vm;
 
 	const authReady = $derived(authVM.isRestored && authVM.isAuthenticated);
 
@@ -94,6 +99,27 @@
 				</div>
 			{:else if !authReady}
 				<p class="hint">Sign in to track your progress and earn a certificate.</p>
+			{/if}
+
+			{#if authReady}
+				{#if $certificate}
+					<div class="cert" aria-label="certificate earned">
+						<span class="cert__mark">🎓</span>
+						<span>Certificate earned</span>
+						<a
+							class="cert__link"
+							href={courseCertificatePdfUrl($certificate.id)}
+							target="_blank"
+							rel="noopener"
+						>
+							Download PDF
+						</a>
+					</div>
+				{:else if $progress?.completed}
+					<button class="cert__claim" onclick={() => vm.claimCertificate(course.slug)}>
+						🎓 Claim your certificate
+					</button>
+				{/if}
 			{/if}
 
 			<ol class="lessons">
@@ -320,6 +346,35 @@
 	.progress__label {
 		font-size: 0.78rem;
 		color: #9ca3af;
+	}
+	.cert {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+		background: #064e3b;
+		color: #6ee7b7;
+		border-radius: 6px;
+		padding: 0.5rem 0.7rem;
+		margin: 0.5rem 0;
+		font-size: 0.85rem;
+	}
+	.cert__mark {
+		font-size: 1.1rem;
+	}
+	.cert__link {
+		margin-left: auto;
+		color: #6ee7b7;
+		font-weight: 600;
+	}
+	.cert__claim {
+		background: #1d4ed8;
+		border: 1px solid #2563eb;
+		color: #fff;
+		border-radius: 6px;
+		padding: 0.45rem 0.7rem;
+		font-size: 0.85rem;
+		cursor: pointer;
+		margin: 0.5rem 0;
 	}
 	.hint {
 		color: #9ca3af;
