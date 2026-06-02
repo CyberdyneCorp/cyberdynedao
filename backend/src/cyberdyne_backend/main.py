@@ -614,6 +614,7 @@ def create_app() -> FastAPI:
             chat_repo = SqlAlchemyChatRepository(session)
             learning_repo = SqlAlchemyLearningRepository(session)
             blog_repo = SqlAlchemyBlogRepository(session)
+            course_repo = SqlAlchemyCourseRepository(session)
             tools_ctx = ToolContext(
                 list_projects=ListProjects(repo=SqlAlchemyContentRepository(session)),
                 list_paths=ListPaths(repo=learning_repo),
@@ -640,6 +641,11 @@ def create_app() -> FastAPI:
                 enroll_in_path=EnrollInPath(repo=learning_repo),
                 get_my_learning=GetMyLearningState(repo=learning_repo),
                 update_progress=UpdateModuleProgress(repo=learning_repo),
+                # New learning surface so the agent can guide + recommend.
+                list_courses=ListCourses(repo=course_repo),
+                get_course=GetCourse(repo=course_repo),
+                get_my_deadlines=GetMyDeadlines(repo=learning_repo),
+                path_gating=GetPathGating(repo=learning_repo),
                 user_id=profile.user_id if profile else None,
             )
             yield RunChatTurn(

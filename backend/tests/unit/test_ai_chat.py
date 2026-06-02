@@ -161,6 +161,37 @@ class _FakeLearningRepo:
         return None
 
 
+class _FakeCourseRepo:
+    def __init__(self) -> None:
+        from cyberdyne_backend.domain.courses import new_course, new_lesson
+
+        c = new_course(title="Intro to MCP", description="MCP basics", level="Beginner")
+        c.publish()
+        c.lessons.append(
+            new_lesson(course_id=c.id, title="What is MCP", lesson_type="text", text_body="hi")
+        )
+        self._course = c
+
+    async def list_courses(self, *, level=None, include_drafts=False):
+        items = [self._course]
+        if level is not None:
+            items = [x for x in items if x.level is level]
+        return items
+
+    async def get_by_slug(self, slug: str, *, include_drafts: bool = False):
+        from cyberdyne_backend.domain.courses import CourseNotFoundError
+
+        if slug == self._course.slug:
+            return self._course
+        raise CourseNotFoundError(slug)
+
+    async def save(self, course) -> None:
+        pass
+
+    async def delete(self, course_id) -> None:
+        pass
+
+
 class _FakeMarketplaceRepo:
     def __init__(self) -> None:
         self.product = Product(
@@ -335,15 +366,19 @@ def _build_ctx(
     user_id: object | None = None,
 ) -> ToolContext:
     from cyberdyne_backend.application.blog import GetBlogPost, ListBlogPosts
+    from cyberdyne_backend.application.courses import GetCourse, ListCourses
     from cyberdyne_backend.application.dao_treasury import GetDaoOverview
     from cyberdyne_backend.application.learning import (
         EnrollInPath,
+        GetMyDeadlines,
         GetMyLearningState,
+        GetPathGating,
         UpdateModuleProgress,
     )
 
     content = _FakeContentRepo()
     learning = _FakeLearningRepo()
+    courses = _FakeCourseRepo()
     market = _FakeMarketplaceRepo()
     blog = _FakeBlogRepo(blog_posts)
     dao_overview = None
@@ -371,6 +406,10 @@ def _build_ctx(
         enroll_in_path=EnrollInPath(repo=learning),
         get_my_learning=GetMyLearningState(repo=learning),
         update_progress=UpdateModuleProgress(repo=learning),
+        list_courses=ListCourses(repo=courses),  # type: ignore[arg-type]
+        get_course=GetCourse(repo=courses),  # type: ignore[arg-type]
+        get_my_deadlines=GetMyDeadlines(repo=learning),
+        path_gating=GetPathGating(repo=learning),
         user_id=user_id,  # type: ignore[arg-type]
     )
 
@@ -1019,6 +1058,71 @@ class TestSystemPrompt:
         assert "confirm" in SYSTEM_PROMPT.lower()  # email confirmation rule
         assert "lookup" in SYSTEM_PROMPT.lower()
         assert "search_cyberdyne_knowledge" in SYSTEM_PROMPT
+
+
+class TestLearningAwarenessTools:
+    """The agent's awareness of the new learning surface (courses,
+    deadlines, gating) so it can guide + recommend."""
+
+    async def test_list_courses(self) -> None:
+        out = await ToolDispatcher(_build_ctx()).dispatch(
+            ToolCall(id="x", name="list_courses", arguments_json="{}")
+        )
+        data = json.loads(out)
+        assert any(c["slug"] == "intro-to-mcp" for c in data)
+        assert data[0]["lesson_count"] == 1
+
+    async def test_list_courses_level_filter_no_match(self) -> None:
+        out = await ToolDispatcher(_build_ctx()).dispatch(
+            ToolCall(id="x", name="list_courses", arguments_json='{"level": "Advanced"}')
+        )
+        assert json.loads(out) == []
+
+    async def test_get_course_hit(self) -> None:
+        out = await ToolDispatcher(_build_ctx()).dispatch(
+            ToolCall(id="x", name="get_course", arguments_json='{"slug": "intro-to-mcp"}')
+        )
+        data = json.loads(out)
+        assert data["title"] == "Intro to MCP"
+        assert data["lessons"][0]["type"] == "text"
+
+    async def test_get_course_miss(self) -> None:
+        out = await ToolDispatcher(_build_ctx()).dispatch(
+            ToolCall(id="x", name="get_course", arguments_json='{"slug": "nope"}')
+        )
+        assert json.loads(out)["error"] == "not_found"
+
+    async def test_deadlines_requires_auth(self) -> None:
+        out = await ToolDispatcher(_build_ctx()).dispatch(
+            ToolCall(id="x", name="get_my_deadlines", arguments_json="{}")
+        )
+        assert json.loads(out)["error"] == "sign_in_required"
+
+    async def test_deadlines_for_user(self) -> None:
+        out = await ToolDispatcher(_build_ctx(user_id=uuid.uuid4())).dispatch(
+            ToolCall(id="x", name="get_my_deadlines", arguments_json="{}")
+        )
+        assert json.loads(out) == []  # fake repo has no enrollments
+
+    async def test_path_gating_for_user(self) -> None:
+        out = await ToolDispatcher(_build_ctx(user_id=uuid.uuid4())).dispatch(
+            ToolCall(
+                id="x",
+                name="get_path_gating",
+                arguments_json='{"path_slug": "cyberdyne-stack"}',
+            )
+        )
+        data = json.loads(out)
+        assert data[0]["module_slug"] == "mcp-servers"
+        assert data[0]["unlocked"] is True  # first module, nothing before it
+
+    async def test_path_gating_requires_auth(self) -> None:
+        out = await ToolDispatcher(_build_ctx()).dispatch(
+            ToolCall(
+                id="x", name="get_path_gating", arguments_json='{"path_slug": "cyberdyne-stack"}'
+            )
+        )
+        assert json.loads(out)["error"] == "sign_in_required"
 
 
 # Suppress unused-import warning.

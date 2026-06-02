@@ -30,10 +30,13 @@ from cyberdyne_backend.application.blog.use_cases import (
     ListBlogPostsQuery,
 )
 from cyberdyne_backend.application.content.use_cases import ListProjects
+from cyberdyne_backend.application.courses import GetCourse, ListCourses
 from cyberdyne_backend.application.dao_treasury.use_cases import GetDaoOverview
 from cyberdyne_backend.application.learning import (
     EnrollInPath,
+    GetMyDeadlines,
     GetMyLearningState,
+    GetPathGating,
     ListPaths,
     UpdateModuleProgress,
 )
@@ -47,6 +50,12 @@ from cyberdyne_backend.domain.ai_chat import (
 from cyberdyne_backend.domain.ai_chat.ports import ToolSchema
 from cyberdyne_backend.domain.auth_identity import UserProfile
 from cyberdyne_backend.domain.blog import BlogPostNotFoundError
+from cyberdyne_backend.domain.courses import (
+    CourseLevel,
+    CourseNotFoundError,
+    InvalidCourseLevelError,
+    parse_level,
+)
 from cyberdyne_backend.domain.leads import (
     AskChannel,
     AskRepository,
@@ -331,6 +340,59 @@ CYBERDYNE_TOOLS: list[ToolSchema] = [
             "required": ["module_slug", "percent"],
         },
     ),
+    ToolSchema(
+        name="list_courses",
+        description=(
+            "List the published courses in Cyberdyne Academy (title, level, lesson count). "
+            "Use to answer 'what courses are there?' or to recommend a course."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "level": {
+                    "type": "string",
+                    "enum": ["Beginner", "Intermediate", "Advanced"],
+                    "description": "Optional level filter.",
+                }
+            },
+            "required": [],
+        },
+    ),
+    ToolSchema(
+        name="get_course",
+        description=(
+            "Get a single published course by slug with its ordered lessons (title + type). "
+            "Use to discuss a course's contents or guide a learner through it. Lesson types "
+            "include quiz lessons — use ``get_lesson_quiz`` for the questions."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {"slug": {"type": "string"}},
+            "required": ["slug"],
+        },
+    ),
+    ToolSchema(
+        name="get_my_deadlines",
+        description=(
+            "Get the signed-in user's enrollment deadlines with status "
+            "(overdue / urgent / upcoming / none) and days remaining. Use to nudge the learner "
+            "about what's due. Requires authentication."
+        ),
+        parameters={"type": "object", "properties": {}, "required": []},
+    ),
+    ToolSchema(
+        name="get_path_gating",
+        description=(
+            "For the signed-in user, get per-module lock state in a learning path: which modules "
+            "are unlocked vs locked, and why (level / sequential prerequisites). Use to explain "
+            "what to do next or why something is locked. Requires authentication."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {"path_slug": {"type": "string"}},
+            "required": ["path_slug"],
+        },
+    ),
 ]
 
 
@@ -363,6 +425,12 @@ class ToolContext:
     enroll_in_path: EnrollInPath | None = None
     get_my_learning: GetMyLearningState | None = None
     update_progress: UpdateModuleProgress | None = None
+    # New learning surface (courses + gating + deadlines) so the agent
+    # can act as a learning companion / recommender.
+    list_courses: ListCourses | None = None
+    get_course: GetCourse | None = None
+    get_my_deadlines: GetMyDeadlines | None = None
+    path_gating: GetPathGating | None = None
     user_id: UUID | None = None
 
 
@@ -426,6 +494,14 @@ class ToolDispatcher:
                 return await self._set_module_progress(
                     cast(str, args.get("module_slug", "")), args.get("percent")
                 )
+            if call.name == "list_courses":
+                return await self._list_courses(cast("str | None", args.get("level")))
+            if call.name == "get_course":
+                return await self._get_course(cast(str, args.get("slug", "")))
+            if call.name == "get_my_deadlines":
+                return await self._get_my_deadlines()
+            if call.name == "get_path_gating":
+                return await self._get_path_gating(cast(str, args.get("path_slug", "")))
         except Exception as exc:
             logger.exception("tool %s failed", call.name)
             return json.dumps({"error": "tool_failed", "detail": str(exc)})
@@ -734,6 +810,102 @@ class ToolDispatcher:
         except ProgressOutOfRangeError:
             return json.dumps({"error": "percent_out_of_range"})
         return json.dumps({"ok": True, "module_slug": prog.module_slug, "percent": prog.percent})
+
+    async def _list_courses(self, level: str | None) -> str:
+        if self._ctx.list_courses is None:
+            return json.dumps({"error": "courses_unavailable"})
+        parsed: CourseLevel | None = None
+        if level:
+            try:
+                parsed = parse_level(level)
+            except InvalidCourseLevelError:
+                return json.dumps({"error": "invalid_level", "level": level})
+        courses = await self._ctx.list_courses.execute(level=parsed, include_drafts=False)
+        return json.dumps(
+            [
+                {
+                    "slug": c.slug,
+                    "title": c.title,
+                    "level": c.level.value,
+                    "description": c.description,
+                    "mandatory": c.mandatory,
+                    "lesson_count": len(c.lessons),
+                }
+                for c in courses
+            ]
+        )
+
+    async def _get_course(self, slug: str) -> str:
+        if self._ctx.get_course is None:
+            return json.dumps({"error": "courses_unavailable"})
+        if not slug.strip():
+            return json.dumps({"error": "missing_slug"})
+        try:
+            course = await self._ctx.get_course.execute(slug, include_drafts=False)
+        except CourseNotFoundError:
+            return json.dumps({"error": "not_found", "slug": slug})
+        return json.dumps(
+            {
+                "slug": course.slug,
+                "title": course.title,
+                "level": course.level.value,
+                "description": course.description,
+                "lessons": [
+                    {
+                        "id": str(les.id),
+                        "title": les.title,
+                        "type": les.lesson_type.value,
+                        "duration": les.duration,
+                    }
+                    for les in course.lessons
+                ],
+            }
+        )
+
+    async def _get_my_deadlines(self) -> str:
+        if self._ctx.get_my_deadlines is None:
+            return json.dumps({"error": "learning_unavailable"})
+        if self._ctx.user_id is None:
+            return json.dumps({"error": "sign_in_required"})
+        deadlines = await self._ctx.get_my_deadlines.execute(self._ctx.user_id)
+        return json.dumps(
+            [
+                {
+                    "path_slug": d.path_slug,
+                    "due_at": d.due_at.isoformat() if d.due_at else None,
+                    "status": d.status.value,
+                    "days_remaining": d.days_remaining,
+                }
+                for d in deadlines
+            ]
+        )
+
+    async def _get_path_gating(self, path_slug: str) -> str:
+        if self._ctx.path_gating is None:
+            return json.dumps({"error": "learning_unavailable"})
+        if self._ctx.user_id is None:
+            return json.dumps({"error": "sign_in_required"})
+        if not path_slug.strip():
+            return json.dumps({"error": "missing_path_slug"})
+        try:
+            gates = await self._ctx.path_gating.execute(
+                user_id=self._ctx.user_id, path_slug=path_slug
+            )
+        except LearningContentNotFoundError:
+            return json.dumps({"error": "not_found", "path_slug": path_slug})
+        return json.dumps(
+            [
+                {
+                    "module_slug": g.module_slug,
+                    "level": g.level,
+                    "unlocked": g.unlocked,
+                    "completed": g.completed,
+                    "blocked_by": g.blocked_by,
+                    "reason": g.reason,
+                }
+                for g in gates
+            ]
+        )
 
     def _fill_identity(self, name: str, email: str) -> tuple[str, str]:
         """Back-fill name/email from the signed-in profile when the LLM
