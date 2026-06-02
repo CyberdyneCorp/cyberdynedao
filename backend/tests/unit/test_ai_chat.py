@@ -191,6 +191,25 @@ class _FakeCourseRepo:
     async def delete(self, course_id) -> None:
         pass
 
+    async def get_by_id(self, course_id):
+        return self._course if self._course.id == course_id else None
+
+
+class _FakeCourseProgressRepo:
+    """No progress recorded — every course reads as 0% / not started."""
+
+    async def get_lesson_progress(self, *, user_id, lesson_id):
+        return None
+
+    async def upsert_lesson_progress(self, progress) -> None:
+        pass
+
+    async def list_course_progress(self, *, user_id, course_id):
+        return []
+
+    async def get_lesson_course_id(self, lesson_id):
+        return None
+
 
 class _FakeAnalyticsRepo:
     async def learner_counts(self, user_id):
@@ -429,7 +448,11 @@ def _build_ctx(
 ) -> ToolContext:
     from cyberdyne_backend.application.analytics import GetLearnerDashboard
     from cyberdyne_backend.application.blog import GetBlogPost, ListBlogPosts
-    from cyberdyne_backend.application.courses import GetCourse, ListCourses
+    from cyberdyne_backend.application.courses import (
+        GetCourse,
+        GetMyCourseProgress,
+        ListCourses,
+    )
     from cyberdyne_backend.application.dao_treasury import GetDaoOverview
     from cyberdyne_backend.application.learning import (
         EnrollInPath,
@@ -473,6 +496,10 @@ def _build_ctx(
         update_progress=UpdateModuleProgress(repo=learning),
         list_courses=ListCourses(repo=courses),  # type: ignore[arg-type]
         get_course=GetCourse(repo=courses),  # type: ignore[arg-type]
+        get_my_course_progress=GetMyCourseProgress(
+            courses=courses,  # type: ignore[arg-type]
+            progress=_FakeCourseProgressRepo(),  # type: ignore[arg-type]
+        ),
         get_my_deadlines=GetMyDeadlines(repo=learning),
         path_gating=GetPathGating(repo=learning),
         get_quiz=GetQuiz(repo=quizzes),  # type: ignore[arg-type]
@@ -1240,6 +1267,36 @@ class TestLearningAwarenessTools:
         assert data["quiz_pass_rate"] == 100.0  # 2/2 attempted quizzes passed
         assert data["completed_courses"] == 1
         assert data["in_progress_courses"] == 2
+
+    async def test_course_progress_requires_auth(self) -> None:
+        out = await ToolDispatcher(_build_ctx()).dispatch(
+            ToolCall(
+                id="x",
+                name="get_my_course_progress",
+                arguments_json='{"slug": "intro-to-mcp"}',
+            )
+        )
+        assert json.loads(out)["error"] == "sign_in_required"
+
+    async def test_course_progress_for_user(self) -> None:
+        out = await ToolDispatcher(_build_ctx(user_id=uuid.uuid4())).dispatch(
+            ToolCall(
+                id="x",
+                name="get_my_course_progress",
+                arguments_json='{"slug": "intro-to-mcp"}',
+            )
+        )
+        data = json.loads(out)
+        assert data["slug"] == "intro-to-mcp"
+        assert data["total_lessons"] == 1
+        assert data["completed"] is False
+        assert data["percent"] == 0
+
+    async def test_course_progress_unknown_slug(self) -> None:
+        out = await ToolDispatcher(_build_ctx(user_id=uuid.uuid4())).dispatch(
+            ToolCall(id="x", name="get_my_course_progress", arguments_json='{"slug": "ghost"}')
+        )
+        assert json.loads(out)["error"] == "not_found"
 
 
 # Suppress unused-import warning.

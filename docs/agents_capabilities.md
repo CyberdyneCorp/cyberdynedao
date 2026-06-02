@@ -57,6 +57,7 @@ the same application services the REST API uses.
 | `enroll_in_path` | Enroll the signed-in user in a path (idempotent). |
 | `set_module_progress` | Set a module's progress 0–100 (100 = mark complete). |
 | `get_my_learning` | The user's enrollments, per-module progress, and earned certificates. |
+| `get_my_course_progress` | The user's progress through one course (by slug): per-lesson completion, completed-lesson count, overall percent, and whether the course is finished. |
 | `get_my_deadlines` | Enrollment deadlines with status (overdue / urgent / upcoming / none) + days remaining. |
 | `get_path_gating` | Per-module lock state in a path (unlocked/locked) and the reason (level / sequential prerequisite). |
 | `get_my_dashboard` | Learner analytics: enrolled/completed/active paths, completed + in-progress modules, completed + in-progress courses, avg module %, quizzes attempted/passed + pass rate + avg score, certificate count — for a narrative progress summary. |

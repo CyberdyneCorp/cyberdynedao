@@ -775,6 +775,10 @@ def create_app() -> FastAPI:
                 # New learning surface so the agent can guide + recommend.
                 list_courses=ListCourses(repo=course_repo),
                 get_course=GetCourse(repo=course_repo),
+                get_my_course_progress=GetMyCourseProgress(
+                    courses=course_repo,
+                    progress=SqlAlchemyCourseProgressRepository(session),
+                ),
                 get_my_deadlines=GetMyDeadlines(repo=learning_repo),
                 path_gating=GetPathGating(repo=learning_repo),
                 get_quiz=GetQuiz(repo=SqlAlchemyQuizRepository(session)),
