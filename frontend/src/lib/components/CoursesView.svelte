@@ -14,7 +14,8 @@
 	// progress, mark-complete, certificate) over the new /api/v1/courses
 	// endpoints.
 	const vm = createCoursesViewModel();
-	const { courses, selected, progress, certificate, loading, error } = vm;
+	const { courses, selected, progress, certificate, dashboard, recommendations, loading, error } =
+		vm;
 
 	const authReady = $derived(authVM.isRestored && authVM.isAuthenticated);
 
@@ -22,9 +23,18 @@
 	let takingQuiz = $state<string | null>(null);
 	// Lesson id whose content is expanded for viewing.
 	let openLesson = $state<string | null>(null);
+	let meLoaded = $state(false);
 
 	onMount(() => {
 		void vm.loadCatalogue();
+	});
+
+	// Load the learner's dashboard + recommendations once auth is ready.
+	$effect(() => {
+		if (authReady && !meLoaded) {
+			meLoaded = true;
+			void vm.loadMe();
+		}
 	});
 
 	function openCourse(slug: string): void {
@@ -170,6 +180,32 @@
 		</article>
 	{:else}
 		<!-- Catalogue -->
+		{#if authReady && $dashboard}
+			{@const d = $dashboard}
+			<div class="dash" aria-label="my learning summary">
+				<div class="dash__stat"><strong>{d.completedCourses}</strong> courses done</div>
+				<div class="dash__stat"><strong>{d.inProgressCourses}</strong> in progress</div>
+				<div class="dash__stat"><strong>{d.quizzesPassed}/{d.quizzesAttempted}</strong> quizzes passed</div>
+				<div class="dash__stat"><strong>{d.certificates}</strong> certificates</div>
+			</div>
+		{/if}
+
+		{#if authReady && $recommendations && $recommendations.courses.length > 0}
+			<section class="recs">
+				<h2>Recommended for you</h2>
+				<p class="recs__summary">{$recommendations.summary}</p>
+				<div class="recs__row">
+					{#each $recommendations.courses as rec (rec.slug)}
+						<button class="rec" onclick={() => openCourse(rec.slug)}>
+							<span class={levelClass[rec.level]}>{rec.level}</span>
+							<span class="rec__title">{rec.title}</span>
+							<span class="rec__reason">{rec.reason}</span>
+						</button>
+					{/each}
+				</div>
+			</section>
+		{/if}
+
 		{#if $loading && $courses.length === 0}
 			<p class="hint">Loading courses…</p>
 		{:else if $courses.length === 0}
@@ -231,6 +267,66 @@
 		padding: 0.5rem 0.75rem;
 		border-radius: 6px;
 		font-size: 0.85rem;
+	}
+	.dash {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem 1.25rem;
+		background: #111827;
+		border: 1px solid #1f2937;
+		border-radius: 8px;
+		padding: 0.6rem 0.85rem;
+		margin-bottom: 0.85rem;
+		font-size: 0.82rem;
+		color: #9ca3af;
+	}
+	.dash__stat strong {
+		color: #e5e7eb;
+		font-size: 1rem;
+		margin-right: 0.25rem;
+	}
+	.recs {
+		margin-bottom: 1.1rem;
+	}
+	.recs h2 {
+		margin: 0 0 0.2rem;
+		font-size: 1rem;
+	}
+	.recs__summary {
+		margin: 0 0 0.5rem;
+		font-size: 0.82rem;
+		color: #9ca3af;
+	}
+	.recs__row {
+		display: flex;
+		gap: 0.6rem;
+		flex-wrap: wrap;
+	}
+	.rec {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		align-items: flex-start;
+		text-align: left;
+		background: #0b1220;
+		border: 1px solid #1f2937;
+		border-radius: 8px;
+		padding: 0.6rem 0.7rem;
+		cursor: pointer;
+		color: inherit;
+		min-width: 180px;
+		max-width: 240px;
+	}
+	.rec:hover {
+		border-color: #3b82f6;
+	}
+	.rec__title {
+		font-size: 0.9rem;
+		font-weight: 600;
+	}
+	.rec__reason {
+		font-size: 0.75rem;
+		color: #9ca3af;
 	}
 	.catalogue {
 		list-style: none;

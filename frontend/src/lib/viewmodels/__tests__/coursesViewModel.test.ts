@@ -68,6 +68,26 @@ function fakeDeps(over: Partial<CoursesViewModelDeps> = {}): CoursesViewModelDep
 		setLessonProgress: vi.fn().mockResolvedValue({ ...progress, completedLessons: 2, completed: true }),
 		fetchMyCertificate: vi.fn().mockRejectedValue(new CoursesApiError(404, 'certificate not found')),
 		claimCertificate: vi.fn().mockResolvedValue(certificate),
+		fetchDashboard: vi.fn().mockResolvedValue({
+			enrolledPaths: 0,
+			completedPaths: 0,
+			activePaths: 0,
+			completedModules: 0,
+			inProgressModules: 0,
+			avgModulePercent: 0,
+			quizzesAttempted: 2,
+			quizzesPassed: 1,
+			quizPassRate: 50,
+			avgQuizScore: 65,
+			totalQuizAttempts: 3,
+			certificates: 1,
+			completedCourses: 1,
+			inProgressCourses: 2
+		}),
+		fetchRecommendations: vi.fn().mockResolvedValue({
+			summary: 'Try these next.',
+			courses: [{ slug: 'advanced', title: 'Advanced', level: 'Advanced', reason: 'next step' }]
+		}),
 		...over
 	};
 }
@@ -212,6 +232,25 @@ describe('coursesViewModel — certificate', () => {
 		await vm.completeLesson('solidity-101', 'l-1');
 		expect(deps.fetchMyCertificate).toHaveBeenCalledWith('solidity-101');
 		expect(get(vm.certificate)).toEqual(certificate);
+	});
+});
+
+describe('coursesViewModel — loadMe (dashboard + recommendations)', () => {
+	it('loads both stores', async () => {
+		const vm = createCoursesViewModel(fakeDeps());
+		await vm.loadMe();
+		expect(get(vm.dashboard)?.completedCourses).toBe(1);
+		expect(get(vm.recommendations)?.courses[0].slug).toBe('advanced');
+	});
+
+	it('is best-effort — a failing dashboard leaves it null without throwing', async () => {
+		const vm = createCoursesViewModel(
+			fakeDeps({ fetchDashboard: vi.fn().mockRejectedValue(new Error('401')) })
+		);
+		await vm.loadMe();
+		expect(get(vm.dashboard)).toBeNull();
+		// recommendations still load independently
+		expect(get(vm.recommendations)?.summary).toBe('Try these next.');
 	});
 });
 

@@ -15,14 +15,18 @@ import {
 	claimCourseCertificate as apiClaimCertificate,
 	fetchCourse as apiFetchCourse,
 	fetchCourses as apiFetchCourses,
+	fetchLearnerDashboard as apiFetchDashboard,
 	fetchMyCourseCertificate as apiFetchMyCertificate,
 	fetchMyCourseProgress as apiFetchMyCourseProgress,
+	fetchRecommendations as apiFetchRecommendations,
 	setLessonProgress as apiSetLessonProgress,
 	type CourseCertificate,
 	type CourseDetail,
 	type CourseLevel,
 	type CourseProgress,
-	type CourseSummary
+	type CourseSummary,
+	type LearnerDashboard,
+	type LearningRecommendations
 } from '$lib/api/coursesApi';
 
 function message(err: unknown): string {
@@ -36,6 +40,8 @@ export interface CoursesViewModelDeps {
 	setLessonProgress: typeof apiSetLessonProgress;
 	fetchMyCertificate: typeof apiFetchMyCertificate;
 	claimCertificate: typeof apiClaimCertificate;
+	fetchDashboard: typeof apiFetchDashboard;
+	fetchRecommendations: typeof apiFetchRecommendations;
 }
 
 const defaultDeps: CoursesViewModelDeps = {
@@ -44,7 +50,9 @@ const defaultDeps: CoursesViewModelDeps = {
 	fetchMyCourseProgress: apiFetchMyCourseProgress,
 	setLessonProgress: apiSetLessonProgress,
 	fetchMyCertificate: apiFetchMyCertificate,
-	claimCertificate: apiClaimCertificate
+	claimCertificate: apiClaimCertificate,
+	fetchDashboard: apiFetchDashboard,
+	fetchRecommendations: apiFetchRecommendations
 };
 
 export interface CoursesViewModel {
@@ -52,9 +60,13 @@ export interface CoursesViewModel {
 	selected: Writable<CourseDetail | null>;
 	progress: Writable<CourseProgress | null>;
 	certificate: Writable<CourseCertificate | null>;
+	dashboard: Writable<LearnerDashboard | null>;
+	recommendations: Writable<LearningRecommendations | null>;
 	loading: Writable<boolean>;
 	error: Writable<string | null>;
 	loadCatalogue: (level?: CourseLevel) => Promise<void>;
+	/** Load the signed-in learner's dashboard + recommendations (best-effort). */
+	loadMe: () => Promise<void>;
 	open: (slug: string, opts?: { withProgress?: boolean }) => Promise<void>;
 	refreshProgress: (slug: string) => Promise<void>;
 	completeLesson: (slug: string, lessonId: string) => Promise<void>;
@@ -69,8 +81,26 @@ export function createCoursesViewModel(
 	const selected = writable<CourseDetail | null>(null);
 	const progress = writable<CourseProgress | null>(null);
 	const certificate = writable<CourseCertificate | null>(null);
+	const dashboard = writable<LearnerDashboard | null>(null);
+	const recommendations = writable<LearningRecommendations | null>(null);
 	const loading = writable(false);
 	const error = writable<string | null>(null);
+
+	// Best-effort: the learner's dashboard + recommendations for the
+	// catalogue header. Failures (e.g. 401 when the session lapsed) leave
+	// the panels hidden rather than blocking the catalogue.
+	async function loadMe(): Promise<void> {
+		try {
+			dashboard.set(await deps.fetchDashboard());
+		} catch {
+			dashboard.set(null);
+		}
+		try {
+			recommendations.set(await deps.fetchRecommendations());
+		} catch {
+			recommendations.set(null);
+		}
+	}
 
 	// Best-effort: the learner's certificate for a course (auto-issued on
 	// completion). A 404 just means "not earned yet" — not an error.
@@ -158,9 +188,12 @@ export function createCoursesViewModel(
 		selected,
 		progress,
 		certificate,
+		dashboard,
+		recommendations,
 		loading,
 		error,
 		loadCatalogue,
+		loadMe,
 		open,
 		refreshProgress,
 		completeLesson,
