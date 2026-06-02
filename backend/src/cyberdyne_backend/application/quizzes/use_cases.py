@@ -8,13 +8,16 @@ domain; these use cases orchestrate persistence around it.
 
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass, field
 from uuid import UUID
 
+from cyberdyne_backend.domain.ai_chat import ChatLLMPort, ChatMessage, ChatRole
 from cyberdyne_backend.domain.quizzes import (
     DEFAULT_PASSING_SCORE,
     GradedAttempt,
     Question,
+    QuestionResult,
     Quiz,
     QuizAttempt,
     QuizRepository,
@@ -22,6 +25,15 @@ from cyberdyne_backend.domain.quizzes import (
     grade,
     new_attempt,
     new_quiz,
+)
+
+# Tutor persona for AI contextual feedback. Deliberately constrained:
+# explain, don't quiz; encouraging; no AI self-reference.
+_TUTOR_SYSTEM_PROMPT = (
+    "You are a patient tutor for Cyberdyne Academy. A learner answered a quiz question "
+    "incorrectly. In 2-3 sentences, kindly explain why their choice is wrong and why the "
+    "correct answer is right, building on the provided note. Do not ask questions and do not "
+    "mention that you are an AI."
 )
 
 # ── Reads ─────────────────────────────────────────────────────────────
@@ -145,8 +157,81 @@ class SubmitQuizAttempt:
         return SubmittedAttempt(attempt=stored, graded=graded)
 
 
+@dataclass(slots=True)
+class AnswerFeedback:
+    question_id: UUID
+    prompt: str
+    is_correct: bool
+    selected_option_id: UUID | None
+    correct_option_id: UUID
+    static_explanation: str
+    ai_explanation: str | None  # populated only for incorrect answers
+
+
+@dataclass(slots=True)
+class ExplainQuizAnswers:
+    """AI contextual feedback. Grades the learner's answers (post-
+    submission, so the answer key is fair game) and, for each WRONG
+    question, asks the LLM for a personalized 'why it's wrong' on top of
+    the question's static explanation. Correct answers get no LLM call."""
+
+    repo: QuizRepository
+    llm: ChatLLMPort
+
+    async def execute(self, *, lesson_id: UUID, answers: dict[UUID, UUID]) -> list[AnswerFeedback]:
+        quiz = await self.repo.get_by_lesson(lesson_id)
+        graded = grade(quiz, answers, strict=False)
+        questions = {q.id: q for q in quiz.questions}
+        feedback: list[AnswerFeedback] = []
+        for result in graded.results:
+            question = questions[result.question_id]
+            ai_explanation: str | None = None
+            if not result.is_correct:
+                ai_explanation = await self._explain(question, result)
+            feedback.append(
+                AnswerFeedback(
+                    question_id=question.id,
+                    prompt=question.prompt,
+                    is_correct=result.is_correct,
+                    selected_option_id=result.selected_option_id,
+                    correct_option_id=result.correct_option_id,
+                    static_explanation=question.explanation,
+                    ai_explanation=ai_explanation,
+                )
+            )
+        return feedback
+
+    async def _explain(self, question: Question, result: QuestionResult) -> str:
+        option_text = {o.id: o.text for o in question.options}
+        chosen = (
+            option_text.get(result.selected_option_id, "(no answer)")
+            if result.selected_option_id
+            else "(no answer)"
+        )
+        correct = option_text.get(result.correct_option_id, "")
+        prompt = (
+            f"Question: {question.prompt}\n"
+            f"Learner chose: {chosen}\n"
+            f"Correct answer: {correct}\n"
+            f"Note: {question.explanation or '(none)'}\n"
+            "Explain why the learner's choice is wrong and the correct answer is right."
+        )
+        message = ChatMessage(
+            id=uuid.uuid4(),
+            session_id=uuid.uuid4(),
+            role=ChatRole.USER,
+            content=prompt,
+        )
+        response = await self.llm.complete(
+            messages=[message], tools=[], system_prompt=_TUTOR_SYSTEM_PROMPT
+        )
+        return response.content
+
+
 __all__ = [
+    "AnswerFeedback",
     "DeleteQuiz",
+    "ExplainQuizAnswers",
     "GetQuiz",
     "ListMyAttempts",
     "OptionInput",

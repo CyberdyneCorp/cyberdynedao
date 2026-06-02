@@ -13,6 +13,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 
 from cyberdyne_backend.adapters.inbound.api.quizzes.schemas import (
+    AnswerFeedbackResponse,
     AttemptResultResponse,
     AttemptSummaryResponse,
     EditorOptionResponse,
@@ -31,6 +32,7 @@ from cyberdyne_backend.adapters.inbound.middleware.auth import (
 )
 from cyberdyne_backend.application.quizzes import (
     DeleteQuiz,
+    ExplainQuizAnswers,
     GetQuiz,
     ListMyAttempts,
     OptionInput,
@@ -71,6 +73,10 @@ async def get_submit_attempt_uc() -> SubmitQuizAttempt:  # pragma: no cover - ov
 
 
 async def get_list_attempts_uc() -> ListMyAttempts:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_explain_answers_uc() -> ExplainQuizAnswers:  # pragma: no cover - override target
     raise NotImplementedError
 
 
@@ -210,6 +216,38 @@ async def list_my_attempts(
     except QuizNotFoundError as exc:
         raise HTTPException(status_code=404, detail="quiz not found") from exc
     return [_attempt_summary(a) for a in attempts]
+
+
+@player_router.post(
+    "/{lesson_id}/quiz/feedback",
+    response_model=list[AnswerFeedbackResponse],
+    response_model_by_alias=True,
+)
+async def explain_quiz_answers(
+    lesson_id: UUID,
+    body: SubmitAttemptRequest,
+    use_case: Annotated[ExplainQuizAnswers, Depends(get_explain_answers_uc)],
+    _principal: Annotated[UserPrincipal, Depends(require_principal)],
+) -> list[AnswerFeedbackResponse]:
+    """AI contextual feedback: grade the submitted answers and return a
+    personalized 'why it's wrong' for each incorrect question. Read-only
+    (records no attempt) so a learner can ask for help freely."""
+    try:
+        feedback = await use_case.execute(lesson_id=lesson_id, answers=body.answers)
+    except QuizNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="quiz not found") from exc
+    return [
+        AnswerFeedbackResponse(
+            question_id=f.question_id,
+            prompt=f.prompt,
+            is_correct=f.is_correct,
+            selected_option_id=f.selected_option_id,
+            correct_option_id=f.correct_option_id,
+            static_explanation=f.static_explanation,
+            ai_explanation=f.ai_explanation,
+        )
+        for f in feedback
+    ]
 
 
 # ── Admin authoring ──────────────────────────────────────────────────

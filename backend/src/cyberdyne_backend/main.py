@@ -147,6 +147,7 @@ from cyberdyne_backend.adapters.inbound.api.quizzes.router import (
 )
 from cyberdyne_backend.adapters.inbound.api.quizzes.router import (
     get_delete_quiz_uc,
+    get_explain_answers_uc,
     get_list_attempts_uc,
     get_quiz_uc,
     get_submit_attempt_uc,
@@ -272,6 +273,7 @@ from cyberdyne_backend.application.marketplace import (
 from cyberdyne_backend.application.marketplace.use_cases import GetProduct
 from cyberdyne_backend.application.quizzes import (
     DeleteQuiz,
+    ExplainQuizAnswers,
     GetQuiz,
     ListMyAttempts,
     SubmitQuizAttempt,
@@ -473,6 +475,13 @@ def create_app() -> FastAPI:
     async def _list_attempts_dep() -> AsyncIterator[ListMyAttempts]:
         async with session_scope() as session:
             yield ListMyAttempts(repo=SqlAlchemyQuizRepository(session))
+
+    async def _explain_answers_dep() -> AsyncIterator[ExplainQuizAnswers]:
+        async with session_scope() as session:
+            yield ExplainQuizAnswers(
+                repo=SqlAlchemyQuizRepository(session),
+                llm=container.chat_llm,
+            )
 
     async def _save_upload_dep() -> AsyncIterator[SaveUpload]:
         async with session_scope() as session:
@@ -700,6 +709,7 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_delete_quiz_uc] = _delete_quiz_dep
     app.dependency_overrides[get_submit_attempt_uc] = _submit_attempt_dep
     app.dependency_overrides[get_list_attempts_uc] = _list_attempts_dep
+    app.dependency_overrides[get_explain_answers_uc] = _explain_answers_dep
     app.dependency_overrides[get_save_upload_uc] = _save_upload_dep
     app.dependency_overrides[get_save_uploads_uc] = _save_uploads_dep
     app.dependency_overrides[get_upload_uc] = _get_upload_dep

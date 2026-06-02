@@ -9,6 +9,7 @@ import pytest
 
 from cyberdyne_backend.application.quizzes import (
     DeleteQuiz,
+    ExplainQuizAnswers,
     GetQuiz,
     ListMyAttempts,
     OptionInput,
@@ -17,6 +18,7 @@ from cyberdyne_backend.application.quizzes import (
     UpsertQuiz,
     UpsertQuizCommand,
 )
+from cyberdyne_backend.domain.ai_chat import ChatMessage, LLMResponse, ToolSchema
 from cyberdyne_backend.domain.quizzes import (
     InvalidQuizError,
     Quiz,
@@ -24,6 +26,27 @@ from cyberdyne_backend.domain.quizzes import (
     QuizNotFoundError,
     QuizRepository,
 )
+
+
+class ScriptedLLM:
+    """Records each prompt it sees and returns a canned tutor reply."""
+
+    def __init__(self) -> None:
+        self.prompts: list[str] = []
+        self.system_prompts: list[str] = []
+
+    async def complete(
+        self,
+        *,
+        messages: list[ChatMessage],
+        tools: list[ToolSchema],
+        system_prompt: str,
+    ) -> LLMResponse:
+        self.prompts.append(messages[-1].content)
+        self.system_prompts.append(system_prompt)
+        return LLMResponse(
+            content="You confused the two options; the right one is correct because X."
+        )
 
 
 class FakeQuizRepo:
@@ -168,3 +191,67 @@ class TestGetAndDelete:
     async def test_delete_missing_raises(self) -> None:
         with pytest.raises(QuizNotFoundError):
             await DeleteQuiz(repo=FakeQuizRepo()).execute(uuid.uuid4())
+
+
+class TestExplainQuizAnswers:
+    async def _seed(self, repo: FakeQuizRepo) -> tuple[UUID, Quiz]:
+        lesson_id = uuid.uuid4()
+        quiz = await UpsertQuiz(repo=repo).execute(lesson_id, _cmd())
+        return lesson_id, quiz
+
+    def _wrong_option(self, quiz: Quiz, question_index: int) -> UUID:
+        question = quiz.questions[question_index]
+        return next(o.id for o in question.options if o.id != question.correct_option_id)
+
+    async def test_ai_explanation_only_for_wrong_answers(self) -> None:
+        repo = FakeQuizRepo()
+        lesson_id, quiz = await self._seed(repo)
+        llm = ScriptedLLM()
+        # Q0 wrong, Q1 correct.
+        answers = {
+            quiz.questions[0].id: self._wrong_option(quiz, 0),
+            quiz.questions[1].id: quiz.questions[1].correct_option_id,
+        }
+        feedback = await ExplainQuizAnswers(repo=repo, llm=llm).execute(
+            lesson_id=lesson_id, answers=answers
+        )
+        assert len(feedback) == 2
+        wrong, right = feedback[0], feedback[1]
+        assert wrong.is_correct is False
+        assert wrong.ai_explanation is not None
+        assert wrong.static_explanation == "basic arithmetic"
+        assert right.is_correct is True
+        assert right.ai_explanation is None
+        # The LLM was consulted exactly once — only for the wrong answer.
+        assert len(llm.prompts) == 1
+        assert llm.system_prompts[0].startswith("You are a patient tutor")
+
+    async def test_prompt_carries_chosen_and_correct_text(self) -> None:
+        repo = FakeQuizRepo()
+        lesson_id, quiz = await self._seed(repo)
+        llm = ScriptedLLM()
+        answers = {quiz.questions[0].id: self._wrong_option(quiz, 0)}
+        await ExplainQuizAnswers(repo=repo, llm=llm).execute(lesson_id=lesson_id, answers=answers)
+        prompt = llm.prompts[0]
+        assert "2+2?" in prompt
+        assert "Learner chose: 3" in prompt
+        assert "Correct answer: 4" in prompt
+
+    async def test_unanswered_question_reports_no_answer(self) -> None:
+        repo = FakeQuizRepo()
+        lesson_id, quiz = await self._seed(repo)
+        llm = ScriptedLLM()
+        # Empty answers → every question wrong, none selected.
+        feedback = await ExplainQuizAnswers(repo=repo, llm=llm).execute(
+            lesson_id=lesson_id, answers={}
+        )
+        assert all(f.is_correct is False for f in feedback)
+        assert all(f.selected_option_id is None for f in feedback)
+        assert "Learner chose: (no answer)" in llm.prompts[0]
+        assert len(llm.prompts) == len(quiz.questions)
+
+    async def test_unknown_quiz_raises(self) -> None:
+        with pytest.raises(QuizNotFoundError):
+            await ExplainQuizAnswers(repo=FakeQuizRepo(), llm=ScriptedLLM()).execute(
+                lesson_id=uuid.uuid4(), answers={}
+            )

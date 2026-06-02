@@ -95,10 +95,21 @@ The agent is the delivery vehicle for the Academy's AI features. Built so
 far: the learning-catalogue + progress + deadlines + gating + quiz
 player-view + dashboard tools above. Next, in order:
 
-- AI contextual feedback (post-attempt "why it's wrong") and LLM course
-  recommendations — thin use cases over the quiz/dashboard/catalogue data.
+- LLM course recommendations - a thin use case over the
+  dashboard/catalogue data.
 
-**Shipped:** the **code-interpreter lesson type** (`code`) — a learner runs
+**Shipped:** **AI contextual feedback** - after a learner submits quiz
+answers, `POST /api/v1/lessons/{id}/quiz/feedback` grades them
+server-side (the answer key is fair game post-submission) and, for each
+*incorrect* question, asks the chat LLM (`container.chat_llm`) for a
+personalized "why your choice is wrong / why the correct answer is right"
+on top of the question's static explanation. Correct answers get no LLM
+call. It is read-only - it records no attempt - so a learner can ask for
+help freely. Distinct from the agent's `get_lesson_quiz` tool, which is
+deliberately answer-blind; this endpoint is the one place the tutor sees
+the key. Use case: `ExplainQuizAnswers` (application/quizzes).
+
+**Shipped:** the **code-interpreter lesson type** (`code`) - a learner runs
 source against the MATLAB-LLVM engine via
 `POST /api/v1/lessons/{id}/code/run` (per-(lesson,user) workspace, keyed
 off the learner's bearer). Same engine the agent's `matlab_*` tools use,
