@@ -231,6 +231,29 @@ def test_failing_quiz_does_not_complete_lesson(authed_client: TestClient) -> Non
 
 
 @pytest.mark.usefixtures("_prepared_schema")
+def test_dashboard_reflects_course_completion(authed_client: TestClient) -> None:
+    lesson_ids = _make_published_course(authed_client)  # 2-lesson "progress-course"
+
+    # One lesson done -> the course is in progress on the dashboard.
+    authed_client.put(
+        f"/api/v1/courses/progress-course/lessons/{lesson_ids[0]}/progress",
+        json={"percent": 100},
+    )
+    mid = authed_client.get("/api/v1/analytics/me").json()
+    assert mid["inProgressCourses"] == 1
+    assert mid["completedCourses"] == 0
+
+    # Both lessons done -> the course counts as completed.
+    authed_client.put(
+        f"/api/v1/courses/progress-course/lessons/{lesson_ids[1]}/progress",
+        json={"percent": 100},
+    )
+    done = authed_client.get("/api/v1/analytics/me").json()
+    assert done["completedCourses"] == 1
+    assert done["inProgressCourses"] == 0
+
+
+@pytest.mark.usefixtures("_prepared_schema")
 def test_unknown_course_is_404(authed_client: TestClient) -> None:
     assert authed_client.get("/api/v1/courses/ghost/progress").status_code == 404
 

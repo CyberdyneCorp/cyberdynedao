@@ -416,9 +416,10 @@ CYBERDYNE_TOOLS: list[ToolSchema] = [
         name="get_my_dashboard",
         description=(
             "Get the signed-in learner's analytics dashboard: enrolled / completed / active "
-            "paths, completed + in-progress modules, average module percent, quizzes "
-            "attempted/passed + pass rate + average score, and certificate count. Use to give a "
-            "narrative progress summary or decide what to recommend next. Requires authentication."
+            "paths, completed + in-progress modules, completed + in-progress courses, average "
+            "module percent, quizzes attempted/passed + pass rate + average score, and "
+            "certificate count. Use to give a narrative progress summary or decide what to "
+            "recommend next. Requires authentication."
         ),
         parameters={"type": "object", "properties": {}, "required": []},
     ),
@@ -990,6 +991,8 @@ class ToolDispatcher:
                 "avg_quiz_score": d.avg_quiz_score,
                 "total_quiz_attempts": d.total_quiz_attempts,
                 "certificates": d.certificates,
+                "completed_courses": d.completed_courses,
+                "in_progress_courses": d.in_progress_courses,
             }
         )
 

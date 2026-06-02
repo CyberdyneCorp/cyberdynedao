@@ -59,7 +59,7 @@ the same application services the REST API uses.
 | `get_my_learning` | The user's enrollments, per-module progress, and earned certificates. |
 | `get_my_deadlines` | Enrollment deadlines with status (overdue / urgent / upcoming / none) + days remaining. |
 | `get_path_gating` | Per-module lock state in a path (unlocked/locked) and the reason (level / sequential prerequisite). |
-| `get_my_dashboard` | Learner analytics: enrolled/completed/active paths, completed + in-progress modules, avg module %, quizzes attempted/passed + pass rate + avg score, certificate count — for a narrative progress summary. |
+| `get_my_dashboard` | Learner analytics: enrolled/completed/active paths, completed + in-progress modules, completed + in-progress courses, avg module %, quizzes attempted/passed + pass rate + avg score, certificate count — for a narrative progress summary. |
 
 User-scoped tools return `sign_in_required` when the caller is anonymous;
 the agent then asks the user to sign in. (Certificate *issuance* stays

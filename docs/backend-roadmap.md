@@ -16,8 +16,10 @@
 > **quizzes** (player + attempts + static feedback),
 > **file uploads** (MIME routing, size caps, traversal guards, persistent
 > volume), **prerequisite/level/sequential gating + enrollment
-> eligibility**, **enrollment deadlines**, **learner + admin analytics**,
-> **certificate verify-by-id + PDF**, and a **learning-aware chat agent**
+> eligibility**, **enrollment deadlines**, **learner + admin analytics**
+> (the learner dashboard now also reports completed + in-progress
+> courses, derived from lesson progress), **certificate verify-by-id +
+> PDF**, and a **learning-aware chat agent**
 > (see [`agents_capabilities.md`](agents_capabilities.md)), and the
 > **code-interpreter lesson type** (`code` lessons run on the MATLAB-LLVM
 > engine via `POST /api/v1/lessons/{id}/code/run`), **AI contextual quiz

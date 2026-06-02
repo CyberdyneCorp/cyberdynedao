@@ -44,6 +44,10 @@ class LearnerCounts:
     best_quiz_scores: list[int] = field(default_factory=list)
     quizzes_passed: int = 0
     total_quiz_attempts: int = 0
+    # Course standing, derived from per-lesson progress: a course is
+    # complete iff every one of its lessons is.
+    completed_courses: int = 0
+    in_progress_courses: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,6 +64,8 @@ class LearnerDashboard:
     avg_quiz_score: float
     total_quiz_attempts: int
     certificates: int
+    completed_courses: int
+    in_progress_courses: int
 
 
 def build_learner_dashboard(counts: LearnerCounts) -> LearnerDashboard:
@@ -79,6 +85,8 @@ def build_learner_dashboard(counts: LearnerCounts) -> LearnerDashboard:
         avg_quiz_score=_mean(counts.best_quiz_scores),
         total_quiz_attempts=counts.total_quiz_attempts,
         certificates=counts.certificates,
+        completed_courses=counts.completed_courses,
+        in_progress_courses=counts.in_progress_courses,
     )
 
 

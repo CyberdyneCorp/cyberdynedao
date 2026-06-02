@@ -48,6 +48,8 @@ def _learner_response(d: LearnerDashboard) -> LearnerDashboardResponse:
         avg_quiz_score=d.avg_quiz_score,
         total_quiz_attempts=d.total_quiz_attempts,
         certificates=d.certificates,
+        completed_courses=d.completed_courses,
+        in_progress_courses=d.in_progress_courses,
     )
 
 
