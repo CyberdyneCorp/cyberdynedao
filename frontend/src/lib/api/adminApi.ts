@@ -55,6 +55,37 @@ export interface UploadResult {
 	category: string;
 }
 
+// ── Quiz authoring (editor view: full tree incl. correct flags) ───────
+
+export interface EditorQuizOption {
+	id: string;
+	text: string;
+	isCorrect: boolean;
+}
+
+export interface EditorQuizQuestion {
+	id: string;
+	prompt: string;
+	explanation: string;
+	options: EditorQuizOption[];
+}
+
+export interface EditorQuiz {
+	id: string;
+	lessonId: string;
+	passingScore: number;
+	questions: EditorQuizQuestion[];
+}
+
+export interface UpsertQuizInput {
+	passingScore?: number;
+	questions: {
+		prompt: string;
+		explanation?: string;
+		options: { text: string; isCorrect: boolean }[];
+	}[];
+}
+
 export class AdminApiError extends Error {
 	constructor(
 		public readonly status: number,
@@ -80,7 +111,7 @@ function ensureBase(): void {
 }
 
 async function sendJson<T>(
-	method: 'POST' | 'PATCH',
+	method: 'POST' | 'PATCH' | 'PUT',
 	path: string,
 	body: unknown
 ): Promise<T> {
@@ -166,4 +197,27 @@ export async function uploadFile(file: File): Promise<UploadResult> {
 	});
 	if (!res.ok) throw new AdminApiError(res.status, await readError(res));
 	return (await res.json()) as UploadResult;
+}
+
+// ── Quiz authoring ────────────────────────────────────────────────────
+
+/** Load a lesson's quiz (editor view). Throws `AdminApiError` 404 when
+ * the lesson has no quiz yet — callers treat that as "author a new one". */
+export function getQuiz(lessonId: string): Promise<EditorQuiz> {
+	ensureBase();
+	return fetch(`${API_BASE}/api/v1/admin/lessons/${enc(lessonId)}/quiz`, {
+		method: 'GET',
+		headers: withAuth({ accept: 'application/json' })
+	}).then(async (res) => {
+		if (!res.ok) throw new AdminApiError(res.status, await readError(res));
+		return (await res.json()) as EditorQuiz;
+	});
+}
+
+export function upsertQuiz(lessonId: string, input: UpsertQuizInput): Promise<EditorQuiz> {
+	return sendJson<EditorQuiz>('PUT', `/api/v1/admin/lessons/${enc(lessonId)}/quiz`, input);
+}
+
+export function deleteQuiz(lessonId: string): Promise<void> {
+	return del(`/api/v1/admin/lessons/${enc(lessonId)}/quiz`);
 }

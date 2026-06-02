@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { get } from 'svelte/store';
 import { createAdminViewModel, type AdminViewModelDeps } from '../adminViewModel';
+import { AdminApiError } from '$lib/api/adminApi';
 import type { CourseDetail, CourseSummary } from '$lib/api/coursesApi';
 
 const draft: CourseSummary = {
@@ -49,6 +50,11 @@ function fakeDeps(over: Partial<AdminViewModelDeps> = {}): AdminViewModelDeps {
 			sizeBytes: 10,
 			category: 'video'
 		}),
+		getQuiz: vi.fn().mockResolvedValue({ id: 'q-1', lessonId: 'l-1', passingScore: 70, questions: [] }),
+		upsertQuiz: vi
+			.fn()
+			.mockResolvedValue({ id: 'q-1', lessonId: 'l-1', passingScore: 70, questions: [] }),
+		deleteQuiz: vi.fn().mockResolvedValue(undefined),
 		...over
 	};
 }
@@ -181,6 +187,56 @@ describe('adminViewModel — lesson editing', () => {
 		);
 		expect(await failing.upload(file)).toBeNull();
 		expect(get(failing.error)).toBe('too big');
+	});
+});
+
+describe('adminViewModel — quiz authoring', () => {
+	it('loadQuiz returns the editor quiz', async () => {
+		const vm = createAdminViewModel(fakeDeps());
+		const quiz = await vm.loadQuiz('l-1');
+		expect(quiz?.id).toBe('q-1');
+	});
+
+	it('loadQuiz returns null (not an error) on 404', async () => {
+		const vm = createAdminViewModel(
+			fakeDeps({ getQuiz: vi.fn().mockRejectedValue(new AdminApiError(404, 'quiz not found')) })
+		);
+		expect(await vm.loadQuiz('l-1')).toBeNull();
+		expect(get(vm.error)).toBeNull();
+	});
+
+	it('loadQuiz surfaces non-404 errors', async () => {
+		const vm = createAdminViewModel(
+			fakeDeps({ getQuiz: vi.fn().mockRejectedValue(new AdminApiError(500, 'boom')) })
+		);
+		expect(await vm.loadQuiz('l-1')).toBeNull();
+		expect(get(vm.error)).toBe('boom');
+	});
+
+	it('saveQuiz returns true and forwards the input', async () => {
+		const deps = fakeDeps();
+		const vm = createAdminViewModel(deps);
+		const input = {
+			passingScore: 80,
+			questions: [{ prompt: '2+2?', options: [{ text: '4', isCorrect: true }] }]
+		};
+		expect(await vm.saveQuiz('l-1', input)).toBe(true);
+		expect(deps.upsertQuiz).toHaveBeenCalledWith('l-1', input);
+	});
+
+	it('saveQuiz returns false + records error on failure', async () => {
+		const vm = createAdminViewModel(
+			fakeDeps({ upsertQuiz: vi.fn().mockRejectedValue(new Error('exactly one correct')) })
+		);
+		expect(await vm.saveQuiz('l-1', { questions: [] })).toBe(false);
+		expect(get(vm.error)).toBe('exactly one correct');
+	});
+
+	it('removeQuiz deletes', async () => {
+		const deps = fakeDeps();
+		const vm = createAdminViewModel(deps);
+		expect(await vm.removeQuiz('l-1')).toBe(true);
+		expect(deps.deleteQuiz).toHaveBeenCalledWith('l-1');
 	});
 });
 
