@@ -192,6 +192,26 @@ class _FakeCourseRepo:
         pass
 
 
+class _FakeAnalyticsRepo:
+    async def learner_counts(self, user_id):
+        from cyberdyne_backend.domain.analytics import LearnerCounts
+
+        return LearnerCounts(
+            enrolled_paths=2,
+            completed_paths=1,
+            active_paths=1,
+            best_quiz_scores=[80, 100],
+            quizzes_passed=2,
+            total_quiz_attempts=3,
+            certificates=1,
+        )
+
+    async def platform_counts(self):
+        from cyberdyne_backend.domain.analytics import PlatformCounts
+
+        return PlatformCounts()
+
+
 class _FakeQuizRepo:
     LESSON_ID = uuid.UUID("aaaaaaaa-0000-0000-0000-000000000001")
 
@@ -405,6 +425,7 @@ def _build_ctx(
     dao: bool = False,
     user_id: object | None = None,
 ) -> ToolContext:
+    from cyberdyne_backend.application.analytics import GetLearnerDashboard
     from cyberdyne_backend.application.blog import GetBlogPost, ListBlogPosts
     from cyberdyne_backend.application.courses import GetCourse, ListCourses
     from cyberdyne_backend.application.dao_treasury import GetDaoOverview
@@ -453,6 +474,7 @@ def _build_ctx(
         get_my_deadlines=GetMyDeadlines(repo=learning),
         path_gating=GetPathGating(repo=learning),
         get_quiz=GetQuiz(repo=quizzes),  # type: ignore[arg-type]
+        learner_dashboard=GetLearnerDashboard(repo=_FakeAnalyticsRepo()),  # type: ignore[arg-type]
         user_id=user_id,  # type: ignore[arg-type]
     )
 
@@ -1199,6 +1221,21 @@ class TestLearningAwarenessTools:
             ToolCall(id="x", name="get_lesson_quiz", arguments_json='{"lesson_id": "not-a-uuid"}')
         )
         assert json.loads(out)["error"] == "invalid_lesson_id"
+
+    async def test_dashboard_requires_auth(self) -> None:
+        out = await ToolDispatcher(_build_ctx()).dispatch(
+            ToolCall(id="x", name="get_my_dashboard", arguments_json="{}")
+        )
+        assert json.loads(out)["error"] == "sign_in_required"
+
+    async def test_dashboard_for_user(self) -> None:
+        out = await ToolDispatcher(_build_ctx(user_id=uuid.uuid4())).dispatch(
+            ToolCall(id="x", name="get_my_dashboard", arguments_json="{}")
+        )
+        data = json.loads(out)
+        assert data["enrolled_paths"] == 2
+        assert data["avg_quiz_score"] == 90.0  # mean(best 80, 100)
+        assert data["quiz_pass_rate"] == 100.0  # 2/2 attempted quizzes passed
 
 
 # Suppress unused-import warning.

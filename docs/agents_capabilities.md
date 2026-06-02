@@ -59,6 +59,7 @@ the same application services the REST API uses.
 | `get_my_learning` | The user's enrollments, per-module progress, and earned certificates. |
 | `get_my_deadlines` | Enrollment deadlines with status (overdue / urgent / upcoming / none) + days remaining. |
 | `get_path_gating` | Per-module lock state in a path (unlocked/locked) and the reason (level / sequential prerequisite). |
+| `get_my_dashboard` | Learner analytics: enrolled/completed/active paths, completed + in-progress modules, avg module %, quizzes attempted/passed + pass rate + avg score, certificate count — for a narrative progress summary. |
 
 User-scoped tools return `sign_in_required` when the caller is anonymous;
 the agent then asks the user to sign in. (Certificate *issuance* stays
@@ -91,11 +92,9 @@ agent uses `matlab_repl('whos')`.
 ## Planned (learning-companion / AI phases)
 
 The agent is the delivery vehicle for the Academy's AI features. Built so
-far: the learning-catalogue + progress + deadlines + gating tools above.
-Next, in order:
+far: the learning-catalogue + progress + deadlines + gating + quiz
+player-view + dashboard tools above. Next, in order:
 
-- `get_my_dashboard` — the learner analytics summary, enabling an
-  LLM-written narrative performance summary.
 - AI contextual feedback (post-attempt "why it's wrong") and LLM course
   recommendations — thin use cases over the quiz/dashboard/catalogue data.
 - Code-interpreter lessons reuse the existing `matlab_*` tools + the

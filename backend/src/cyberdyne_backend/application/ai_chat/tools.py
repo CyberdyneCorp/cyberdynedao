@@ -24,6 +24,7 @@ from decimal import Decimal
 from typing import cast
 from uuid import UUID
 
+from cyberdyne_backend.application.analytics import GetLearnerDashboard
 from cyberdyne_backend.application.blog.use_cases import (
     GetBlogPost,
     ListBlogPosts,
@@ -411,6 +412,16 @@ CYBERDYNE_TOOLS: list[ToolSchema] = [
             "required": ["lesson_id"],
         },
     ),
+    ToolSchema(
+        name="get_my_dashboard",
+        description=(
+            "Get the signed-in learner's analytics dashboard: enrolled / completed / active "
+            "paths, completed + in-progress modules, average module percent, quizzes "
+            "attempted/passed + pass rate + average score, and certificate count. Use to give a "
+            "narrative progress summary or decide what to recommend next. Requires authentication."
+        ),
+        parameters={"type": "object", "properties": {}, "required": []},
+    ),
 ]
 
 
@@ -450,6 +461,7 @@ class ToolContext:
     get_my_deadlines: GetMyDeadlines | None = None
     path_gating: GetPathGating | None = None
     get_quiz: GetQuiz | None = None
+    learner_dashboard: GetLearnerDashboard | None = None
     user_id: UUID | None = None
 
 
@@ -523,6 +535,8 @@ class ToolDispatcher:
                 return await self._get_path_gating(cast(str, args.get("path_slug", "")))
             if call.name == "get_lesson_quiz":
                 return await self._get_lesson_quiz(cast(str, args.get("lesson_id", "")))
+            if call.name == "get_my_dashboard":
+                return await self._get_my_dashboard()
         except Exception as exc:
             logger.exception("tool %s failed", call.name)
             return json.dumps({"error": "tool_failed", "detail": str(exc)})
@@ -953,6 +967,29 @@ class ToolDispatcher:
                     }
                     for q in quiz.questions
                 ],
+            }
+        )
+
+    async def _get_my_dashboard(self) -> str:
+        if self._ctx.learner_dashboard is None:
+            return json.dumps({"error": "analytics_unavailable"})
+        if self._ctx.user_id is None:
+            return json.dumps({"error": "sign_in_required"})
+        d = await self._ctx.learner_dashboard.execute(self._ctx.user_id)
+        return json.dumps(
+            {
+                "enrolled_paths": d.enrolled_paths,
+                "completed_paths": d.completed_paths,
+                "active_paths": d.active_paths,
+                "completed_modules": d.completed_modules,
+                "in_progress_modules": d.in_progress_modules,
+                "avg_module_percent": d.avg_module_percent,
+                "quizzes_attempted": d.quizzes_attempted,
+                "quizzes_passed": d.quizzes_passed,
+                "quiz_pass_rate": d.quiz_pass_rate,
+                "avg_quiz_score": d.avg_quiz_score,
+                "total_quiz_attempts": d.total_quiz_attempts,
+                "certificates": d.certificates,
             }
         )
 
