@@ -20,6 +20,7 @@ from cyberdyne_backend.domain.courses import (
     CourseNotFoundError,
     CourseProgressRepository,
     CourseRepository,
+    course_certificate_eligible,
     new_course_certificate,
 )
 
@@ -109,7 +110,41 @@ class RenderCourseCertificatePdf:
         return self.renderer.render(certificate=cert, subject_title=title, verify_url=verify_url)
 
 
+@dataclass(slots=True)
+class AwardCourseCertificate:
+    """Auto-award a course certificate the moment a learner completes
+    every lesson. Idempotent and silent when not yet eligible, so the
+    progress write-path can call it unconditionally after a write."""
+
+    courses: CourseRepository
+    progress: CourseProgressRepository
+    certificates: CourseCertificateRepository
+    signer: CourseCertificateSigner
+
+    async def award_if_complete(self, *, user_id: UUID, course_id: UUID) -> None:
+        course = await self.courses.get_by_id(course_id)
+        if course is None:
+            return
+        existing = await self.certificates.get_for_user_and_course(
+            user_id=user_id, course_slug=course.slug
+        )
+        if existing is not None:
+            return
+        rows = await self.progress.list_course_progress(user_id=user_id, course_id=course_id)
+        progress_by_lesson = {row.lesson_id: row for row in rows}
+        if not course_certificate_eligible(course, progress_by_lesson):
+            return
+        certificate = new_course_certificate(
+            user_id=user_id,
+            course=course,
+            progress_by_lesson=progress_by_lesson,
+            signer=self.signer,
+        )
+        await self.certificates.save(certificate)
+
+
 __all__ = [
+    "AwardCourseCertificate",
     "CourseCertificateVerification",
     "GetMyCourseCertificate",
     "IssueCourseCertificate",

@@ -8,6 +8,7 @@ from uuid import UUID
 import pytest
 
 from cyberdyne_backend.application.courses import (
+    AwardCourseCertificate,
     GetMyCourseCertificate,
     IssueCourseCertificate,
     RenderCourseCertificatePdf,
@@ -118,6 +119,11 @@ class FakeCourseRepo:
         if self._course is None or self._course.slug != slug:
             raise CourseNotFoundError(slug)
         return self._course
+
+    async def get_by_id(self, course_id: UUID) -> Course | None:
+        if self._course is not None and self._course.id == course_id:
+            return self._course
+        return None
 
     async def list_courses(self, *, level: object = None, include_drafts: bool = False):  # type: ignore[no-untyped-def]
         raise NotImplementedError  # pragma: no cover - unused
@@ -322,3 +328,50 @@ class TestRenderCourseCertificatePdf:
         )
         with pytest.raises(CourseCertificateNotFoundError):
             await uc.execute(uuid.uuid4())
+
+
+class TestAwardCourseCertificate:
+    def _uc(
+        self, course: Course | None, rows: list[LessonProgress], certs: FakeCertRepo
+    ) -> AwardCourseCertificate:
+        return AwardCourseCertificate(
+            courses=FakeCourseRepo(course),
+            progress=FakeProgressRepo(rows),
+            certificates=certs,
+            signer=FakeSigner(),
+        )
+
+    async def test_awards_when_complete(self) -> None:
+        course = _course(2)
+        user = uuid.uuid4()
+        certs = FakeCertRepo()
+        await self._uc(
+            course, list(_all_completed(course, user).values()), certs
+        ).award_if_complete(user_id=user, course_id=course.id)
+        assert len(certs.saved) == 1
+        assert certs.saved[0].course_slug == course.slug
+
+    async def test_noop_when_incomplete(self) -> None:
+        course = _course(2)
+        certs = FakeCertRepo()
+        await self._uc(course, [], certs).award_if_complete(
+            user_id=uuid.uuid4(), course_id=course.id
+        )
+        assert certs.saved == []
+
+    async def test_idempotent_when_already_awarded(self) -> None:
+        course = _course(1)
+        user = uuid.uuid4()
+        rows = list(_all_completed(course, user).values())
+        certs = FakeCertRepo()
+        uc = self._uc(course, rows, certs)
+        await uc.award_if_complete(user_id=user, course_id=course.id)
+        await uc.award_if_complete(user_id=user, course_id=course.id)
+        assert len(certs.saved) == 1
+
+    async def test_noop_when_course_missing(self) -> None:
+        certs = FakeCertRepo()
+        await self._uc(None, [], certs).award_if_complete(
+            user_id=uuid.uuid4(), course_id=uuid.uuid4()
+        )
+        assert certs.saved == []

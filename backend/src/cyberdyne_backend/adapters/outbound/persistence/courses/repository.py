@@ -110,6 +110,13 @@ class SqlAlchemyCourseRepository:
         lessons = await self._lessons_for(row.id)
         return _row_to_course(row, lessons)
 
+    async def get_by_id(self, course_id: UUID) -> Course | None:
+        row = await self._session.get(CourseRow, course_id)
+        if row is None:
+            return None
+        lessons = await self._lessons_for(row.id)
+        return _row_to_course(row, lessons)
+
     async def list_courses(
         self,
         *,

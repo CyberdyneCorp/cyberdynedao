@@ -26,6 +26,12 @@ class CourseRepository(Protocol):
         ``include_drafts`` is true (editor scope)."""
         ...
 
+    async def get_by_id(self, course_id: UUID) -> Course | None:
+        """Load a course (with its lessons) by id, or ``None`` if absent.
+        Used by cross-cutting flows that hold a course id (e.g. awarding a
+        certificate when progress marks the course complete)."""
+        ...
+
     async def list_courses(
         self,
         *,
@@ -108,3 +114,12 @@ class CourseCertificatePdfRenderer(Protocol):
     def render(
         self, *, certificate: CourseCertificate, subject_title: str, verify_url: str
     ) -> bytes: ...
+
+
+@runtime_checkable
+class CourseCertificateAwarder(Protocol):
+    """Awards a course certificate when a learner's progress completes
+    the course. Idempotent and a no-op when not yet eligible, so the
+    progress write-path can fire it unconditionally."""
+
+    async def award_if_complete(self, *, user_id: UUID, course_id: UUID) -> None: ...

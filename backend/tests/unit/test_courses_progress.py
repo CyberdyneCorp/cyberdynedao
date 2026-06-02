@@ -127,6 +127,11 @@ class FakeCourseRepo:
             raise CourseNotFoundError(slug)
         return self._course
 
+    async def get_by_id(self, course_id: UUID) -> Course | None:
+        if self._course is not None and self._course.id == course_id:
+            return self._course
+        return None
+
     async def list_courses(self, *, level: object = None, include_drafts: bool = False):  # type: ignore[no-untyped-def]
         raise NotImplementedError  # pragma: no cover - unused
 
@@ -268,3 +273,46 @@ class TestCourseLessonCompleter:
             user_id=uuid.uuid4(), lesson_id=uuid.uuid4()
         )
         assert prog.rows == {}
+
+
+class _RecordingAwarder:
+    def __init__(self) -> None:
+        self.awarded: list[tuple[UUID, UUID]] = []
+
+    async def award_if_complete(self, *, user_id: UUID, course_id: UUID) -> None:
+        self.awarded.append((user_id, course_id))
+
+
+class TestCertificateAwarding:
+    async def test_set_progress_awards_on_completion(self) -> None:
+        course = _course_with_lessons(1)
+        awarder = _RecordingAwarder()
+        uc = SetLessonProgress(
+            courses=FakeCourseRepo(course), progress=FakeProgressRepo(), awarder=awarder
+        )
+        user = uuid.uuid4()
+        await uc.execute(
+            user_id=user, slug=course.slug, lesson_id=course.lessons[0].id, percent=100
+        )
+        assert awarder.awarded == [(user, course.id)]
+
+    async def test_set_progress_skips_award_when_incomplete(self) -> None:
+        course = _course_with_lessons(2)
+        awarder = _RecordingAwarder()
+        uc = SetLessonProgress(
+            courses=FakeCourseRepo(course), progress=FakeProgressRepo(), awarder=awarder
+        )
+        await uc.execute(
+            user_id=uuid.uuid4(), slug=course.slug, lesson_id=course.lessons[0].id, percent=100
+        )
+        assert awarder.awarded == []
+
+    async def test_lesson_completer_awards(self) -> None:
+        prog = FakeProgressRepo()
+        user, course_id, lesson_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+        prog.lesson_courses[lesson_id] = course_id
+        awarder = _RecordingAwarder()
+        await CourseLessonCompleter(progress=prog, awarder=awarder).complete_lesson(
+            user_id=user, lesson_id=lesson_id
+        )
+        assert awarder.awarded == [(user, course_id)]

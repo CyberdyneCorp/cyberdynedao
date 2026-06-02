@@ -68,6 +68,9 @@ class FakeCourseRepo:
         items.sort(key=lambda c: (c.level.value, c.sort_order, c.title))
         return items
 
+    async def get_by_id(self, course_id: UUID) -> Course | None:
+        return next((c for c in self._by_slug.values() if c.id == course_id), None)
+
     async def delete(self, course_id: UUID) -> None:
         self._by_slug = {s: c for s, c in self._by_slug.items() if c.id != course_id}
 

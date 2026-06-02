@@ -27,6 +27,9 @@ class FakeCourseRepo:
     async def get_by_slug(self, slug: str, *, include_drafts: bool = False) -> Course:
         raise NotImplementedError  # pragma: no cover - unused
 
+    async def get_by_id(self, course_id: UUID) -> Course | None:
+        raise NotImplementedError  # pragma: no cover - unused
+
     async def list_courses(
         self,
         *,

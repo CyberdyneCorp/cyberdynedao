@@ -1,6 +1,7 @@
 """Courses use cases."""
 
 from cyberdyne_backend.application.courses.certificates import (
+    AwardCourseCertificate,
     CourseCertificateVerification,
     GetMyCourseCertificate,
     IssueCourseCertificate,
@@ -34,6 +35,7 @@ from cyberdyne_backend.application.courses.use_cases import (
 __all__ = [
     "AddLesson",
     "AddLessonCommand",
+    "AwardCourseCertificate",
     "CourseCertificateVerification",
     "CourseLessonCompleter",
     "CreateCourse",

@@ -256,6 +256,7 @@ from cyberdyne_backend.application.content.use_cases import (
 )
 from cyberdyne_backend.application.courses import (
     AddLesson,
+    AwardCourseCertificate,
     CourseLessonCompleter,
     CreateCourse,
     DeleteCourse,
@@ -540,6 +541,12 @@ def create_app() -> FastAPI:
             yield SetLessonProgress(
                 courses=SqlAlchemyCourseRepository(session),
                 progress=SqlAlchemyCourseProgressRepository(session),
+                awarder=AwardCourseCertificate(
+                    courses=SqlAlchemyCourseRepository(session),
+                    progress=SqlAlchemyCourseProgressRepository(session),
+                    certificates=SqlAlchemyCourseCertificateRepository(session),
+                    signer=container.certificate_signer,
+                ),
             )
 
     async def _my_course_progress_dep() -> AsyncIterator[GetMyCourseProgress]:
@@ -566,7 +573,13 @@ def create_app() -> FastAPI:
             yield SubmitQuizAttempt(
                 repo=SqlAlchemyQuizRepository(session),
                 lesson_completer=CourseLessonCompleter(
-                    progress=SqlAlchemyCourseProgressRepository(session)
+                    progress=SqlAlchemyCourseProgressRepository(session),
+                    awarder=AwardCourseCertificate(
+                        courses=SqlAlchemyCourseRepository(session),
+                        progress=SqlAlchemyCourseProgressRepository(session),
+                        certificates=SqlAlchemyCourseCertificateRepository(session),
+                        signer=container.certificate_signer,
+                    ),
                 ),
             )
 
