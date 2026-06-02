@@ -11,7 +11,13 @@
  */
 
 import { withAuth } from '$lib/auth/authToken';
-import type { CourseDetail, CourseLevel, CourseSummary } from './coursesApi';
+import type {
+	CourseDetail,
+	CourseLesson,
+	CourseLevel,
+	CourseSummary,
+	LessonType
+} from './coursesApi';
 
 const API_BASE = (import.meta.env.VITE_BACKEND_API_URL ?? '').replace(/\/+$/, '');
 
@@ -29,6 +35,24 @@ export interface UpdateCourseInput {
 	description?: string;
 	mandatory?: boolean;
 	sortOrder?: number;
+}
+
+export interface AddLessonInput {
+	title: string;
+	lessonType: LessonType;
+	contentUrl?: string;
+	textBody?: string;
+	duration?: string;
+	sortOrder?: number;
+}
+
+export interface UploadResult {
+	id: string;
+	url: string;
+	originalFilename: string;
+	contentType: string;
+	sizeBytes: number;
+	category: string;
 }
 
 export class AdminApiError extends Error {
@@ -103,4 +127,43 @@ export function deleteCourse(slug: string): Promise<void> {
 
 export function reorderCourses(order: Record<string, number>): Promise<CourseSummary[]> {
 	return sendJson<CourseSummary[]>('POST', '/api/v1/admin/courses/reorder', { order });
+}
+
+// ── Lessons ───────────────────────────────────────────────────────────
+
+export function addLesson(slug: string, input: AddLessonInput): Promise<CourseLesson> {
+	return sendJson<CourseLesson>('POST', `/api/v1/admin/courses/${enc(slug)}/lessons`, input);
+}
+
+export function deleteLesson(slug: string, lessonId: string): Promise<void> {
+	return del(`/api/v1/admin/courses/${enc(slug)}/lessons/${enc(lessonId)}`);
+}
+
+export function reorderLessons(
+	slug: string,
+	order: Record<string, number>
+): Promise<CourseDetail> {
+	return sendJson<CourseDetail>(
+		'POST',
+		`/api/v1/admin/courses/${enc(slug)}/lessons/reorder`,
+		{ order }
+	);
+}
+
+// ── Uploads (multipart) ───────────────────────────────────────────────
+
+/** Upload a single file → its stored metadata incl. the `url` to use as
+ * a lesson's `contentUrl`. Content-type is left unset so the browser
+ * adds the multipart boundary. */
+export async function uploadFile(file: File): Promise<UploadResult> {
+	ensureBase();
+	const form = new FormData();
+	form.append('file', file);
+	const res = await fetch(`${API_BASE}/api/v1/admin/uploads`, {
+		method: 'POST',
+		headers: withAuth({ accept: 'application/json' }),
+		body: form
+	});
+	if (!res.ok) throw new AdminApiError(res.status, await readError(res));
+	return (await res.json()) as UploadResult;
 }
