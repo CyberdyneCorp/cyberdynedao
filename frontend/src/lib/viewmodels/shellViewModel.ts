@@ -119,7 +119,8 @@ const DEFAULT_START_SECTIONS: StartMenuSection[] = [
 		items: [
 			{ id: 'Blog', label: 'Blog', icon: '📰' },
 			{ id: 'Learn', label: 'Academy', icon: '🎓' },
-			{ id: 'Courses', label: 'Courses', icon: '📚' }
+			{ id: 'Courses', label: 'Courses', icon: '📚' },
+			{ id: 'Admin', label: 'Academy Admin', icon: '🛠️', subtitle: 'Author courses (editor)' }
 		]
 	},
 	{

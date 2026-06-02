@@ -95,6 +95,9 @@ export interface AuthViewModel {
 	readonly user: AuthUser | null;
 	readonly expiresAt: number;
 	readonly isAuthenticated: boolean;
+	/** True when the signed-in user carries the `editor` scope — gates
+	 * the admin authoring surface (course/lesson/quiz CMS). */
+	readonly isEditor: boolean;
 	readonly isRestored: boolean;
 	readonly loading: boolean;
 	readonly error: string | null;
@@ -281,6 +284,9 @@ export function createAuthVM(): AuthViewModel {
 		get user() { return user; },
 		get expiresAt() { return expiresAt; },
 		get isAuthenticated() { return token !== null; },
+		get isEditor() {
+			return Array.isArray(user?.scopes) && user.scopes.includes('editor');
+		},
 		get isRestored() { return isRestored; },
 		get loading() { return loading; },
 		get error() { return error; },

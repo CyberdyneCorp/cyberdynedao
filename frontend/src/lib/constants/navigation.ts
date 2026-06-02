@@ -26,6 +26,7 @@ export const viewMap: { [key: string]: any } = {
 	'Services': 'services',
 	'Learn': 'listen',
 	'Courses': 'courses',
+	'Admin': 'admin',
 	'Cyberdyne': 'cyberdyne',
 	'Contact Us': 'contact',
 	'DAO': 'dao',
