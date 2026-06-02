@@ -1,5 +1,11 @@
 """Courses use cases."""
 
+from cyberdyne_backend.application.courses.certificates import (
+    CourseCertificateVerification,
+    GetMyCourseCertificate,
+    IssueCourseCertificate,
+    VerifyCourseCertificate,
+)
 from cyberdyne_backend.application.courses.progress import (
     CourseLessonCompleter,
     GetMyCourseProgress,
@@ -27,13 +33,16 @@ from cyberdyne_backend.application.courses.use_cases import (
 __all__ = [
     "AddLesson",
     "AddLessonCommand",
+    "CourseCertificateVerification",
     "CourseLessonCompleter",
     "CreateCourse",
     "CreateCourseCommand",
     "DeleteCourse",
     "DeleteLesson",
     "GetCourse",
+    "GetMyCourseCertificate",
     "GetMyCourseProgress",
+    "IssueCourseCertificate",
     "ListCourses",
     "ReorderCourses",
     "ReorderLessons",
@@ -44,4 +53,5 @@ __all__ = [
     "UpdateCourseCommand",
     "UpdateLesson",
     "UpdateLessonCommand",
+    "VerifyCourseCertificate",
 ]

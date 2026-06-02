@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Protocol, runtime_checkable
 from uuid import UUID
 
+from cyberdyne_backend.domain.courses.certificates import CourseCertificate
 from cyberdyne_backend.domain.courses.entities import Course, CourseLevel
 from cyberdyne_backend.domain.courses.progress import LessonProgress
 
@@ -63,3 +64,37 @@ class CourseProgressRepository(Protocol):
         exists. Lets a cross-context caller (e.g. quiz completion) resolve
         the owning course without holding a courses repository."""
         ...
+
+
+@runtime_checkable
+class CourseCertificateRepository(Protocol):
+    """Persists course completion certificates (one per user+course)."""
+
+    async def save(self, certificate: CourseCertificate) -> None:
+        """Insert the certificate. Issuance is idempotent at the use-case
+        layer, so this is only reached for a genuinely new certificate."""
+        ...
+
+    async def get_for_user_and_course(
+        self, *, user_id: UUID, course_slug: str
+    ) -> CourseCertificate | None:
+        """The learner's certificate for a course, or ``None``."""
+        ...
+
+    async def get_by_id(self, certificate_id: UUID) -> CourseCertificate | None:
+        """A certificate by id (for public verification), or ``None``."""
+        ...
+
+    async def list_for_user(self, user_id: UUID) -> list[CourseCertificate]:
+        """Every course certificate the learner has earned."""
+        ...
+
+
+@runtime_checkable
+class CourseCertificateSigner(Protocol):
+    """Signs/verifies a certificate's verification hash. Structurally
+    satisfied by the shared HMAC signer."""
+
+    def sign(self, message: str) -> str: ...
+
+    def verify(self, message: str, signature: str) -> bool: ...

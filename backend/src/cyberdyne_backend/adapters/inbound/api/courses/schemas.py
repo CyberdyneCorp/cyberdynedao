@@ -140,3 +140,19 @@ class CourseProgressResponse(_CamelModel):
     percent: int
     completed: bool
     lessons: list[LessonProgressResponse]
+
+
+# ── Certificates ──────────────────────────────────────────────────────
+
+
+class CourseCertificateResponse(_CamelModel):
+    id: UUID
+    user_id: UUID
+    course_slug: str
+    issued_at: datetime
+    verification_hash: str
+
+
+class CourseCertificateVerificationResponse(_CamelModel):
+    valid: bool
+    certificate: CourseCertificateResponse | None = None

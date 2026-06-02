@@ -85,6 +85,15 @@ from cyberdyne_backend.adapters.inbound.api.courses.router import (
     get_update_lesson_uc,
 )
 from cyberdyne_backend.adapters.inbound.api.courses.router import (
+    get_issue_certificate_uc as get_issue_course_cert_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.courses.router import (
+    get_my_certificate_uc as get_my_course_cert_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.courses.router import (
+    get_verify_certificate_uc as get_verify_course_cert_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.courses.router import (
     public_router as courses_public_router,
 )
 from cyberdyne_backend.adapters.inbound.api.dao.router import (
@@ -190,6 +199,9 @@ from cyberdyne_backend.adapters.outbound.persistence.blog.repository import (
 from cyberdyne_backend.adapters.outbound.persistence.content.repository import (
     SqlAlchemyContentRepository,
 )
+from cyberdyne_backend.adapters.outbound.persistence.courses.certificate_repository import (
+    SqlAlchemyCourseCertificateRepository,
+)
 from cyberdyne_backend.adapters.outbound.persistence.courses.progress_repository import (
     SqlAlchemyCourseProgressRepository,
 )
@@ -246,7 +258,9 @@ from cyberdyne_backend.application.courses import (
     DeleteCourse,
     DeleteLesson,
     GetCourse,
+    GetMyCourseCertificate,
     GetMyCourseProgress,
+    IssueCourseCertificate,
     ListCourses,
     ReorderCourses,
     ReorderLessons,
@@ -255,6 +269,7 @@ from cyberdyne_backend.application.courses import (
     SetLessonProgress,
     UpdateCourse,
     UpdateLesson,
+    VerifyCourseCertificate,
 )
 from cyberdyne_backend.application.dao_treasury import GetDaoOverview
 from cyberdyne_backend.application.leads import (
@@ -460,6 +475,28 @@ def create_app() -> FastAPI:
     async def _set_course_deadline_dep() -> AsyncIterator[SetCourseDeadline]:
         async with session_scope() as session:
             yield SetCourseDeadline(repo=SqlAlchemyCourseRepository(session))
+
+    async def _issue_course_cert_dep() -> AsyncIterator[IssueCourseCertificate]:
+        async with session_scope() as session:
+            yield IssueCourseCertificate(
+                courses=SqlAlchemyCourseRepository(session),
+                progress=SqlAlchemyCourseProgressRepository(session),
+                certificates=SqlAlchemyCourseCertificateRepository(session),
+                signer=container.certificate_signer,
+            )
+
+    async def _my_course_cert_dep() -> AsyncIterator[GetMyCourseCertificate]:
+        async with session_scope() as session:
+            yield GetMyCourseCertificate(
+                certificates=SqlAlchemyCourseCertificateRepository(session)
+            )
+
+    async def _verify_course_cert_dep() -> AsyncIterator[VerifyCourseCertificate]:
+        async with session_scope() as session:
+            yield VerifyCourseCertificate(
+                certificates=SqlAlchemyCourseCertificateRepository(session),
+                signer=container.certificate_signer,
+            )
 
     async def _delete_course_dep() -> AsyncIterator[DeleteCourse]:
         async with session_scope() as session:
@@ -748,6 +785,9 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_update_course_uc] = _update_course_dep
     app.dependency_overrides[get_set_published_uc] = _set_published_dep
     app.dependency_overrides[get_set_course_deadline_uc] = _set_course_deadline_dep
+    app.dependency_overrides[get_issue_course_cert_uc] = _issue_course_cert_dep
+    app.dependency_overrides[get_my_course_cert_uc] = _my_course_cert_dep
+    app.dependency_overrides[get_verify_course_cert_uc] = _verify_course_cert_dep
     app.dependency_overrides[get_delete_course_uc] = _delete_course_dep
     app.dependency_overrides[get_reorder_courses_uc] = _reorder_courses_dep
     app.dependency_overrides[get_add_lesson_uc] = _add_lesson_dep

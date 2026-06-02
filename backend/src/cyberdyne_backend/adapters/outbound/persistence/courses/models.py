@@ -90,3 +90,19 @@ class LessonProgressRow(Base):
         UniqueConstraint("user_id", "lesson_id", name="uq_lesson_progress_user_lesson"),
         Index("ix_lesson_progress_user_course", "user_id", "course_id"),
     )
+
+
+class CourseCertificateRow(Base):
+    """A learner's completion certificate for a course (one per pair)."""
+
+    __tablename__ = "course_certificates"
+    __table_args__ = (
+        UniqueConstraint("user_id", "course_slug", name="uq_course_cert_user_course"),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid(), primary_key=True)
+    user_id: Mapped[UUID] = mapped_column(Uuid(), nullable=False, index=True)
+    course_slug: Mapped[str] = mapped_column(String(128), nullable=False)
+    issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    verification_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    signed_payload: Mapped[str] = mapped_column(Text, nullable=False)

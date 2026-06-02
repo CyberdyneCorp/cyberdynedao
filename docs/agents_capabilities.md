@@ -62,8 +62,11 @@ the same application services the REST API uses.
 | `get_my_dashboard` | Learner analytics: enrolled/completed/active paths, completed + in-progress modules, completed + in-progress courses, avg module %, quizzes attempted/passed + pass rate + avg score, certificate count — for a narrative progress summary. |
 
 User-scoped tools return `sign_in_required` when the caller is anonymous;
-the agent then asks the user to sign in. (Certificate *issuance* stays
-admin-only and is not an agent tool; public verify/PDF are REST-only.)
+the agent then asks the user to sign in. (Path-certificate *issuance*
+stays admin-only and is not an agent tool; public verify/PDF are
+REST-only. Course completion certificates are learner-claimed REST
+endpoints — `POST/GET /api/v1/courses/{slug}/certificate` + public
+`/courses/certificates/{id}/verify` — also not agent tools today.)
 
 ### Blog
 | Tool | What it does |
