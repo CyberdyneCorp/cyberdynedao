@@ -134,7 +134,7 @@
 <style>
 	.sysadmin-view {
 		padding: 1.25rem;
-		color: #e5e7eb;
+		color: #000000;
 		font-family: system-ui, sans-serif;
 	}
 	.hero {
@@ -150,7 +150,7 @@
 	.hero p {
 		margin: 0.15rem 0 0;
 		font-size: 0.82rem;
-		color: #9ca3af;
+		color: #374151;
 	}
 	.banner {
 		padding: 0.5rem 0.75rem;
@@ -159,16 +159,16 @@
 		margin-bottom: 0.75rem;
 	}
 	.banner--warn {
-		background: #78350f;
-		color: #fcd34d;
+		background: #fef3c7;
+		color: #92400e;
 	}
 	.hint {
 		font-size: 0.85rem;
-		color: #9ca3af;
+		color: #374151;
 	}
 	.card {
-		background: #111827;
-		border: 1px solid #1f2937;
+		background: #ffffff;
+		border: 1px solid #d4d4d8;
 		border-radius: 8px;
 		padding: 0.85rem 1rem;
 		margin-bottom: 1rem;
@@ -185,7 +185,7 @@
 		font-size: 0.85rem;
 	}
 	.kv dt {
-		color: #9ca3af;
+		color: #374151;
 	}
 	.kv dd {
 		margin: 0;
@@ -196,8 +196,8 @@
 		gap: 0.35rem;
 	}
 	.kv code {
-		background: #0b1220;
-		border: 1px solid #1f2937;
+		background: #f3f4f6;
+		border: 1px solid #d4d4d8;
 		border-radius: 4px;
 		padding: 0.05rem 0.35rem;
 		font-size: 0.8rem;
@@ -214,8 +214,8 @@
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
-		background: #0b1220;
-		border: 1px solid #1f2937;
+		background: #f3f4f6;
+		border: 1px solid #d4d4d8;
 		border-radius: 6px;
 		padding: 0.6rem 0.75rem;
 	}
@@ -232,6 +232,6 @@
 	}
 	.tool__desc {
 		font-size: 0.78rem;
-		color: #9ca3af;
+		color: #374151;
 	}
 </style>

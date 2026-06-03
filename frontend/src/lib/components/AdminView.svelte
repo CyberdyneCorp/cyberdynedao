@@ -572,7 +572,7 @@
 <style>
 	.admin-view {
 		padding: 1.25rem;
-		color: #e5e7eb;
+		color: #000000;
 		font-family: system-ui, sans-serif;
 	}
 	.hero {
@@ -588,7 +588,7 @@
 	.hero p {
 		margin: 0.15rem 0 0;
 		font-size: 0.82rem;
-		color: #9ca3af;
+		color: #374151;
 	}
 	.banner {
 		padding: 0.5rem 0.75rem;
@@ -597,16 +597,16 @@
 		margin-bottom: 0.75rem;
 	}
 	.banner--error {
-		background: #7f1d1d;
-		color: #fecaca;
+		background: #fee2e2;
+		color: #991b1b;
 	}
 	.banner--warn {
-		background: #78350f;
-		color: #fcd34d;
+		background: #fef3c7;
+		color: #92400e;
 	}
 	.new-course {
-		background: #111827;
-		border: 1px solid #1f2937;
+		background: #ffffff;
+		border: 1px solid #d4d4d8;
 		border-radius: 8px;
 		padding: 0.85rem;
 		margin-bottom: 1.25rem;
@@ -644,8 +644,8 @@
 		justify-content: space-between;
 		align-items: center;
 		gap: 0.75rem;
-		background: #111827;
-		border: 1px solid #1f2937;
+		background: #ffffff;
+		border: 1px solid #d4d4d8;
 		border-radius: 6px;
 		padding: 0.5rem 0.7rem;
 	}
@@ -668,7 +668,7 @@
 		flex-shrink: 0;
 	}
 	.hint {
-		color: #9ca3af;
+		color: #374151;
 		font-size: 0.85rem;
 	}
 	.detail-head {
@@ -686,15 +686,15 @@
 		gap: 0.5rem;
 		align-items: center;
 		font-size: 0.85rem;
-		color: #9ca3af;
+		color: #374151;
 		margin-bottom: 0.75rem;
 	}
 	.num {
 		width: 5rem;
-		background: #0b1220;
-		border: 1px solid #1f2937;
+		background: #f3f4f6;
+		border: 1px solid #d4d4d8;
 		border-radius: 5px;
-		color: #e5e7eb;
+		color: #000000;
 		padding: 0.4rem 0.55rem;
 		font: inherit;
 		box-sizing: border-box;
@@ -704,20 +704,20 @@
 		flex-direction: column;
 		gap: 0.25rem;
 		font-size: 0.78rem;
-		color: #9ca3af;
+		color: #374151;
 	}
 	.dt {
-		background: #0b1220;
-		border: 1px solid #1f2937;
+		background: #f3f4f6;
+		border: 1px solid #d4d4d8;
 		border-radius: 5px;
-		color: #e5e7eb;
+		color: #000000;
 		padding: 0.4rem 0.55rem;
 		font: inherit;
 		box-sizing: border-box;
 	}
 	.qcard {
-		background: #111827;
-		border: 1px solid #1f2937;
+		background: #ffffff;
+		border: 1px solid #d4d4d8;
 		border-radius: 8px;
 		padding: 0.7rem;
 		margin-bottom: 0.6rem;
