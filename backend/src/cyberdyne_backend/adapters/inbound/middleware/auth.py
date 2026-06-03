@@ -14,8 +14,9 @@ public.
 from __future__ import annotations
 
 import logging
+from typing import Annotated
 
-from fastapi import HTTPException, Request, Response, status
+from fastapi import Depends, HTTPException, Request, Response, status
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from cyberdyne_backend.domain.auth_identity import (
@@ -24,6 +25,7 @@ from cyberdyne_backend.domain.auth_identity import (
     InvalidTokenError,
     Principal,
     UserPrincipal,
+    UserProfilePort,
 )
 
 logger = logging.getLogger("cyberdyne_backend.auth.middleware")
@@ -103,20 +105,38 @@ def require_principal(request: Request) -> Principal:
     return principal
 
 
-def require_editor(request: Request) -> UserPrincipal:
+def get_user_profile_port() -> UserProfilePort | None:
+    """Provider seam for the ``/users/me`` profile port.
+
+    The app factory overrides this with the container's cached client.
+    Defaults to ``None`` so guards that depend on it degrade to
+    introspection-only when the port isn't wired (e.g. minimal test
+    apps that don't need the profile fallback).
+    """
+    return None
+
+
+async def require_editor(
+    request: Request,
+    profile_port: Annotated[UserProfilePort | None, Depends(get_user_profile_port)] = None,
+) -> UserPrincipal:
     """Asserts the caller may author content.
 
     Service tokens (``ServicePrincipal``) are rejected — authoring is
-    gated to human reviewers. A user passes when either:
+    gated to human reviewers. A user passes when any of:
 
-    - the token carries the ``editor`` scope, or
-    - CyberdyneAuth marks the user as an admin (``is_admin`` flag).
+    - the token carries the ``editor`` scope,
+    - the introspection response flags the user as an admin, or
+    - the user's ``/users/me`` profile flags them as an admin.
 
     The admin path exists because CyberdyneAuth's on-chain policy
     engine — which would otherwise grant the ``editor`` scope — is
     currently disabled, so it doesn't surface scopes on user tokens.
-    Admins are recognised by the introspection ``is_superuser`` /
-    ``is_admin`` flag instead.
+    Admins are recognised by the ``is_superuser`` / ``is_admin`` flag
+    instead. That flag may live on the introspection response or only
+    on ``/users/me`` depending on the auth-server version, so we check
+    introspection first (free — already resolved by the middleware) and
+    fall back to a best-effort, cached profile lookup only when needed.
     """
     principal = require_principal(request)
     if not isinstance(principal, UserPrincipal):
@@ -124,9 +144,19 @@ def require_editor(request: Request) -> UserPrincipal:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="user token required (service tokens cannot edit asks)",
         )
-    if EDITOR_SCOPE not in principal.scopes and not principal.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="editor scope or admin required",
-        )
-    return principal
+    if EDITOR_SCOPE in principal.scopes or principal.is_admin:
+        return principal
+
+    # Introspection didn't authorise the caller. CyberdyneAuth may only
+    # surface the admin flag on /users/me, so try that before rejecting.
+    if profile_port is not None:
+        token = extract_token(request)
+        if token:
+            profile = await profile_port.get_profile(token)
+            if profile is not None and profile.is_admin:
+                return principal
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="editor scope or admin required",
+    )
