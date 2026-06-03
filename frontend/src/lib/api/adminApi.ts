@@ -46,6 +46,15 @@ export interface AddLessonInput {
 	sortOrder?: number;
 }
 
+// Lesson type is fixed at creation; everything else is editable.
+export interface UpdateLessonInput {
+	title?: string;
+	contentUrl?: string;
+	textBody?: string;
+	duration?: string;
+	sortOrder?: number;
+}
+
 export interface UploadResult {
 	id: string;
 	url: string;
@@ -180,6 +189,18 @@ export function reorderCourses(order: Record<string, number>): Promise<CourseSum
 
 export function addLesson(slug: string, input: AddLessonInput): Promise<CourseLesson> {
 	return sendJson<CourseLesson>('POST', `/api/v1/admin/courses/${enc(slug)}/lessons`, input);
+}
+
+export function updateLesson(
+	slug: string,
+	lessonId: string,
+	input: UpdateLessonInput
+): Promise<CourseLesson> {
+	return sendJson<CourseLesson>(
+		'PATCH',
+		`/api/v1/admin/courses/${enc(slug)}/lessons/${enc(lessonId)}`,
+		input
+	);
 }
 
 export function deleteLesson(slug: string, lessonId: string): Promise<void> {
