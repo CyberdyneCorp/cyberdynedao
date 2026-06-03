@@ -9,7 +9,7 @@
  * course) so the view reflects server truth without optimistic bookkeeping.
  */
 
-import { writable, type Writable } from 'svelte/store';
+import { get, writable, type Writable } from 'svelte/store';
 import {
 	fetchCourse as apiFetchCourse,
 	fetchCourses as apiFetchCourses,
@@ -25,15 +25,19 @@ import {
 	deleteQuiz as apiDeleteQuiz,
 	getQuiz as apiGetQuiz,
 	publishCourse as apiPublishCourse,
+	reorderCourses as apiReorderCourses,
+	reorderLessons as apiReorderLessons,
 	setCourseDeadline as apiSetCourseDeadline,
 	unpublishCourse as apiUnpublishCourse,
 	updateCourse as apiUpdateCourse,
+	updateLesson as apiUpdateLesson,
 	upsertQuiz as apiUpsertQuiz,
 	uploadFile as apiUploadFile,
 	type AddLessonInput,
 	type CreateCourseInput,
 	type EditorQuiz,
 	type UpdateCourseInput,
+	type UpdateLessonInput,
 	type UploadResult,
 	type UpsertQuizInput
 } from '$lib/api/adminApi';
@@ -53,6 +57,24 @@ export function shouldAutoLoad(canEdit: boolean, attempted: boolean, loading: bo
 	return canEdit && !attempted && !loading;
 }
 
+/**
+ * Build the `{id: sortOrder}` payload for a reorder endpoint after moving
+ * the item at `index` one step `up`/`down`. Returns `null` when the move
+ * is a no-op (out of bounds), so callers can skip the request. Order is
+ * re-densified to 0..n-1 so sort positions stay contiguous.
+ */
+export function reorderedMap(
+	ids: string[],
+	index: number,
+	dir: 'up' | 'down'
+): Record<string, number> | null {
+	const target = dir === 'up' ? index - 1 : index + 1;
+	if (index < 0 || target < 0 || target >= ids.length) return null;
+	const next = [...ids];
+	[next[index], next[target]] = [next[target], next[index]];
+	return Object.fromEntries(next.map((id, i) => [id, i]));
+}
+
 export interface AdminViewModelDeps {
 	listCourses: typeof apiFetchCourses;
 	getCourse: typeof apiFetchCourse;
@@ -62,8 +84,11 @@ export interface AdminViewModelDeps {
 	publishCourse: typeof apiPublishCourse;
 	unpublishCourse: typeof apiUnpublishCourse;
 	deleteCourse: typeof apiDeleteCourse;
+	reorderCourses: typeof apiReorderCourses;
 	addLesson: typeof apiAddLesson;
+	updateLesson: typeof apiUpdateLesson;
 	deleteLesson: typeof apiDeleteLesson;
+	reorderLessons: typeof apiReorderLessons;
 	uploadFile: typeof apiUploadFile;
 	getQuiz: typeof apiGetQuiz;
 	upsertQuiz: typeof apiUpsertQuiz;
@@ -79,8 +104,11 @@ const defaultDeps: AdminViewModelDeps = {
 	publishCourse: apiPublishCourse,
 	unpublishCourse: apiUnpublishCourse,
 	deleteCourse: apiDeleteCourse,
+	reorderCourses: apiReorderCourses,
 	addLesson: apiAddLesson,
+	updateLesson: apiUpdateLesson,
 	deleteLesson: apiDeleteLesson,
+	reorderLessons: apiReorderLessons,
 	uploadFile: apiUploadFile,
 	getQuiz: apiGetQuiz,
 	upsertQuiz: apiUpsertQuiz,
@@ -97,6 +125,9 @@ export interface AdminViewModel {
 	create: (input: CreateCourseInput) => Promise<boolean>;
 	editCourse: (slug: string, input: UpdateCourseInput) => Promise<boolean>;
 	setDeadline: (slug: string, dueAt: string | null) => Promise<boolean>;
+	moveCourse: (slug: string, dir: 'up' | 'down') => Promise<boolean>;
+	editLesson: (lessonId: string, input: UpdateLessonInput) => Promise<boolean>;
+	moveLesson: (lessonId: string, dir: 'up' | 'down') => Promise<boolean>;
 	publish: (slug: string) => Promise<void>;
 	unpublish: (slug: string) => Promise<void>;
 	remove: (slug: string) => Promise<void>;
@@ -261,6 +292,29 @@ export function createAdminViewModel(deps: AdminViewModelDeps = defaultDeps): Ad
 			const ok = await mutateSelected(() => deps.setCourseDeadline(slug, dueAt));
 			if (ok) await load();
 			return ok;
+		},
+		moveCourse: async (slug, dir) => {
+			const list = get(courses);
+			const map = reorderedMap(
+				list.map((c) => c.slug),
+				list.findIndex((c) => c.slug === slug),
+				dir
+			);
+			if (!map) return false;
+			return mutate(() => deps.reorderCourses(map));
+		},
+		editLesson: (lessonId, input) =>
+			mutateSelected(() => deps.updateLesson(selectedSlug as string, lessonId, input)),
+		moveLesson: async (lessonId, dir) => {
+			const sel = get(selected);
+			if (!sel) return false;
+			const map = reorderedMap(
+				sel.lessons.map((l) => l.id),
+				sel.lessons.findIndex((l) => l.id === lessonId),
+				dir
+			);
+			if (!map) return false;
+			return mutateSelected(() => deps.reorderLessons(sel.slug, map));
 		},
 		publish: async (slug) => {
 			await mutate(() => deps.publishCourse(slug));

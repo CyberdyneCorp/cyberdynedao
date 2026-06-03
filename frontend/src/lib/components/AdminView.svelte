@@ -101,6 +101,42 @@
 		await vm.setDeadline(c.slug, null);
 	}
 
+	// Inline lesson editing.
+	let editingLessonId = $state<string | null>(null);
+	let elTitle = $state('');
+	let elDuration = $state('');
+	let elContentUrl = $state('');
+	let elTextBody = $state('');
+
+	function openLessonEdit(lesson: {
+		id: string;
+		title: string;
+		duration: string | null;
+		contentUrl: string | null;
+		textBody: string | null;
+	}): void {
+		editingLessonId = lesson.id;
+		elTitle = lesson.title;
+		elDuration = lesson.duration ?? '';
+		elContentUrl = lesson.contentUrl ?? '';
+		elTextBody = lesson.textBody ?? '';
+	}
+
+	function closeLessonEdit(): void {
+		editingLessonId = null;
+	}
+
+	async function saveLessonEdit(): Promise<void> {
+		if (!editingLessonId || !elTitle.trim()) return;
+		const ok = await vm.editLesson(editingLessonId, {
+			title: elTitle.trim(),
+			duration: elDuration.trim() || undefined,
+			contentUrl: elContentUrl.trim() || undefined,
+			textBody: elTextBody.trim() || undefined
+		});
+		if (ok) closeLessonEdit();
+	}
+
 	async function submit(): Promise<void> {
 		if (!title.trim()) return;
 		const ok = await vm.create({ title: title.trim(), description: description.trim(), level });
@@ -369,13 +405,22 @@
 					<p class="hint">No lessons yet — add the first one below.</p>
 				{:else}
 					<ul class="list">
-						{#each course.lessons as lesson (lesson.id)}
+						{#each course.lessons as lesson, li (lesson.id)}
 							<li class="item">
 								<div class="item__main">
 									<span class="item__meta">{lesson.lessonType}</span>
 									<span class="item__title">{lesson.title}</span>
 								</div>
 								<div class="item__actions">
+									<PixelButton variant="ghost" size="sm" ariaLabel="Move lesson up" disabled={$busy || li === 0} onclick={() => vm.moveLesson(lesson.id, 'up')}>
+										▲
+									</PixelButton>
+									<PixelButton variant="ghost" size="sm" ariaLabel="Move lesson down" disabled={$busy || li === course.lessons.length - 1} onclick={() => vm.moveLesson(lesson.id, 'down')}>
+										▼
+									</PixelButton>
+									<PixelButton variant="outline" size="sm" disabled={$busy} onclick={() => openLessonEdit(lesson)}>
+										Edit
+									</PixelButton>
 									{#if lesson.lessonType === 'quiz'}
 										<PixelButton variant="outline" size="sm" disabled={$busy} onclick={() => openQuizEditor(lesson.id)}>
 											Quiz
@@ -391,6 +436,26 @@
 									</PixelButton>
 								</div>
 							</li>
+							{#if editingLessonId === lesson.id}
+								<li class="edit-row">
+									<form class="new-course" onsubmit={(e) => { e.preventDefault(); void saveLessonEdit(); }}>
+										<h2>Edit lesson</h2>
+										<PixelInput placeholder="Lesson title" bind:value={elTitle} ariaLabel="Lesson title" />
+										<PixelInput placeholder="Duration (optional)" bind:value={elDuration} ariaLabel="Duration" />
+										{#if URL_TYPES.includes(lesson.lessonType)}
+											<PixelInput placeholder="Content URL" bind:value={elContentUrl} ariaLabel="Content URL" />
+										{:else if lesson.lessonType === 'text'}
+											<Textarea label="Lesson text (markdown)" rows={3} bind:value={elTextBody} />
+										{/if}
+										<div class="row">
+											<PixelButton type="submit" variant="solid" size="sm" disabled={$busy || !elTitle.trim()}>
+												{$busy ? 'Saving…' : 'Save lesson'}
+											</PixelButton>
+											<PixelButton variant="ghost" size="sm" onclick={closeLessonEdit}>Cancel</PixelButton>
+										</div>
+									</form>
+								</li>
+							{/if}
 						{/each}
 					</ul>
 				{/if}
@@ -465,7 +530,7 @@
 				{/if}
 			{:else}
 				<ul class="list">
-					{#each $courses as course (course.id)}
+					{#each $courses as course, ci (course.id)}
 						<li class="item">
 							<div class="item__main">
 								<Badge variant={STATUS_VARIANT[course.status]} size="sm">{course.status}</Badge>
@@ -473,6 +538,12 @@
 								<span class="item__meta">{course.level} · {course.lessonCount} lessons</span>
 							</div>
 							<div class="item__actions">
+								<PixelButton variant="ghost" size="sm" ariaLabel="Move course up" disabled={$busy || ci === 0} onclick={() => vm.moveCourse(course.slug, 'up')}>
+									▲
+								</PixelButton>
+								<PixelButton variant="ghost" size="sm" ariaLabel="Move course down" disabled={$busy || ci === $courses.length - 1} onclick={() => vm.moveCourse(course.slug, 'down')}>
+									▼
+								</PixelButton>
 								<PixelButton variant="outline" size="sm" disabled={$busy} onclick={() => vm.openCourse(course.slug)}>
 									Edit
 								</PixelButton>
@@ -661,5 +732,11 @@
 	}
 	.opt__input {
 		flex: 1;
+	}
+	.edit-row {
+		list-style: none;
+	}
+	.edit-row .new-course {
+		margin-bottom: 0.45rem;
 	}
 </style>

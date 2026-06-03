@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { get } from 'svelte/store';
-import { createAdminViewModel, shouldAutoLoad, type AdminViewModelDeps } from '../adminViewModel';
+import {
+	createAdminViewModel,
+	reorderedMap,
+	shouldAutoLoad,
+	type AdminViewModelDeps
+} from '../adminViewModel';
 import { AdminApiError } from '$lib/api/adminApi';
 import type { CourseDetail, CourseSummary } from '$lib/api/coursesApi';
 
@@ -33,6 +38,18 @@ function fakeDeps(over: Partial<AdminViewModelDeps> = {}): AdminViewModelDeps {
 		publishCourse: vi.fn().mockResolvedValue({ ...detail, status: 'published' }),
 		unpublishCourse: vi.fn().mockResolvedValue(detail),
 		deleteCourse: vi.fn().mockResolvedValue(undefined),
+		reorderCourses: vi.fn().mockResolvedValue([draft]),
+		updateLesson: vi.fn().mockResolvedValue({
+			id: 'l-1',
+			courseId: 'c-1',
+			title: 'Intro (edited)',
+			lessonType: 'text',
+			sortOrder: 0,
+			contentUrl: null,
+			textBody: 'hi',
+			duration: null
+		}),
+		reorderLessons: vi.fn().mockResolvedValue(detail),
 		addLesson: vi.fn().mockResolvedValue({
 			id: 'l-1',
 			courseId: 'c-1',
@@ -166,6 +183,74 @@ describe('adminViewModel — edit course & deadline', () => {
 		const ok = await vm.editCourse('solidity-101', { title: 'x' });
 		expect(ok).toBe(false);
 		expect(deps.updateCourse).not.toHaveBeenCalled();
+	});
+});
+
+describe('adminViewModel — edit lesson & reorder', () => {
+	const draftB: CourseSummary = { ...draft, id: 'c-2', slug: 'rust-101', title: 'Rust 101' };
+	const twoLessons: CourseDetail = {
+		...detail,
+		lessons: [
+			{ ...detail.lessons[0], id: 'l-1', title: 'One', sortOrder: 0 } as never,
+			{
+				id: 'l-2',
+				courseId: 'c-1',
+				title: 'Two',
+				lessonType: 'text',
+				sortOrder: 1,
+				contentUrl: null,
+				textBody: 'two',
+				duration: null
+			} as never
+		]
+	};
+
+	it('editLesson updates the lesson within the open course', async () => {
+		const deps = fakeDeps({ getCourse: vi.fn().mockResolvedValue(twoLessons) });
+		const vm = createAdminViewModel(deps);
+		await vm.openCourse('solidity-101');
+		const ok = await vm.editLesson('l-1', { title: 'One (edited)' });
+		expect(ok).toBe(true);
+		expect(deps.updateLesson).toHaveBeenCalledWith('solidity-101', 'l-1', { title: 'One (edited)' });
+	});
+
+	it('moveCourse down sends a re-densified order map', async () => {
+		const deps = fakeDeps({ listCourses: vi.fn().mockResolvedValue([draft, draftB]) });
+		const vm = createAdminViewModel(deps);
+		await vm.load();
+		await vm.moveCourse('solidity-101', 'down');
+		expect(deps.reorderCourses).toHaveBeenCalledWith({ 'rust-101': 0, 'solidity-101': 1 });
+	});
+
+	it('moveCourse up at the top is a no-op', async () => {
+		const deps = fakeDeps({ listCourses: vi.fn().mockResolvedValue([draft, draftB]) });
+		const vm = createAdminViewModel(deps);
+		await vm.load();
+		const ok = await vm.moveCourse('solidity-101', 'up');
+		expect(ok).toBe(false);
+		expect(deps.reorderCourses).not.toHaveBeenCalled();
+	});
+
+	it('moveLesson down reorders within the open course', async () => {
+		const deps = fakeDeps({ getCourse: vi.fn().mockResolvedValue(twoLessons) });
+		const vm = createAdminViewModel(deps);
+		await vm.openCourse('solidity-101');
+		await vm.moveLesson('l-1', 'down');
+		expect(deps.reorderLessons).toHaveBeenCalledWith('solidity-101', { 'l-2': 0, 'l-1': 1 });
+	});
+});
+
+describe('reorderedMap', () => {
+	it('swaps down and re-densifies', () => {
+		expect(reorderedMap(['a', 'b', 'c'], 0, 'down')).toEqual({ b: 0, a: 1, c: 2 });
+	});
+	it('swaps up and re-densifies', () => {
+		expect(reorderedMap(['a', 'b', 'c'], 2, 'up')).toEqual({ a: 0, c: 1, b: 2 });
+	});
+	it('returns null at the boundaries', () => {
+		expect(reorderedMap(['a', 'b'], 0, 'up')).toBeNull();
+		expect(reorderedMap(['a', 'b'], 1, 'down')).toBeNull();
+		expect(reorderedMap(['a', 'b'], -1, 'down')).toBeNull();
 	});
 });
 
