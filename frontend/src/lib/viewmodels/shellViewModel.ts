@@ -90,12 +90,6 @@ const DEFAULT_START_SECTIONS: StartMenuSection[] = [
 						subtitle: 'RAG, Agents, MCP'
 					},
 					{
-						id: 'Cyberdyne',
-						label: 'Geospatial Platform',
-						icon: '🛰',
-						subtitle: 'Satellite, Risk, Analytics'
-					},
-					{
 						id: 'MATLAB',
 						label: 'MATLAB LLVM Compiler',
 						icon: '🔢',
