@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { PixelScrollArea, PixelButton, Badge } from '@cyberdynecorp/svelte-ui-core';
+	import { PixelScrollArea, PixelButton, PixelInput, Badge } from '@cyberdynecorp/svelte-ui-core';
 	import { createCoursesViewModel } from '$lib/viewmodels/coursesViewModel';
 	import {
 		courseCertificatePdfUrl,
@@ -15,8 +15,21 @@
 	// progress, mark-complete, certificate) over the new /api/v1/courses
 	// endpoints.
 	const vm = createCoursesViewModel();
-	const { courses, selected, progress, certificate, dashboard, recommendations, loading, error } =
-		vm;
+	const {
+		courses,
+		selected,
+		progress,
+		certificate,
+		dashboard,
+		recommendations,
+		verification,
+		verifying,
+		loading,
+		error
+	} = vm;
+
+	// Public "verify a certificate" panel.
+	let verifyId = $state('');
 
 	const authReady = $derived(authVM.isRestored && authVM.isAuthenticated);
 
@@ -244,6 +257,39 @@
 				{/each}
 			</ul>
 		{/if}
+
+		<!-- Public certificate verification -->
+		<section class="verify">
+			<h2>Verify a certificate</h2>
+			<p class="verify__hint">Paste a certificate ID to check it was genuinely issued.</p>
+			<div class="verify__row">
+				<div class="grow">
+					<PixelInput placeholder="Certificate ID" bind:value={verifyId} ariaLabel="Certificate ID" />
+				</div>
+				<PixelButton
+					variant="solid"
+					size="sm"
+					disabled={$verifying || !verifyId.trim()}
+					onclick={() => vm.verify(verifyId.trim())}
+				>
+					{$verifying ? 'Checking…' : 'Verify'}
+				</PixelButton>
+			</div>
+			{#if $verification}
+				{#if $verification.valid && $verification.certificate}
+					<p class="verify__result">
+						<Badge variant="success" size="sm">Valid</Badge>
+						Course <strong>{$verification.certificate.courseSlug}</strong>, issued
+						{new Date($verification.certificate.issuedAt).toLocaleDateString()}.
+					</p>
+				{:else}
+					<p class="verify__result">
+						<Badge variant="danger" size="sm">Not valid</Badge>
+						No certificate matches that ID.
+					</p>
+				{/if}
+			{/if}
+		</section>
 	{/if}
 </div>
 </PixelScrollArea>
@@ -483,5 +529,36 @@
 	.lesson__done {
 		font-size: 0.75rem;
 		color: #6ee7b7;
+	}
+	.verify {
+		margin-top: 1.5rem;
+		padding-top: 1rem;
+		border-top: 1px solid #1f2937;
+	}
+	.verify h2 {
+		margin: 0 0 0.2rem;
+		font-size: 1rem;
+	}
+	.verify__hint {
+		margin: 0 0 0.5rem;
+		font-size: 0.8rem;
+		color: #9ca3af;
+	}
+	.verify__row {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+		max-width: 520px;
+	}
+	.verify__row .grow {
+		flex: 1;
+	}
+	.verify__result {
+		display: flex;
+		gap: 0.4rem;
+		align-items: center;
+		font-size: 0.82rem;
+		color: #d1d5db;
+		margin: 0.6rem 0 0;
 	}
 </style>
