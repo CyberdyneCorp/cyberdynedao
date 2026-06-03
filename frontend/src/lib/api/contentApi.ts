@@ -177,7 +177,7 @@ function apiProjectToProductEntry(api: ApiProject): ProductEntry {
 // Products hidden from the Products view for now, regardless of whether
 // the backend still returns them. Matched on the normalized name/id so a
 // rename or id change on the backend doesn't silently re-surface them.
-const HIDDEN_PRODUCT_KEYS = new Set(['cyberspace', 'cyberdyneauth']);
+const HIDDEN_PRODUCT_KEYS = new Set(['cyberspace', 'cyberdyneauth', 'cyberstac']);
 
 function isHiddenProduct(p: ProductEntry): boolean {
 	const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
