@@ -125,6 +125,16 @@ async function sendJson<T>(
 	return (await res.json()) as T;
 }
 
+async function getJson<T>(path: string): Promise<T> {
+	ensureBase();
+	const res = await fetch(`${API_BASE}${path}`, {
+		method: 'GET',
+		headers: withAuth({ accept: 'application/json' })
+	});
+	if (!res.ok) throw new AdminApiError(res.status, await readError(res));
+	return (await res.json()) as T;
+}
+
 async function del(path: string): Promise<void> {
 	ensureBase();
 	const res = await fetch(`${API_BASE}${path}`, {
@@ -226,4 +236,25 @@ export function upsertQuiz(lessonId: string, input: UpsertQuizInput): Promise<Ed
 
 export function deleteQuiz(lessonId: string): Promise<void> {
 	return del(`/api/v1/admin/lessons/${enc(lessonId)}/quiz`);
+}
+
+// ── Analytics (admin overview) ────────────────────────────────────────
+
+export interface AdminOverview {
+	totalLearners: number;
+	totalEnrollments: number;
+	completedEnrollments: number;
+	enrollmentCompletionRate: number;
+	publishedCourses: number;
+	draftCourses: number;
+	totalModules: number;
+	totalPaths: number;
+	totalCertificates: number;
+	totalQuizAttempts: number;
+	quizPassRate: number;
+	avgQuizScore: number;
+}
+
+export function fetchAdminOverview(): Promise<AdminOverview> {
+	return getJson<AdminOverview>('/api/v1/admin/analytics/overview');
 }
