@@ -6,7 +6,9 @@
 	const vm = createAdminViewModel();
 	const { courses, selected, loading, busy, error } = vm;
 
-	const canEdit = $derived(authVM.isRestored && authVM.isAuthenticated && authVM.isEditor);
+	const canEdit = $derived(
+		authVM.isRestored && authVM.isAuthenticated && (authVM.isEditor || authVM.isAdmin)
+	);
 
 	// New-course form.
 	let title = $state('');
@@ -183,8 +185,8 @@
 		<p class="hint">Checking your session…</p>
 	{:else if !canEdit}
 		<p class="banner banner--warn" role="alert">
-			You need the <strong>editor</strong> role to author courses.
-			{#if !authVM.isAuthenticated}Sign in with an editor account to continue.{/if}
+			You need the <strong>editor</strong> role or an <strong>admin</strong> account to author courses.
+			{#if !authVM.isAuthenticated}Sign in with an editor or admin account to continue.{/if}
 		</p>
 	{:else}
 		{#if $error}

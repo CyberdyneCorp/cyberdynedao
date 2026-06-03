@@ -25,6 +25,7 @@ class UserPrincipal:
     scopes: frozenset[str]
     audience: str | None
     expires_at: datetime
+    is_admin: bool = False
 
     @property
     def kind(self) -> str:
@@ -63,6 +64,7 @@ class UserProfile:
     wallet_address: str | None = None
     organization_id: str | None = None
     is_email_verified: bool = False
+    is_admin: bool = False
 
     @property
     def display_name(self) -> str | None:
@@ -71,6 +73,18 @@ class UserProfile:
         if self.wallet_address:
             return f"{self.wallet_address[:6]}…{self.wallet_address[-4:]}"
         return None
+
+
+# CyberdyneAuth marks privileged users with a boolean flag rather than a
+# scope. The key has drifted across versions, so we accept the first of
+# these that is present and truthy. With the on-chain policy engine (which
+# would otherwise grant the ``editor`` scope) disabled, this flag is the
+# only signal that lets an admin through the authoring guard.
+_ADMIN_FLAG_KEYS = ("is_superuser", "is_admin", "is_staff")
+
+
+def _parse_admin_flag(payload: dict[str, Any]) -> bool:
+    return any(bool(payload.get(key)) for key in _ADMIN_FLAG_KEYS)
 
 
 def profile_from_users_me(payload: dict[str, Any]) -> UserProfile | None:
@@ -95,6 +109,7 @@ def profile_from_users_me(payload: dict[str, Any]) -> UserProfile | None:
         wallet_address=wallet if isinstance(wallet, str) else None,
         organization_id=org if isinstance(org, str) else None,
         is_email_verified=bool(payload.get("is_email_verified", False)),
+        is_admin=_parse_admin_flag(payload),
     )
 
 
@@ -147,4 +162,5 @@ def principal_from_introspection(payload: dict[str, Any]) -> Principal | None:
         scopes=scopes,
         audience=audience,
         expires_at=expires_at,
+        is_admin=_parse_admin_flag(payload),
     )

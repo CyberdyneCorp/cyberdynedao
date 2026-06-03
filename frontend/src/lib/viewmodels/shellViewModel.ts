@@ -26,6 +26,14 @@ export interface StartMenuItemConfig {
 }
 
 /**
+ * Start-menu item ids that should only appear for CyberdyneAuth admins
+ * (or editor-scoped users). The view filters these out of the rendered
+ * menu when the session isn't privileged — the items still exist in the
+ * static config so tests and the launcher data stay stable.
+ */
+export const ADMIN_MENU_ITEM_IDS: readonly string[] = ['System Admin', 'Admin'];
+
+/**
  * DOM classes whose click events should NOT trigger a desktop slide.
  * Exported so the view can stay declarative.
  */
@@ -119,13 +127,19 @@ const DEFAULT_START_SECTIONS: StartMenuSection[] = [
 		items: [
 			{ id: 'Blog', label: 'Blog', icon: '📰' },
 			{ id: 'Learn', label: 'Academy', icon: '🎓' },
-			{ id: 'Admin', label: 'Academy Admin', icon: '🛠️', subtitle: 'Author courses (editor)' }
+			{ id: 'Admin', label: 'Academy Admin', icon: '🛠️', subtitle: 'Author courses (admin/editor)' }
 		]
 	},
 	{
 		id: 'system',
 		label: 'SYSTEM',
 		items: [
+			{
+				id: 'System Admin',
+				label: 'System Admin',
+				icon: '🛡️',
+				subtitle: 'Admin control panel'
+			},
 			{ id: 'cart', label: 'Your Bag', icon: '🛍️' },
 			{ id: 'terminal', label: 'Terminal', icon: '💻', subtitle: 'Linux sandbox shell' },
 			{ id: 'settings', label: 'Settings', icon: '⚙️' },

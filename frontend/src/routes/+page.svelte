@@ -17,7 +17,7 @@
 	} from '$lib/stores/windowStore';
 	import { navItems } from '$lib/constants/navigation';
 	import { CYBERDYNE_ASCII_LOGO } from '$lib/constants/asciiLogo';
-	import { createShellViewModel } from '$lib/viewmodels/shellViewModel';
+	import { createShellViewModel, ADMIN_MENU_ITEM_IDS } from '$lib/viewmodels/shellViewModel';
 	import ViewRouter from '$lib/components/ViewRouter.svelte';
 	import Web3Wallet from '$lib/components/Web3Wallet.svelte';
 	import { isMobileDevice } from '$lib/utils/mobileDetection';
@@ -25,18 +25,20 @@
 	const shell = createShellViewModel();
 	const { windows, cartCount, startMenuSections } = shell;
 
-	// Pipe the live cart count into the SYSTEM section's "Your Bag"
-	// item so the menu renders the badge in real time.
+	// Pipe the live cart count into the SYSTEM section's "Your Bag" item
+	// (real-time badge) and hide admin-only entries from non-admins.
+	const adminItemIds = new Set(ADMIN_MENU_ITEM_IDS);
 	let liveStartSections = $state(startMenuSections);
 	$effect(() => {
-		liveStartSections = startMenuSections.map((s) =>
-			s.id === 'system'
-				? {
-						...s,
-						items: s.items.map((i) => (i.id === 'cart' ? { ...i, badge: cartCountValue } : i))
-					}
-				: s
-		);
+		const canSeeAdmin = authVM.isAdmin || authVM.isEditor;
+		liveStartSections = startMenuSections.map((s) => {
+			let items = s.items;
+			if (!canSeeAdmin) items = items.filter((i) => !adminItemIds.has(i.id));
+			if (s.id === 'system') {
+				items = items.map((i) => (i.id === 'cart' ? { ...i, badge: cartCountValue } : i));
+			}
+			return items === s.items ? s : { ...s, items };
+		});
 	});
 
 	function shortAddr(a: string | null | undefined): string | null {

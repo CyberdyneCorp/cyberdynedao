@@ -104,14 +104,19 @@ def require_principal(request: Request) -> Principal:
 
 
 def require_editor(request: Request) -> UserPrincipal:
-    """Asserts the caller is a user with the ``editor`` scope.
+    """Asserts the caller may author content.
 
-    Service tokens (``ServicePrincipal``) are rejected — admin actions
-    are gated to human reviewers. Phase 1 wired scopes through
-    introspection; CyberdyneAuth doesn't yet surface scopes on user
-    tokens directly, so until that lands we additionally accept
-    ``email``-claim allowlisting in a follow-up PR. For now the scope
-    check is authoritative.
+    Service tokens (``ServicePrincipal``) are rejected — authoring is
+    gated to human reviewers. A user passes when either:
+
+    - the token carries the ``editor`` scope, or
+    - CyberdyneAuth marks the user as an admin (``is_admin`` flag).
+
+    The admin path exists because CyberdyneAuth's on-chain policy
+    engine — which would otherwise grant the ``editor`` scope — is
+    currently disabled, so it doesn't surface scopes on user tokens.
+    Admins are recognised by the introspection ``is_superuser`` /
+    ``is_admin`` flag instead.
     """
     principal = require_principal(request)
     if not isinstance(principal, UserPrincipal):
@@ -119,9 +124,9 @@ def require_editor(request: Request) -> UserPrincipal:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="user token required (service tokens cannot edit asks)",
         )
-    if EDITOR_SCOPE not in principal.scopes:
+    if EDITOR_SCOPE not in principal.scopes and not principal.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="editor scope required",
+            detail="editor scope or admin required",
         )
     return principal
