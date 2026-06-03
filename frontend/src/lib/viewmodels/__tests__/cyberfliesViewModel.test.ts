@@ -1,7 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createCyberfliesVM } from '../cyberfliesViewModel.svelte';
+import { createCyberfliesVM, isLikelyInternalHost } from '../cyberfliesViewModel.svelte';
 import * as cyberfliesApi from '$lib/api/cyberfliesApi';
-import type { RecordingResponse } from '$lib/api/cyberfliesApi';
+import type { ChannelResponse, RecordingResponse } from '$lib/api/cyberfliesApi';
+
+function channel(over: Partial<ChannelResponse> = {}): ChannelResponse {
+	return {
+		id: 'chan-1',
+		owner_id: 'u-1',
+		name: 'Standups',
+		created_at: '2026-06-01T00:00:00Z',
+		updated_at: '2026-06-01T00:00:00Z',
+		...over
+	};
+}
 
 function recording(over: Partial<RecordingResponse> = {}): RecordingResponse {
 	return {
@@ -255,5 +266,140 @@ describe('cyberfliesViewModel', () => {
 		const vm = createCyberfliesVM(1);
 		const url = await vm.audioUrlFor('rec-1');
 		expect(url).toBe('https://signed.example/audio.m4a');
+	});
+
+	describe('isLikelyInternalHost', () => {
+		it('flags the internal minio host the backend currently signs', () => {
+			expect(
+				isLikelyInternalHost('http://minio:9000/cyberflies-audio/x.m4a?X-Amz-Signature=ab')
+			).toBe(true);
+		});
+		it('flags localhost, loopback and RFC-1918 ranges', () => {
+			expect(isLikelyInternalHost('http://localhost:9000/a')).toBe(true);
+			expect(isLikelyInternalHost('http://127.0.0.1/a')).toBe(true);
+			expect(isLikelyInternalHost('http://10.1.2.3/a')).toBe(true);
+			expect(isLikelyInternalHost('http://192.168.0.5/a')).toBe(true);
+			expect(isLikelyInternalHost('http://172.16.5.5/a')).toBe(true);
+			expect(isLikelyInternalHost('http://store.local/a')).toBe(true);
+		});
+		it('treats a real public host as reachable', () => {
+			expect(isLikelyInternalHost('https://s3.amazonaws.com/bucket/x.m4a')).toBe(false);
+			expect(isLikelyInternalHost('https://cyberflies.backend.coolify.cyberdynecorp.ai/x')).toBe(
+				false
+			);
+		});
+		it('treats an unparseable url as internal (not openable)', () => {
+			expect(isLikelyInternalHost('not a url')).toBe(true);
+		});
+	});
+
+	describe('downloadAudio', () => {
+		it('opens a reachable presigned url', async () => {
+			vi.spyOn(cyberfliesApi, 'getAudioUrl').mockResolvedValue({
+				url: 'https://s3.amazonaws.com/bucket/x.m4a',
+				expires_seconds: 3600
+			});
+			const openSpy = vi
+				.spyOn(window, 'open')
+				.mockImplementation(() => null);
+			const vm = createCyberfliesVM(1);
+			await vm.downloadAudio('rec-1');
+			expect(openSpy).toHaveBeenCalledWith('https://s3.amazonaws.com/bucket/x.m4a', '_blank', 'noopener');
+			expect(vm.error).toBeNull();
+			openSpy.mockRestore();
+		});
+
+		it('refuses an internal host and explains why', async () => {
+			vi.spyOn(cyberfliesApi, 'getAudioUrl').mockResolvedValue({
+				url: 'http://minio:9000/cyberflies-audio/x.m4a?X-Amz-Signature=ab',
+				expires_seconds: 3600
+			});
+			const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+			const vm = createCyberfliesVM(1);
+			await vm.downloadAudio('rec-1');
+			expect(openSpy).not.toHaveBeenCalled();
+			expect(vm.error).toMatch(/internal URL/i);
+			openSpy.mockRestore();
+		});
+
+		it('surfaces getAudioUrl errors', async () => {
+			vi.spyOn(cyberfliesApi, 'getAudioUrl').mockRejectedValue(new Error('boom'));
+			const vm = createCyberfliesVM(1);
+			await vm.downloadAudio('rec-1');
+			expect(vm.error).toMatch(/boom/);
+		});
+	});
+
+	describe('deleteRecording', () => {
+		it('removes the recording and clears selection when it was selected', async () => {
+			vi.spyOn(cyberfliesApi, 'listRecordings').mockResolvedValue({
+				items: [recording({ id: 'a' }), recording({ id: 'b' })],
+				limit: 50,
+				offset: 0
+			});
+			const delSpy = vi.spyOn(cyberfliesApi, 'deleteRecording').mockResolvedValue(undefined);
+			const vm = createCyberfliesVM(1);
+			await vm.refreshRecordings();
+			vm.selectRecording('a');
+			await vm.deleteRecording('a');
+			expect(delSpy).toHaveBeenCalledWith('a');
+			expect(vm.recordings.map((r) => r.id)).toEqual(['b']);
+			expect(vm.selectedId).toBeNull();
+		});
+
+		it('surfaces delete errors and keeps the recording', async () => {
+			vi.spyOn(cyberfliesApi, 'listRecordings').mockResolvedValue({
+				items: [recording({ id: 'a' })],
+				limit: 50,
+				offset: 0
+			});
+			vi.spyOn(cyberfliesApi, 'deleteRecording').mockRejectedValue(new Error('nope'));
+			const vm = createCyberfliesVM(1);
+			await vm.refreshRecordings();
+			await vm.deleteRecording('a');
+			expect(vm.error).toMatch(/nope/);
+			expect(vm.recordings).toHaveLength(1);
+		});
+	});
+
+	describe('organize into channels', () => {
+		it('createChannel adds the channel and returns it', async () => {
+			vi.spyOn(cyberfliesApi, 'createChannel').mockResolvedValue(channel({ id: 'c9', name: 'Planning' }));
+			const vm = createCyberfliesVM(1);
+			const ch = await vm.createChannel('Planning');
+			expect(ch?.id).toBe('c9');
+			expect(vm.channels.map((c) => c.name)).toContain('Planning');
+		});
+
+		it('createChannel ignores blank names without calling the API', async () => {
+			const spy = vi.spyOn(cyberfliesApi, 'createChannel');
+			const vm = createCyberfliesVM(1);
+			const ch = await vm.createChannel('   ');
+			expect(ch).toBeNull();
+			expect(spy).not.toHaveBeenCalled();
+		});
+
+		it('addToChannel posts membership and sets a confirmation notice', async () => {
+			vi.spyOn(cyberfliesApi, 'listChannels').mockResolvedValue({
+				items: [channel({ id: 'c1', name: 'Standups' })],
+				limit: 50,
+				offset: 0
+			});
+			const addSpy = vi.spyOn(cyberfliesApi, 'addRecordingToChannel').mockResolvedValue(undefined);
+			const vm = createCyberfliesVM(1);
+			await vm.refreshChannels();
+			await vm.addToChannel('rec-7', 'c1');
+			expect(addSpy).toHaveBeenCalledWith('c1', 'rec-7');
+			expect(vm.notice).toBe('Added to Standups');
+			vm.clearNotice();
+			expect(vm.notice).toBeNull();
+		});
+
+		it('addToChannel surfaces errors', async () => {
+			vi.spyOn(cyberfliesApi, 'addRecordingToChannel').mockRejectedValue(new Error('403'));
+			const vm = createCyberfliesVM(1);
+			await vm.addToChannel('rec-7', 'c1');
+			expect(vm.error).toMatch(/403/);
+		});
 	});
 });
