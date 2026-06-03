@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createAdminViewModel } from '$lib/viewmodels/adminViewModel';
+	import { createAdminViewModel, shouldAutoLoad } from '$lib/viewmodels/adminViewModel';
 	import type { CourseLevel, LessonType } from '$lib/api/coursesApi';
 	import { authVM } from '$lib/auth/authViewModel.svelte';
 
@@ -29,8 +29,14 @@
 	const URL_TYPES: LessonType[] = ['video', 'pdf', 'presentation'];
 	const urlBacked = $derived(URL_TYPES.includes(lType));
 
+	// Load the course list once when authoring becomes available. Do NOT
+	// key this on `$courses.length` — an empty list is a valid result, and
+	// re-triggering on it loops the load forever ("Loading…" that never
+	// settles). The user can re-run it via the Retry button on error.
+	let loadAttempted = $state(false);
 	$effect(() => {
-		if (canEdit && $courses.length === 0 && !$loading) {
+		if (shouldAutoLoad(canEdit, loadAttempted, $loading)) {
+			loadAttempted = true;
 			void vm.load();
 		}
 	});
@@ -344,7 +350,12 @@
 			{#if $loading && $courses.length === 0}
 				<p class="hint">Loading…</p>
 			{:else if $courses.length === 0}
-				<p class="hint">No courses yet — create your first draft above.</p>
+				{#if $error}
+					<p class="hint">Couldn't load courses.</p>
+					<button class="btn" disabled={$loading} onclick={() => void vm.load()}>Retry</button>
+				{:else}
+					<p class="hint">No courses yet — create your first draft above.</p>
+				{/if}
 			{:else}
 				<ul class="list">
 					{#each $courses as course (course.id)}
