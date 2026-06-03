@@ -1,6 +1,6 @@
 <script lang="ts">
 	import '../app.css';
-	import 'highlight.js/styles/github.css'; // light syntax-highlighting theme
+	import 'highlight.js/styles/github-dark.css'; // dark syntax-highlighting theme
 	let { children } = $props();
 </script>
 
