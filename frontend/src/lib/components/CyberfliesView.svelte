@@ -3,20 +3,15 @@
 	import { Badge, PixelButton, PixelScrollArea } from '@cyberdynecorp/svelte-ui-core';
 	import { authVM } from '$lib/auth/authViewModel.svelte';
 	import { createCyberfliesVM } from '$lib/viewmodels/cyberfliesViewModel.svelte';
-	import { createInterpreterVM } from '$lib/viewmodels/interpreterViewModel.svelte';
 
-	type Tab = 'meetings' | 'chat' | 'code';
+	type Tab = 'meetings' | 'chat';
 	let tab = $state<Tab>('meetings');
 
 	const meetings = createCyberfliesVM();
-	const code = createInterpreterVM();
 
 	let audioInputEl = $state<HTMLInputElement | null>(null);
-	let codeUploadEl = $state<HTMLInputElement | null>(null);
-	let codeTextareaEl = $state<HTMLTextAreaElement | null>(null);
 	let chatInput = $state<string>('');
 	let chatScrollBottom = $state<HTMLElement | null>(null);
-	let codeScrollBottom = $state<HTMLElement | null>(null);
 
 	const authReady = $derived(authVM.isRestored && authVM.isAuthenticated);
 
@@ -31,19 +26,12 @@
 		meetings.destroy();
 	});
 
-	// Auto-scroll chat + code logs as new turns/cells land.
+	// Auto-scroll the chat log as new turns land.
 	$effect(() => {
 		void meetings.chatTurns.length;
 		void meetings.chatSending;
 		void tick().then(() =>
 			chatScrollBottom?.scrollIntoView({ block: 'end', inline: 'nearest' })
-		);
-	});
-	$effect(() => {
-		const last = code.cells[code.cells.length - 1];
-		void `${code.cells.length}|${last?.status}|${last?.stdout.length}`;
-		void tick().then(() =>
-			codeScrollBottom?.scrollIntoView({ block: 'end', inline: 'nearest' })
 		);
 	});
 
@@ -99,26 +87,6 @@
 		await meetings.sendChat(text);
 	}
 
-	function pickCodeFile() {
-		codeUploadEl?.click();
-	}
-	async function onCodeFileChange(e: Event) {
-		const target = e.currentTarget as HTMLInputElement;
-		const file = target.files?.[0];
-		if (file) await code.uploadWorkspaceFile(file);
-		target.value = '';
-	}
-	function onCodeKeydown(e: KeyboardEvent) {
-		if (e.shiftKey && e.key === 'Enter') {
-			e.preventDefault();
-			void code.runCode();
-		}
-	}
-	async function onRunCode() {
-		await code.runCode();
-		codeTextareaEl?.focus();
-	}
-
 	const heroStyle = '--accent: #14b8a6; --accent-dark: #0f766e;';
 </script>
 
@@ -139,9 +107,6 @@
 			</button>
 			<button type="button" class="tab" class:tab--active={tab === 'chat'} onclick={() => (tab = 'chat')}>
 				💬 Chat
-			</button>
-			<button type="button" class="tab" class:tab--active={tab === 'code'} onclick={() => (tab = 'code')}>
-				🐍 Code
 			</button>
 		</nav>
 	</header>
@@ -342,92 +307,6 @@
 			</form>
 		</div>
 	{/if}
-
-	<!-- ── Code (Python interpreter) ───────────────────────────── -->
-	{#if tab === 'code'}
-		<div class="code">
-			<div class="code__main">
-				<div class="cells">
-					<PixelScrollArea maxHeight="100%" ariaLabel="Python cells">
-						{#if code.cells.length === 0}
-							<div class="empty empty--code">
-								<p># Python sandbox. Shift + Enter to run.</p>
-								<pre class="empty__code">import statistics
-print(statistics.mean([1, 2, 3, 4]))</pre>
-							</div>
-						{/if}
-						{#each code.cells as cell (cell.id)}
-							<article class="cell">
-								<header class="cell__head">
-									<span class="cell__no">[{cell.id}]</span>
-									<Badge variant={cell.status === 'ok' ? 'success' : cell.status === 'running' ? 'warning' : 'danger'} size="sm">
-										{cell.status === 'running' ? 'RUNNING' : cell.status === 'ok' ? 'OK' : 'ERROR'}
-									</Badge>
-									{#if cell.truncated}<Badge variant="warning" size="sm">TRUNCATED</Badge>{/if}
-								</header>
-								<pre class="cell__source">{cell.source}</pre>
-								{#if cell.stdout}<pre class="cell__stdout">{cell.stdout}</pre>{/if}
-								{#if cell.result}<pre class="cell__result">{cell.result}</pre>{/if}
-								{#if cell.stderr}<pre class="cell__stderr">{cell.stderr}</pre>{/if}
-								{#if cell.error}<pre class="cell__error">{cell.error}</pre>{/if}
-							</article>
-						{/each}
-						<div bind:this={codeScrollBottom} aria-hidden="true"></div>
-					</PixelScrollArea>
-				</div>
-
-				<aside class="files">
-					<div class="files__head">
-						<h3 class="files__title">Workspace <span class="files__count">{code.files.length}</span></h3>
-						<button type="button" class="icon-btn" onclick={() => code.refreshFiles()} disabled={!authReady || code.filesLoading} title="Refresh files">
-							{code.filesLoading ? '…' : '↻'}
-						</button>
-					</div>
-					<input type="file" class="hidden-input" bind:this={codeUploadEl} onchange={onCodeFileChange} />
-					<PixelButton variant="outline" size="sm" onclick={pickCodeFile} disabled={!authReady || code.filesLoading}>⬆ Upload</PixelButton>
-					{#if code.error}<div class="banner banner--err">{code.error}</div>{/if}
-					{#if code.files.length === 0}
-						<p class="empty">No files. Run code that writes a file, or upload a dataset.</p>
-					{:else}
-						<ul class="file-list">
-							{#each code.files as f (f.name)}
-								<li>
-									<button type="button" class="file" onclick={() => code.downloadWorkspaceFile(f.name)} title={`Download ${f.name}`}>
-										<span class="file__name">{f.name}</span>
-										<span class="file__meta">{formatBytes(f.size_bytes)}</span>
-									</button>
-								</li>
-							{/each}
-						</ul>
-					{/if}
-				</aside>
-			</div>
-
-			<form class="prompt" onsubmit={(e) => { e.preventDefault(); void onRunCode(); }}>
-				<div class="prompt__head">
-					<span class="prompt__caret" aria-hidden="true">&gt;&gt;&gt;</span>
-					<div class="prompt__buttons">
-						<PixelButton variant="solid" size="sm" type="submit" disabled={!authReady || code.running}>
-							{code.running ? 'Running…' : '▶ Run'}
-						</PixelButton>
-						<PixelButton variant="ghost" size="sm" onclick={() => code.clearCells()} disabled={code.running}>Clear</PixelButton>
-						<PixelButton variant="ghost" size="sm" onclick={() => code.resetSession()} disabled={code.running}>Reset session</PixelButton>
-					</div>
-				</div>
-				<textarea
-					bind:this={codeTextareaEl}
-					class="prompt__input"
-					value={code.input}
-					oninput={(e) => code.setInput((e.currentTarget as HTMLTextAreaElement).value)}
-					onkeydown={onCodeKeydown}
-					rows="3"
-					spellcheck="false"
-					placeholder={authReady ? 'Python source…  (Shift + Enter to run)' : 'Sign in to run code'}
-					disabled={!authReady || code.running}
-				></textarea>
-			</form>
-		</div>
-	{/if}
 </div>
 
 <style>
@@ -508,7 +387,21 @@ print(statistics.mean([1, 2, 3, 4]))</pre>
 	.block__count { font-size: 0.65rem; color: #94a3b8; font-weight: 600; }
 	.block__abstract { margin: 0 0 8px; font-size: 0.85rem; line-height: 1.55; }
 	.bullets { margin: 0; padding-left: 18px; font-size: 0.82rem; line-height: 1.6; }
-	.transcript { margin: 0; font-size: 0.8rem; line-height: 1.6; white-space: pre-wrap; font-family: inherit; color: #1f2937; }
+	/* The Foundation base.css styles every <pre> with a dark surface, so
+	   set explicit light text + a defined dark panel here — otherwise the
+	   transcript renders dark-on-dark and is unreadable. */
+	.transcript {
+		margin: 0;
+		padding: 12px 14px;
+		font-size: 0.82rem;
+		line-height: 1.65;
+		white-space: pre-wrap;
+		word-break: break-word;
+		font-family: inherit;
+		background: #0f172a;
+		color: #e2e8f0;
+		border-left: 4px solid var(--accent);
+	}
 
 	/* Chat layout */
 	.chat { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
@@ -525,44 +418,9 @@ print(statistics.mean([1, 2, 3, 4]))</pre>
 	.chat__input { flex: 1 1 auto; font-family: inherit; font-size: 0.85rem; padding: 8px 12px; border: 2px solid var(--accent); outline: none; }
 	.chat__input:disabled { opacity: 0.5; }
 
-	/* Code layout (dark, mirrors the MATLAB REPL) */
-	.code { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
-	.code__main { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, 260px); }
-	@media (max-width: 720px) { .code__main { grid-template-columns: minmax(0, 1fr); } .files { display: none; } }
-	.cells { flex: 1 1 auto; min-height: 0; overflow-y: auto; background: #0a0f1e; }
-	.empty--code { color: #94a3b8; }
-	.empty__code { margin: 8px 16px; padding: 12px; background: #050913; border: 2px solid #1e293b; border-left: 6px solid var(--accent); color: #99f6e4; font-size: 0.8rem; white-space: pre-wrap; }
-	.cell { margin: 12px 16px; background: #0f172a; border: 2px solid #1e293b; border-left: 6px solid var(--accent); color: #e2e8f0; }
-	.cell__head { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: #1e293b; border-bottom: 1px solid #334155; font-size: 0.7rem; }
-	.cell__no { color: var(--accent); font-weight: 700; }
-	.cell__source, .cell__stdout, .cell__stderr, .cell__error, .cell__result { margin: 0; padding: 8px 12px; font-size: 0.8rem; line-height: 1.55; white-space: pre-wrap; overflow-x: auto; font-family: inherit; }
-	.cell__source { background: #050913; color: #99f6e4; border-bottom: 1px dashed #1e293b; }
-	.cell__stdout { color: #86efac; }
-	.cell__result { color: #5eead4; }
-	.cell__stderr { color: #fda4af; background: rgba(127, 29, 29, 0.2); }
-	.cell__error { color: #fecaca; background: rgba(127, 29, 29, 0.4); border-top: 1px solid #b91c1c; }
-
-	.files { background: #1e293b; color: #e2e8f0; border-left: 2px solid #000; display: flex; flex-direction: column; gap: 10px; padding: 12px; overflow-y: auto; min-height: 0; }
-	.files__head { display: flex; align-items: center; justify-content: space-between; }
-	.files__title { margin: 0; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); }
-	.files__count { font-size: 0.65rem; color: #64748b; }
-	.file-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-	.file { display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left; background: #0f172a; border: 1px solid #334155; border-left: 4px solid var(--accent); padding: 6px 8px; cursor: pointer; font-family: inherit; color: inherit; }
-	.file:hover { border-color: var(--accent); }
-	.file__name { font-size: 0.78rem; font-weight: 700; color: #99f6e4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-	.file__meta { font-size: 0.62rem; color: #94a3b8; }
-
-	.prompt { padding: 10px 14px 14px; background: #0a0f1e; border-top: 2px solid #000; display: flex; flex-direction: column; gap: 8px; }
-	.prompt__head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-	.prompt__caret { color: var(--accent); font-weight: 800; }
-	.prompt__buttons { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
-	.prompt__input { width: 100%; min-height: 64px; resize: vertical; background: #050913; color: #99f6e4; border: 2px solid var(--accent); padding: 10px 12px; font-family: inherit; font-size: 0.85rem; line-height: 1.5; outline: none; }
-	.prompt__input:disabled { opacity: 0.5; }
-
 	.icon-btn { background: transparent; border: 1px solid #94a3b8; color: #475569; font-family: inherit; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
 	.icon-btn:hover:not(:disabled) { color: var(--accent-dark); border-color: var(--accent); }
 	.icon-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-	.files .icon-btn { color: #cbd5e1; border-color: #334155; }
 
 	.hidden-input { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 </style>

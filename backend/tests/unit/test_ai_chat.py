@@ -401,6 +401,34 @@ class _FakeMatlab:
         )
 
 
+class _FakePython:
+    """Records execute calls; returns canned stdout (+ optional artifact)."""
+
+    def __init__(self, artifacts: tuple[str, ...] = ()) -> None:
+        self.calls: list[dict[str, object]] = []
+        self._artifacts = artifacts
+
+    async def execute(self, *, code, session_id, bearer, restricted=False):
+        from cyberdyne_backend.domain.ai_chat import PythonExecResult
+
+        self.calls.append(
+            {
+                "code": code,
+                "session_id": session_id,
+                "bearer": bearer,
+                "restricted": restricted,
+            }
+        )
+        return PythonExecResult(
+            ok=True,
+            stdout="45\n",
+            stderr="",
+            result="45",
+            artifacts=self._artifacts,
+            session_id=session_id,
+        )
+
+
 class _FakeBlogRepo:
     def __init__(self, posts=None) -> None:
         self._posts = posts or []
@@ -441,6 +469,7 @@ def _build_ctx(
     ask_notifier: _RecordingAskNotifier | None = None,
     user: object | None = None,
     matlab: object | None = None,
+    python: object | None = None,
     bearer: str | None = None,
     blog_posts: list | None = None,
     dao: bool = False,
@@ -487,6 +516,7 @@ def _build_ctx(
         ask_notifier=ask_notifier or _RecordingAskNotifier(),
         user=user,  # type: ignore[arg-type]
         matlab=matlab,  # type: ignore[arg-type]
+        python=python,  # type: ignore[arg-type]
         bearer=bearer,
         dao_overview=dao_overview,
         list_blog_posts=ListBlogPosts(repo=blog),  # type: ignore[arg-type]
@@ -828,6 +858,57 @@ class TestToolDispatcher:
         assert data["ok"] is True
         assert data["language"] == "c"
         assert "int main" in data["code"]
+
+    async def test_python_exec_runs_in_session_workspace(self) -> None:
+        python = _FakePython()
+        ctx = _build_ctx(python=python, bearer="tok-9")
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x",
+                name="python_exec",
+                arguments_json=json.dumps({"code": "print(sum(range(10)))"}),
+            ),
+            chat_session_id="sess-7",
+        )
+        data = json.loads(result)
+        assert data["ok"] is True
+        assert "45" in data["stdout"]
+        assert data["result"] == "45"
+        # stable per-conversation workspace + forwarded bearer
+        assert python.calls[0]["session_id"] == "agent-sess-7"
+        assert python.calls[0]["bearer"] == "tok-9"
+
+    async def test_python_exec_reports_figure_artifacts(self) -> None:
+        python = _FakePython(artifacts=("plot.png", "data.csv"))
+        ctx = _build_ctx(python=python, bearer="tok")
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x",
+                name="python_exec",
+                arguments_json=json.dumps({"code": "savefig('plot.png')"}),
+            ),
+            chat_session_id="s",
+        )
+        data = json.loads(result)
+        assert data["has_figure"] is True
+        assert data["figures"] == ["plot.png"]
+        assert data["artifacts"] == ["plot.png", "data.csv"]
+
+    async def test_python_exec_empty_code_rejected(self) -> None:
+        ctx = _build_ctx(python=_FakePython())
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(id="x", name="python_exec", arguments_json=json.dumps({"code": "  "})),
+            chat_session_id="s",
+        )
+        assert json.loads(result)["error"] == "empty_code"
+
+    async def test_python_exec_unavailable_when_port_missing(self) -> None:
+        ctx = _build_ctx()  # python defaults to None
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(id="x", name="python_exec", arguments_json=json.dumps({"code": "1+1"})),
+            chat_session_id="s",
+        )
+        assert json.loads(result)["error"] == "python_unavailable"
 
     async def test_get_dao_treasury(self) -> None:
         ctx = _build_ctx(dao=True)

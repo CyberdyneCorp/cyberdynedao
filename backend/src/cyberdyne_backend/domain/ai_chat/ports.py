@@ -114,6 +114,33 @@ class MatlabPort(Protocol):
     ) -> MatlabCodegenResult: ...
 
 
+@dataclass(frozen=True, slots=True)
+class PythonExecResult:
+    """One Python interpreter execution. Like MATLAB, files written to the
+    workspace are referenced by ``artifacts`` (filenames) + ``session_id``,
+    not inlined — the frontend downloads them through the authed
+    /api/interpreter proxy."""
+
+    ok: bool
+    stdout: str
+    stderr: str
+    result: str | None = None
+    error: str | None = None
+    artifacts: tuple[str, ...] = ()
+    session_id: str = ""
+
+
+@runtime_checkable
+class PythonInterpreterPort(Protocol):
+    """Thin client over the Python interpreter backend. The agent calls it
+    as the signed-in user (``bearer`` is the user's CyberdyneAuth token),
+    so files land in that user's per-session workspace."""
+
+    async def execute(
+        self, *, code: str, session_id: str, bearer: str | None, restricted: bool = False
+    ) -> PythonExecResult: ...
+
+
 @runtime_checkable
 class ChatRepository(Protocol):
     async def save_session(self, session: ChatSession) -> None: ...

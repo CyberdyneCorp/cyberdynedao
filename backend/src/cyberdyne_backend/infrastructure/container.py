@@ -37,6 +37,9 @@ from cyberdyne_backend.adapters.outbound.llm.openai_client import (
     StubKnowledgeSearch,
 )
 from cyberdyne_backend.adapters.outbound.matlab.client import MatlabBackendClient
+from cyberdyne_backend.adapters.outbound.python_interpreter.client import (
+    PythonInterpreterClient,
+)
 from cyberdyne_backend.adapters.outbound.stripe.checkout_client import (
     MockStripeCheckoutClient,
     StripeCheckoutClient,
@@ -45,7 +48,12 @@ from cyberdyne_backend.adapters.outbound.stripe.webhook_verifier import (
     MockStripeWebhookVerifier,
     StripeWebhookVerifier,
 )
-from cyberdyne_backend.domain.ai_chat import ChatLLMPort, KnowledgeSearchPort, MatlabPort
+from cyberdyne_backend.domain.ai_chat import (
+    ChatLLMPort,
+    KnowledgeSearchPort,
+    MatlabPort,
+    PythonInterpreterPort,
+)
 from cyberdyne_backend.domain.auth_identity import AuthPort, UserProfilePort
 from cyberdyne_backend.domain.dao_treasury import ChainReaderPort
 from cyberdyne_backend.domain.leads import CaptchaPort, EmailNotifierPort
@@ -78,6 +86,7 @@ class Container:
         self._chat_llm: ChatLLMPort | None = None
         self._knowledge_search: KnowledgeSearchPort | None = None
         self._matlab: MatlabPort | None = None
+        self._python: PythonInterpreterPort | None = None
 
     # ── HTTP ──────────────────────────────────────────────────────────
     @property
@@ -271,6 +280,15 @@ class Container:
                 http_client=self.http_client,
             )
         return self._matlab
+
+    @property
+    def python(self) -> PythonInterpreterPort:
+        if self._python is None:
+            self._python = PythonInterpreterClient(
+                base_url=self._settings.python_interpreter_url,
+                http_client=self.http_client,
+            )
+        return self._python
 
     @property
     def knowledge_search(self) -> KnowledgeSearchPort:

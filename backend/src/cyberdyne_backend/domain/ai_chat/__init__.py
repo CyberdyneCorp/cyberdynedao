@@ -34,6 +34,8 @@ from cyberdyne_backend.domain.ai_chat.ports import (
     MatlabDiagnostic,
     MatlabPort,
     MatlabRunResult,
+    PythonExecResult,
+    PythonInterpreterPort,
     ToolSchema,
 )
 
@@ -52,6 +54,8 @@ __all__ = [
     "MatlabDiagnostic",
     "MatlabPort",
     "MatlabRunResult",
+    "PythonExecResult",
+    "PythonInterpreterPort",
     "ToolCall",
     "ToolSchema",
     "new_assistant_message",
