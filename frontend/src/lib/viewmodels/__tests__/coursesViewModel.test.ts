@@ -188,19 +188,37 @@ describe('coursesViewModel — progress actions', () => {
 });
 
 describe('coursesViewModel — certificate', () => {
-	it('open loads an existing certificate when present', async () => {
+	// A certificate only exists once the course is complete, so these
+	// exercise the cert path with a *completed* progress.
+	const completedProgress = { ...progress, completed: true };
+
+	it('open loads an existing certificate when the course is complete', async () => {
 		const vm = createCoursesViewModel(
-			fakeDeps({ fetchMyCertificate: vi.fn().mockResolvedValue(certificate) })
+			fakeDeps({
+				fetchMyCourseProgress: vi.fn().mockResolvedValue(completedProgress),
+				fetchMyCertificate: vi.fn().mockResolvedValue(certificate)
+			})
 		);
 		await vm.open('solidity-101', { withProgress: true });
 		expect(get(vm.certificate)).toEqual(certificate);
 	});
 
 	it('a 404 certificate is treated as "not earned", not an error', async () => {
-		const vm = createCoursesViewModel(fakeDeps()); // default cert dep → 404
+		// Completed course, but cert lookup 404s (e.g. not yet issued).
+		const vm = createCoursesViewModel(
+			fakeDeps({ fetchMyCourseProgress: vi.fn().mockResolvedValue(completedProgress) })
+		);
 		await vm.open('solidity-101', { withProgress: true });
 		expect(get(vm.certificate)).toBeNull();
 		expect(get(vm.error)).toBeNull();
+	});
+
+	it('does not fetch the certificate mid-course (course not complete)', async () => {
+		const deps = fakeDeps(); // default progress → completed: false
+		const vm = createCoursesViewModel(deps);
+		await vm.open('solidity-101', { withProgress: true });
+		expect(deps.fetchMyCertificate).not.toHaveBeenCalled();
+		expect(get(vm.certificate)).toBeNull();
 	});
 
 	it('does not load a certificate when anonymous (no progress)', async () => {

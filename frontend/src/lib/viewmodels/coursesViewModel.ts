@@ -139,14 +139,26 @@ export function createCoursesViewModel(
 		}
 	}
 
+	// A course certificate only exists once the course is complete, so
+	// only look it up then. Fetching it mid-course just 404s (noisy in the
+	// console and a wasted request).
+	async function syncCertificate(slug: string, prog: CourseProgress): Promise<void> {
+		if (prog.completed) {
+			await loadCertificate(slug);
+		} else {
+			certificate.set(null);
+		}
+	}
+
 	async function open(slug: string, opts: { withProgress?: boolean } = {}): Promise<void> {
 		loading.set(true);
 		error.set(null);
 		try {
 			selected.set(await deps.fetchCourse(slug));
 			if (opts.withProgress) {
-				progress.set(await deps.fetchMyCourseProgress(slug));
-				await loadCertificate(slug);
+				const prog = await deps.fetchMyCourseProgress(slug);
+				progress.set(prog);
+				await syncCertificate(slug, prog);
 			} else {
 				progress.set(null);
 				certificate.set(null);
@@ -160,8 +172,9 @@ export function createCoursesViewModel(
 
 	async function refreshProgress(slug: string): Promise<void> {
 		try {
-			progress.set(await deps.fetchMyCourseProgress(slug));
-			await loadCertificate(slug);
+			const prog = await deps.fetchMyCourseProgress(slug);
+			progress.set(prog);
+			await syncCertificate(slug, prog);
 		} catch (err) {
 			error.set(message(err));
 		}
@@ -170,8 +183,9 @@ export function createCoursesViewModel(
 	async function completeLesson(slug: string, lessonId: string): Promise<void> {
 		error.set(null);
 		try {
-			progress.set(await deps.setLessonProgress(slug, lessonId, 100));
-			await loadCertificate(slug);
+			const prog = await deps.setLessonProgress(slug, lessonId, 100);
+			progress.set(prog);
+			await syncCertificate(slug, prog);
 		} catch (err) {
 			error.set(message(err));
 		}
