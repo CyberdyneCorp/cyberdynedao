@@ -61,7 +61,7 @@
 		border: 2px solid #000000;
 		border-radius: 6px;
 		overflow: hidden;
-		background: #f6f8fa; /* matches the github hljs theme surface */
+		background: #0d1117; /* matches the github-dark hljs theme surface */
 	}
 	.ce__lang {
 		position: absolute;
@@ -72,10 +72,10 @@
 		font-size: 0.6rem;
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
-		color: #57606a;
-		background: #eaeef2;
-		border-left: 1px solid #d0d7de;
-		border-bottom: 1px solid #d0d7de;
+		color: #8b949e;
+		background: rgba(255, 255, 255, 0.06);
+		border-left: 1px solid rgba(255, 255, 255, 0.12);
+		border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 		border-bottom-left-radius: 4px;
 		padding: 0.1rem 0.4rem;
 		pointer-events: none;
@@ -103,7 +103,8 @@
 		z-index: 0;
 		pointer-events: none;
 		overflow: hidden;
-		color: #1f2328;
+		color: #c9d1d9; /* fallback if the hljs theme is slow to load */
+		background: #0d1117;
 	}
 	.ce__layer code {
 		font: inherit;
@@ -113,10 +114,10 @@
 		z-index: 1;
 		background: transparent;
 		color: transparent;
-		caret-color: #1f2328;
+		caret-color: #e6edf3;
 		resize: vertical;
 	}
 	.ce__input::selection {
-		background: rgba(84, 174, 255, 0.35);
+		background: rgba(56, 139, 253, 0.4);
 	}
 </style>

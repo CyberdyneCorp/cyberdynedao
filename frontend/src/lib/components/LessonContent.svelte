@@ -132,6 +132,17 @@
 		border-radius: 6px;
 		padding: 0.7rem 0.9rem;
 	}
+	/* Dark code fences inside rendered markdown, matching the code editor. */
+	.md :global(pre) {
+		background: #0d1117;
+		border-radius: 6px;
+		padding: 0.7rem 0.85rem;
+		overflow-x: auto;
+	}
+	.md :global(pre code) {
+		background: transparent;
+		color: #c9d1d9;
+	}
 	.run {
 		margin-top: 0.4rem;
 	}
@@ -140,15 +151,14 @@
 		white-space: pre-wrap;
 		font-family: ui-monospace, monospace;
 		font-size: 0.78rem;
-		background: #f3f4f6;
+		background: #0d1117;
 		border: 2px solid #000000;
 		border-radius: 6px;
 		padding: 0.6rem;
-		color: #374151;
+		color: #c9d1d9;
 	}
 	.out--err {
-		color: #991b1b;
-		border-color: #fee2e2;
+		color: #ffa198;
 	}
 	.hint {
 		color: #374151;
