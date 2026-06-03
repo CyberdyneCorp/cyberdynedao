@@ -606,7 +606,7 @@
 	}
 	.new-course {
 		background: #ffffff;
-		border: 1px solid #d4d4d8;
+		border: 2px solid #000000;
 		border-radius: 8px;
 		padding: 0.85rem;
 		margin-bottom: 1.25rem;
@@ -645,7 +645,7 @@
 		align-items: center;
 		gap: 0.75rem;
 		background: #ffffff;
-		border: 1px solid #d4d4d8;
+		border: 2px solid #000000;
 		border-radius: 6px;
 		padding: 0.5rem 0.7rem;
 	}
@@ -692,7 +692,7 @@
 	.num {
 		width: 5rem;
 		background: #f3f4f6;
-		border: 1px solid #d4d4d8;
+		border: 2px solid #000000;
 		border-radius: 5px;
 		color: #000000;
 		padding: 0.4rem 0.55rem;
@@ -708,7 +708,7 @@
 	}
 	.dt {
 		background: #f3f4f6;
-		border: 1px solid #d4d4d8;
+		border: 2px solid #000000;
 		border-radius: 5px;
 		color: #000000;
 		padding: 0.4rem 0.55rem;
@@ -717,7 +717,7 @@
 	}
 	.qcard {
 		background: #ffffff;
-		border: 1px solid #d4d4d8;
+		border: 2px solid #000000;
 		border-radius: 8px;
 		padding: 0.7rem;
 		margin-bottom: 0.6rem;

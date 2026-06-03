@@ -103,7 +103,7 @@
 <style>
 	.quiz {
 		background: #f3f4f6;
-		border: 1px solid #d4d4d8;
+		border: 2px solid #000000;
 		border-radius: 8px;
 		padding: 0.85rem;
 		margin-top: 0.6rem;
@@ -137,7 +137,7 @@
 		gap: 0.6rem;
 	}
 	.q {
-		border: 1px solid #d4d4d8;
+		border: 2px solid #000000;
 		border-radius: 6px;
 		padding: 0.55rem 0.7rem;
 	}
