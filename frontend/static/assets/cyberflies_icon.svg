@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges">
+  <!-- Background tile (teal/cyan, chunky drop-shadow square to match the
+       rest of the Cyberdyne pixel-icon family) -->
+  <rect x="6" y="9" width="55" height="51" fill="#0f766e"/>
+  <rect x="3" y="5" width="55" height="51" fill="#14b8a6" stroke="#000" stroke-width="2"/>
+
+  <!-- Microphone body — capsule + stand, signalling "meetings / audio" -->
+  <g stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="22" y="12" width="13" height="22" rx="6" fill="#fff7ed"/>
+    <path d="M18 28 a10 10 0 0 0 20 0" fill="none" stroke-width="2.5"/>
+    <line x1="28" y1="38" x2="28" y2="46" stroke-width="2.5"/>
+    <line x1="22" y1="46" x2="34" y2="46" stroke-width="2.5"/>
+  </g>
+
+  <!-- Waveform on the right — hints at the transcription / audio capture -->
+  <g fill="#fde68a" stroke="#000" stroke-width="1">
+    <rect x="42" y="24" width="3" height="8"/>
+    <rect x="47" y="18" width="3" height="20"/>
+    <rect x="52" y="22" width="3" height="12"/>
+  </g>
+</svg>

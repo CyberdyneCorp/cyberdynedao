@@ -135,6 +135,38 @@ server {
     proxy_buffering off;
   }
 
+  # Cyberflies (meetings) backend reverse proxy. Same trailing-slash
+  # trick as /api/matlab. Audio uploads can be large, so the body-size
+  # ceiling is generous; transcription is handled async upstream (the
+  # POST returns 202 quickly), but keep a long read timeout for the
+  # upload itself over slow links.
+  location ^~ /api/cyberflies/ {
+    proxy_pass https://cyberflies.backend.coolify.cyberdynecorp.ai/;
+    proxy_set_header Host cyberflies.backend.coolify.cyberdynecorp.ai;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+    proxy_ssl_server_name on;
+    proxy_read_timeout 120s;
+    proxy_connect_timeout 10s;
+    client_max_body_size 256m;
+    proxy_buffering off;
+  }
+
+  # Python interpreter backend reverse proxy. Code execution can run for
+  # tens of seconds; raise the read timeout. Uploaded datasets/artifacts
+  # are bounded but can be a few MB.
+  location ^~ /api/interpreter/ {
+    proxy_pass https://interpreter.backend.coolify.cyberdynecorp.ai/;
+    proxy_set_header Host interpreter.backend.coolify.cyberdynecorp.ai;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+    proxy_ssl_server_name on;
+    proxy_read_timeout 120s;
+    proxy_connect_timeout 10s;
+    client_max_body_size 64m;
+    proxy_buffering off;
+  }
+
   location / { try_files \$uri \$uri/ /index.html; }
 
   add_header X-Frame-Options "SAMEORIGIN" always;
