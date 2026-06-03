@@ -144,6 +144,12 @@ export function updateCourse(slug: string, input: UpdateCourseInput): Promise<Co
 	return sendJson<CourseDetail>('PATCH', `/api/v1/admin/courses/${enc(slug)}`, input);
 }
 
+/** Set or clear a course deadline. `dueAt` is an ISO-8601 string, or
+ * `null` to clear it. */
+export function setCourseDeadline(slug: string, dueAt: string | null): Promise<CourseDetail> {
+	return sendJson<CourseDetail>('PUT', `/api/v1/admin/courses/${enc(slug)}/deadline`, { dueAt });
+}
+
 export function publishCourse(slug: string): Promise<CourseDetail> {
 	return sendJson<CourseDetail>('POST', `/api/v1/admin/courses/${enc(slug)}/publish`, {});
 }

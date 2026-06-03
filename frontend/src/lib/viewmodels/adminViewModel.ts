@@ -25,12 +25,15 @@ import {
 	deleteQuiz as apiDeleteQuiz,
 	getQuiz as apiGetQuiz,
 	publishCourse as apiPublishCourse,
+	setCourseDeadline as apiSetCourseDeadline,
 	unpublishCourse as apiUnpublishCourse,
+	updateCourse as apiUpdateCourse,
 	upsertQuiz as apiUpsertQuiz,
 	uploadFile as apiUploadFile,
 	type AddLessonInput,
 	type CreateCourseInput,
 	type EditorQuiz,
+	type UpdateCourseInput,
 	type UploadResult,
 	type UpsertQuizInput
 } from '$lib/api/adminApi';
@@ -54,6 +57,8 @@ export interface AdminViewModelDeps {
 	listCourses: typeof apiFetchCourses;
 	getCourse: typeof apiFetchCourse;
 	createCourse: typeof apiCreateCourse;
+	updateCourse: typeof apiUpdateCourse;
+	setCourseDeadline: typeof apiSetCourseDeadline;
 	publishCourse: typeof apiPublishCourse;
 	unpublishCourse: typeof apiUnpublishCourse;
 	deleteCourse: typeof apiDeleteCourse;
@@ -69,6 +74,8 @@ const defaultDeps: AdminViewModelDeps = {
 	listCourses: apiFetchCourses,
 	getCourse: apiFetchCourse,
 	createCourse: apiCreateCourse,
+	updateCourse: apiUpdateCourse,
+	setCourseDeadline: apiSetCourseDeadline,
 	publishCourse: apiPublishCourse,
 	unpublishCourse: apiUnpublishCourse,
 	deleteCourse: apiDeleteCourse,
@@ -88,6 +95,8 @@ export interface AdminViewModel {
 	error: Writable<string | null>;
 	load: () => Promise<void>;
 	create: (input: CreateCourseInput) => Promise<boolean>;
+	editCourse: (slug: string, input: UpdateCourseInput) => Promise<boolean>;
+	setDeadline: (slug: string, dueAt: string | null) => Promise<boolean>;
 	publish: (slug: string) => Promise<void>;
 	unpublish: (slug: string) => Promise<void>;
 	remove: (slug: string) => Promise<void>;
@@ -240,6 +249,19 @@ export function createAdminViewModel(deps: AdminViewModelDeps = defaultDeps): Ad
 		error,
 		load,
 		create: (input) => mutate(() => deps.createCourse(input)),
+		// Course-level edits happen while a course is open: refresh the
+		// open detail AND the list (so the catalogue reflects the new
+		// title/status/deadline once the editor closes).
+		editCourse: async (slug, input) => {
+			const ok = await mutateSelected(() => deps.updateCourse(slug, input));
+			if (ok) await load();
+			return ok;
+		},
+		setDeadline: async (slug, dueAt) => {
+			const ok = await mutateSelected(() => deps.setCourseDeadline(slug, dueAt));
+			if (ok) await load();
+			return ok;
+		},
 		publish: async (slug) => {
 			await mutate(() => deps.publishCourse(slug));
 		},
