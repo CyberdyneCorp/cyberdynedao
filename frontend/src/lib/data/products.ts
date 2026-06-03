@@ -29,21 +29,6 @@ export const productSuite: ProductEntry[] = [
 		status: 'active'
 	},
 	{
-		id: 'cyberstac',
-		name: 'CyberSTAC',
-		icon: '📡',
-		description:
-			'STAC-compliant catalog server for satellite and drone imagery, exposing both a standards REST API and a first-class MCP surface so LLM agents can query the catalog natively.',
-		features: [
-			'REST + MCP dual interface',
-			'Dual backend: MongoDB or pgstac',
-			'bbox / datetime / CQL2 filters',
-			'Hexagonal + MVVM SvelteKit frontend'
-		],
-		palette: 'purple',
-		status: 'active'
-	},
-	{
 		id: 'cybergeopy',
 		name: 'CyberGeoPy',
 		icon: '🗺️',
