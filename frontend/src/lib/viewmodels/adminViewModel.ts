@@ -39,6 +39,17 @@ function message(err: unknown): string {
 	return err instanceof Error ? err.message : String(err);
 }
 
+/**
+ * Whether the admin view should kick off its one-time initial course
+ * load. Deliberately independent of how many courses came back: an empty
+ * list is a valid result, so gating on `courses.length === 0` would
+ * re-trigger the load forever and leave the UI stuck on "Loading…".
+ * Callers track `attempted` and flip it before loading.
+ */
+export function shouldAutoLoad(canEdit: boolean, attempted: boolean, loading: boolean): boolean {
+	return canEdit && !attempted && !loading;
+}
+
 export interface AdminViewModelDeps {
 	listCourses: typeof apiFetchCourses;
 	getCourse: typeof apiFetchCourse;

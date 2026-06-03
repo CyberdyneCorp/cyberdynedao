@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { get } from 'svelte/store';
-import { createAdminViewModel, type AdminViewModelDeps } from '../adminViewModel';
+import { createAdminViewModel, shouldAutoLoad, type AdminViewModelDeps } from '../adminViewModel';
 import { AdminApiError } from '$lib/api/adminApi';
 import type { CourseDetail, CourseSummary } from '$lib/api/coursesApi';
 
@@ -77,6 +77,36 @@ describe('adminViewModel — load', () => {
 		await vm.load();
 		expect(get(vm.error)).toBe('boom');
 		expect(get(vm.loading)).toBe(false);
+	});
+
+	it('an empty course list is a valid result (no error, not loading)', async () => {
+		const vm = createAdminViewModel(fakeDeps({ listCourses: vi.fn().mockResolvedValue([]) }));
+		await vm.load();
+		expect(get(vm.courses)).toEqual([]);
+		expect(get(vm.loading)).toBe(false);
+		expect(get(vm.error)).toBeNull();
+	});
+});
+
+describe('shouldAutoLoad — the initial-load guard', () => {
+	// Regression: the admin view auto-loaded whenever the course list was
+	// empty, so an empty (but successful) result re-triggered the load
+	// forever and the UI was stuck on "Loading…". The guard must fire at
+	// most once and must NOT depend on how many courses came back.
+	it('loads once when editable and not yet attempted', () => {
+		expect(shouldAutoLoad(true, false, false)).toBe(true);
+	});
+
+	it('does not load again after the first attempt — even with zero courses', () => {
+		expect(shouldAutoLoad(true, true, false)).toBe(false);
+	});
+
+	it('does not load while a load is in flight', () => {
+		expect(shouldAutoLoad(true, false, true)).toBe(false);
+	});
+
+	it('does not load when the user cannot edit', () => {
+		expect(shouldAutoLoad(false, false, false)).toBe(false);
 	});
 });
 
