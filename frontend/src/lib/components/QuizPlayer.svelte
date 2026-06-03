@@ -62,11 +62,15 @@
 				</li>
 			{/each}
 		</ol>
+		{@const hasIncorrect = res.results.some((r) => !r.isCorrect)}
 		<div class="row">
-			{#if !$feedback}
+			<!-- AI feedback only explains *wrong* answers; offer it only then. -->
+			{#if hasIncorrect && !$feedback}
 				<PixelButton variant="outline" size="sm" disabled={$busy} onclick={() => vm.explain(lessonId)}>
-					{$busy ? 'Thinking…' : 'Explain my answers (AI)'}
+					{$busy ? 'Thinking…' : 'Explain my mistakes (AI)'}
 				</PixelButton>
+			{:else if !hasIncorrect}
+				<span class="hint">All correct — see the explanations above. 🎉</span>
 			{/if}
 			<PixelButton variant="outline" size="sm" disabled={$busy} onclick={() => vm.load(lessonId)}>
 				Try again
