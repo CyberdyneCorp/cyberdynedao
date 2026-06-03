@@ -89,6 +89,14 @@ class SqlAlchemyQuizRepository:
                 )
             )
             quiz_id = quiz.id
+        # Flush each level before inserting the next: the rows form a
+        # quizzes → quiz_questions → quiz_options FK chain, and the models
+        # declare only column-level ForeignKeys (no relationship()), so the
+        # unit of work doesn't know to order the INSERTs. A single flush
+        # lets options be written before their question exists, which a
+        # real FK-enforcing DB (Postgres) rejects (SQLite silently allows
+        # it). Flushing per level guarantees parents land first.
+        await self._session.flush()
         for question in quiz.questions:
             self._session.add(
                 QuizQuestionRow(
@@ -99,6 +107,8 @@ class SqlAlchemyQuizRepository:
                     sort_order=question.sort_order,
                 )
             )
+        await self._session.flush()
+        for question in quiz.questions:
             for option in question.options:
                 self._session.add(
                     QuizOptionRow(
