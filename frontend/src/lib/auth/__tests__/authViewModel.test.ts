@@ -76,3 +76,45 @@ describe('authViewModel admin/editor detection', () => {
 		expect(mockedGetProfile).not.toHaveBeenCalled();
 	});
 });
+
+describe('authViewModel restore() refreshes a stale profile', () => {
+	// sessionStorage key mirrors STORAGE_KEY in the view-model.
+	const STORAGE_KEY = 'cyberdyne.auth.v1';
+
+	function persist(user: Record<string, unknown>): void {
+		sessionStorage.setItem(
+			STORAGE_KEY,
+			JSON.stringify({
+				token: 'persisted-token',
+				refreshToken: 'persisted-refresh',
+				user,
+				expiresAt: Date.now() + 60 * 60 * 1000 // 1h out — not expired
+			})
+		);
+	}
+
+	// Regression: a session persisted before the upstream is_admin grant
+	// (CyberdyneAuth#12) carries a stale profile. restore() must re-fetch
+	// /users/me so isAdmin reflects current state without a fresh sign-in.
+	it('picks up is_admin granted after the session was persisted', async () => {
+		persist({ id: 'u4', email: 'leotest@test.com' }); // stale: no is_admin
+		mockedGetProfile.mockResolvedValue({
+			id: 'u4',
+			email: 'leotest@test.com',
+			is_admin: true
+		});
+		const vm = createAuthVM();
+		await vm.restore();
+		expect(mockedGetProfile).toHaveBeenCalled();
+		expect(vm.isAdmin).toBe(true);
+	});
+
+	it('keeps the persisted profile if the refresh fetch fails', async () => {
+		persist({ id: 'u5', email: 'admin@test.com', is_admin: true });
+		mockedGetProfile.mockRejectedValue(new Error('network down'));
+		const vm = createAuthVM();
+		await vm.restore();
+		expect(vm.isAuthenticated).toBe(true);
+		expect(vm.isAdmin).toBe(true); // retained from the persisted session
+	});
+});

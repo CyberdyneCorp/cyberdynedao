@@ -197,6 +197,28 @@ export function createAuthVM(): AuthViewModel {
 		}
 	}
 
+	/**
+	 * Best-effort re-fetch of the signed-in user's profile, replacing the
+	 * persisted copy. Restored sessions carry whatever profile was cached
+	 * at sign-in time, which can be stale — e.g. an admin grant
+	 * (`is_admin`) made upstream after the session was persisted wouldn't
+	 * surface until the user signed out and back in. Refreshing on restore
+	 * keeps `isAdmin` / `isEditor` honest on reload. Failures are ignored:
+	 * the existing profile stays put rather than dropping the session.
+	 */
+	async function refreshProfile(): Promise<void> {
+		if (!token) return;
+		try {
+			const fresh = await getProfile();
+			if (fresh) {
+				user = fresh;
+				writePersisted({ token, refreshToken: refreshToken ?? '', user, expiresAt });
+			}
+		} catch {
+			/* keep the persisted profile */
+		}
+	}
+
 	async function installSession(
 		accessToken: string,
 		newRefreshToken: string,
@@ -275,6 +297,10 @@ export function createAuthVM(): AuthViewModel {
 		} else {
 			scheduleRefresh();
 		}
+		// Re-sync the profile (e.g. is_admin) that may have changed upstream
+		// since this session was persisted. No-op if the refresh above
+		// cleared the session.
+		await refreshProfile();
 		isRestored = true;
 	}
 
