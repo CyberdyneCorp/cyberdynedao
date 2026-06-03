@@ -121,6 +121,9 @@ export interface AdminViewModel {
 	loading: Writable<boolean>;
 	busy: Writable<boolean>;
 	error: Writable<string | null>;
+	/** Transient success message after a mutation (e.g. "Draft created"). */
+	notice: Writable<string | null>;
+	clearNotice: () => void;
 	load: () => Promise<void>;
 	create: (input: CreateCourseInput) => Promise<boolean>;
 	editCourse: (slug: string, input: UpdateCourseInput) => Promise<boolean>;
@@ -148,6 +151,7 @@ export function createAdminViewModel(deps: AdminViewModelDeps = defaultDeps): Ad
 	const loading = writable(false);
 	const busy = writable(false);
 	const error = writable<string | null>(null);
+	const notice = writable<string | null>(null);
 
 	let selectedSlug: string | null = null;
 
@@ -164,12 +168,14 @@ export function createAdminViewModel(deps: AdminViewModelDeps = defaultDeps): Ad
 	}
 
 	// Mutation + reload the course LIST (course-level changes).
-	async function mutate(run: () => Promise<unknown>): Promise<boolean> {
+	async function mutate(run: () => Promise<unknown>, successMsg?: string): Promise<boolean> {
 		busy.set(true);
 		error.set(null);
+		notice.set(null);
 		try {
 			await run();
 			await load();
+			if (successMsg) notice.set(successMsg);
 			return true;
 		} catch (err) {
 			error.set(message(err));
@@ -180,13 +186,15 @@ export function createAdminViewModel(deps: AdminViewModelDeps = defaultDeps): Ad
 	}
 
 	// Mutation + reload the SELECTED course detail (lesson-level changes).
-	async function mutateSelected(run: () => Promise<unknown>): Promise<boolean> {
+	async function mutateSelected(run: () => Promise<unknown>, successMsg?: string): Promise<boolean> {
 		if (!selectedSlug) return false;
 		busy.set(true);
 		error.set(null);
+		notice.set(null);
 		try {
 			await run();
 			selected.set(await deps.getCourse(selectedSlug));
+			if (successMsg) notice.set(successMsg);
 			return true;
 		} catch (err) {
 			error.set(message(err));
@@ -278,18 +286,23 @@ export function createAdminViewModel(deps: AdminViewModelDeps = defaultDeps): Ad
 		loading,
 		busy,
 		error,
+		notice,
+		clearNotice: () => notice.set(null),
 		load,
-		create: (input) => mutate(() => deps.createCourse(input)),
+		create: (input) => mutate(() => deps.createCourse(input), 'Draft created'),
 		// Course-level edits happen while a course is open: refresh the
 		// open detail AND the list (so the catalogue reflects the new
 		// title/status/deadline once the editor closes).
 		editCourse: async (slug, input) => {
-			const ok = await mutateSelected(() => deps.updateCourse(slug, input));
+			const ok = await mutateSelected(() => deps.updateCourse(slug, input), 'Course updated');
 			if (ok) await load();
 			return ok;
 		},
 		setDeadline: async (slug, dueAt) => {
-			const ok = await mutateSelected(() => deps.setCourseDeadline(slug, dueAt));
+			const ok = await mutateSelected(
+				() => deps.setCourseDeadline(slug, dueAt),
+				dueAt ? 'Deadline set' : 'Deadline cleared'
+			);
 			if (ok) await load();
 			return ok;
 		},
@@ -304,7 +317,7 @@ export function createAdminViewModel(deps: AdminViewModelDeps = defaultDeps): Ad
 			return mutate(() => deps.reorderCourses(map));
 		},
 		editLesson: (lessonId, input) =>
-			mutateSelected(() => deps.updateLesson(selectedSlug as string, lessonId, input)),
+			mutateSelected(() => deps.updateLesson(selectedSlug as string, lessonId, input), 'Lesson updated'),
 		moveLesson: async (lessonId, dir) => {
 			const sel = get(selected);
 			if (!sel) return false;
@@ -317,19 +330,20 @@ export function createAdminViewModel(deps: AdminViewModelDeps = defaultDeps): Ad
 			return mutateSelected(() => deps.reorderLessons(sel.slug, map));
 		},
 		publish: async (slug) => {
-			await mutate(() => deps.publishCourse(slug));
+			await mutate(() => deps.publishCourse(slug), 'Course published');
 		},
 		unpublish: async (slug) => {
-			await mutate(() => deps.unpublishCourse(slug));
+			await mutate(() => deps.unpublishCourse(slug), 'Course unpublished');
 		},
 		remove: async (slug) => {
-			await mutate(() => deps.deleteCourse(slug));
+			await mutate(() => deps.deleteCourse(slug), 'Course deleted');
 		},
 		openCourse,
 		closeCourse,
-		addLesson: (input) => mutateSelected(() => deps.addLesson(selectedSlug as string, input)),
+		addLesson: (input) =>
+			mutateSelected(() => deps.addLesson(selectedSlug as string, input), 'Lesson added'),
 		removeLesson: async (lessonId) => {
-			await mutateSelected(() => deps.deleteLesson(selectedSlug as string, lessonId));
+			await mutateSelected(() => deps.deleteLesson(selectedSlug as string, lessonId), 'Lesson deleted');
 		},
 		upload,
 		loadQuiz,
