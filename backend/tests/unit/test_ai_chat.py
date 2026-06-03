@@ -402,13 +402,18 @@ class _FakeMatlab:
 
 
 class _FakePython:
-    """Records execute calls; returns canned stdout (+ optional artifact)."""
+    """Records create_session + execute calls; returns canned stdout."""
 
     def __init__(self, artifacts: tuple[str, ...] = ()) -> None:
         self.calls: list[dict[str, object]] = []
+        self.created = 0
         self._artifacts = artifacts
 
-    async def execute(self, *, code, session_id, bearer, restricted=False):
+    async def create_session(self, *, bearer):
+        self.created += 1
+        return f"srv-session-{self.created}"
+
+    async def execute(self, *, code, session_id, bearer, restricted=True):
         from cyberdyne_backend.domain.ai_chat import PythonExecResult
 
         self.calls.append(
@@ -859,7 +864,7 @@ class TestToolDispatcher:
         assert data["language"] == "c"
         assert "int main" in data["code"]
 
-    async def test_python_exec_runs_in_session_workspace(self) -> None:
+    async def test_python_exec_runs_in_server_session(self) -> None:
         python = _FakePython()
         ctx = _build_ctx(python=python, bearer="tok-9")
         result = await ToolDispatcher(ctx).dispatch(
@@ -874,9 +879,24 @@ class TestToolDispatcher:
         assert data["ok"] is True
         assert "45" in data["stdout"]
         assert data["result"] == "45"
-        # stable per-conversation workspace + forwarded bearer
-        assert python.calls[0]["session_id"] == "agent-sess-7"
+        # A server-issued session is created (never a client-invented id)
+        # and the bearer + restricted sandbox are forwarded.
+        assert python.created == 1
+        assert python.calls[0]["session_id"] == "srv-session-1"
         assert python.calls[0]["bearer"] == "tok-9"
+        assert python.calls[0]["restricted"] is True
+
+    async def test_python_exec_reuses_one_session_within_a_turn(self) -> None:
+        python = _FakePython()
+        dispatcher = ToolDispatcher(_build_ctx(python=python, bearer="t"))
+        for _ in range(3):
+            await dispatcher.dispatch(
+                ToolCall(id="x", name="python_exec", arguments_json=json.dumps({"code": "1"})),
+                chat_session_id="s",
+            )
+        # One session created, reused across the three calls.
+        assert python.created == 1
+        assert {c["session_id"] for c in python.calls} == {"srv-session-1"}
 
     async def test_python_exec_reports_figure_artifacts(self) -> None:
         python = _FakePython(artifacts=("plot.png", "data.csv"))

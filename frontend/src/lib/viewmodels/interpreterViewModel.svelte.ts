@@ -19,6 +19,7 @@
 
 import {
 	execute as runExecute,
+	createSession,
 	listFiles,
 	uploadFile,
 	downloadFile,
@@ -42,18 +43,15 @@ export interface InterpreterCell {
 	finishedAt: number | null;
 }
 
-function randomSessionId(): string {
-	if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-		return `web-${crypto.randomUUID()}`;
-	}
-	return `web-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
 export interface InterpreterViewModel {
 	readonly cells: InterpreterCell[];
 	readonly input: string;
 	readonly running: boolean;
-	readonly sessionId: string;
+	/** Server-issued workspace session id, or null until the first
+	 *  execute/refresh/upload lazily creates one via POST /sessions. The
+	 *  interpreter rejects client-invented ids ("invalid session id"), so
+	 *  we never fabricate one. */
+	readonly sessionId: string | null;
 	/** Files in the session workspace, refreshed from each /execute
 	 *  response and on demand via {@link refreshFiles}. */
 	readonly files: FileMeta[];
@@ -74,11 +72,30 @@ export function createInterpreterVM(): InterpreterViewModel {
 	let cells = $state<InterpreterCell[]>([]);
 	let input = $state<string>('');
 	let running = $state<boolean>(false);
-	let sessionId = $state<string>(randomSessionId());
+	let sessionId = $state<string | null>(null);
 	let files = $state<FileMeta[]>([]);
 	let filesLoading = $state<boolean>(false);
 	let error = $state<string | null>(null);
 	let nextCellId = 1;
+
+	// Lazily create one server-issued session and reuse it. Coalesce
+	// concurrent callers so a burst of run/refresh/upload doesn't spawn
+	// multiple workspaces.
+	let sessionInflight: Promise<string> | null = null;
+	async function ensureSession(): Promise<string> {
+		if (sessionId) return sessionId;
+		if (sessionInflight) return sessionInflight;
+		sessionInflight = (async () => {
+			try {
+				const { session_id } = await createSession();
+				sessionId = session_id;
+				return session_id;
+			} finally {
+				sessionInflight = null;
+			}
+		})();
+		return sessionInflight;
+	}
 
 	function appendCell(source: string): InterpreterCell {
 		const cell: InterpreterCell = {
@@ -115,7 +132,8 @@ export function createInterpreterVM(): InterpreterViewModel {
 		input = '';
 		const cell = appendCell(trimmed);
 		try {
-			const response = await runExecute({ code: trimmed, session_id: sessionId });
+			const sid = await ensureSession();
+			const response = await runExecute({ code: trimmed, session_id: sid });
 			patchCell(cell.id, {
 				status: response.success ? 'ok' : 'error',
 				stdout: response.stdout ?? '',
@@ -142,7 +160,8 @@ export function createInterpreterVM(): InterpreterViewModel {
 	async function refreshFiles(): Promise<void> {
 		filesLoading = true;
 		try {
-			files = await listFiles(sessionId);
+			const sid = await ensureSession();
+			files = await listFiles(sid);
 			error = null;
 		} catch (err) {
 			error = toMessage(err);
@@ -154,8 +173,9 @@ export function createInterpreterVM(): InterpreterViewModel {
 	async function uploadWorkspaceFile(file: File): Promise<void> {
 		filesLoading = true;
 		try {
-			await uploadFile(file, file.name, sessionId);
-			files = await listFiles(sessionId);
+			const sid = await ensureSession();
+			await uploadFile(file, file.name, sid);
+			files = await listFiles(sid);
 			error = null;
 		} catch (err) {
 			error = toMessage(err);
@@ -166,7 +186,8 @@ export function createInterpreterVM(): InterpreterViewModel {
 
 	async function downloadWorkspaceFile(name: string): Promise<void> {
 		try {
-			const { url } = await downloadFile(sessionId, name);
+			const sid = await ensureSession();
+			const { url } = await downloadFile(sid, name);
 			const anchor = document.createElement('a');
 			anchor.href = url;
 			anchor.download = name.split('/').pop() ?? name;
@@ -212,7 +233,10 @@ export function createInterpreterVM(): InterpreterViewModel {
 		resetSession: () => {
 			cells = [];
 			nextCellId = 1;
-			sessionId = randomSessionId();
+			// Drop the session; the next run/refresh/upload creates a fresh
+			// server-issued one.
+			sessionId = null;
+			sessionInflight = null;
 			files = [];
 			error = null;
 		},

@@ -19,6 +19,9 @@ function execResponse(over: Partial<ExecuteResponse> = {}): ExecuteResponse {
 beforeEach(() => {
 	URL.createObjectURL = vi.fn(() => 'blob:mock://abc') as typeof URL.createObjectURL;
 	URL.revokeObjectURL = vi.fn() as typeof URL.revokeObjectURL;
+	// The VM lazily creates a server-issued session before any execute /
+	// listFiles / upload; default it so each test doesn't have to.
+	vi.spyOn(interpreterApi, 'createSession').mockResolvedValue({ session_id: 'srv-1' });
 });
 
 afterEach(() => {
@@ -26,12 +29,24 @@ afterEach(() => {
 });
 
 describe('interpreterViewModel', () => {
-	it('starts empty with a stable web- session id', () => {
+	it('starts empty with no session until first use', () => {
 		const vm = createInterpreterVM();
 		expect(vm.cells).toEqual([]);
 		expect(vm.input).toBe('');
 		expect(vm.running).toBe(false);
-		expect(vm.sessionId).toMatch(/^web-/);
+		expect(vm.sessionId).toBeNull();
+	});
+
+	it('creates one server session and reuses it across calls', async () => {
+		const createSpy = vi.spyOn(interpreterApi, 'createSession');
+		vi.spyOn(interpreterApi, 'execute').mockResolvedValue(execResponse());
+		const vm = createInterpreterVM();
+		vm.setInput('1');
+		await vm.runCode();
+		vm.setInput('2');
+		await vm.runCode();
+		expect(vm.sessionId).toBe('srv-1');
+		expect(createSpy).toHaveBeenCalledTimes(1);
 	});
 
 	it('runCode is a no-op on empty input', async () => {
@@ -63,12 +78,13 @@ describe('interpreterViewModel', () => {
 		expect(vm.files[0].name).toBe('out.txt');
 	});
 
-	it('passes session_id to execute', async () => {
+	it('passes the created session_id to execute', async () => {
 		const spy = vi.spyOn(interpreterApi, 'execute').mockResolvedValue(execResponse());
 		const vm = createInterpreterVM();
 		vm.setInput('1+1');
 		await vm.runCode();
-		expect(spy.mock.calls[0][0].session_id).toBe(vm.sessionId);
+		expect(spy.mock.calls[0][0].session_id).toBe('srv-1');
+		expect(vm.sessionId).toBe('srv-1');
 		expect(spy.mock.calls[0][0].code).toBe('1+1');
 	});
 
@@ -153,12 +169,15 @@ describe('interpreterViewModel', () => {
 		vm.setInput('second');
 		await vm.runCode();
 		expect(vm.cells).toHaveLength(1);
+		// Let the first run progress past createSession() to the (hanging)
+		// execute() so resolveFirst is assigned.
+		await new Promise((r) => setTimeout(r, 0));
 		resolveFirst(execResponse());
 		await inflight;
 		expect(vm.running).toBe(false);
 	});
 
-	it('clearCells empties history; resetSession also bumps session id and files', async () => {
+	it('clearCells empties history; resetSession also drops session + files', async () => {
 		vi.spyOn(interpreterApi, 'execute').mockResolvedValue(
 			execResponse({ artifacts: [{ name: 'a', size_bytes: 1, modified_at: 0 }] })
 		);
@@ -167,13 +186,14 @@ describe('interpreterViewModel', () => {
 		await vm.runCode();
 		expect(vm.cells).toHaveLength(1);
 		expect(vm.files).toHaveLength(1);
-		const sid = vm.sessionId;
+		expect(vm.sessionId).toBe('srv-1');
 		vm.clearCells();
 		expect(vm.cells).toEqual([]);
 		expect(vm.files).toHaveLength(1); // clearCells leaves files alone
 		vm.resetSession();
 		expect(vm.files).toEqual([]);
-		expect(vm.sessionId).not.toBe(sid);
+		// Session dropped; the next run will create a fresh one.
+		expect(vm.sessionId).toBeNull();
 	});
 
 	it('refreshFiles lists workspace files', async () => {
