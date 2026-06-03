@@ -156,8 +156,14 @@ async def get_certificate_pdf_uc() -> (
 
 
 def _viewer_can_see_drafts(request: Request) -> bool:
+    # Must mirror ``require_editor``: a caller who can author courses must
+    # also be able to *see* the drafts they author. Honour both the
+    # ``editor`` scope and the CyberdyneAuth ``is_admin`` flag — otherwise
+    # an admin can create a draft (201) but never see it in the catalogue.
     principal = getattr(request.state, "principal", None)
-    return isinstance(principal, UserPrincipal) and EDITOR_SCOPE in principal.scopes
+    if not isinstance(principal, UserPrincipal):
+        return False
+    return EDITOR_SCOPE in principal.scopes or principal.is_admin
 
 
 def _certificate_response(cert: CourseCertificate) -> CourseCertificateResponse:
