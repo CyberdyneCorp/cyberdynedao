@@ -3,6 +3,7 @@
 		PixelScrollArea,
 		PixelButton,
 		PixelInput,
+		PixelCheckbox,
 		Textarea,
 		Select,
 		Badge
@@ -52,6 +53,53 @@
 			void vm.load();
 		}
 	});
+
+	// Edit-course form, re-seeded from the open course whenever it changes.
+	let eTitle = $state('');
+	let eDescription = $state('');
+	let eMandatory = $state(false);
+	let eDueAt = $state(''); // datetime-local value (local time)
+	let editingSlug = $state<string | null>(null);
+
+	function isoToLocalInput(iso: string): string {
+		const d = new Date(iso);
+		const pad = (n: number) => String(n).padStart(2, '0');
+		return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+	}
+
+	$effect(() => {
+		const c = $selected;
+		if (c && c.slug !== editingSlug) {
+			editingSlug = c.slug;
+			eTitle = c.title;
+			eDescription = c.description ?? '';
+			eMandatory = c.mandatory;
+			eDueAt = c.dueAt ? isoToLocalInput(c.dueAt) : '';
+		}
+	});
+
+	async function saveCourseEdits(): Promise<void> {
+		const c = $selected;
+		if (!c || !eTitle.trim()) return;
+		await vm.editCourse(c.slug, {
+			title: eTitle.trim(),
+			description: eDescription.trim(),
+			mandatory: eMandatory
+		});
+	}
+
+	async function saveDeadline(): Promise<void> {
+		const c = $selected;
+		if (!c) return;
+		await vm.setDeadline(c.slug, eDueAt ? new Date(eDueAt).toISOString() : null);
+	}
+
+	async function clearDeadline(): Promise<void> {
+		const c = $selected;
+		if (!c) return;
+		eDueAt = '';
+		await vm.setDeadline(c.slug, null);
+	}
 
 	async function submit(): Promise<void> {
 		if (!title.trim()) return;
@@ -283,6 +331,40 @@
 					<PixelButton variant="ghost" disabled={$busy} onclick={deleteQuiz}>Delete quiz</PixelButton>
 				</div>
 			{:else}
+				<!-- Edit course metadata -->
+				<form class="new-course" onsubmit={(e) => { e.preventDefault(); void saveCourseEdits(); }}>
+					<h2>Edit course</h2>
+					<PixelInput placeholder="Course title" bind:value={eTitle} ariaLabel="Course title" />
+					<Textarea label="Description" rows={2} bind:value={eDescription} />
+					<PixelCheckbox bind:checked={eMandatory} label="Mandatory course" />
+					<PixelButton type="submit" variant="solid" size="sm" disabled={$busy || !eTitle.trim()}>
+						{$busy ? 'Saving…' : 'Save changes'}
+					</PixelButton>
+				</form>
+
+				<!-- Deadline -->
+				<div class="new-course">
+					<h2>Deadline</h2>
+					<div class="row row--end">
+						<label class="grow dt-field">
+							<span>Due date &amp; time</span>
+							<input class="dt" type="datetime-local" bind:value={eDueAt} aria-label="Course deadline" />
+						</label>
+						<PixelButton variant="solid" size="sm" disabled={$busy || !eDueAt} onclick={saveDeadline}>
+							Set
+						</PixelButton>
+						<PixelButton variant="ghost" size="sm" disabled={$busy || !course.dueAt} onclick={clearDeadline}>
+							Clear
+						</PixelButton>
+					</div>
+					{#if course.dueAt}
+						<p class="hint">Current: {new Date(course.dueAt).toLocaleString()} · {course.deadlineStatus}</p>
+					{:else}
+						<p class="hint">No deadline set.</p>
+					{/if}
+				</div>
+
+				<h2>Lessons</h2>
 				{#if course.lessons.length === 0}
 					<p class="hint">No lessons yet — add the first one below.</p>
 				{:else}
@@ -538,6 +620,22 @@
 	}
 	.num {
 		width: 5rem;
+		background: #0b1220;
+		border: 1px solid #1f2937;
+		border-radius: 5px;
+		color: #e5e7eb;
+		padding: 0.4rem 0.55rem;
+		font: inherit;
+		box-sizing: border-box;
+	}
+	.dt-field {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		font-size: 0.78rem;
+		color: #9ca3af;
+	}
+	.dt {
 		background: #0b1220;
 		border: 1px solid #1f2937;
 		border-radius: 5px;

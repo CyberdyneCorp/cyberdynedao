@@ -28,6 +28,8 @@ function fakeDeps(over: Partial<AdminViewModelDeps> = {}): AdminViewModelDeps {
 		listCourses: vi.fn().mockResolvedValue([draft]),
 		getCourse: vi.fn().mockResolvedValue(detail),
 		createCourse: vi.fn().mockResolvedValue(detail),
+		updateCourse: vi.fn().mockResolvedValue(detail),
+		setCourseDeadline: vi.fn().mockResolvedValue(detail),
 		publishCourse: vi.fn().mockResolvedValue({ ...detail, status: 'published' }),
 		unpublishCourse: vi.fn().mockResolvedValue(detail),
 		deleteCourse: vi.fn().mockResolvedValue(undefined),
@@ -130,6 +132,40 @@ describe('adminViewModel — create', () => {
 		expect(ok).toBe(false);
 		expect(get(vm.error)).toBe('slug already exists');
 		expect(deps.listCourses).not.toHaveBeenCalled(); // no reload on failure
+	});
+});
+
+describe('adminViewModel — edit course & deadline', () => {
+	it('editCourse updates, refreshes the open course, and reloads the list', async () => {
+		const deps = fakeDeps();
+		const vm = createAdminViewModel(deps);
+		await vm.openCourse('solidity-101');
+		const ok = await vm.editCourse('solidity-101', { title: 'New title', mandatory: true });
+		expect(ok).toBe(true);
+		expect(deps.updateCourse).toHaveBeenCalledWith('solidity-101', {
+			title: 'New title',
+			mandatory: true
+		});
+		expect(deps.getCourse).toHaveBeenCalled(); // open course refreshed
+		expect(deps.listCourses).toHaveBeenCalled(); // catalogue reloaded
+	});
+
+	it('setDeadline forwards the ISO string and null to clear', async () => {
+		const deps = fakeDeps();
+		const vm = createAdminViewModel(deps);
+		await vm.openCourse('solidity-101');
+		await vm.setDeadline('solidity-101', '2099-01-01T00:00:00.000Z');
+		expect(deps.setCourseDeadline).toHaveBeenCalledWith('solidity-101', '2099-01-01T00:00:00.000Z');
+		await vm.setDeadline('solidity-101', null);
+		expect(deps.setCourseDeadline).toHaveBeenCalledWith('solidity-101', null);
+	});
+
+	it('editCourse without an open course is a no-op', async () => {
+		const deps = fakeDeps();
+		const vm = createAdminViewModel(deps);
+		const ok = await vm.editCourse('solidity-101', { title: 'x' });
+		expect(ok).toBe(false);
+		expect(deps.updateCourse).not.toHaveBeenCalled();
 	});
 });
 
