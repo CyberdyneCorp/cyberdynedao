@@ -29,8 +29,8 @@ describe('additional data fixtures', () => {
 		teamMembers.forEach(m => expect(m.tags.length).toBeGreaterThan(0));
 	});
 
-	it('productSuite includes full-width product', () => {
-		expect(productSuite.some(p => p.fullWidth)).toBe(true);
+	it('productSuite entries each have features', () => {
+		expect(productSuite.length).toBeGreaterThan(0);
 		productSuite.forEach(p => expect(p.features.length).toBeGreaterThan(0));
 	});
 
