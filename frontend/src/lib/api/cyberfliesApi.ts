@@ -143,6 +143,25 @@ async function getJson<T>(path: string): Promise<T> {
 	return (await res.json()) as T;
 }
 
+/** DELETE returning 204 (no body). */
+async function del(path: string): Promise<void> {
+	const res = await fetch(`${CYBERFLIES_BASE}${path}`, {
+		method: 'DELETE',
+		headers: withAuth({ accept: 'application/json' })
+	});
+	if (!res.ok) throw new CyberfliesApiError(res.status, await readError(res));
+}
+
+/** POST with a JSON body that returns 204 (no body to parse). */
+async function postNoContent(path: string, body: unknown): Promise<void> {
+	const res = await fetch(`${CYBERFLIES_BASE}${path}`, {
+		method: 'POST',
+		headers: withAuth({ 'content-type': 'application/json', accept: 'application/json' }),
+		body: JSON.stringify(body)
+	});
+	if (!res.ok) throw new CyberfliesApiError(res.status, await readError(res));
+}
+
 // ── Recordings ──────────────────────────────────────────────────────
 
 export function listRecordings(limit = 50, offset = 0): Promise<RecordingListResponse> {
@@ -152,6 +171,11 @@ export function listRecordings(limit = 50, offset = 0): Promise<RecordingListRes
 
 export function getRecording(recordingId: string): Promise<RecordingResponse> {
 	return getJson<RecordingResponse>(`/api/v1/recordings/${encodeURIComponent(recordingId)}`);
+}
+
+/** Delete a recording (audio, transcript and channel membership). 204. */
+export function deleteRecording(recordingId: string): Promise<void> {
+	return del(`/api/v1/recordings/${encodeURIComponent(recordingId)}`);
 }
 
 /**
@@ -196,6 +220,19 @@ export function getAudioUrl(
 export function listChannels(limit = 50, offset = 0): Promise<ChannelListResponse> {
 	const qs = `?limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`;
 	return getJson<ChannelListResponse>(`/api/v1/channels${qs}`);
+}
+
+/** Create a channel. 201. */
+export function createChannel(name: string, description?: string): Promise<ChannelResponse> {
+	return postJson<ChannelResponse>('/api/v1/channels', { name, description });
+}
+
+/** Add a recording to a channel. 204. */
+export function addRecordingToChannel(channelId: string, recordingId: string): Promise<void> {
+	return postNoContent(
+		`/api/v1/channels/${encodeURIComponent(channelId)}/recordings`,
+		{ recording_id: recordingId }
+	);
 }
 
 // ── Chat ────────────────────────────────────────────────────────────

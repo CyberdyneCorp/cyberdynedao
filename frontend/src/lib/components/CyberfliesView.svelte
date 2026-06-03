@@ -12,6 +12,10 @@
 	let audioInputEl = $state<HTMLInputElement | null>(null);
 	let chatInput = $state<string>('');
 	let chatScrollBottom = $state<HTMLElement | null>(null);
+	// Organize-into-channel controls (per detail panel).
+	let organizeChannelId = $state<string>('');
+	let newChannelName = $state<string>('');
+	let creatingChannel = $state<boolean>(false);
 
 	const authReady = $derived(authVM.isRestored && authVM.isAuthenticated);
 
@@ -33,6 +37,16 @@
 		void tick().then(() =>
 			chatScrollBottom?.scrollIntoView({ block: 'end', inline: 'nearest' })
 		);
+	});
+
+	// Reset the organize controls + transient notice when the selected
+	// meeting changes, so a stale "Added to X" doesn't carry over.
+	$effect(() => {
+		void meetings.selectedId;
+		organizeChannelId = '';
+		newChannelName = '';
+		creatingChannel = false;
+		meetings.clearNotice();
 	});
 
 	function statusVariant(status: string): 'success' | 'warning' | 'danger' {
@@ -71,13 +85,24 @@
 		target.value = '';
 	}
 
-	async function onDownloadAudio(id: string) {
-		try {
-			const url = await meetings.audioUrlFor(id);
-			window.open(url, '_blank', 'noopener');
-		} catch {
-			/* surfaced via the meetings error banner on next action */
-		}
+	async function onDeleteRecording(id: string, title: string) {
+		if (!confirm(`Delete "${title}"? This removes the audio, transcript and channel membership.`))
+			return;
+		await meetings.deleteRecording(id);
+	}
+
+	async function onAddToChannel(recordingId: string) {
+		if (!organizeChannelId) return;
+		await meetings.addToChannel(recordingId, organizeChannelId);
+	}
+
+	async function onCreateChannelAndAdd(recordingId: string) {
+		const channel = await meetings.createChannel(newChannelName);
+		if (!channel) return;
+		newChannelName = '';
+		creatingChannel = false;
+		organizeChannelId = channel.id;
+		await meetings.addToChannel(recordingId, channel.id);
 	}
 
 	async function onSendChat(e: SubmitEvent) {
@@ -199,7 +224,7 @@
 						· {rec.audio_format} · {formatBytes(rec.size_bytes)}
 					</p>
 					<div class="detail__actions">
-						<PixelButton variant="outline" size="sm" onclick={() => onDownloadAudio(rec.id)}>
+						<PixelButton variant="outline" size="sm" onclick={() => meetings.downloadAudio(rec.id)}>
 							⬇ Download audio
 						</PixelButton>
 						<PixelButton
@@ -213,7 +238,70 @@
 						>
 							💬 Ask about this
 						</PixelButton>
+						<PixelButton
+							variant="ghost"
+							size="sm"
+							onclick={() => onDeleteRecording(rec.id, rec.summary?.headline ?? `Recording ${rec.id.slice(0, 8)}`)}
+							disabled={meetings.busy}
+						>
+							🗑 Delete
+						</PixelButton>
 					</div>
+
+					<!-- Organize into a channel -->
+					<div class="organize">
+						<label class="organize__label" for="cf-organize">Organize</label>
+						{#if creatingChannel}
+							<input
+								class="organize__input"
+								type="text"
+								placeholder="New channel name"
+								value={newChannelName}
+								oninput={(e) => (newChannelName = (e.currentTarget as HTMLInputElement).value)}
+							/>
+							<PixelButton
+								variant="solid"
+								size="sm"
+								onclick={() => onCreateChannelAndAdd(rec.id)}
+								disabled={meetings.busy || newChannelName.trim() === ''}
+							>
+								Create & add
+							</PixelButton>
+							<PixelButton variant="ghost" size="sm" onclick={() => (creatingChannel = false)}>
+								Cancel
+							</PixelButton>
+						{:else}
+							<select
+								id="cf-organize"
+								class="organize__select"
+								value={organizeChannelId}
+								onchange={(e) => (organizeChannelId = (e.currentTarget as HTMLSelectElement).value)}
+							>
+								<option value="">Choose a channel…</option>
+								{#each meetings.channels as ch (ch.id)}
+									<option value={ch.id}>{ch.name}</option>
+								{/each}
+							</select>
+							<PixelButton
+								variant="solid"
+								size="sm"
+								onclick={() => onAddToChannel(rec.id)}
+								disabled={meetings.busy || !organizeChannelId}
+							>
+								Add
+							</PixelButton>
+							<PixelButton variant="ghost" size="sm" onclick={() => (creatingChannel = true)}>
+								＋ New channel
+							</PixelButton>
+						{/if}
+					</div>
+
+					{#if meetings.notice}
+						<div class="banner banner--ok" role="status">{meetings.notice}</div>
+					{/if}
+					{#if meetings.error}
+						<div class="banner banner--err">{meetings.error}</div>
+					{/if}
 
 					{#if rec.error}
 						<div class="banner banner--err">Processing failed: {rec.error}</div>
@@ -352,6 +440,7 @@
 	.banner { padding: 8px 12px; font-size: 0.75rem; white-space: pre-wrap; word-break: break-word; }
 	.banner--err { background: #fee2e2; border: 1px solid #b91c1c; color: #991b1b; }
 	.banner--info { background: #cffafe; border: 1px solid #0e7490; color: #155e63; }
+	.banner--ok { background: #d1fae5; border: 1px solid #0f766e; color: #065f46; }
 
 	.empty { padding: 16px; color: #6b7280; font-size: 0.8rem; line-height: 1.6; font-style: italic; }
 	.empty--detail { text-align: center; margin-top: 40px; }
@@ -382,6 +471,10 @@
 	.detail__title { margin: 0; font-size: 1.05rem; font-weight: 800; }
 	.detail__sub { margin: 0; font-size: 0.72rem; color: #64748b; }
 	.detail__actions { display: flex; gap: 6px; flex-wrap: wrap; }
+	.organize { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 0; border-top: 1px dashed #cbd5e1; border-bottom: 1px dashed #cbd5e1; }
+	.organize__label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #0f766e; }
+	.organize__select, .organize__input { font-family: inherit; font-size: 0.78rem; padding: 5px 8px; border: 2px solid #000; background: #fff; }
+	.organize__input { min-width: 160px; }
 	.block { border: 2px solid #e2e8f0; border-left: 6px solid var(--accent); padding: 10px 12px; }
 	.block__title { margin: 0 0 6px; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #0f766e; display: flex; justify-content: space-between; }
 	.block__count { font-size: 0.65rem; color: #94a3b8; font-weight: 600; }
