@@ -29,21 +29,6 @@ export const productSuite: ProductEntry[] = [
 		status: 'active'
 	},
 	{
-		id: 'cybergeopy',
-		name: 'CyberGeoPy',
-		icon: '🗺️',
-		description:
-			'Geospatial processing engine of the Cyberdyne stack. Python library unifying ten satellite product managers, spectral indices, SAR primitives, anomaly detection, parametric payouts, and EUDR compliance.',
-		features: [
-			'Sentinel-1/2/3/5P + Landsat + VIIRS + SMAP + ERA5',
-			'Pure-Python SAR (coherence, interferogram, unwrap)',
-			'Climatology baseline + anomaly engine',
-			'EUDR pipeline with TRACES-ready DDS payload'
-		],
-		palette: 'orange',
-		status: 'development'
-	},
-	{
 		id: 'orgpilot',
 		name: 'OrgPilot',
 		icon: '🧭',
