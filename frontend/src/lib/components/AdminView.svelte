@@ -15,7 +15,18 @@
 	const STATUS_VARIANT = { draft: 'warning', published: 'success' } as const;
 
 	const vm = createAdminViewModel();
-	const { courses, selected, loading, busy, error } = vm;
+	const { courses, selected, loading, busy, error, notice } = vm;
+
+	// Auto-dismiss the success notice a few seconds after it appears.
+	$effect(() => {
+		if ($notice) {
+			const t = setTimeout(() => vm.clearNotice(), 3000);
+			return () => clearTimeout(t);
+		}
+	});
+
+	// Two-step delete confirmation, keyed by course slug.
+	let confirmingDelete = $state<string | null>(null);
 
 	const canEdit = $derived(
 		authVM.isRestored && authVM.isAuthenticated && (authVM.isEditor || authVM.isAdmin)
@@ -295,6 +306,9 @@
 		{#if $error}
 			<p class="banner banner--error" role="alert">{$error}</p>
 		{/if}
+		{#if $notice}
+			<p class="banner banner--ok" role="status">{$notice}</p>
+		{/if}
 
 		{#if $selected}
 			{@const course = $selected}
@@ -556,9 +570,26 @@
 										Publish
 									</PixelButton>
 								{/if}
-								<PixelButton variant="ghost" size="sm" disabled={$busy} onclick={() => vm.remove(course.slug)}>
-									Delete
-								</PixelButton>
+								{#if confirmingDelete === course.slug}
+									<PixelButton
+										variant="solid"
+										size="sm"
+										disabled={$busy}
+										onclick={async () => {
+											await vm.remove(course.slug);
+											confirmingDelete = null;
+										}}
+									>
+										Confirm
+									</PixelButton>
+									<PixelButton variant="ghost" size="sm" onclick={() => (confirmingDelete = null)}>
+										Cancel
+									</PixelButton>
+								{:else}
+									<PixelButton variant="ghost" size="sm" disabled={$busy} onclick={() => (confirmingDelete = course.slug)}>
+										Delete
+									</PixelButton>
+								{/if}
 							</div>
 						</li>
 					{/each}
@@ -604,6 +635,10 @@
 		background: #fef3c7;
 		color: #92400e;
 	}
+	.banner--ok {
+		background: #dcfce7;
+		color: #166534;
+	}
 	.new-course {
 		background: #ffffff;
 		border: 2px solid #000000;
@@ -613,6 +648,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.5rem;
+		box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.18);
 	}
 	.new-course h2,
 	.admin-view > h2 {

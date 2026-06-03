@@ -150,6 +150,24 @@ describe('adminViewModel — create', () => {
 		expect(get(vm.error)).toBe('slug already exists');
 		expect(deps.listCourses).not.toHaveBeenCalled(); // no reload on failure
 	});
+
+	it('sets a success notice on create and clears it on the next mutation', async () => {
+		const deps = fakeDeps();
+		const vm = createAdminViewModel(deps);
+		await vm.create({ title: 'X', level: 'Beginner' });
+		expect(get(vm.notice)).toBe('Draft created');
+		await vm.publish('solidity-101');
+		expect(get(vm.notice)).toBe('Course published');
+		vm.clearNotice();
+		expect(get(vm.notice)).toBeNull();
+	});
+
+	it('does not set a notice when the mutation fails', async () => {
+		const deps = fakeDeps({ createCourse: vi.fn().mockRejectedValue(new Error('boom')) });
+		const vm = createAdminViewModel(deps);
+		await vm.create({ title: 'X', level: 'Beginner' });
+		expect(get(vm.notice)).toBeNull();
+	});
 });
 
 describe('adminViewModel — edit course & deadline', () => {
