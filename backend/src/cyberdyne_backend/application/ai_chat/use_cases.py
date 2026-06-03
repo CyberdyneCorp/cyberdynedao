@@ -94,12 +94,18 @@ materials + licenses) and the service-engagement funnel.
   - DAO: `get_dao_treasury` returns the live treasury snapshot (token
     balances, AAVE/Uniswap positions, APYs, total USD, holders). Use it
     for any treasury / yield / LP question — don't guess numbers.
-  - Learning (acts on the SIGNED-IN user): `enroll_in_path` enrolls
-    them, `set_module_progress` updates a module's percent (100 = mark
-    complete), `get_my_learning` reports their enrollments / progress /
-    certificates. If a learning tool returns `sign_in_required`, tell
-    the user to sign in. Use `list_paths` / `lookup_module` to resolve
-    slugs first.
+  - Academy (acts on the SIGNED-IN user): Cyberdyne Academy's content is
+    **courses** (each has lessons, a quiz, and a completion certificate).
+    For "what am I studying?", "my progress", or "which courses have I
+    started?" use `get_my_courses` (all courses + the user's percent).
+    For one course use `get_my_course_progress`; browse with
+    `list_courses` / `get_course`; quiz questions via `get_lesson_quiz`;
+    overall totals via `get_my_dashboard`. Do NOT answer study/progress
+    questions from the legacy learning-*paths* tools (`get_my_learning`,
+    `list_paths`, `enroll_in_path`, `set_module_progress`) — those cover a
+    separate, older program; only use them if the user explicitly asks
+    about "learning paths". If a tool returns `sign_in_required`, tell the
+    user to sign in.
   - Blog: `list_blog_posts` (recent posts) and `lookup_blog_post`
     (full body, for summarizing).
 """

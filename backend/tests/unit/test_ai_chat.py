@@ -1298,6 +1298,23 @@ class TestLearningAwarenessTools:
         )
         assert json.loads(out)["error"] == "not_found"
 
+    async def test_my_courses_requires_sign_in(self) -> None:
+        out = await ToolDispatcher(_build_ctx()).dispatch(
+            ToolCall(id="x", name="get_my_courses", arguments_json="{}")
+        )
+        assert json.loads(out)["error"] == "sign_in_required"
+
+    async def test_my_courses_reports_progress_across_courses(self) -> None:
+        out = await ToolDispatcher(_build_ctx(user_id=uuid.uuid4())).dispatch(
+            ToolCall(id="x", name="get_my_courses", arguments_json="{}")
+        )
+        data = json.loads(out)
+        assert "courses" in data
+        intro = next(c for c in data["courses"] if c["slug"] == "intro-to-mcp")
+        assert intro["total_lessons"] == 1
+        assert intro["completed"] is False
+        assert intro["percent"] == 0
+
 
 # Suppress unused-import warning.
 _ = datetime.now(tz=UTC)
