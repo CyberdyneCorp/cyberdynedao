@@ -14,28 +14,6 @@ export interface ProductEntry {
 
 export const productSuite: ProductEntry[] = [
 	{
-		id: 'cyberspace',
-		name: 'CyberSpace',
-		icon: '🌍',
-		description:
-			'Four-pillar 3D geospatial platform combining a real-time dashboard, agricultural parametric-insurance workbench, RF coverage & link planning, and OpenFOAM wind + structural FSI simulation — with a single conversational AI agent across all of it.',
-		features: [
-			'25 toggleable layers across 7 sections',
-			'Multi-tenant insurance portfolios + parametric triggers',
-			'ITM & ITU-R P.1812-7 RF planning',
-			'OpenFOAM CFD + Calculix FEA'
-		],
-		extraFeatures: [
-			'Live S1 / S3 / S5P satellite cross-checks',
-			'JRC / UN GDACS hazard alerts',
-			'AIS, OpenSky and Celestrak feeds',
-			'EUDR-ready polygon analysis'
-		],
-		palette: 'green',
-		status: 'live',
-		fullWidth: true
-	},
-	{
 		id: 'cyberdynedao',
 		name: 'CyberdyneDAO',
 		icon: '🖥️',
@@ -49,21 +27,6 @@ export const productSuite: ProductEntry[] = [
 		],
 		palette: 'blue',
 		status: 'active'
-	},
-	{
-		id: 'cyberdyneauth',
-		name: 'CyberdyneAuth',
-		icon: '🔐',
-		description:
-			'Centralized identity backbone for the Cyberdyne stack. FastAPI microservice issuing short-lived JWTs over httpOnly cookies (browsers) and Bearer tokens (services).',
-		features: [
-			'Google + Microsoft OAuth + EIP-4361 wallet sign-in',
-			'Sandboxed user hooks (subprocess + netns)',
-			'NFT-gated access & on-chain IAM',
-			'143+ tests, >83% coverage'
-		],
-		palette: 'red',
-		status: 'live'
 	},
 	{
 		id: 'cyberstac',

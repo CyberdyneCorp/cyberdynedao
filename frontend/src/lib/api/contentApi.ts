@@ -174,13 +174,23 @@ function apiProjectToProductEntry(api: ApiProject): ProductEntry {
 	};
 }
 
+// Products hidden from the Products view for now, regardless of whether
+// the backend still returns them. Matched on the normalized name/id so a
+// rename or id change on the backend doesn't silently re-surface them.
+const HIDDEN_PRODUCT_KEYS = new Set(['cyberspace', 'cyberdyneauth']);
+
+function isHiddenProduct(p: ProductEntry): boolean {
+	const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+	return HIDDEN_PRODUCT_KEYS.has(norm(p.id)) || HIDDEN_PRODUCT_KEYS.has(norm(p.name));
+}
+
 export async function fetchProjects(): Promise<ProductEntry[]> {
 	try {
 		const api = await fetchJson<ApiProject[]>('/api/v1/content/projects');
-		return api.map(apiProjectToProductEntry);
+		return api.map(apiProjectToProductEntry).filter((p) => !isHiddenProduct(p));
 	} catch (err) {
 		console.warn('[contentApi] projects fetch failed, using static fallback:', err);
-		return staticProductSuite;
+		return staticProductSuite.filter((p) => !isHiddenProduct(p));
 	}
 }
 
