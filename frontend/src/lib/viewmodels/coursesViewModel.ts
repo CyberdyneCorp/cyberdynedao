@@ -20,7 +20,9 @@ import {
 	fetchMyCourseProgress as apiFetchMyCourseProgress,
 	fetchRecommendations as apiFetchRecommendations,
 	setLessonProgress as apiSetLessonProgress,
+	verifyCourseCertificate as apiVerifyCertificate,
 	type CourseCertificate,
+	type CourseCertificateVerification,
 	type CourseDetail,
 	type CourseLevel,
 	type CourseProgress,
@@ -42,6 +44,7 @@ export interface CoursesViewModelDeps {
 	claimCertificate: typeof apiClaimCertificate;
 	fetchDashboard: typeof apiFetchDashboard;
 	fetchRecommendations: typeof apiFetchRecommendations;
+	verifyCertificate: typeof apiVerifyCertificate;
 }
 
 const defaultDeps: CoursesViewModelDeps = {
@@ -52,7 +55,8 @@ const defaultDeps: CoursesViewModelDeps = {
 	fetchMyCertificate: apiFetchMyCertificate,
 	claimCertificate: apiClaimCertificate,
 	fetchDashboard: apiFetchDashboard,
-	fetchRecommendations: apiFetchRecommendations
+	fetchRecommendations: apiFetchRecommendations,
+	verifyCertificate: apiVerifyCertificate
 };
 
 export interface CoursesViewModel {
@@ -62,9 +66,13 @@ export interface CoursesViewModel {
 	certificate: Writable<CourseCertificate | null>;
 	dashboard: Writable<LearnerDashboard | null>;
 	recommendations: Writable<LearningRecommendations | null>;
+	verification: Writable<CourseCertificateVerification | null>;
+	verifying: Writable<boolean>;
 	loading: Writable<boolean>;
 	error: Writable<string | null>;
 	loadCatalogue: (level?: CourseLevel) => Promise<void>;
+	/** Public certificate authenticity check by id. */
+	verify: (certificateId: string) => Promise<void>;
 	/** Load the signed-in learner's dashboard + recommendations (best-effort). */
 	loadMe: () => Promise<void>;
 	open: (slug: string, opts?: { withProgress?: boolean }) => Promise<void>;
@@ -83,6 +91,8 @@ export function createCoursesViewModel(
 	const certificate = writable<CourseCertificate | null>(null);
 	const dashboard = writable<LearnerDashboard | null>(null);
 	const recommendations = writable<LearningRecommendations | null>(null);
+	const verification = writable<CourseCertificateVerification | null>(null);
+	const verifying = writable(false);
 	const loading = writable(false);
 	const error = writable<string | null>(null);
 
@@ -176,6 +186,25 @@ export function createCoursesViewModel(
 		}
 	}
 
+	// Public verification: anyone can check a certificate id. A 404 means
+	// no such certificate — report it as "not valid" rather than an error.
+	async function verify(certificateId: string): Promise<void> {
+		verifying.set(true);
+		error.set(null);
+		try {
+			verification.set(await deps.verifyCertificate(certificateId));
+		} catch (err) {
+			if (err instanceof CoursesApiError && err.status === 404) {
+				verification.set({ valid: false, certificate: null });
+			} else {
+				error.set(message(err));
+				verification.set(null);
+			}
+		} finally {
+			verifying.set(false);
+		}
+	}
+
 	function close(): void {
 		selected.set(null);
 		progress.set(null);
@@ -190,6 +219,8 @@ export function createCoursesViewModel(
 		certificate,
 		dashboard,
 		recommendations,
+		verification,
+		verifying,
 		loading,
 		error,
 		loadCatalogue,
@@ -198,6 +229,7 @@ export function createCoursesViewModel(
 		refreshProgress,
 		completeLesson,
 		claimCertificate,
+		verify,
 		close
 	};
 }

@@ -88,6 +88,7 @@ function fakeDeps(over: Partial<CoursesViewModelDeps> = {}): CoursesViewModelDep
 			summary: 'Try these next.',
 			courses: [{ slug: 'advanced', title: 'Advanced', level: 'Advanced', reason: 'next step' }]
 		}),
+		verifyCertificate: vi.fn().mockResolvedValue({ valid: true, certificate }),
 		...over
 	};
 }
@@ -271,6 +272,33 @@ describe('coursesViewModel — defaults', () => {
 		const vm = createCoursesViewModel();
 		expect(get(vm.courses)).toEqual([]);
 		expect(get(vm.loading)).toBe(false);
+	});
+});
+
+describe('coursesViewModel — verify', () => {
+	it('stores a valid verification result', async () => {
+		const vm = createCoursesViewModel(fakeDeps());
+		await vm.verify('cert-123');
+		expect(get(vm.verification)).toEqual({ valid: true, certificate });
+		expect(get(vm.verifying)).toBe(false);
+	});
+
+	it('treats a 404 as "not valid" rather than an error', async () => {
+		const vm = createCoursesViewModel(
+			fakeDeps({ verifyCertificate: vi.fn().mockRejectedValue(new CoursesApiError(404, 'nope')) })
+		);
+		await vm.verify('missing');
+		expect(get(vm.verification)).toEqual({ valid: false, certificate: null });
+		expect(get(vm.error)).toBeNull();
+	});
+
+	it('records a non-404 failure as an error', async () => {
+		const vm = createCoursesViewModel(
+			fakeDeps({ verifyCertificate: vi.fn().mockRejectedValue(new Error('boom')) })
+		);
+		await vm.verify('x');
+		expect(get(vm.verification)).toBeNull();
+		expect(get(vm.error)).toBe('boom');
 	});
 });
 
