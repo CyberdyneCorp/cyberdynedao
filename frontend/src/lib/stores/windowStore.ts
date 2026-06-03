@@ -13,7 +13,7 @@ export interface WindowState {
 	isSlideHidden: boolean;
 	originalX?: number;
 	originalY?: number;
-	content: 'read' | 'shop' | 'cart' | 'investments' | 'watch' | 'listen' | 'substack' | 'contact' | 'dao' | 'products' | 'team' | 'terminal' | 'services' | 'cyberdyne' | 'matlab' | 'agent' | 'courses' | 'admin' | 'sysadmin' | 'analytics';
+	content: 'read' | 'shop' | 'cart' | 'investments' | 'watch' | 'listen' | 'substack' | 'contact' | 'dao' | 'products' | 'team' | 'terminal' | 'services' | 'cyberdyne' | 'matlab' | 'agent' | 'cyberflies' | 'courses' | 'admin' | 'sysadmin' | 'analytics';
 }
 
 export const windows = writable<WindowState[]>([]);
