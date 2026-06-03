@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { PixelButton, Badge } from '@cyberdynecorp/svelte-ui-core';
 	import { createQuizPlayerViewModel } from '$lib/viewmodels/quizPlayerViewModel';
 
 	let { lessonId, onDone }: { lessonId: string; onDone?: () => void } = $props();
@@ -23,7 +24,7 @@
 <div class="quiz">
 	<div class="quiz__head">
 		<h3>Quiz</h3>
-		<button class="link" onclick={() => onDone?.()}>Close</button>
+		<PixelButton variant="ghost" size="sm" onclick={() => onDone?.()}>Close</PixelButton>
 	</div>
 
 	{#if $error}
@@ -52,8 +53,8 @@
 							class:opt--chosen={r && opt.id === r.selectedOptionId}
 						>
 							{opt.text}
-							{#if r && opt.id === r.correctOptionId}<span class="tag">correct</span>{/if}
-							{#if r && opt.id === r.selectedOptionId && !r.isCorrect}<span class="tag tag--bad">your answer</span>{/if}
+							{#if r && opt.id === r.correctOptionId}<Badge variant="success" size="sm">correct</Badge>{/if}
+							{#if r && opt.id === r.selectedOptionId && !r.isCorrect}<Badge variant="danger" size="sm">your answer</Badge>{/if}
 						</div>
 					{/each}
 					{#if r?.explanation}<p class="explain">{r.explanation}</p>{/if}
@@ -63,12 +64,14 @@
 		</ol>
 		<div class="row">
 			{#if !$feedback}
-				<button class="btn" disabled={$busy} onclick={() => vm.explain(lessonId)}>
+				<PixelButton variant="outline" size="sm" disabled={$busy} onclick={() => vm.explain(lessonId)}>
 					{$busy ? 'Thinking…' : 'Explain my answers (AI)'}
-				</button>
+				</PixelButton>
 			{/if}
-			<button class="btn" disabled={$busy} onclick={() => vm.load(lessonId)}>Try again</button>
-			<button class="btn btn--primary" onclick={() => onDone?.()}>Done</button>
+			<PixelButton variant="outline" size="sm" disabled={$busy} onclick={() => vm.load(lessonId)}>
+				Try again
+			</PixelButton>
+			<PixelButton variant="solid" size="sm" onclick={() => onDone?.()}>Done</PixelButton>
 		</div>
 	{:else}
 		<!-- Taking the quiz -->
@@ -91,9 +94,9 @@
 				</li>
 			{/each}
 		</ol>
-		<button class="btn btn--primary" disabled={$busy || !allAnswered} onclick={() => vm.submit(lessonId)}>
+		<PixelButton variant="solid" size="sm" disabled={$busy || !allAnswered} onclick={() => vm.submit(lessonId)}>
 			{$busy ? 'Submitting…' : 'Submit answers'}
-		</button>
+		</PixelButton>
 	{/if}
 </div>
 
@@ -113,13 +116,6 @@
 	.quiz__head h3 {
 		margin: 0;
 		font-size: 1rem;
-	}
-	.link {
-		background: none;
-		border: none;
-		color: #93c5fd;
-		cursor: pointer;
-		font-size: 0.8rem;
 	}
 	.banner--error {
 		background: #7f1d1d;
@@ -171,14 +167,6 @@
 	.opt--chosen {
 		outline: 1px solid #64748b;
 	}
-	.tag {
-		font-size: 0.65rem;
-		margin-left: 0.4rem;
-		color: #6ee7b7;
-	}
-	.tag--bad {
-		color: #fca5a5;
-	}
 	.explain {
 		margin: 0.35rem 0 0;
 		font-size: 0.78rem;
@@ -201,23 +189,5 @@
 		gap: 0.5rem;
 		flex-wrap: wrap;
 		margin-top: 0.5rem;
-	}
-	.btn {
-		font-size: 0.78rem;
-		padding: 0.35rem 0.7rem;
-		border-radius: 5px;
-		border: 1px solid #374151;
-		background: #1f2937;
-		color: #e5e7eb;
-		cursor: pointer;
-	}
-	.btn:disabled {
-		opacity: 0.5;
-		cursor: default;
-	}
-	.btn--primary {
-		border-color: #2563eb;
-		background: #1d4ed8;
-		color: #fff;
 	}
 </style>

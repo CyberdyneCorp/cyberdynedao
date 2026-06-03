@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { PixelButton } from '@cyberdynecorp/svelte-ui-core';
 	import { runLessonCode, type CourseLesson, type RunCodeResult } from '$lib/api/coursesApi';
 
 	let { lesson }: { lesson: CourseLesson } = $props();
@@ -55,9 +56,11 @@
 	{:else if lesson.lessonType === 'code'}
 		<p class="hint">Edit and run against the MATLAB engine:</p>
 		<textarea class="code" rows="6" bind:value={source} spellcheck="false" aria-label="Code"></textarea>
-		<button class="btn btn--primary" disabled={running || !source.trim()} onclick={run}>
-			{running ? 'Running…' : 'Run'}
-		</button>
+		<div class="run">
+			<PixelButton variant="solid" size="sm" disabled={running || !source.trim()} onclick={run}>
+				{running ? 'Running…' : 'Run'}
+			</PixelButton>
+		</div>
 		{#if runError}
 			<pre class="out out--err">{runError}</pre>
 		{:else if result}
@@ -125,24 +128,8 @@
 		border-radius: 6px;
 		padding: 0.6rem;
 	}
-	.btn {
-		font-size: 0.78rem;
-		padding: 0.35rem 0.7rem;
-		border-radius: 5px;
-		border: 1px solid #374151;
-		background: #1f2937;
-		color: #e5e7eb;
-		cursor: pointer;
+	.run {
 		margin-top: 0.4rem;
-	}
-	.btn:disabled {
-		opacity: 0.5;
-		cursor: default;
-	}
-	.btn--primary {
-		border-color: #2563eb;
-		background: #1d4ed8;
-		color: #fff;
 	}
 	.out {
 		margin-top: 0.5rem;
