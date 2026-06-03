@@ -47,21 +47,34 @@ class TestPythonInterpreterClient:
             )
 
         client = _client_with(handler)
-        res = await client.execute(
-            code="print(sum(range(10)))", session_id="agent-1", bearer="tok-1"
-        )
+        res = await client.execute(code="print(sum(range(10)))", session_id="srv-1", bearer="tok-1")
         assert res.ok is True
         assert res.stdout == "45\n"
         assert res.result == "45"
         assert res.artifacts == ("plot.png", "data.csv")
-        assert res.session_id == "agent-1"
+        assert res.session_id == "srv-1"
         assert seen["path"] == "/execute"
         assert seen["auth"] == "Bearer tok-1"
+        # restricted defaults to True — the backend forbids unrestricted.
         assert seen["body"] == {
             "code": "print(sum(range(10)))",
-            "session_id": "agent-1",
-            "restricted": False,
+            "session_id": "srv-1",
+            "restricted": True,
         }
+
+    async def test_create_session_returns_server_id(self) -> None:
+        seen: dict[str, object] = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen["path"] = request.url.path
+            seen["auth"] = request.headers.get("authorization")
+            return httpx.Response(200, json={"session_id": "srv-xyz"})
+
+        client = _client_with(handler)
+        sid = await client.create_session(bearer="tok-2")
+        assert sid == "srv-xyz"
+        assert seen["path"] == "/sessions"
+        assert seen["auth"] == "Bearer tok-2"
 
     async def test_execute_tolerates_string_or_missing_artifacts(self) -> None:
         def handler(request: httpx.Request) -> httpx.Response:

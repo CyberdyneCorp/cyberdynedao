@@ -134,10 +134,17 @@ class PythonExecResult:
 class PythonInterpreterPort(Protocol):
     """Thin client over the Python interpreter backend. The agent calls it
     as the signed-in user (``bearer`` is the user's CyberdyneAuth token),
-    so files land in that user's per-session workspace."""
+    so files land in that user's per-session workspace.
+
+    Sessions must be created server-side via ``create_session`` — the
+    backend rejects client-invented ids ("invalid session id"). Execution
+    runs under the RestrictedPython sandbox (``restricted=True``); the
+    backend disables unrestricted execution by policy."""
+
+    async def create_session(self, *, bearer: str | None) -> str: ...
 
     async def execute(
-        self, *, code: str, session_id: str, bearer: str | None, restricted: bool = False
+        self, *, code: str, session_id: str, bearer: str | None, restricted: bool = True
     ) -> PythonExecResult: ...
 
 

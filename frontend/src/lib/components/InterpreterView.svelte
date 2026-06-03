@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, tick } from 'svelte';
+	import { tick } from 'svelte';
 	import { Badge, PixelButton, PixelScrollArea } from '@cyberdynecorp/svelte-ui-core';
 	import { authVM } from '$lib/auth/authViewModel.svelte';
 	import { createInterpreterVM } from '$lib/viewmodels/interpreterViewModel.svelte';
@@ -12,9 +12,9 @@
 
 	const authReady = $derived(authVM.isRestored && authVM.isAuthenticated);
 
-	onMount(() => {
-		if (authReady) void vm.refreshFiles();
-	});
+	// No probe on mount: a brand-new workspace has no files, and listing
+	// would needlessly create a session before the user runs anything.
+	// The session is created lazily on the first Run / Upload / refresh.
 
 	// Auto-scroll the cell log to the bottom as new cells land / fill in.
 	const scrollSignal = $derived.by(() => {
@@ -75,7 +75,7 @@
 		<div class="hero__brand">
 			<span class="hero__mark" aria-hidden="true">🐍</span>
 			<h1 class="hero__title">PYTHON SANDBOX</h1>
-			<span class="hero__chip">session {vm.sessionId.slice(-6)}</span>
+			<span class="hero__chip">session {vm.sessionId ? vm.sessionId.slice(-6) : 'new'}</span>
 		</div>
 		<p class="hero__tagline">
 			Sandboxed Python on a remote engine. Upload datasets, write files, crunch numbers.

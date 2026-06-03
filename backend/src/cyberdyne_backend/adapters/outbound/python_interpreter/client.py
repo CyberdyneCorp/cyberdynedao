@@ -37,8 +37,12 @@ class PythonInterpreterClient:
             headers["authorization"] = f"Bearer {bearer}"
         return headers
 
+    async def create_session(self, *, bearer: str | None) -> str:
+        body = await self._post("/sessions", {}, bearer)
+        return str(body["session_id"])
+
     async def execute(
-        self, *, code: str, session_id: str, bearer: str | None, restricted: bool = False
+        self, *, code: str, session_id: str, bearer: str | None, restricted: bool = True
     ) -> PythonExecResult:
         payload: dict[str, object] = {
             "code": code,

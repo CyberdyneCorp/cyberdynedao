@@ -522,6 +522,11 @@ class ToolDispatcher:
 
     def __init__(self, ctx: ToolContext) -> None:
         self._ctx = ctx
+        # Lazily-created interpreter session, reused across python_exec
+        # calls within a single turn so variables/files persist between
+        # them. (A new dispatcher per turn means no cross-turn state —
+        # the agent writes self-contained code, which is fine.)
+        self._py_session_id: str | None = None
 
     async def dispatch(self, call: ToolCall, *, chat_session_id: str = "") -> str:
         try:
@@ -717,11 +722,13 @@ class ToolDispatcher:
             return json.dumps({"error": "empty_code"})
         if self._ctx.python is None:
             return json.dumps({"error": "python_unavailable"})
-        # One stable workspace per conversation so variables/files persist
-        # across tool calls in the same chat.
-        session_id = f"agent-{chat_session_id}" if chat_session_id else "agent-default"
+        # The interpreter rejects client-invented session ids; create one
+        # server-side and reuse it for the rest of this turn so multiple
+        # python_exec calls share a workspace.
+        if self._py_session_id is None:
+            self._py_session_id = await self._ctx.python.create_session(bearer=self._ctx.bearer)
         res = await self._ctx.python.execute(
-            code=code, session_id=session_id, bearer=self._ctx.bearer
+            code=code, session_id=self._py_session_id, bearer=self._ctx.bearer
         )
         # Reference produced files by name + session id only — the frontend
         # downloads them through the authed /api/interpreter proxy. Image

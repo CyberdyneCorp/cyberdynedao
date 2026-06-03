@@ -94,11 +94,12 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
 	return (await res.json()) as T;
 }
 
-/** Execute Python in the sandbox. `restricted` defaults to false here so
- *  the panel behaves like a normal REPL; pass `true` to opt into the
- *  RestrictedPython sandbox. */
+/** Execute Python in the sandbox. `restricted` defaults to `true` (the
+ *  upstream default): this backend disables unrestricted execution by
+ *  policy and returns 403 otherwise. Callers can still pass `restricted`
+ *  explicitly if a deployment allows it. */
 export function execute(req: ExecuteRequest): Promise<ExecuteResponse> {
-	return postJson<ExecuteResponse>('/execute', { restricted: false, ...req });
+	return postJson<ExecuteResponse>('/execute', { restricted: true, ...req });
 }
 
 export function createSession(): Promise<SessionResponse> {
