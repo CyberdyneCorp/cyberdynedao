@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { PixelScrollArea, PixelButton, Badge } from '@cyberdynecorp/svelte-ui-core';
 	import { createCoursesViewModel } from '$lib/viewmodels/coursesViewModel';
 	import {
 		courseCertificatePdfUrl,
@@ -57,10 +58,17 @@
 		return $progress?.lessons.find((l) => l.lessonId === lessonId)?.completed ?? false;
 	}
 
-	const levelClass: Record<CourseLevel, string> = {
-		Beginner: 'lvl lvl--beg',
-		Intermediate: 'lvl lvl--int',
-		Advanced: 'lvl lvl--adv'
+	const levelVariant: Record<CourseLevel, 'success' | 'info' | 'danger'> = {
+		Beginner: 'success',
+		Intermediate: 'info',
+		Advanced: 'danger'
+	};
+
+	const deadlineVariant: Record<DeadlineStatus, 'neutral' | 'info' | 'warning' | 'danger'> = {
+		none: 'neutral',
+		upcoming: 'info',
+		urgent: 'warning',
+		overdue: 'danger'
 	};
 
 	const deadlineLabel: Record<DeadlineStatus, string> = {
@@ -71,6 +79,7 @@
 	};
 </script>
 
+<PixelScrollArea maxHeight="100%" ariaLabel="Cyberdyne Academy courses">
 <div class="courses-view">
 	<header class="hero">
 		<span class="hero__mark" aria-hidden="true">📚</span>
@@ -87,17 +96,16 @@
 	{#if $selected}
 		{@const course = $selected}
 		<!-- Course detail / player -->
-		<button class="back" onclick={() => vm.close()}>← All courses</button>
+		<PixelButton variant="ghost" size="sm" onclick={() => vm.close()}>← All courses</PixelButton>
 
 		<article class="detail">
 			<div class="detail__head">
 				<h2>{course.title}</h2>
-				<span class={levelClass[course.level]}>{course.level}</span>
+				<Badge variant={levelVariant[course.level]} size="sm">{course.level}</Badge>
 				{#if course.deadlineStatus !== 'none'}
-					<span class="deadline deadline--{course.deadlineStatus}">
-						{deadlineLabel[course.deadlineStatus]}
-						{#if course.daysRemaining !== null}({course.daysRemaining}d){/if}
-					</span>
+					<Badge variant={deadlineVariant[course.deadlineStatus]} size="sm">
+						{deadlineLabel[course.deadlineStatus]}{#if course.daysRemaining !== null}&nbsp;({course.daysRemaining}d){/if}
+					</Badge>
 				{/if}
 			</div>
 			<p class="detail__desc">{course.description}</p>
@@ -129,9 +137,11 @@
 						</a>
 					</div>
 				{:else if $progress?.completed}
-					<button class="cert__claim" onclick={() => vm.claimCertificate(course.slug)}>
-						🎓 Claim your certificate
-					</button>
+					<div class="cert__claim">
+						<PixelButton variant="solid" size="sm" onclick={() => vm.claimCertificate(course.slug)}>
+							🎓 Claim your certificate
+						</PixelButton>
+					</div>
 				{/if}
 			{/if}
 
@@ -143,28 +153,30 @@
 							<span class="lesson__title">{lesson.title}</span>
 							{#if lesson.duration}<span class="lesson__dur">{lesson.duration}</span>{/if}
 							{#if lesson.lessonType !== 'quiz'}
-								<button
-									class="lesson__btn"
+								<PixelButton
+									variant="outline"
+									size="sm"
 									onclick={() => (openLesson = openLesson === lesson.id ? null : lesson.id)}
 								>
 									{openLesson === lesson.id ? 'Hide' : 'View'}
-								</button>
+								</PixelButton>
 							{/if}
 							{#if authReady}
 								{#if lesson.lessonType === 'quiz'}
-									<button
-										class="lesson__btn"
+									<PixelButton
+										variant="outline"
+										size="sm"
 										onclick={() => (takingQuiz = takingQuiz === lesson.id ? null : lesson.id)}
 									>
 										{takingQuiz === lesson.id ? 'Hide quiz' : 'Take quiz'}
-									</button>
+									</PixelButton>
 								{/if}
 								{#if lessonCompleted(lesson.id)}
 									<span class="lesson__done">✓ done</span>
 								{:else if lesson.lessonType !== 'quiz'}
-									<button class="lesson__btn" onclick={() => markComplete(lesson.id)}>
+									<PixelButton variant="ghost" size="sm" onclick={() => markComplete(lesson.id)}>
 										Mark complete
-									</button>
+									</PixelButton>
 								{/if}
 							{/if}
 						</div>
@@ -197,7 +209,7 @@
 				<div class="recs__row">
 					{#each $recommendations.courses as rec (rec.slug)}
 						<button class="rec" onclick={() => openCourse(rec.slug)}>
-							<span class={levelClass[rec.level]}>{rec.level}</span>
+							<Badge variant={levelVariant[rec.level]} size="sm">{rec.level}</Badge>
 							<span class="rec__title">{rec.title}</span>
 							<span class="rec__reason">{rec.reason}</span>
 						</button>
@@ -216,12 +228,12 @@
 					<li>
 						<button class="card" onclick={() => openCourse(course.slug)}>
 							<div class="card__top">
-								<span class={levelClass[course.level]}>{course.level}</span>
-								{#if course.mandatory}<span class="badge">Required</span>{/if}
+								<Badge variant={levelVariant[course.level]} size="sm">{course.level}</Badge>
+								{#if course.mandatory}<Badge variant="neutral" size="sm">Required</Badge>{/if}
 								{#if course.deadlineStatus !== 'none'}
-									<span class="deadline deadline--{course.deadlineStatus}">
+									<Badge variant={deadlineVariant[course.deadlineStatus]} size="sm">
 										{deadlineLabel[course.deadlineStatus]}
-									</span>
+									</Badge>
 								{/if}
 							</div>
 							<h3>{course.title}</h3>
@@ -234,14 +246,13 @@
 		{/if}
 	{/if}
 </div>
+</PixelScrollArea>
 
 <style>
 	.courses-view {
 		padding: 1.25rem;
 		color: #e5e7eb;
 		font-family: system-ui, sans-serif;
-		overflow-y: auto;
-		height: 100%;
 	}
 	.hero {
 		display: flex;
@@ -373,58 +384,6 @@
 		font-size: 0.75rem;
 		color: #6b7280;
 	}
-	.lvl {
-		font-size: 0.7rem;
-		padding: 0.1rem 0.45rem;
-		border-radius: 999px;
-		font-weight: 600;
-	}
-	.lvl--beg {
-		background: #064e3b;
-		color: #6ee7b7;
-	}
-	.lvl--int {
-		background: #1e3a8a;
-		color: #93c5fd;
-	}
-	.lvl--adv {
-		background: #7f1d1d;
-		color: #fca5a5;
-	}
-	.badge {
-		font-size: 0.7rem;
-		padding: 0.1rem 0.45rem;
-		border-radius: 999px;
-		background: #374151;
-		color: #d1d5db;
-	}
-	.deadline {
-		font-size: 0.7rem;
-		padding: 0.1rem 0.45rem;
-		border-radius: 999px;
-		font-weight: 600;
-	}
-	.deadline--upcoming {
-		background: #1e3a8a;
-		color: #93c5fd;
-	}
-	.deadline--urgent {
-		background: #78350f;
-		color: #fcd34d;
-	}
-	.deadline--overdue {
-		background: #7f1d1d;
-		color: #fca5a5;
-	}
-	.back {
-		background: none;
-		border: none;
-		color: #93c5fd;
-		cursor: pointer;
-		padding: 0;
-		font-size: 0.85rem;
-		margin-bottom: 0.75rem;
-	}
 	.detail__head {
 		display: flex;
 		gap: 0.5rem;
@@ -477,13 +436,6 @@
 		font-weight: 600;
 	}
 	.cert__claim {
-		background: #1d4ed8;
-		border: 1px solid #2563eb;
-		color: #fff;
-		border-radius: 6px;
-		padding: 0.45rem 0.7rem;
-		font-size: 0.85rem;
-		cursor: pointer;
 		margin: 0.5rem 0;
 	}
 	.hint {
@@ -531,14 +483,5 @@
 	.lesson__done {
 		font-size: 0.75rem;
 		color: #6ee7b7;
-	}
-	.lesson__btn {
-		font-size: 0.72rem;
-		padding: 0.2rem 0.5rem;
-		border-radius: 4px;
-		border: 1px solid #3b82f6;
-		background: none;
-		color: #93c5fd;
-		cursor: pointer;
 	}
 </style>
