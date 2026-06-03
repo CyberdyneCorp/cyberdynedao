@@ -106,14 +106,14 @@
 	.ext {
 		display: inline-block;
 		margin-top: 0.4rem;
-		color: #93c5fd;
+		color: #1d4ed8;
 	}
 	.text {
 		white-space: pre-wrap;
 		line-height: 1.5;
-		color: #d1d5db;
-		background: #0b1220;
-		border: 1px solid #1f2937;
+		color: #374151;
+		background: #f3f4f6;
+		border: 1px solid #d4d4d8;
 		border-radius: 6px;
 		padding: 0.7rem;
 	}
@@ -122,9 +122,9 @@
 		box-sizing: border-box;
 		font-family: ui-monospace, monospace;
 		font-size: 0.8rem;
-		background: #0b1220;
-		color: #e5e7eb;
-		border: 1px solid #1f2937;
+		background: #f3f4f6;
+		color: #000000;
+		border: 1px solid #d4d4d8;
 		border-radius: 6px;
 		padding: 0.6rem;
 	}
@@ -136,17 +136,17 @@
 		white-space: pre-wrap;
 		font-family: ui-monospace, monospace;
 		font-size: 0.78rem;
-		background: #0b1220;
-		border: 1px solid #1f2937;
+		background: #f3f4f6;
+		border: 1px solid #d4d4d8;
 		border-radius: 6px;
 		padding: 0.6rem;
-		color: #d1d5db;
+		color: #374151;
 	}
 	.out--err {
-		color: #fca5a5;
-		border-color: #7f1d1d;
+		color: #991b1b;
+		border-color: #fee2e2;
 	}
 	.hint {
-		color: #9ca3af;
+		color: #374151;
 	}
 </style>

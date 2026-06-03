@@ -102,8 +102,8 @@
 
 <style>
 	.quiz {
-		background: #0b1220;
-		border: 1px solid #1f2937;
+		background: #f3f4f6;
+		border: 1px solid #d4d4d8;
 		border-radius: 8px;
 		padding: 0.85rem;
 		margin-top: 0.6rem;
@@ -118,14 +118,14 @@
 		font-size: 1rem;
 	}
 	.banner--error {
-		background: #7f1d1d;
-		color: #fecaca;
+		background: #fee2e2;
+		color: #991b1b;
 		padding: 0.4rem 0.6rem;
 		border-radius: 6px;
 		font-size: 0.82rem;
 	}
 	.hint {
-		color: #9ca3af;
+		color: #374151;
 		font-size: 0.85rem;
 	}
 	.qlist {
@@ -137,12 +137,12 @@
 		gap: 0.6rem;
 	}
 	.q {
-		border: 1px solid #1f2937;
+		border: 1px solid #d4d4d8;
 		border-radius: 6px;
 		padding: 0.55rem 0.7rem;
 	}
 	.q--wrong {
-		border-color: #7f1d1d;
+		border-color: #fee2e2;
 	}
 	.q__prompt {
 		margin: 0 0 0.4rem;
@@ -152,7 +152,7 @@
 		font-size: 0.82rem;
 		padding: 0.2rem 0.35rem;
 		border-radius: 4px;
-		color: #d1d5db;
+		color: #374151;
 	}
 	.opt--pick {
 		display: flex;
@@ -161,8 +161,8 @@
 		cursor: pointer;
 	}
 	.opt--correct {
-		background: #064e3b;
-		color: #6ee7b7;
+		background: #dcfce7;
+		color: #166534;
 	}
 	.opt--chosen {
 		outline: 1px solid #64748b;
@@ -170,19 +170,19 @@
 	.explain {
 		margin: 0.35rem 0 0;
 		font-size: 0.78rem;
-		color: #9ca3af;
+		color: #374151;
 	}
 	.explain--ai {
-		color: #c4b5fd;
+		color: #6d28d9;
 	}
 	.score {
 		font-weight: 600;
 		font-size: 0.95rem;
-		color: #fca5a5;
+		color: #991b1b;
 		margin-bottom: 0.4rem;
 	}
 	.score--pass {
-		color: #6ee7b7;
+		color: #166534;
 	}
 	.row {
 		display: flex;

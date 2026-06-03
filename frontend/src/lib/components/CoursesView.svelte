@@ -297,7 +297,7 @@
 <style>
 	.courses-view {
 		padding: 1.25rem;
-		color: #e5e7eb;
+		color: #000000;
 		font-family: system-ui, sans-serif;
 	}
 	.hero {
@@ -316,11 +316,11 @@
 	.hero p {
 		margin: 0.15rem 0 0;
 		font-size: 0.85rem;
-		color: #9ca3af;
+		color: #374151;
 	}
 	.banner--error {
-		background: #7f1d1d;
-		color: #fecaca;
+		background: #fee2e2;
+		color: #991b1b;
 		padding: 0.5rem 0.75rem;
 		border-radius: 6px;
 		font-size: 0.85rem;
@@ -329,16 +329,16 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0.5rem 1.25rem;
-		background: #111827;
-		border: 1px solid #1f2937;
+		background: #ffffff;
+		border: 1px solid #d4d4d8;
 		border-radius: 8px;
 		padding: 0.6rem 0.85rem;
 		margin-bottom: 0.85rem;
 		font-size: 0.82rem;
-		color: #9ca3af;
+		color: #374151;
 	}
 	.dash__stat strong {
-		color: #e5e7eb;
+		color: #000000;
 		font-size: 1rem;
 		margin-right: 0.25rem;
 	}
@@ -352,7 +352,7 @@
 	.recs__summary {
 		margin: 0 0 0.5rem;
 		font-size: 0.82rem;
-		color: #9ca3af;
+		color: #374151;
 	}
 	.recs__row {
 		display: flex;
@@ -365,8 +365,8 @@
 		gap: 0.25rem;
 		align-items: flex-start;
 		text-align: left;
-		background: #0b1220;
-		border: 1px solid #1f2937;
+		background: #f3f4f6;
+		border: 1px solid #d4d4d8;
 		border-radius: 8px;
 		padding: 0.6rem 0.7rem;
 		cursor: pointer;
@@ -383,7 +383,7 @@
 	}
 	.rec__reason {
 		font-size: 0.75rem;
-		color: #9ca3af;
+		color: #374151;
 	}
 	.catalogue {
 		list-style: none;
@@ -396,8 +396,8 @@
 	.card {
 		width: 100%;
 		text-align: left;
-		background: #111827;
-		border: 1px solid #1f2937;
+		background: #ffffff;
+		border: 1px solid #d4d4d8;
 		border-radius: 8px;
 		padding: 0.85rem;
 		cursor: pointer;
@@ -419,7 +419,7 @@
 	.card p {
 		margin: 0 0 0.5rem;
 		font-size: 0.8rem;
-		color: #9ca3af;
+		color: #374151;
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
 		line-clamp: 2;
@@ -441,7 +441,7 @@
 		font-size: 1.15rem;
 	}
 	.detail__desc {
-		color: #9ca3af;
+		color: #374151;
 		font-size: 0.88rem;
 	}
 	.progress {
@@ -449,7 +449,7 @@
 	}
 	.progress__bar {
 		height: 8px;
-		background: #1f2937;
+		background: #d4d4d8;
 		border-radius: 999px;
 		overflow: hidden;
 	}
@@ -460,14 +460,14 @@
 	}
 	.progress__label {
 		font-size: 0.78rem;
-		color: #9ca3af;
+		color: #374151;
 	}
 	.cert {
 		display: flex;
 		gap: 0.5rem;
 		align-items: center;
-		background: #064e3b;
-		color: #6ee7b7;
+		background: #dcfce7;
+		color: #166534;
 		border-radius: 6px;
 		padding: 0.5rem 0.7rem;
 		margin: 0.5rem 0;
@@ -478,14 +478,14 @@
 	}
 	.cert__link {
 		margin-left: auto;
-		color: #6ee7b7;
+		color: #166534;
 		font-weight: 600;
 	}
 	.cert__claim {
 		margin: 0.5rem 0;
 	}
 	.hint {
-		color: #9ca3af;
+		color: #374151;
 		font-size: 0.85rem;
 	}
 	.lessons {
@@ -504,8 +504,8 @@
 		display: flex;
 		gap: 0.6rem;
 		align-items: center;
-		background: #111827;
-		border: 1px solid #1f2937;
+		background: #ffffff;
+		border: 1px solid #d4d4d8;
 		border-radius: 6px;
 		padding: 0.5rem 0.7rem;
 	}
@@ -528,12 +528,12 @@
 	}
 	.lesson__done {
 		font-size: 0.75rem;
-		color: #6ee7b7;
+		color: #166534;
 	}
 	.verify {
 		margin-top: 1.5rem;
 		padding-top: 1rem;
-		border-top: 1px solid #1f2937;
+		border-top: 1px solid #d4d4d8;
 	}
 	.verify h2 {
 		margin: 0 0 0.2rem;
@@ -542,7 +542,7 @@
 	.verify__hint {
 		margin: 0 0 0.5rem;
 		font-size: 0.8rem;
-		color: #9ca3af;
+		color: #374151;
 	}
 	.verify__row {
 		display: flex;
@@ -558,7 +558,7 @@
 		gap: 0.4rem;
 		align-items: center;
 		font-size: 0.82rem;
-		color: #d1d5db;
+		color: #374151;
 		margin: 0.6rem 0 0;
 	}
 </style>

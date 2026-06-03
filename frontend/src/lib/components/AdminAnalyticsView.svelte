@@ -94,7 +94,7 @@
 <style>
 	.analytics-view {
 		padding: 1.25rem;
-		color: #e5e7eb;
+		color: #000000;
 		font-family: system-ui, sans-serif;
 	}
 	.hero {
@@ -110,7 +110,7 @@
 	.hero p {
 		margin: 0.15rem 0 0;
 		font-size: 0.82rem;
-		color: #9ca3af;
+		color: #374151;
 	}
 	.banner {
 		padding: 0.5rem 0.75rem;
@@ -119,24 +119,24 @@
 		margin-bottom: 0.75rem;
 	}
 	.banner--warn {
-		background: #78350f;
-		color: #fcd34d;
+		background: #fef3c7;
+		color: #92400e;
 	}
 	.banner--error {
-		background: #7f1d1d;
-		color: #fecaca;
+		background: #fee2e2;
+		color: #991b1b;
 	}
 	.hint {
 		font-size: 0.85rem;
-		color: #9ca3af;
+		color: #374151;
 	}
 	.retry {
 		font-size: 0.78rem;
 		padding: 0.35rem 0.7rem;
 		border-radius: 5px;
 		border: 1px solid #374151;
-		background: #1f2937;
-		color: #e5e7eb;
+		background: #d4d4d8;
+		color: #000000;
 		cursor: pointer;
 	}
 	.grid {
