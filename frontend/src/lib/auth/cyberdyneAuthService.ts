@@ -34,6 +34,12 @@ export interface AuthUser {
 	wallet_address?: string | null;
 	is_active?: boolean;
 	scopes?: string[];
+	/** CyberdyneAuth admin flag. Surfaced under one of these keys
+	 * depending on the auth-server version; any truthy one grants the
+	 * authoring surface (see `authVM.isAdmin`). */
+	is_superuser?: boolean;
+	is_admin?: boolean;
+	is_staff?: boolean;
 	[k: string]: unknown;
 }
 

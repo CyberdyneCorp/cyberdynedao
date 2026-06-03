@@ -189,7 +189,11 @@ from cyberdyne_backend.adapters.inbound.api.uploads.router import (
     public_router as uploads_public_router,
 )
 from cyberdyne_backend.adapters.inbound.health.router import router as health_router
-from cyberdyne_backend.adapters.inbound.middleware.auth import AuthMiddleware, extract_token
+from cyberdyne_backend.adapters.inbound.middleware.auth import (
+    AuthMiddleware,
+    extract_token,
+    get_user_profile_port,
+)
 from cyberdyne_backend.adapters.outbound.persistence.ai_chat.repository import (
     SqlAlchemyChatRepository,
 )
@@ -860,6 +864,10 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_start_session_uc] = _start_session_dep
     app.dependency_overrides[get_chat_history_uc] = _chat_history_dep
     app.dependency_overrides[get_run_turn_uc] = _run_turn_dep
+    # Lets require_editor fall back to a /users/me admin-flag check when
+    # introspection doesn't surface it. Reuses the container's cached
+    # profile client.
+    app.dependency_overrides[get_user_profile_port] = lambda: container.user_profile_port
 
     app.include_router(health_router)
     app.include_router(content_router)

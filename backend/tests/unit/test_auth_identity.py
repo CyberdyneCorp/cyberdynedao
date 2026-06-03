@@ -114,6 +114,22 @@ class TestUserPrincipalParsing:
         assert isinstance(principal, UserPrincipal)
         assert principal.audience is None
 
+    def test_default_is_not_admin(self) -> None:
+        principal = principal_from_introspection(_base_introspect())
+        assert isinstance(principal, UserPrincipal)
+        assert principal.is_admin is False
+
+    @pytest.mark.parametrize("flag_key", ["is_superuser", "is_admin", "is_staff"])
+    def test_admin_flag_sets_is_admin(self, flag_key: str) -> None:
+        principal = principal_from_introspection(_base_introspect(**{flag_key: True}))
+        assert isinstance(principal, UserPrincipal)
+        assert principal.is_admin is True
+
+    def test_falsy_admin_flag_stays_non_admin(self) -> None:
+        principal = principal_from_introspection(_base_introspect(is_superuser=False))
+        assert isinstance(principal, UserPrincipal)
+        assert principal.is_admin is False
+
 
 # ── principal_from_introspection — service tokens ────────────────────
 

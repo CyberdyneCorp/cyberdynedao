@@ -98,6 +98,10 @@ export interface AuthViewModel {
 	/** True when the signed-in user carries the `editor` scope — gates
 	 * the admin authoring surface (course/lesson/quiz CMS). */
 	readonly isEditor: boolean;
+	/** True when CyberdyneAuth marks the user as an admin. Admins reach
+	 * the authoring surface even without the `editor` scope, which the
+	 * (currently disabled) on-chain policy engine would otherwise grant. */
+	readonly isAdmin: boolean;
 	readonly isRestored: boolean;
 	readonly loading: boolean;
 	readonly error: string | null;
@@ -286,6 +290,9 @@ export function createAuthVM(): AuthViewModel {
 		get isAuthenticated() { return token !== null; },
 		get isEditor() {
 			return Array.isArray(user?.scopes) && user.scopes.includes('editor');
+		},
+		get isAdmin() {
+			return Boolean(user?.is_superuser || user?.is_admin || user?.is_staff);
 		},
 		get isRestored() { return isRestored; },
 		get loading() { return loading; },
