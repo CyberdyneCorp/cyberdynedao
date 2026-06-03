@@ -330,7 +330,7 @@
 		flex-wrap: wrap;
 		gap: 0.5rem 1.25rem;
 		background: #ffffff;
-		border: 1px solid #d4d4d8;
+		border: 2px solid #000000;
 		border-radius: 8px;
 		padding: 0.6rem 0.85rem;
 		margin-bottom: 0.85rem;
@@ -366,7 +366,7 @@
 		align-items: flex-start;
 		text-align: left;
 		background: #f3f4f6;
-		border: 1px solid #d4d4d8;
+		border: 2px solid #000000;
 		border-radius: 8px;
 		padding: 0.6rem 0.7rem;
 		cursor: pointer;
@@ -397,7 +397,7 @@
 		width: 100%;
 		text-align: left;
 		background: #ffffff;
-		border: 1px solid #d4d4d8;
+		border: 2px solid #000000;
 		border-radius: 8px;
 		padding: 0.85rem;
 		cursor: pointer;
@@ -505,7 +505,7 @@
 		gap: 0.6rem;
 		align-items: center;
 		background: #ffffff;
-		border: 1px solid #d4d4d8;
+		border: 2px solid #000000;
 		border-radius: 6px;
 		padding: 0.5rem 0.7rem;
 	}
@@ -533,7 +533,7 @@
 	.verify {
 		margin-top: 1.5rem;
 		padding-top: 1rem;
-		border-top: 1px solid #d4d4d8;
+		border-top: 2px solid #000000;
 	}
 	.verify h2 {
 		margin: 0 0 0.2rem;
