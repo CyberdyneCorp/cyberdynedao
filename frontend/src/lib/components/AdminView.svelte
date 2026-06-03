@@ -1,7 +1,17 @@
 <script lang="ts">
+	import {
+		PixelScrollArea,
+		PixelButton,
+		PixelInput,
+		Textarea,
+		Select,
+		Badge
+	} from '@cyberdynecorp/svelte-ui-core';
 	import { createAdminViewModel, shouldAutoLoad } from '$lib/viewmodels/adminViewModel';
 	import type { CourseLevel, LessonType } from '$lib/api/coursesApi';
 	import { authVM } from '$lib/auth/authViewModel.svelte';
+
+	const STATUS_VARIANT = { draft: 'warning', published: 'success' } as const;
 
 	const vm = createAdminViewModel();
 	const { courses, selected, loading, busy, error } = vm;
@@ -16,6 +26,7 @@
 	let level = $state<CourseLevel>('Beginner');
 
 	const levels: CourseLevel[] = ['Beginner', 'Intermediate', 'Advanced'];
+	const levelOptions = levels.map((l) => ({ value: l, label: l }));
 
 	// New-lesson form (within the open-course editor).
 	let lTitle = $state('');
@@ -26,6 +37,7 @@
 	let uploadName = $state<string | null>(null);
 
 	const lessonTypes: LessonType[] = ['text', 'video', 'pdf', 'presentation', 'quiz', 'code'];
+	const lessonTypeOptions = lessonTypes.map((t) => ({ value: t, label: t }));
 	const URL_TYPES: LessonType[] = ['video', 'pdf', 'presentation'];
 	const urlBacked = $derived(URL_TYPES.includes(lType));
 
@@ -178,6 +190,7 @@
 	}
 </script>
 
+<PixelScrollArea maxHeight="100%" ariaLabel="Academy admin">
 <div class="admin-view">
 	<header class="hero">
 		<span aria-hidden="true">🛠️</span>
@@ -202,25 +215,29 @@
 		{#if $selected}
 			{@const course = $selected}
 			<!-- Lesson editor for the open course -->
-			<button class="back" onclick={() => vm.closeCourse()}>← All courses</button>
+			<PixelButton variant="ghost" size="sm" onclick={() => vm.closeCourse()}>← All courses</PixelButton>
 			<div class="detail-head">
-				<span class="status status--{course.status}">{course.status}</span>
+				<Badge variant={STATUS_VARIANT[course.status]} size="sm">{course.status}</Badge>
 				<h2>{course.title}</h2>
 			</div>
 
 			{#if quizLessonId}
 				<!-- Quiz builder for a quiz-type lesson -->
-				<button class="back" onclick={closeQuizEditor}>← Back to lessons</button>
+				<PixelButton variant="ghost" size="sm" onclick={closeQuizEditor}>← Back to lessons</PixelButton>
 				<h2>Quiz</h2>
 				<label class="passing">
 					Passing score (%)
-					<input class="field field--num" type="number" min="1" max="100" bind:value={quizPassing} />
+					<input class="num" type="number" min="1" max="100" bind:value={quizPassing} />
 				</label>
 
 				{#each quizQuestions as q, qi (qi)}
 					<div class="qcard">
-						<input class="field" placeholder="Question {qi + 1}" bind:value={q.prompt} aria-label="Question prompt" />
-						<input class="field" placeholder="Explanation (shown after answering)" bind:value={q.explanation} aria-label="Explanation" />
+						<PixelInput placeholder={`Question ${qi + 1}`} bind:value={q.prompt} ariaLabel="Question prompt" />
+						<PixelInput
+							placeholder="Explanation (shown after answering)"
+							bind:value={q.explanation}
+							ariaLabel="Explanation"
+						/>
 						{#each q.options as opt, oi (oi)}
 							<div class="opt">
 								<input
@@ -230,32 +247,40 @@
 									onchange={() => setCorrect(qi, oi)}
 									aria-label="Mark option {oi + 1} correct"
 								/>
-								<input class="field" placeholder="Option {oi + 1}" bind:value={opt.text} aria-label="Option text" />
-								<button class="btn" type="button" disabled={q.options.length <= 2} onclick={() => removeOption(qi, oi)}>
+								<div class="opt__input">
+									<PixelInput placeholder={`Option ${oi + 1}`} bind:value={opt.text} ariaLabel="Option text" />
+								</div>
+								<PixelButton
+									variant="ghost"
+									size="sm"
+									disabled={q.options.length <= 2}
+									ariaLabel="Remove option"
+									onclick={() => removeOption(qi, oi)}
+								>
 									✕
-								</button>
+								</PixelButton>
 							</div>
 						{/each}
 						<div class="row">
-							<button class="btn" type="button" disabled={q.options.length >= 6} onclick={() => addOption(qi)}>
+							<PixelButton variant="outline" size="sm" disabled={q.options.length >= 6} onclick={() => addOption(qi)}>
 								+ option
-							</button>
-							<button class="btn btn--danger" type="button" onclick={() => removeQuestion(qi)}>
+							</PixelButton>
+							<PixelButton variant="ghost" size="sm" onclick={() => removeQuestion(qi)}>
 								Remove question
-							</button>
+							</PixelButton>
 						</div>
 					</div>
 				{/each}
 
-				<button class="btn" type="button" disabled={quizQuestions.length >= 15} onclick={addQuestion}>
+				<PixelButton variant="outline" size="sm" disabled={quizQuestions.length >= 15} onclick={addQuestion}>
 					+ question
-				</button>
+				</PixelButton>
 				<p class="hint">Select the radio next to the correct option. 2–6 options per question, 1–15 questions.</p>
 				<div class="row">
-					<button class="btn btn--primary" disabled={$busy || !quizValid} onclick={saveQuiz}>
+					<PixelButton variant="solid" disabled={$busy || !quizValid} onclick={saveQuiz}>
 						{$busy ? 'Saving…' : 'Save quiz'}
-					</button>
-					<button class="btn btn--danger" disabled={$busy} onclick={deleteQuiz}>Delete quiz</button>
+					</PixelButton>
+					<PixelButton variant="ghost" disabled={$busy} onclick={deleteQuiz}>Delete quiz</PixelButton>
 				</div>
 			{:else}
 				{#if course.lessons.length === 0}
@@ -270,17 +295,18 @@
 								</div>
 								<div class="item__actions">
 									{#if lesson.lessonType === 'quiz'}
-										<button class="btn" disabled={$busy} onclick={() => openQuizEditor(lesson.id)}>
+										<PixelButton variant="outline" size="sm" disabled={$busy} onclick={() => openQuizEditor(lesson.id)}>
 											Quiz
-										</button>
+										</PixelButton>
 									{/if}
-									<button
-										class="btn btn--danger"
+									<PixelButton
+										variant="ghost"
+										size="sm"
 										disabled={$busy}
 										onclick={() => vm.removeLesson(lesson.id)}
 									>
 										Delete
-									</button>
+									</PixelButton>
 								</div>
 							</li>
 						{/each}
@@ -289,59 +315,56 @@
 
 				<form class="new-course" onsubmit={(e) => { e.preventDefault(); void submitLesson(); }}>
 					<h2>Add lesson</h2>
-					<input class="field" placeholder="Lesson title" bind:value={lTitle} aria-label="Lesson title" />
-					<div class="row">
-						<select class="field field--sel" bind:value={lType} aria-label="Lesson type">
-							{#each lessonTypes as t (t)}
-								<option value={t}>{t}</option>
-							{/each}
-						</select>
-						<input class="field" placeholder="Duration (optional)" bind:value={lDuration} aria-label="Duration" />
+					<PixelInput placeholder="Lesson title" bind:value={lTitle} ariaLabel="Lesson title" />
+					<div class="row row--end">
+						<div class="grow">
+							<Select
+								label="Lesson type"
+								value={lType}
+								options={lessonTypeOptions}
+								onchange={(e) => (lType = (e.target as HTMLSelectElement).value as LessonType)}
+							/>
+						</div>
+						<div class="grow">
+							<PixelInput placeholder="Duration (optional)" bind:value={lDuration} ariaLabel="Duration" />
+						</div>
 					</div>
 					{#if urlBacked}
 						<div class="row">
 							<input type="file" onchange={onPickFile} aria-label="Upload material" />
 							{#if uploadName}<span class="hint">Uploaded: {uploadName}</span>{/if}
 						</div>
-						<input class="field" placeholder="Content URL" bind:value={lContentUrl} aria-label="Content URL" />
+						<PixelInput placeholder="Content URL" bind:value={lContentUrl} ariaLabel="Content URL" />
 					{:else if lType === 'text'}
-						<textarea class="field" rows="3" placeholder="Lesson text (markdown)" bind:value={lTextBody} aria-label="Lesson text"></textarea>
+						<Textarea label="Lesson text (markdown)" rows={3} bind:value={lTextBody} />
 					{:else if lType === 'quiz'}
 						<p class="hint">Add the lesson, then click <strong>Quiz</strong> on its row to author questions.</p>
 					{:else}
 						<p class="hint">Code lessons run interactively against the MATLAB engine — no content needed.</p>
 					{/if}
-					<button class="btn btn--primary" type="submit" disabled={$busy || !lessonValid}>
+					<PixelButton type="submit" variant="solid" disabled={$busy || !lessonValid}>
 						{$busy ? 'Saving…' : 'Add lesson'}
-					</button>
+					</PixelButton>
 				</form>
 			{/if}
 		{:else}
 			<!-- New course -->
 			<form class="new-course" onsubmit={(e) => { e.preventDefault(); void submit(); }}>
 				<h2>New course</h2>
-				<input
-					class="field"
-					placeholder="Course title"
-					bind:value={title}
-					aria-label="Course title"
-				/>
-				<textarea
-					class="field"
-					placeholder="Description"
-					rows="2"
-					bind:value={description}
-					aria-label="Course description"
-				></textarea>
-				<div class="row">
-					<select class="field field--sel" bind:value={level} aria-label="Level">
-						{#each levels as lvl (lvl)}
-							<option value={lvl}>{lvl}</option>
-						{/each}
-					</select>
-					<button class="btn btn--primary" type="submit" disabled={$busy || !title.trim()}>
+				<PixelInput placeholder="Course title" bind:value={title} ariaLabel="Course title" />
+				<Textarea label="Description" rows={2} bind:value={description} />
+				<div class="row row--end">
+					<div class="grow">
+						<Select
+							label="Level"
+							value={level}
+							options={levelOptions}
+							onchange={(e) => (level = (e.target as HTMLSelectElement).value as CourseLevel)}
+						/>
+					</div>
+					<PixelButton type="submit" variant="solid" disabled={$busy || !title.trim()}>
 						{$busy ? 'Saving…' : 'Create draft'}
-					</button>
+					</PixelButton>
 				</div>
 			</form>
 
@@ -352,7 +375,9 @@
 			{:else if $courses.length === 0}
 				{#if $error}
 					<p class="hint">Couldn't load courses.</p>
-					<button class="btn" disabled={$loading} onclick={() => void vm.load()}>Retry</button>
+					<PixelButton variant="outline" size="sm" disabled={$loading} onclick={() => void vm.load()}>
+						Retry
+					</PixelButton>
 				{:else}
 					<p class="hint">No courses yet — create your first draft above.</p>
 				{/if}
@@ -361,30 +386,26 @@
 					{#each $courses as course (course.id)}
 						<li class="item">
 							<div class="item__main">
-								<span class="status status--{course.status}">{course.status}</span>
+								<Badge variant={STATUS_VARIANT[course.status]} size="sm">{course.status}</Badge>
 								<span class="item__title">{course.title}</span>
 								<span class="item__meta">{course.level} · {course.lessonCount} lessons</span>
 							</div>
 							<div class="item__actions">
-								<button class="btn" disabled={$busy} onclick={() => vm.openCourse(course.slug)}>
+								<PixelButton variant="outline" size="sm" disabled={$busy} onclick={() => vm.openCourse(course.slug)}>
 									Edit
-								</button>
+								</PixelButton>
 								{#if course.status === 'published'}
-									<button class="btn" disabled={$busy} onclick={() => vm.unpublish(course.slug)}>
+									<PixelButton variant="outline" size="sm" disabled={$busy} onclick={() => vm.unpublish(course.slug)}>
 										Unpublish
-									</button>
+									</PixelButton>
 								{:else}
-									<button
-										class="btn btn--primary"
-										disabled={$busy}
-										onclick={() => vm.publish(course.slug)}
-									>
+									<PixelButton variant="solid" size="sm" disabled={$busy} onclick={() => vm.publish(course.slug)}>
 										Publish
-									</button>
+									</PixelButton>
 								{/if}
-								<button class="btn btn--danger" disabled={$busy} onclick={() => vm.remove(course.slug)}>
+								<PixelButton variant="ghost" size="sm" disabled={$busy} onclick={() => vm.remove(course.slug)}>
 									Delete
-								</button>
+								</PixelButton>
 							</div>
 						</li>
 					{/each}
@@ -393,14 +414,13 @@
 		{/if}
 	{/if}
 </div>
+</PixelScrollArea>
 
 <style>
 	.admin-view {
 		padding: 1.25rem;
 		color: #e5e7eb;
 		font-family: system-ui, sans-serif;
-		overflow-y: auto;
-		height: 100%;
 	}
 	.hero {
 		display: flex;
@@ -446,46 +466,17 @@
 		margin: 0 0 0.4rem;
 		font-size: 1rem;
 	}
-	.field {
-		background: #0b1220;
-		border: 1px solid #1f2937;
-		border-radius: 5px;
-		color: #e5e7eb;
-		padding: 0.4rem 0.55rem;
-		font: inherit;
-		width: 100%;
-		box-sizing: border-box;
-	}
 	.row {
 		display: flex;
 		gap: 0.5rem;
 		align-items: center;
 	}
-	.field--sel {
-		width: auto;
+	.row--end {
+		align-items: flex-end;
 	}
-	.btn {
-		font-size: 0.78rem;
-		padding: 0.35rem 0.7rem;
-		border-radius: 5px;
-		border: 1px solid #374151;
-		background: #1f2937;
-		color: #e5e7eb;
-		cursor: pointer;
-	}
-	.btn:disabled {
-		opacity: 0.5;
-		cursor: default;
-	}
-	.btn--primary {
-		border-color: #2563eb;
-		background: #1d4ed8;
-		color: #fff;
-	}
-	.btn--danger {
-		border-color: #b91c1c;
-		color: #fca5a5;
-		background: none;
+	.grow {
+		flex: 1;
+		min-width: 0;
 	}
 	.list {
 		list-style: none;
@@ -523,33 +514,9 @@
 		gap: 0.4rem;
 		flex-shrink: 0;
 	}
-	.status {
-		font-size: 0.65rem;
-		text-transform: uppercase;
-		padding: 0.1rem 0.4rem;
-		border-radius: 999px;
-		font-weight: 600;
-	}
-	.status--published {
-		background: #064e3b;
-		color: #6ee7b7;
-	}
-	.status--draft {
-		background: #374151;
-		color: #d1d5db;
-	}
 	.hint {
 		color: #9ca3af;
 		font-size: 0.85rem;
-	}
-	.back {
-		background: none;
-		border: none;
-		color: #93c5fd;
-		cursor: pointer;
-		padding: 0;
-		font-size: 0.85rem;
-		margin-bottom: 0.5rem;
 	}
 	.detail-head {
 		display: flex;
@@ -569,8 +536,15 @@
 		color: #9ca3af;
 		margin-bottom: 0.75rem;
 	}
-	.field--num {
+	.num {
 		width: 5rem;
+		background: #0b1220;
+		border: 1px solid #1f2937;
+		border-radius: 5px;
+		color: #e5e7eb;
+		padding: 0.4rem 0.55rem;
+		font: inherit;
+		box-sizing: border-box;
 	}
 	.qcard {
 		background: #111827;
@@ -586,5 +560,8 @@
 		display: flex;
 		gap: 0.5rem;
 		align-items: center;
+	}
+	.opt__input {
+		flex: 1;
 	}
 </style>

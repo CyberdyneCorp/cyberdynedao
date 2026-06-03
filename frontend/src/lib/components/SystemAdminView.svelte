@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
+	import { PixelScrollArea, PixelButton, Badge } from '@cyberdynecorp/svelte-ui-core';
 	import { authVM } from '$lib/auth/authViewModel.svelte';
 	import { createWindow } from '$lib/stores/windowStore';
 
@@ -62,67 +63,72 @@
 	}
 </script>
 
-<div class="sysadmin-view">
-	<header class="hero">
-		<span aria-hidden="true">🛡️</span>
-		<div>
-			<h1>System Admin</h1>
-			<p>Control panel for CyberdyneAuth administrators.</p>
-		</div>
-	</header>
+<PixelScrollArea maxHeight="100%" ariaLabel="System admin">
+	<div class="sysadmin-view">
+		<header class="hero">
+			<span aria-hidden="true">🛡️</span>
+			<div>
+				<h1>System Admin</h1>
+				<p>Control panel for CyberdyneAuth administrators.</p>
+			</div>
+		</header>
 
-	{#if !authVM.isRestored}
-		<p class="hint">Checking your session…</p>
-	{:else if !canAccess}
-		<p class="banner banner--warn" role="alert">
-			This panel is restricted to <strong>admin</strong> accounts.
-			{#if !authVM.isAuthenticated}Sign in with an admin account to continue.{/if}
-		</p>
-	{:else}
-		<section class="card">
-			<h2>Session</h2>
-			<dl class="kv">
-				<dt>Signed in as</dt>
-				<dd>{identity}</dd>
-				<dt>Access</dt>
-				<dd>
-					{#if authVM.isAdmin}<span class="badge badge--admin">ADMIN</span>{/if}
-					{#if authVM.isEditor}<span class="badge badge--editor">EDITOR</span>{/if}
-				</dd>
-				<dt>Scopes</dt>
-				<dd><code>{scopes}</code></dd>
-				<dt>Session expires</dt>
-				<dd>{expiresLabel}</dd>
-			</dl>
-		</section>
+		{#if !authVM.isRestored}
+			<p class="hint">Checking your session…</p>
+		{:else if !canAccess}
+			<p class="banner banner--warn" role="alert">
+				This panel is restricted to <strong>admin</strong> accounts.
+				{#if !authVM.isAuthenticated}Sign in with an admin account to continue.{/if}
+			</p>
+		{:else}
+			<section class="card">
+				<h2>Session</h2>
+				<dl class="kv">
+					<dt>Signed in as</dt>
+					<dd>{identity}</dd>
+					<dt>Access</dt>
+					<dd class="access">
+						{#if authVM.isAdmin}<Badge variant="info" size="sm">ADMIN</Badge>{/if}
+						{#if authVM.isEditor}<Badge variant="success" size="sm">EDITOR</Badge>{/if}
+					</dd>
+					<dt>Scopes</dt>
+					<dd><code>{scopes}</code></dd>
+					<dt>Session expires</dt>
+					<dd>{expiresLabel}</dd>
+				</dl>
+			</section>
 
-		<section class="card">
-			<h2>Admin tools</h2>
-			<ul class="tools">
-				{#each tools as tool (tool.id)}
-					<li>
-						<button class="tool" type="button" onclick={() => launch(tool)}>
+			<section class="card">
+				<h2>Admin tools</h2>
+				<ul class="tools">
+					{#each tools as tool (tool.id)}
+						<li class="tool">
 							<span class="tool__icon" aria-hidden="true">{tool.icon}</span>
 							<span class="tool__text">
 								<span class="tool__title">{tool.title}</span>
 								<span class="tool__desc">{tool.desc}</span>
 							</span>
-							<span class="tool__arrow" aria-hidden="true">→</span>
-						</button>
-					</li>
-				{/each}
-			</ul>
-		</section>
-	{/if}
-</div>
+							<PixelButton
+								variant="outline"
+								size="sm"
+								ariaLabel="Open {tool.title}"
+								onclick={() => launch(tool)}
+							>
+								Open →
+							</PixelButton>
+						</li>
+					{/each}
+				</ul>
+			</section>
+		{/if}
+	</div>
+</PixelScrollArea>
 
 <style>
 	.sysadmin-view {
 		padding: 1.25rem;
 		color: #e5e7eb;
 		font-family: system-ui, sans-serif;
-		overflow-y: auto;
-		height: 100%;
 	}
 	.hero {
 		display: flex;
@@ -178,29 +184,16 @@
 		margin: 0;
 		word-break: break-word;
 	}
+	.access {
+		display: flex;
+		gap: 0.35rem;
+	}
 	.kv code {
 		background: #0b1220;
 		border: 1px solid #1f2937;
 		border-radius: 4px;
 		padding: 0.05rem 0.35rem;
 		font-size: 0.8rem;
-	}
-	.badge {
-		display: inline-block;
-		font-size: 0.68rem;
-		font-weight: 700;
-		letter-spacing: 0.05em;
-		padding: 0.1rem 0.4rem;
-		border-radius: 4px;
-		margin-right: 0.35rem;
-	}
-	.badge--admin {
-		background: #1d4ed8;
-		color: #fff;
-	}
-	.badge--editor {
-		background: #065f46;
-		color: #d1fae5;
 	}
 	.tools {
 		list-style: none;
@@ -214,19 +207,10 @@
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
-		width: 100%;
-		text-align: left;
 		background: #0b1220;
 		border: 1px solid #1f2937;
 		border-radius: 6px;
 		padding: 0.6rem 0.75rem;
-		color: #e5e7eb;
-		font: inherit;
-		cursor: pointer;
-	}
-	.tool:hover {
-		border-color: #2563eb;
-		background: #0e1729;
 	}
 	.tool__icon {
 		font-size: 1.3rem;
@@ -242,8 +226,5 @@
 	.tool__desc {
 		font-size: 0.78rem;
 		color: #9ca3af;
-	}
-	.tool__arrow {
-		color: #6b7280;
 	}
 </style>
