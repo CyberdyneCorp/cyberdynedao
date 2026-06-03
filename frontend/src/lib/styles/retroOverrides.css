@@ -16,9 +16,25 @@
 	--color-surface-hover: #f3f4f6;
 	--color-text-primary: #000000;
 	--color-text-inverse: #ffffff;
+	--color-text-tertiary: #6b7280;
+	--color-bg-elevated: #ffffff;
 	--color-action-tertiary-default: #7e22ce;
 	--color-state-error: #ef4444;
 	--color-border-subtle: #d4d4d8;
+
+	/* Form-control tokens — the forms/* components (Textarea, Select,
+	   TextInput) use this distinct family rather than --color-surface-*.
+	   Without these they fall back to the library's dark defaults, so a
+	   Textarea renders dark-on-dark (invisible text). Pin them light to
+	   match PixelInput and the rest of the light retro shell. */
+	--input-bg: #ffffff;
+	--input-bg-hover: #f9fafb;
+	--input-text: #000000;
+	--input-label: #374151;
+	--input-placeholder: #9ca3af;
+	--input-border: #000000;
+	--input-border-focus: #2563eb;
+	--input-border-error: #ef4444;
 
 	/* Accent — neon-green "Connect Wallet" button */
 	--color-action-brand-default: #22c55e;
