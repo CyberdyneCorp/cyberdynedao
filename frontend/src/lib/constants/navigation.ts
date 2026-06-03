@@ -17,7 +17,8 @@ export const navItems: NavItem[] = [
 	{ name: 'Marketplace', mobileLabel: 'Market', icon: '/assets/marketplace_icon.svg' },
 	{ name: 'MATLAB', icon: '/assets/matlab_icon.svg' },
 	{ name: 'Agent', icon: '/assets/agent_icon.svg' },
-	{ name: 'Cyberflies', mobileLabel: 'Meets', icon: '/assets/cyberflies_icon.svg' }
+	{ name: 'Cyberflies', mobileLabel: 'Meets', icon: '/assets/cyberflies_icon.svg' },
+	{ name: 'Python', icon: '/assets/python_icon.svg' }
 ];
 
 export const viewMap: { [key: string]: any } = {
@@ -35,5 +36,6 @@ export const viewMap: { [key: string]: any } = {
 	'Team': 'team',
 	'MATLAB': 'matlab',
 	'Agent': 'agent',
-	'Cyberflies': 'cyberflies'
+	'Cyberflies': 'cyberflies',
+	'Python': 'interpreter'
 };

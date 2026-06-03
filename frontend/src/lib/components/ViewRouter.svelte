@@ -17,6 +17,7 @@
 	import MatlabView from './MatlabView.svelte';
 	import AgentView from './AgentView.svelte';
 	import CyberfliesView from './CyberfliesView.svelte';
+	import InterpreterView from './InterpreterView.svelte';
 	import type { MarketplaceItem } from '$lib/types/components';
 
 	export let content: string;
@@ -58,6 +59,8 @@
 	<AgentView />
 {:else if content === 'cyberflies'}
 	<CyberfliesView />
+{:else if content === 'interpreter'}
+	<InterpreterView />
 {:else}
 	<NewsView {isMobile} />
 {/if}

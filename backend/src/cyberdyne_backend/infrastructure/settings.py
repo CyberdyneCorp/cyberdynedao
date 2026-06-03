@@ -135,6 +135,11 @@ class Settings(BaseSettings):
     # matlabApi.ts proxies to.
     matlab_backend_url: str = "https://matlab-backend.coolify.cyberdynecorp.ai"
 
+    # Python interpreter backend the chat agent's python_exec tool calls
+    # (as the signed-in user). Same upstream the frontend's
+    # interpreterApi.ts proxies to.
+    python_interpreter_url: str = "https://interpreter.backend.coolify.cyberdynecorp.ai"
+
     # ── Uploads / media (Phase 8 — course content) ────────────────────
     # Where uploaded course/lesson media is written. In prod point this
     # at the Coolify persistent volume mount; locally it defaults to a

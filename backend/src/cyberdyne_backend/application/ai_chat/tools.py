@@ -47,6 +47,7 @@ from cyberdyne_backend.domain.ai_chat import (
     KnowledgeSearchPort,
     MatlabDiagnostic,
     MatlabPort,
+    PythonInterpreterPort,
     ToolCall,
 )
 from cyberdyne_backend.domain.ai_chat.ports import ToolSchema
@@ -279,6 +280,23 @@ CYBERDYNE_TOOLS: list[ToolSchema] = [
         },
     ),
     ToolSchema(
+        name="python_exec",
+        description=(
+            "Execute Python source on the live interpreter sandbox and return stdout/stderr. "
+            "The session is stateful across calls in this conversation — variables and files "
+            "persist to the next call. Use for computation, data analysis, generating and "
+            "running plots (matplotlib etc.), or any general Python the user asks for. Always "
+            "show the Python source you ran in a fenced ```python block in your reply."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "code": {"type": "string", "description": "Python source to run."},
+            },
+            "required": ["code"],
+        },
+    ),
+    ToolSchema(
         name="get_dao_treasury",
         description=(
             "Fetch the Cyberdyne DAO treasury snapshot on Base: token balances, AAVE v3 "
@@ -473,6 +491,9 @@ class ToolContext:
     # MATLAB-LLVM engine for the matlab_* tools, plus the user's bearer
     # (forwarded so figures land in their workspace).
     matlab: MatlabPort | None = None
+    # Python interpreter sandbox for the python_exec tool (same bearer
+    # forwarding so files land in the user's workspace).
+    python: PythonInterpreterPort | None = None
     bearer: str | None = None
     # DAO treasury + blog (read-only); learning actions run as the
     # signed-in user (user_id from the profile).
@@ -538,6 +559,8 @@ class ToolDispatcher:
                     cast(str, args.get("target", "c") or "c"),
                     chat_session_id,
                 )
+            if call.name == "python_exec":
+                return await self._python_exec(cast(str, args.get("code", "")), chat_session_id)
             if call.name == "get_dao_treasury":
                 return await self._get_dao_treasury()
             if call.name == "list_blog_posts":
@@ -682,6 +705,36 @@ class ToolDispatcher:
                 "stdout": res.stdout,
                 "stderr": res.stderr,
                 "timed_out": res.timed_out,
+                "artifacts": list(res.artifacts),
+                "figures": figures,
+                "session_id": res.session_id,
+                "has_figure": len(figures) > 0,
+            }
+        )
+
+    async def _python_exec(self, code: str, chat_session_id: str) -> str:
+        if not code.strip():
+            return json.dumps({"error": "empty_code"})
+        if self._ctx.python is None:
+            return json.dumps({"error": "python_unavailable"})
+        # One stable workspace per conversation so variables/files persist
+        # across tool calls in the same chat.
+        session_id = f"agent-{chat_session_id}" if chat_session_id else "agent-default"
+        res = await self._ctx.python.execute(
+            code=code, session_id=session_id, bearer=self._ctx.bearer
+        )
+        # Reference produced files by name + session id only — the frontend
+        # downloads them through the authed /api/interpreter proxy. Image
+        # artifacts surface ``has_figure`` like the MATLAB tool.
+        image_exts = (".png", ".jpg", ".jpeg", ".svg", ".gif")
+        figures = [a for a in res.artifacts if a.lower().endswith(image_exts)]
+        return json.dumps(
+            {
+                "ok": res.ok,
+                "stdout": res.stdout,
+                "stderr": res.stderr,
+                "result": res.result,
+                "error": res.error,
                 "artifacts": list(res.artifacts),
                 "figures": figures,
                 "session_id": res.session_id,

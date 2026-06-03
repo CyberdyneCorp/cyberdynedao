@@ -72,6 +72,7 @@ const DEFAULT_START_SECTIONS: StartMenuSection[] = [
 			{ id: 'Cyberdyne', label: 'About Cyberdyne', icon: '🏢' },
 			{ id: 'Agent', label: 'AI Agent', icon: '🤖' },
 			{ id: 'MATLAB', label: 'MATLAB REPL', icon: '🔢' },
+			{ id: 'Python', label: 'Python REPL', icon: '🐍', subtitle: 'Sandboxed code execution' },
 			{ id: 'Cyberflies', label: 'Meetings', icon: '🎙️', subtitle: 'Record, transcribe & ask' }
 		]
 	},
