@@ -1,8 +1,24 @@
 <script lang="ts">
 	import { PixelButton, MarkdownPreview } from '@cyberdynecorp/svelte-ui-core';
 	import { runLessonCode, type CourseLesson, type RunCodeResult } from '$lib/api/coursesApi';
+	import CodeEditor from './CodeEditor.svelte';
+	import { highlightElement } from '$lib/utils/highlight';
 
 	let { lesson }: { lesson: CourseLesson } = $props();
+
+	// Colour fenced code blocks inside rendered markdown (```python, ```matlab,
+	// ```systemverilog, …). MarkdownPreview emits <code class="language-x">;
+	// highlight.js recolours them once they're in the DOM.
+	let mdWrap = $state<HTMLElement | null>(null);
+	$effect(() => {
+		const _ = lesson.textBody; // re-run when the lesson content changes
+		if (lesson.lessonType !== 'text') return;
+		queueMicrotask(() => {
+			mdWrap
+				?.querySelectorAll<HTMLElement>('code[class*="language-"]')
+				.forEach((el) => highlightElement(el));
+		});
+	});
 
 	// ── Video: embed YouTube, otherwise play an uploaded file. ──
 	function youtubeEmbed(url: string): string | null {
@@ -52,12 +68,12 @@
 	{:else if lesson.lessonType === 'presentation' && lesson.contentUrl}
 		<a class="ext" href={lesson.contentUrl} target="_blank" rel="noopener">Open presentation ↗</a>
 	{:else if lesson.lessonType === 'text'}
-		<div class="md">
+		<div class="md" bind:this={mdWrap}>
 			<MarkdownPreview content={lesson.textBody ?? 'No content.'} />
 		</div>
 	{:else if lesson.lessonType === 'code'}
 		<p class="hint">Edit and run against the MATLAB engine:</p>
-		<textarea class="code" rows="6" bind:value={source} spellcheck="false" aria-label="Code"></textarea>
+		<CodeEditor bind:value={source} language="matlab" ariaLabel="MATLAB code" minHeight="9rem" />
 		<div class="run">
 			<PixelButton variant="solid" size="sm" disabled={running || !source.trim()} onclick={run}>
 				{running ? 'Running…' : 'Run'}
@@ -115,17 +131,6 @@
 		border: 2px solid #000000;
 		border-radius: 6px;
 		padding: 0.7rem 0.9rem;
-	}
-	.code {
-		width: 100%;
-		box-sizing: border-box;
-		font-family: ui-monospace, monospace;
-		font-size: 0.8rem;
-		background: #f3f4f6;
-		color: #000000;
-		border: 2px solid #000000;
-		border-radius: 6px;
-		padding: 0.6rem;
 	}
 	.run {
 		margin-top: 0.4rem;
