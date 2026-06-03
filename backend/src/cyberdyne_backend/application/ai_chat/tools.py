@@ -439,6 +439,17 @@ CYBERDYNE_TOOLS: list[ToolSchema] = [
             "required": ["slug"],
         },
     ),
+    ToolSchema(
+        name="get_my_courses",
+        description=(
+            "The signed-in learner's progress across ALL published Cyberdyne Academy "
+            "courses: each course's title, level, percent complete, and whether it's "
+            "finished. This is the canonical answer to 'what am I studying?', 'what's my "
+            "progress?', or 'which courses have I started?'. Prefer this over the legacy "
+            "learning-paths tools. Requires authentication."
+        ),
+        parameters={"type": "object", "properties": {}},
+    ),
 ]
 
 
@@ -557,6 +568,8 @@ class ToolDispatcher:
                 return await self._get_my_dashboard()
             if call.name == "get_my_course_progress":
                 return await self._get_my_course_progress(cast(str, args.get("slug", "")))
+            if call.name == "get_my_courses":
+                return await self._get_my_courses()
         except Exception as exc:
             logger.exception("tool %s failed", call.name)
             return json.dumps({"error": "tool_failed", "detail": str(exc)})
@@ -1041,6 +1054,30 @@ class ToolDispatcher:
                 ],
             }
         )
+
+    async def _get_my_courses(self) -> str:
+        if self._ctx.list_courses is None or self._ctx.get_my_course_progress is None:
+            return json.dumps({"error": "courses_unavailable"})
+        if self._ctx.user_id is None:
+            return json.dumps({"error": "sign_in_required"})
+        courses = await self._ctx.list_courses.execute(include_drafts=False)
+        out = []
+        for course in courses:
+            progress = await self._ctx.get_my_course_progress.execute(
+                user_id=self._ctx.user_id, slug=course.slug
+            )
+            out.append(
+                {
+                    "slug": course.slug,
+                    "title": course.title,
+                    "level": course.level.value,
+                    "percent": progress.percent,
+                    "completed": progress.completed,
+                    "completed_lessons": progress.completed_lessons,
+                    "total_lessons": progress.total_lessons,
+                }
+            )
+        return json.dumps({"courses": out})
 
     def _fill_identity(self, name: str, email: str) -> tuple[str, str]:
         """Back-fill name/email from the signed-in profile when the LLM
