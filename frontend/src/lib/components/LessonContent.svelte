@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { PixelButton } from '@cyberdynecorp/svelte-ui-core';
+	import { PixelButton, MarkdownPreview } from '@cyberdynecorp/svelte-ui-core';
 	import { runLessonCode, type CourseLesson, type RunCodeResult } from '$lib/api/coursesApi';
 
 	let { lesson }: { lesson: CourseLesson } = $props();
@@ -52,7 +52,9 @@
 	{:else if lesson.lessonType === 'presentation' && lesson.contentUrl}
 		<a class="ext" href={lesson.contentUrl} target="_blank" rel="noopener">Open presentation ↗</a>
 	{:else if lesson.lessonType === 'text'}
-		<div class="text">{lesson.textBody ?? 'No content.'}</div>
+		<div class="md">
+			<MarkdownPreview content={lesson.textBody ?? 'No content.'} />
+		</div>
 	{:else if lesson.lessonType === 'code'}
 		<p class="hint">Edit and run against the MATLAB engine:</p>
 		<textarea class="code" rows="6" bind:value={source} spellcheck="false" aria-label="Code"></textarea>
@@ -108,14 +110,11 @@
 		margin-top: 0.4rem;
 		color: #1d4ed8;
 	}
-	.text {
-		white-space: pre-wrap;
-		line-height: 1.5;
-		color: #374151;
-		background: #f3f4f6;
+	.md {
+		background: #ffffff;
 		border: 2px solid #000000;
 		border-radius: 6px;
-		padding: 0.7rem;
+		padding: 0.7rem 0.9rem;
 	}
 	.code {
 		width: 100%;
