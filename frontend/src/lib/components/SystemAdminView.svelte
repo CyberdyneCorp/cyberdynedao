@@ -43,7 +43,7 @@
 		title: string;
 		desc: string;
 		icon: string;
-		content: 'admin';
+		content: 'admin' | 'analytics';
 	}
 
 	// Admin surfaces reachable from the hub. Add new admin tools here as
@@ -55,6 +55,13 @@
 			desc: 'Author, publish, and manage courses, lessons, and quizzes.',
 			icon: '🎓',
 			content: 'admin'
+		},
+		{
+			id: 'analytics',
+			title: 'Academy Analytics',
+			desc: 'Platform-wide learning metrics: learners, courses, certificates, quizzes.',
+			icon: '📊',
+			content: 'analytics'
 		}
 	];
 

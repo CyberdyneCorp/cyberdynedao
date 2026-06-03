@@ -12,6 +12,7 @@
 	import CoursesView from './CoursesView.svelte';
 	import AdminView from './AdminView.svelte';
 	import SystemAdminView from './SystemAdminView.svelte';
+	import AdminAnalyticsView from './AdminAnalyticsView.svelte';
 	import ContactView from './ContactView.svelte';
 	import MatlabView from './MatlabView.svelte';
 	import AgentView from './AgentView.svelte';
@@ -46,6 +47,8 @@
 	<AdminView />
 {:else if content === 'sysadmin'}
 	<SystemAdminView />
+{:else if content === 'analytics'}
+	<AdminAnalyticsView />
 {:else if content === 'contact'}
 	<ContactView />
 {:else if content === 'matlab'}
