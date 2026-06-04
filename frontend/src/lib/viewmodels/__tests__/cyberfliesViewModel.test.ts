@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createCyberfliesVM, isLikelyInternalHost } from '../cyberfliesViewModel.svelte';
+import { createCyberfliesVM } from '../cyberfliesViewModel.svelte';
 import * as cyberfliesApi from '$lib/api/cyberfliesApi';
 import type { ChannelResponse, RecordingResponse } from '$lib/api/cyberfliesApi';
 
@@ -258,75 +258,57 @@ describe('cyberfliesViewModel', () => {
 		expect(vm.channels[0].name).toBe('Standups');
 	});
 
-	it('audioUrlFor returns the presigned url', async () => {
-		vi.spyOn(cyberfliesApi, 'getAudioUrl').mockResolvedValue({
-			url: 'https://signed.example/audio.m4a',
-			expires_seconds: 3600
-		});
-		const vm = createCyberfliesVM(1);
-		const url = await vm.audioUrlFor('rec-1');
-		expect(url).toBe('https://signed.example/audio.m4a');
-	});
-
-	describe('isLikelyInternalHost', () => {
-		it('flags the internal minio host the backend currently signs', () => {
-			expect(
-				isLikelyInternalHost('http://minio:9000/cyberflies-audio/x.m4a?X-Amz-Signature=ab')
-			).toBe(true);
-		});
-		it('flags localhost, loopback and RFC-1918 ranges', () => {
-			expect(isLikelyInternalHost('http://localhost:9000/a')).toBe(true);
-			expect(isLikelyInternalHost('http://127.0.0.1/a')).toBe(true);
-			expect(isLikelyInternalHost('http://10.1.2.3/a')).toBe(true);
-			expect(isLikelyInternalHost('http://192.168.0.5/a')).toBe(true);
-			expect(isLikelyInternalHost('http://172.16.5.5/a')).toBe(true);
-			expect(isLikelyInternalHost('http://store.local/a')).toBe(true);
-		});
-		it('treats a real public host as reachable', () => {
-			expect(isLikelyInternalHost('https://s3.amazonaws.com/bucket/x.m4a')).toBe(false);
-			expect(isLikelyInternalHost('https://cyberflies.backend.coolify.cyberdynecorp.ai/x')).toBe(
-				false
-			);
-		});
-		it('treats an unparseable url as internal (not openable)', () => {
-			expect(isLikelyInternalHost('not a url')).toBe(true);
-		});
-	});
-
 	describe('downloadAudio', () => {
-		it('opens a reachable presigned url', async () => {
-			vi.spyOn(cyberfliesApi, 'getAudioUrl').mockResolvedValue({
-				url: 'https://s3.amazonaws.com/bucket/x.m4a',
-				expires_seconds: 3600
+		it('streams the file through the API and saves it via a hidden anchor', async () => {
+			const blob = new Blob(['audio-bytes'], { type: 'audio/mp4' });
+			vi.spyOn(cyberfliesApi, 'fetchAudioFile').mockResolvedValue({
+				blob,
+				filename: 'recording-rec-1.m4a',
+				contentType: 'audio/mp4'
 			});
-			const openSpy = vi
-				.spyOn(window, 'open')
-				.mockImplementation(() => null);
+			const createSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock');
+			const clickSpy = vi
+				.spyOn(HTMLAnchorElement.prototype, 'click')
+				.mockImplementation(() => {});
 			const vm = createCyberfliesVM(1);
 			await vm.downloadAudio('rec-1');
-			expect(openSpy).toHaveBeenCalledWith('https://s3.amazonaws.com/bucket/x.m4a', '_blank', 'noopener');
+			expect(createSpy).toHaveBeenCalledWith(blob);
+			expect(clickSpy).toHaveBeenCalledTimes(1);
 			expect(vm.error).toBeNull();
-			openSpy.mockRestore();
+			clickSpy.mockRestore();
+			createSpy.mockRestore();
 		});
 
-		it('refuses an internal host and explains why', async () => {
-			vi.spyOn(cyberfliesApi, 'getAudioUrl').mockResolvedValue({
-				url: 'http://minio:9000/cyberflies-audio/x.m4a?X-Amz-Signature=ab',
-				expires_seconds: 3600
-			});
-			const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+		it('surfaces a streaming error (e.g. 401/404) instead of saving', async () => {
+			vi.spyOn(cyberfliesApi, 'fetchAudioFile').mockRejectedValue(
+				new cyberfliesApi.CyberfliesApiError(404, 'recording not found')
+			);
+			const clickSpy = vi
+				.spyOn(HTMLAnchorElement.prototype, 'click')
+				.mockImplementation(() => {});
 			const vm = createCyberfliesVM(1);
 			await vm.downloadAudio('rec-1');
-			expect(openSpy).not.toHaveBeenCalled();
-			expect(vm.error).toMatch(/internal URL/i);
-			openSpy.mockRestore();
+			expect(clickSpy).not.toHaveBeenCalled();
+			expect(vm.error).toMatch(/recording not found/);
+			clickSpy.mockRestore();
 		});
+	});
 
-		it('surfaces getAudioUrl errors', async () => {
-			vi.spyOn(cyberfliesApi, 'getAudioUrl').mockRejectedValue(new Error('boom'));
-			const vm = createCyberfliesVM(1);
-			await vm.downloadAudio('rec-1');
-			expect(vm.error).toMatch(/boom/);
+	describe('filenameFromContentDisposition', () => {
+		it('parses a quoted filename', () => {
+			expect(
+				cyberfliesApi.filenameFromContentDisposition('attachment; filename="recording-7.m4a"')
+			).toBe('recording-7.m4a');
+		});
+		it('parses an RFC 5987 filename* and decodes it', () => {
+			expect(
+				cyberfliesApi.filenameFromContentDisposition(
+					"attachment; filename*=UTF-8''recording%20note.mp3"
+				)
+			).toBe('recording note.mp3');
+		});
+		it('returns null when no header is present', () => {
+			expect(cyberfliesApi.filenameFromContentDisposition(null)).toBeNull();
 		});
 	});
 
