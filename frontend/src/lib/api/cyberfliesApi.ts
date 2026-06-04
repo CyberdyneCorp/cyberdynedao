@@ -282,6 +282,28 @@ export function addRecordingToChannel(channelId: string, recordingId: string): P
 	);
 }
 
+/** Remove a recording from a channel (the recording itself is kept). 204. */
+export function removeRecordingFromChannel(
+	channelId: string,
+	recordingId: string
+): Promise<void> {
+	return del(
+		`/api/v1/channels/${encodeURIComponent(channelId)}/recordings/${encodeURIComponent(recordingId)}`
+	);
+}
+
+/** List the meetings that belong to a channel. */
+export function listChannelRecordings(channelId: string): Promise<RecordingListResponse> {
+	return getJson<RecordingListResponse>(
+		`/api/v1/channels/${encodeURIComponent(channelId)}/recordings`
+	);
+}
+
+/** Generate an AI recap across all of a channel's meetings. */
+export function generateChannelRecap(channelId: string): Promise<SummarySchema> {
+	return postJson<SummarySchema>(`/api/v1/channels/${encodeURIComponent(channelId)}/recap`, {});
+}
+
 // ── Chat ────────────────────────────────────────────────────────────
 
 /** Chat across all of the user's meetings knowledge. */
@@ -296,6 +318,17 @@ export function chatInChannel(
 ): Promise<ChatReplyResponse> {
 	return postJson<ChatReplyResponse>(
 		`/api/v1/channels/${encodeURIComponent(channelId)}/chat`,
+		{ messages }
+	);
+}
+
+/** Chat scoped to a single meeting. */
+export function chatInRecording(
+	recordingId: string,
+	messages: ChatMessage[]
+): Promise<ChatReplyResponse> {
+	return postJson<ChatReplyResponse>(
+		`/api/v1/recordings/${encodeURIComponent(recordingId)}/chat`,
 		{ messages }
 	);
 }
