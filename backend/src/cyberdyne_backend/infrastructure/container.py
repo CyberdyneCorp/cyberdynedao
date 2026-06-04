@@ -27,6 +27,7 @@ from cyberdyne_backend.adapters.outbound.certificates.signer import (
 from cyberdyne_backend.adapters.outbound.chain.caching_reader import CachingChainReader
 from cyberdyne_backend.adapters.outbound.chain.fake_reader import FakeChainReader
 from cyberdyne_backend.adapters.outbound.chain.web3py_reader import Web3PyChainReader
+from cyberdyne_backend.adapters.outbound.cyberflies.client import CyberfliesClient
 from cyberdyne_backend.adapters.outbound.email.notifiers import (
     LoggingEmailNotifier,
     LoggingLicenseEmailNotifier,
@@ -50,6 +51,7 @@ from cyberdyne_backend.adapters.outbound.stripe.webhook_verifier import (
 )
 from cyberdyne_backend.domain.ai_chat import (
     ChatLLMPort,
+    CyberfliesPort,
     KnowledgeSearchPort,
     MatlabPort,
     PythonInterpreterPort,
@@ -87,6 +89,7 @@ class Container:
         self._knowledge_search: KnowledgeSearchPort | None = None
         self._matlab: MatlabPort | None = None
         self._python: PythonInterpreterPort | None = None
+        self._cyberflies: CyberfliesPort | None = None
 
     # ── HTTP ──────────────────────────────────────────────────────────
     @property
@@ -289,6 +292,15 @@ class Container:
                 http_client=self.http_client,
             )
         return self._python
+
+    @property
+    def cyberflies(self) -> CyberfliesPort:
+        if self._cyberflies is None:
+            self._cyberflies = CyberfliesClient(
+                base_url=self._settings.cyberflies_url,
+                http_client=self.http_client,
+            )
+        return self._cyberflies
 
     @property
     def knowledge_search(self) -> KnowledgeSearchPort:

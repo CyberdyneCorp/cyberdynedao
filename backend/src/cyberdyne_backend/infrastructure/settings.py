@@ -140,6 +140,10 @@ class Settings(BaseSettings):
     # interpreterApi.ts proxies to.
     python_interpreter_url: str = "https://interpreter.backend.coolify.cyberdynecorp.ai"
 
+    # Cyberflies (meetings) backend the chat agent's ask_meetings /
+    # list_meetings tools call (as the signed-in user).
+    cyberflies_url: str = "https://cyberflies.backend.coolify.cyberdynecorp.ai"
+
     # ── Uploads / media (Phase 8 — course content) ────────────────────
     # Where uploaded course/lesson media is written. In prod point this
     # at the Coolify persistent volume mount; locally it defaults to a

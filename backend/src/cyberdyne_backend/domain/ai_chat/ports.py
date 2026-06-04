@@ -148,6 +148,28 @@ class PythonInterpreterPort(Protocol):
     ) -> PythonExecResult: ...
 
 
+@dataclass(frozen=True, slots=True)
+class MeetingSummary:
+    """A one-line meeting/recording descriptor for the agent's
+    ``list_meetings`` tool."""
+
+    id: str
+    headline: str
+    status: str
+    created_at: str
+
+
+@runtime_checkable
+class CyberfliesPort(Protocol):
+    """Thin client over the Cyberflies (meetings) backend. The agent calls
+    it as the signed-in user (``bearer`` is the user's CyberdyneAuth token)
+    so it only ever sees that user's recordings."""
+
+    async def ask_meetings(self, *, question: str, bearer: str | None) -> str: ...
+
+    async def list_meetings(self, *, bearer: str | None) -> tuple[MeetingSummary, ...]: ...
+
+
 @runtime_checkable
 class ChatRepository(Protocol):
     async def save_session(self, session: ChatSession) -> None: ...
