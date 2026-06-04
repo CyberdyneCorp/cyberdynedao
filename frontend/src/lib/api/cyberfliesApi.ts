@@ -57,11 +57,6 @@ export interface RecordingListResponse {
 	offset: number;
 }
 
-export interface PresignedUrlResponse {
-	url: string;
-	expires_seconds: number;
-}
-
 export interface ChannelResponse {
 	id: string;
 	owner_id: string;
@@ -204,15 +199,62 @@ export async function uploadRecording(
 	return (await res.json()) as RecordingResponse;
 }
 
-/** Temporary signed URL to download/stream the original audio. */
-export function getAudioUrl(
-	recordingId: string,
-	expiresSeconds = 3600
-): Promise<PresignedUrlResponse> {
-	const qs = `?expires_seconds=${encodeURIComponent(expiresSeconds)}`;
-	return getJson<PresignedUrlResponse>(
-		`/api/v1/recordings/${encodeURIComponent(recordingId)}/audio-url${qs}`
+export interface AudioFile {
+	blob: Blob;
+	filename: string;
+	contentType: string;
+}
+
+/** Extension for a media content-type, used as a download-filename fallback
+ *  when the server doesn't send a Content-Disposition. */
+function extForContentType(contentType: string): string {
+	const map: Record<string, string> = {
+		'audio/mp4': '.m4a',
+		'audio/x-m4a': '.m4a',
+		'audio/mpeg': '.mp3',
+		'audio/wav': '.wav',
+		'audio/x-wav': '.wav',
+		'audio/x-caf': '.caf',
+		'video/mp4': '.mp4',
+		'video/quicktime': '.mov'
+	};
+	return map[contentType.split(';')[0].trim().toLowerCase()] ?? '';
+}
+
+/** Parse the download filename from a Content-Disposition header, handling
+ *  both `filename="…"` and RFC 5987 `filename*=UTF-8''…`. */
+export function filenameFromContentDisposition(header: string | null): string | null {
+	if (!header) return null;
+	const star = /filename\*\s*=\s*[^']*''([^;]+)/i.exec(header);
+	if (star) {
+		try {
+			return decodeURIComponent(star[1].trim());
+		} catch {
+			/* fall through to the plain form */
+		}
+	}
+	const plain = /filename\s*=\s*"?([^";]+)"?/i.exec(header);
+	return plain ? plain[1].trim() : null;
+}
+
+/**
+ * Stream the original audio/video through the API (same-origin proxy +
+ * bearer). Replaces the deprecated `/audio-url` presigned endpoint, which
+ * handed back an internal `minio:9000` URL unreachable from the browser.
+ * The returned blob is ready to save via an `<a download>`.
+ */
+export async function fetchAudioFile(recordingId: string): Promise<AudioFile> {
+	const res = await fetch(
+		`${CYBERFLIES_BASE}/api/v1/recordings/${encodeURIComponent(recordingId)}/audio`,
+		{ method: 'GET', headers: withAuth() }
 	);
+	if (!res.ok) throw new CyberfliesApiError(res.status, await readError(res));
+	const blob = await res.blob();
+	const contentType = res.headers.get('content-type') ?? blob.type ?? 'application/octet-stream';
+	const filename =
+		filenameFromContentDisposition(res.headers.get('content-disposition')) ??
+		`recording-${recordingId}${extForContentType(contentType)}`;
+	return { blob, filename, contentType };
 }
 
 // ── Channels ────────────────────────────────────────────────────────

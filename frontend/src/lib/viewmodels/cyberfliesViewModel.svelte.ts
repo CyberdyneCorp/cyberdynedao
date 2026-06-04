@@ -18,7 +18,7 @@ import {
 	getRecording,
 	deleteRecording,
 	uploadRecording,
-	getAudioUrl,
+	fetchAudioFile,
 	listChannels,
 	createChannel as createChannelApi,
 	deleteChannel as deleteChannelApi,
@@ -34,33 +34,6 @@ import {
 
 /** Scope for the chat panel: all meetings, or a specific channel id. */
 export type ChatScope = 'all' | string;
-
-/**
- * True when a presigned audio URL points at a host the browser almost
- * certainly can't reach — the Cyberflies backend currently signs URLs
- * with the internal MinIO host (`minio:9000`), which fails with
- * "can't find the server". We detect this so the UI can explain it
- * instead of opening a doomed browser tab. Single-label hosts (no dot),
- * `localhost`, loopback and RFC-1918 ranges, and `.local`/`.internal`
- * suffixes are all treated as internal.
- */
-export function isLikelyInternalHost(url: string): boolean {
-	let host: string;
-	try {
-		host = new URL(url).hostname;
-	} catch {
-		return true; // unparseable → definitely not openable
-	}
-	if (host === 'localhost') return true;
-	if (!host.includes('.')) return true; // single-label, e.g. "minio"
-	if (host.endsWith('.local') || host.endsWith('.internal')) return true;
-	if (host === '127.0.0.1' || host.startsWith('127.')) return true;
-	if (host.startsWith('10.') || host.startsWith('192.168.')) return true;
-	// 172.16.0.0 – 172.31.255.255
-	const m = /^172\.(\d{1,3})\./.exec(host);
-	if (m && Number(m[1]) >= 16 && Number(m[1]) <= 31) return true;
-	return false;
-}
 
 /** A single chat turn as rendered in the panel. */
 export interface ChatTurn {
@@ -93,10 +66,7 @@ export interface CyberfliesViewModel {
 	refreshChannels(): Promise<void>;
 	selectRecording(id: string | null): void;
 	uploadAudio(file: File): Promise<void>;
-	/** Resolve a temporary signed URL for the recording's audio. */
-	audioUrlFor(id: string): Promise<string>;
-	/** Resolve the signed URL and open it for download, or surface a clear
-	 *  error when the backend hands back an unreachable internal host. */
+	/** Stream the original audio/video through the API and save it. */
 	downloadAudio(id: string): Promise<void>;
 	/** Delete a recording and drop it from the list. */
 	deleteRecording(id: string): Promise<void>;
@@ -228,22 +198,20 @@ export function createCyberfliesVM(
 		}
 	}
 
-	async function audioUrlFor(id: string): Promise<string> {
-		const res = await getAudioUrl(id);
-		return res.url;
-	}
-
 	async function downloadAudio(id: string): Promise<void> {
 		try {
-			const url = await audioUrlFor(id);
-			if (isLikelyInternalHost(url)) {
-				error =
-					'Audio download is unavailable: the storage service returned an internal URL ' +
-					"that your browser can't reach (backend MinIO public-endpoint misconfiguration).";
-				return;
-			}
+			const { blob, filename } = await fetchAudioFile(id);
+			// Save the streamed blob via a transient object URL + hidden
+			// anchor (same pattern as the interpreter file download).
+			const url = URL.createObjectURL(blob);
+			const anchor = document.createElement('a');
+			anchor.href = url;
+			anchor.download = filename;
+			document.body.appendChild(anchor);
+			anchor.click();
+			document.body.removeChild(anchor);
+			setTimeout(() => URL.revokeObjectURL(url), 30_000);
 			error = null;
-			if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener');
 		} catch (err) {
 			error = toMessage(err);
 		}
@@ -389,7 +357,6 @@ export function createCyberfliesVM(
 			selectedId = id;
 		},
 		uploadAudio,
-		audioUrlFor,
 		downloadAudio,
 		deleteRecording: deleteRecording_,
 		createChannel: createChannel_,
