@@ -21,6 +21,7 @@ import {
 	getAudioUrl,
 	listChannels,
 	createChannel as createChannelApi,
+	deleteChannel as deleteChannelApi,
 	addRecordingToChannel,
 	chat as chatAll,
 	chatInChannel,
@@ -101,7 +102,9 @@ export interface CyberfliesViewModel {
 	deleteRecording(id: string): Promise<void>;
 
 	/** Create a channel and add it to the list; returns it (or null on failure). */
-	createChannel(name: string): Promise<ChannelResponse | null>;
+	createChannel(name: string, description?: string): Promise<ChannelResponse | null>;
+	/** Delete a channel and drop it from the list. */
+	deleteChannel(channelId: string): Promise<void>;
 	/** Add a recording to an existing channel. */
 	addToChannel(recordingId: string, channelId: string): Promise<void>;
 	clearNotice(): void;
@@ -261,18 +264,38 @@ export function createCyberfliesVM(
 		}
 	}
 
-	async function createChannel_(name: string): Promise<ChannelResponse | null> {
+	async function createChannel_(
+		name: string,
+		description?: string
+	): Promise<ChannelResponse | null> {
 		const trimmed = name.trim();
 		if (trimmed === '') return null;
 		busy = true;
 		try {
-			const channel = await createChannelApi(trimmed);
+			const channel = await createChannelApi(trimmed, description?.trim() || undefined);
 			channels = [...channels, channel];
+			notice = `Channel "${channel.name}" created`;
 			error = null;
 			return channel;
 		} catch (err) {
 			error = toMessage(err);
 			return null;
+		} finally {
+			busy = false;
+		}
+	}
+
+	async function deleteChannel_(channelId: string): Promise<void> {
+		if (busy) return;
+		busy = true;
+		try {
+			await deleteChannelApi(channelId);
+			channels = channels.filter((c) => c.id !== channelId);
+			// If the chat was scoped to this channel, fall back to "all".
+			if (chatScope === channelId) chatScope = 'all';
+			error = null;
+		} catch (err) {
+			error = toMessage(err);
 		} finally {
 			busy = false;
 		}
@@ -370,6 +393,7 @@ export function createCyberfliesVM(
 		downloadAudio,
 		deleteRecording: deleteRecording_,
 		createChannel: createChannel_,
+		deleteChannel: deleteChannel_,
 		addToChannel,
 		clearNotice: () => {
 			notice = null;

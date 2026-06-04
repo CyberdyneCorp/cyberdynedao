@@ -379,6 +379,47 @@ describe('cyberfliesViewModel', () => {
 			expect(spy).not.toHaveBeenCalled();
 		});
 
+		it('createChannel forwards a trimmed description (or undefined when blank)', async () => {
+			const spy = vi
+				.spyOn(cyberfliesApi, 'createChannel')
+				.mockResolvedValue(channel({ id: 'c1', name: 'Planning' }));
+			const vm = createCyberfliesVM(1);
+			await vm.createChannel('Planning', '  weekly  ');
+			expect(spy).toHaveBeenCalledWith('Planning', 'weekly');
+			await vm.createChannel('Planning', '   ');
+			expect(spy).toHaveBeenLastCalledWith('Planning', undefined);
+		});
+
+		it('deleteChannel removes it and resets chat scope when it was selected', async () => {
+			vi.spyOn(cyberfliesApi, 'listChannels').mockResolvedValue({
+				items: [channel({ id: 'c1', name: 'A' }), channel({ id: 'c2', name: 'B' })],
+				limit: 50,
+				offset: 0
+			});
+			const delSpy = vi.spyOn(cyberfliesApi, 'deleteChannel').mockResolvedValue(undefined);
+			const vm = createCyberfliesVM(1);
+			await vm.refreshChannels();
+			vm.setChatScope('c1');
+			await vm.deleteChannel('c1');
+			expect(delSpy).toHaveBeenCalledWith('c1');
+			expect(vm.channels.map((c) => c.id)).toEqual(['c2']);
+			expect(vm.chatScope).toBe('all');
+		});
+
+		it('deleteChannel surfaces errors and keeps the channel', async () => {
+			vi.spyOn(cyberfliesApi, 'listChannels').mockResolvedValue({
+				items: [channel({ id: 'c1', name: 'A' })],
+				limit: 50,
+				offset: 0
+			});
+			vi.spyOn(cyberfliesApi, 'deleteChannel').mockRejectedValue(new Error('locked'));
+			const vm = createCyberfliesVM(1);
+			await vm.refreshChannels();
+			await vm.deleteChannel('c1');
+			expect(vm.error).toMatch(/locked/);
+			expect(vm.channels).toHaveLength(1);
+		});
+
 		it('addToChannel posts membership and sets a confirmation notice', async () => {
 			vi.spyOn(cyberfliesApi, 'listChannels').mockResolvedValue({
 				items: [channel({ id: 'c1', name: 'Standups' })],

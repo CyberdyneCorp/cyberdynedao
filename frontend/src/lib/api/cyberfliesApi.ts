@@ -227,6 +227,11 @@ export function createChannel(name: string, description?: string): Promise<Chann
 	return postJson<ChannelResponse>('/api/v1/channels', { name, description });
 }
 
+/** Delete a channel (membership links are removed; recordings are kept). 204. */
+export function deleteChannel(channelId: string): Promise<void> {
+	return del(`/api/v1/channels/${encodeURIComponent(channelId)}`);
+}
+
 /** Add a recording to a channel. 204. */
 export function addRecordingToChannel(channelId: string, recordingId: string): Promise<void> {
 	return postNoContent(
