@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onDestroy, onMount, tick } from 'svelte';
-	import { Badge, PixelButton, PixelScrollArea } from '@cyberdynecorp/svelte-ui-core';
+	import { Badge, Modal, PixelButton, PixelScrollArea } from '@cyberdynecorp/svelte-ui-core';
 	import { authVM } from '$lib/auth/authViewModel.svelte';
 	import { createCyberfliesVM } from '$lib/viewmodels/cyberfliesViewModel.svelte';
 
-	type Tab = 'meetings' | 'chat';
+	type Tab = 'meetings' | 'chat' | 'channels';
 	let tab = $state<Tab>('meetings');
 
 	const meetings = createCyberfliesVM();
@@ -16,6 +16,39 @@
 	let organizeChannelId = $state<string>('');
 	let newChannelName = $state<string>('');
 	let creatingChannel = $state<boolean>(false);
+	// Channels subview create-form.
+	let channelName = $state<string>('');
+	let channelDesc = $state<string>('');
+
+	// Reusable confirmation modal (replaces the native confirm() dialog).
+	let confirmOpen = $state<boolean>(false);
+	let confirmTitle = $state<string>('');
+	let confirmMessage = $state<string>('');
+	let confirmLabel = $state<string>('Delete');
+	let confirmAction = $state<(() => void | Promise<void>) | null>(null);
+
+	function askConfirm(opts: {
+		title: string;
+		message: string;
+		label?: string;
+		action: () => void | Promise<void>;
+	}) {
+		confirmTitle = opts.title;
+		confirmMessage = opts.message;
+		confirmLabel = opts.label ?? 'Delete';
+		confirmAction = opts.action;
+		confirmOpen = true;
+	}
+	function closeConfirm() {
+		confirmOpen = false;
+		confirmAction = null;
+	}
+	async function runConfirm() {
+		const action = confirmAction;
+		confirmOpen = false;
+		confirmAction = null;
+		if (action) await action();
+	}
 
 	const authReady = $derived(authVM.isRestored && authVM.isAuthenticated);
 
@@ -85,10 +118,29 @@
 		target.value = '';
 	}
 
-	async function onDeleteRecording(id: string, title: string) {
-		if (!confirm(`Delete "${title}"? This removes the audio, transcript and channel membership.`))
-			return;
-		await meetings.deleteRecording(id);
+	function onDeleteRecording(id: string, title: string) {
+		askConfirm({
+			title: 'Delete recording',
+			message: `Delete "${title}"? This removes the audio, transcript and channel membership.`,
+			action: () => meetings.deleteRecording(id)
+		});
+	}
+
+	async function onCreateChannel(e: SubmitEvent) {
+		e.preventDefault();
+		const created = await meetings.createChannel(channelName, channelDesc);
+		if (created) {
+			channelName = '';
+			channelDesc = '';
+		}
+	}
+
+	function onDeleteChannel(id: string, name: string) {
+		askConfirm({
+			title: 'Delete channel',
+			message: `Delete the channel "${name}"? Meetings stay, but their membership in this channel is removed.`,
+			action: () => meetings.deleteChannel(id)
+		});
 	}
 
 	async function onAddToChannel(recordingId: string) {
@@ -132,6 +184,9 @@
 			</button>
 			<button type="button" class="tab" class:tab--active={tab === 'chat'} onclick={() => (tab = 'chat')}>
 				💬 Chat
+			</button>
+			<button type="button" class="tab" class:tab--active={tab === 'channels'} onclick={() => (tab = 'channels')}>
+				🗂 Channels
 			</button>
 		</nav>
 	</header>
@@ -395,7 +450,90 @@
 			</form>
 		</div>
 	{/if}
+
+	<!-- ── Channels ─────────────────────────────────────────────── -->
+	{#if tab === 'channels'}
+		<div class="channels-view">
+			<form class="ch-create" onsubmit={onCreateChannel}>
+				<h2 class="ch-create__title">Create a channel</h2>
+				<div class="ch-create__row">
+					<input
+						class="ch-input"
+						type="text"
+						placeholder="Channel name"
+						value={channelName}
+						oninput={(e) => (channelName = (e.currentTarget as HTMLInputElement).value)}
+						disabled={!authReady || meetings.busy}
+					/>
+					<input
+						class="ch-input ch-input--desc"
+						type="text"
+						placeholder="Description (optional)"
+						value={channelDesc}
+						oninput={(e) => (channelDesc = (e.currentTarget as HTMLInputElement).value)}
+						disabled={!authReady || meetings.busy}
+					/>
+					<PixelButton
+						variant="solid"
+						size="sm"
+						type="submit"
+						disabled={!authReady || meetings.busy || channelName.trim() === ''}
+					>
+						＋ Create
+					</PixelButton>
+				</div>
+			</form>
+
+			{#if meetings.notice}
+				<div class="banner banner--ok" role="status">{meetings.notice}</div>
+			{/if}
+			{#if meetings.error}
+				<div class="banner banner--err">{meetings.error}</div>
+			{/if}
+
+			<div class="ch-list-head">
+				<h2 class="ch-list-title">Your channels <span class="ch-count">{meetings.channels.length}</span></h2>
+				<button type="button" class="icon-btn" onclick={() => meetings.refreshChannels()} disabled={!authReady}>↻</button>
+			</div>
+
+			{#if meetings.channels.length === 0}
+				<p class="empty">{authReady ? 'No channels yet. Create one above, then organize meetings into it from the Meetings tab.' : 'Sign in to manage channels.'}</p>
+			{:else}
+				<PixelScrollArea maxHeight="100%" ariaLabel="Channels">
+					<ul class="ch-list">
+						{#each meetings.channels as ch (ch.id)}
+							<li class="ch-item">
+								<div class="ch-item__main">
+									<span class="ch-item__name">{ch.name}</span>
+									{#if ch.description}<span class="ch-item__desc">{ch.description}</span>{/if}
+								</div>
+								<PixelButton
+									variant="ghost"
+									size="sm"
+									onclick={() => onDeleteChannel(ch.id, ch.name)}
+									disabled={meetings.busy}
+								>
+									🗑 Delete
+								</PixelButton>
+							</li>
+						{/each}
+					</ul>
+				</PixelScrollArea>
+			{/if}
+		</div>
+	{/if}
 </div>
+
+<!-- Styled confirmation dialog (replaces the native browser confirm()) -->
+<Modal bind:open={confirmOpen} title={confirmTitle} size="sm">
+	<p class="confirm__msg">{confirmMessage}</p>
+	{#snippet footer()}
+		<div class="confirm__actions">
+			<PixelButton variant="ghost" size="sm" onclick={closeConfirm}>Cancel</PixelButton>
+			<PixelButton variant="solid" size="sm" onclick={runConfirm}>{confirmLabel}</PixelButton>
+		</div>
+	{/snippet}
+</Modal>
 
 <style>
 	.cf {
@@ -441,6 +579,26 @@
 	.banner--err { background: #fee2e2; border: 1px solid #b91c1c; color: #991b1b; }
 	.banner--info { background: #cffafe; border: 1px solid #0e7490; color: #155e63; }
 	.banner--ok { background: #d1fae5; border: 1px solid #0f766e; color: #065f46; }
+
+	/* Channels subview */
+	.channels-view { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; overflow-y: auto; }
+	.ch-create { display: flex; flex-direction: column; gap: 8px; }
+	.ch-create__title { margin: 0; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #0f766e; }
+	.ch-create__row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+	.ch-input { font-family: inherit; font-size: 0.82rem; padding: 7px 10px; border: 2px solid #000; background: #fff; }
+	.ch-input--desc { flex: 1 1 220px; min-width: 160px; }
+	.ch-list-head { display: flex; align-items: center; justify-content: space-between; border-top: 1px dashed #cbd5e1; padding-top: 10px; }
+	.ch-list-title { margin: 0; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #0f766e; }
+	.ch-count { font-size: 0.65rem; color: #94a3b8; font-weight: 600; }
+	.ch-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+	.ch-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #f1f5f9; border: 2px solid #e2e8f0; border-left: 6px solid var(--accent); padding: 8px 12px; }
+	.ch-item__main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+	.ch-item__name { font-size: 0.85rem; font-weight: 700; }
+	.ch-item__desc { font-size: 0.7rem; color: #64748b; }
+
+	/* Confirm dialog */
+	.confirm__msg { margin: 0; font-size: 0.85rem; line-height: 1.55; color: #111827; }
+	.confirm__actions { display: flex; gap: 8px; justify-content: flex-end; }
 
 	.empty { padding: 16px; color: #6b7280; font-size: 0.8rem; line-height: 1.6; font-style: italic; }
 	.empty--detail { text-align: center; margin-top: 40px; }
