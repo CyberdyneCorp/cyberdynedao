@@ -32,6 +32,16 @@ export interface AgentPlot {
 	caption: string;
 }
 
+/** A downloadable file the agent produced via python_exec / create_document. */
+export interface AgentArtifact {
+	/** Filename in the interpreter workspace (e.g. summary.md, report.pdf). */
+	name: string;
+	/** The interpreter session the file lives in. Downloaded via the
+	 *  authed /api/interpreter proxy. */
+	sessionId: string;
+	sizeBytes: number;
+}
+
 export interface AgentBubble {
 	id: string;
 	role: 'user' | 'assistant';
@@ -40,6 +50,8 @@ export interface AgentBubble {
 	/** Figures produced by matlab_plot/matlab_repl tool calls made by
 	 *  this assistant turn, captured inline so they survive a refresh. */
 	plots: AgentPlot[];
+	/** Downloadable files produced by python_exec / create_document. */
+	artifacts: AgentArtifact[];
 	model: string | null;
 	createdAt: string;
 	pending: boolean;
@@ -105,6 +117,7 @@ function toBubble(m: AgentMessage): AgentBubble {
 		content: m.content,
 		toolCalls: m.toolCalls ?? [],
 		plots: [],
+		artifacts: [],
 		model: m.model,
 		createdAt: m.createdAt,
 		pending: false,
@@ -132,6 +145,36 @@ function extractPlots(toolResultContent: string): AgentPlot[] {
 	}
 }
 
+/** Image extensions already rendered inline as plots — don't also list
+ *  them as downloadable files. */
+const IMAGE_EXT = /\.(png|jpe?g|svg|gif|webp)$/i;
+
+/** Pull downloadable file references out of a python_exec / create_document
+ *  tool-result JSON (`{session_id, artifacts: [{name,size_bytes,...}]}`). */
+function extractArtifacts(toolResultContent: string): AgentArtifact[] {
+	try {
+		const parsed = JSON.parse(toolResultContent) as {
+			session_id?: string;
+			filename?: string;
+			artifacts?: Array<{ name?: string; size_bytes?: number }>;
+		};
+		const sessionId = parsed.session_id ?? '';
+		if (!sessionId) return [];
+		// create_document returns a single {filename}; python_exec returns an
+		// artifacts[] workspace listing.
+		const entries = parsed.artifacts?.length
+			? parsed.artifacts
+			: parsed.filename
+				? [{ name: parsed.filename, size_bytes: 0 }]
+				: [];
+		return entries
+			.map((a) => ({ name: a.name ?? '', sizeBytes: a.size_bytes ?? 0, sessionId }))
+			.filter((a) => a.name && !IMAGE_EXT.test(a.name));
+	} catch {
+		return [];
+	}
+}
+
 /**
  * Build the visible bubble list from a full message history.
  *
@@ -150,32 +193,52 @@ function bubblesFromMessages(messages: AgentMessage[]): AgentBubble[] {
 	}
 	const out: AgentBubble[] = [];
 	let pendingPlots: AgentPlot[] = [];
+	let pendingArtifacts: AgentArtifact[] = [];
 	for (const m of messages) {
 		if (m.role === 'tool' || m.role === 'system') continue;
 		if (m.role === 'assistant') {
-			// Collect figures from any tool calls this message made.
+			// Collect figures + files from any tool calls this message made.
 			for (const tc of m.toolCalls ?? []) {
 				const res = toolResultsById.get(tc.id);
-				if (res) pendingPlots.push(...extractPlots(res.content));
+				if (res) {
+					pendingPlots.push(...extractPlots(res.content));
+					pendingArtifacts.push(...extractArtifacts(res.content));
+				}
 			}
-			// Skip the empty tool-call-only round; keep its figures
+			// Skip the empty tool-call-only round; keep its figures/files
 			// pending for the final text bubble.
 			if (m.content.trim() === '') continue;
 			const bubble = toBubble(m);
 			bubble.plots = pendingPlots;
+			bubble.artifacts = dedupeArtifacts(pendingArtifacts);
 			pendingPlots = [];
+			pendingArtifacts = [];
 			out.push(bubble);
 		} else {
 			out.push(toBubble(m));
 		}
 	}
-	// Figures with no trailing text bubble (rare) — attach to the last
-	// assistant bubble so they aren't lost.
-	if (pendingPlots.length) {
+	// Figures/files with no trailing text bubble (rare) — attach to the
+	// last assistant bubble so they aren't lost.
+	if (pendingPlots.length || pendingArtifacts.length) {
 		const lastAssistant = [...out].reverse().find((b) => b.role === 'assistant');
-		if (lastAssistant) lastAssistant.plots = [...lastAssistant.plots, ...pendingPlots];
+		if (lastAssistant) {
+			lastAssistant.plots = [...lastAssistant.plots, ...pendingPlots];
+			lastAssistant.artifacts = dedupeArtifacts([
+				...lastAssistant.artifacts,
+				...pendingArtifacts
+			]);
+		}
 	}
 	return out;
+}
+
+/** python_exec returns the whole workspace listing each turn, so the same
+ *  file can appear across calls — keep the last occurrence per name+session. */
+function dedupeArtifacts(artifacts: AgentArtifact[]): AgentArtifact[] {
+	const byKey = new Map<string, AgentArtifact>();
+	for (const a of artifacts) byKey.set(`${a.sessionId}/${a.name}`, a);
+	return [...byKey.values()];
 }
 
 export interface AgentViewModel {
@@ -255,6 +318,7 @@ export function createAgentVM(): AgentViewModel {
 			content: text,
 			toolCalls: [],
 			plots: [],
+			artifacts: [],
 			model: null,
 			createdAt: nowIso(),
 			pending: false,
@@ -266,6 +330,7 @@ export function createAgentVM(): AgentViewModel {
 			content: '',
 			toolCalls: [],
 			plots: [],
+			artifacts: [],
 			model: null,
 			createdAt: nowIso(),
 			pending: true,

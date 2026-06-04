@@ -108,6 +108,50 @@ describe('agentViewModel', () => {
 		expect(assistant.plots[0].sessionId).toBe('agent-s-plot');
 	});
 
+	it('attaches python_exec file artifacts (download links) to the assistant bubble, skipping images', async () => {
+		sessionStorage.setItem(
+			'cyberdyne.agent.v1',
+			JSON.stringify({ sessionId: 's-doc', bubbles: [] })
+		);
+		vi.spyOn(agentApi, 'getHistory').mockResolvedValue({
+			sessionId: 's-doc',
+			messages: [
+				{
+					id: 'u1', sessionId: 's-doc', role: 'user', content: 'make a markdown summary',
+					toolCalls: [], toolCallId: null, tokensIn: 0, tokensOut: 0, model: null,
+					createdAt: '2026-06-04T09:00:00Z'
+				},
+				{
+					id: 'a1', sessionId: 's-doc', role: 'assistant', content: 'Done — download below.',
+					toolCalls: [{ id: 'call_1', name: 'python_exec', argumentsJson: '{}' }],
+					toolCallId: null, tokensIn: 0, tokensOut: 0, model: 'gpt-4o-mini',
+					createdAt: '2026-06-04T09:00:01Z'
+				},
+				{
+					id: 't1', sessionId: 's-doc', role: 'tool',
+					content: JSON.stringify({
+						ok: true,
+						session_id: 'srv-7',
+						artifacts: [
+							{ name: 'summary.md', size_bytes: 412, modified_at: 1 },
+							{ name: 'chart.png', size_bytes: 999, modified_at: 1 }
+						]
+					}),
+					toolCalls: [], toolCallId: 'call_1', tokensIn: 0, tokensOut: 0, model: null,
+					createdAt: '2026-06-04T09:00:02Z'
+				}
+			]
+		});
+		const vm = createAgentVM();
+		await vm.bootstrap();
+		const assistant = vm.bubbles[1];
+		// chart.png is an image (shown as a plot path), so it's excluded here.
+		expect(assistant.artifacts).toHaveLength(1);
+		expect(assistant.artifacts[0].name).toBe('summary.md');
+		expect(assistant.artifacts[0].sessionId).toBe('srv-7');
+		expect(assistant.artifacts[0].sizeBytes).toBe(412);
+	});
+
 	it('attaches the figure to the final text bubble, skipping the empty tool-call round', async () => {
 		sessionStorage.setItem(
 			'cyberdyne.agent.v1',
