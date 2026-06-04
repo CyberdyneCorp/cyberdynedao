@@ -205,12 +205,28 @@ describe('cyberfliesViewModel', () => {
 				.mockResolvedValue({ reply: 'scoped', used_tools: [] });
 			const globalSpy = vi.spyOn(cyberfliesApi, 'chat');
 			const vm = createCyberfliesVM(1);
-			vm.setChatScope('chan-7');
+			vm.setChatScope('channel:chan-7');
 			await vm.sendChat('what changed?');
 			expect(channelSpy).toHaveBeenCalledWith('chan-7', [
 				{ role: 'user', content: 'what changed?' }
 			]);
 			expect(globalSpy).not.toHaveBeenCalled();
+		});
+
+		it('routes to the single-meeting endpoint when scoped to a recording', async () => {
+			const recSpy = vi
+				.spyOn(cyberfliesApi, 'chatInRecording')
+				.mockResolvedValue({ reply: 'about this meeting', used_tools: [] });
+			const globalSpy = vi.spyOn(cyberfliesApi, 'chat');
+			const channelSpy = vi.spyOn(cyberfliesApi, 'chatInChannel');
+			const vm = createCyberfliesVM(1);
+			vm.setChatScope('recording:rec-9');
+			await vm.sendChat('what was this about?');
+			expect(recSpy).toHaveBeenCalledWith('rec-9', [
+				{ role: 'user', content: 'what was this about?' }
+			]);
+			expect(globalSpy).not.toHaveBeenCalled();
+			expect(channelSpy).not.toHaveBeenCalled();
 		});
 
 		it('sendChat ignores empty input', async () => {
@@ -381,9 +397,10 @@ describe('cyberfliesViewModel', () => {
 			const delSpy = vi.spyOn(cyberfliesApi, 'deleteChannel').mockResolvedValue(undefined);
 			const vm = createCyberfliesVM(1);
 			await vm.refreshChannels();
-			vm.setChatScope('c1');
+			vm.setChatScope('channel:c1');
 			await vm.deleteChannel('c1');
 			expect(delSpy).toHaveBeenCalledWith('c1');
+			expect(vm.chatScope).toBe('all');
 			expect(vm.channels.map((c) => c.id)).toEqual(['c2']);
 			expect(vm.chatScope).toBe('all');
 		});
@@ -423,6 +440,50 @@ describe('cyberfliesViewModel', () => {
 			const vm = createCyberfliesVM(1);
 			await vm.addToChannel('rec-7', 'c1');
 			expect(vm.error).toMatch(/403/);
+		});
+
+		it('toggleChannel loads the channel contents, and collapses on a second call', async () => {
+			const listSpy = vi.spyOn(cyberfliesApi, 'listChannelRecordings').mockResolvedValue({
+				items: [recording({ id: 'r1' }), recording({ id: 'r2' })],
+				limit: 50,
+				offset: 0
+			});
+			const vm = createCyberfliesVM(1);
+			await vm.toggleChannel('c1');
+			expect(listSpy).toHaveBeenCalledWith('c1');
+			expect(vm.expandedChannelId).toBe('c1');
+			expect(vm.channelRecordings.map((r) => r.id)).toEqual(['r1', 'r2']);
+			await vm.toggleChannel('c1');
+			expect(vm.expandedChannelId).toBeNull();
+		});
+
+		it('recapChannel generates and stores the recap', async () => {
+			vi.spyOn(cyberfliesApi, 'generateChannelRecap').mockResolvedValue({
+				headline: 'Q3 sync',
+				abstract: 'We **shipped** a lot.',
+				bullets: ['a', 'b']
+			});
+			const vm = createCyberfliesVM(1);
+			await vm.recapChannel('c1');
+			expect(vm.channelRecap?.headline).toBe('Q3 sync');
+			expect(vm.channelRecap?.bullets).toEqual(['a', 'b']);
+		});
+
+		it('removeFromChannel drops the recording from the expanded list', async () => {
+			vi.spyOn(cyberfliesApi, 'listChannelRecordings').mockResolvedValue({
+				items: [recording({ id: 'r1' }), recording({ id: 'r2' })],
+				limit: 50,
+				offset: 0
+			});
+			const rmSpy = vi
+				.spyOn(cyberfliesApi, 'removeRecordingFromChannel')
+				.mockResolvedValue(undefined);
+			const vm = createCyberfliesVM(1);
+			await vm.toggleChannel('c1');
+			await vm.removeFromChannel('c1', 'r1');
+			expect(rmSpy).toHaveBeenCalledWith('c1', 'r1');
+			expect(vm.channelRecordings.map((r) => r.id)).toEqual(['r2']);
+			expect(vm.notice).toBe('Removed from channel');
 		});
 	});
 });

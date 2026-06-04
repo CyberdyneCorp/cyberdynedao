@@ -23,17 +23,27 @@ import {
 	createChannel as createChannelApi,
 	deleteChannel as deleteChannelApi,
 	addRecordingToChannel,
+	removeRecordingFromChannel,
+	listChannelRecordings,
+	generateChannelRecap,
 	chat as chatAll,
 	chatInChannel,
+	chatInRecording,
 	isTerminalStatus,
 	CyberfliesApiError,
 	type RecordingResponse,
 	type ChannelResponse,
+	type SummarySchema,
 	type ChatMessage
 } from '$lib/api/cyberfliesApi';
 
-/** Scope for the chat panel: all meetings, or a specific channel id. */
-export type ChatScope = 'all' | string;
+/**
+ * Chat scope, encoded as a string so it round-trips through a `<select>`:
+ *   - `'all'`            → every meeting (`POST /chat`)
+ *   - `'channel:<id>'`   → one channel  (`POST /channels/{id}/chat`)
+ *   - `'recording:<id>'` → one meeting  (`POST /recordings/{id}/chat`)
+ */
+export type ChatScope = 'all' | `channel:${string}` | `recording:${string}`;
 
 /** A single chat turn as rendered in the panel. */
 export interface ChatTurn {
@@ -62,6 +72,13 @@ export interface CyberfliesViewModel {
 	/** Transient confirmation for the last organize action (e.g. "Added to Standups"). */
 	readonly notice: string | null;
 
+	/** Channels tab: currently-expanded channel + its lazily-loaded contents/recap. */
+	readonly expandedChannelId: string | null;
+	readonly channelRecordings: RecordingResponse[];
+	readonly channelContentsLoading: boolean;
+	readonly channelRecap: SummarySchema | null;
+	readonly recapLoading: boolean;
+
 	refreshRecordings(): Promise<void>;
 	refreshChannels(): Promise<void>;
 	selectRecording(id: string | null): void;
@@ -77,6 +94,12 @@ export interface CyberfliesViewModel {
 	deleteChannel(channelId: string): Promise<void>;
 	/** Add a recording to an existing channel. */
 	addToChannel(recordingId: string, channelId: string): Promise<void>;
+	/** Expand/collapse a channel, loading its recordings on expand. */
+	toggleChannel(channelId: string): Promise<void>;
+	/** Generate (and store) an AI recap for a channel. */
+	recapChannel(channelId: string): Promise<void>;
+	/** Remove a recording from a channel (keeps the recording). */
+	removeFromChannel(channelId: string, recordingId: string): Promise<void>;
 	clearNotice(): void;
 
 	setChatScope(scope: ChatScope): void;
@@ -108,6 +131,14 @@ export function createCyberfliesVM(
 
 	let busy = $state<boolean>(false);
 	let notice = $state<string | null>(null);
+
+	// Channels tab: the currently-expanded channel and its lazily-loaded
+	// contents / recap.
+	let expandedChannelId = $state<string | null>(null);
+	let channelRecordings = $state<RecordingResponse[]>([]);
+	let channelContentsLoading = $state<boolean>(false);
+	let channelRecap = $state<SummarySchema | null>(null);
+	let recapLoading = $state<boolean>(false);
 
 	// Recordings currently being polled, plus a kill switch for onDestroy.
 	const polling = new Set<string>();
@@ -260,7 +291,8 @@ export function createCyberfliesVM(
 			await deleteChannelApi(channelId);
 			channels = channels.filter((c) => c.id !== channelId);
 			// If the chat was scoped to this channel, fall back to "all".
-			if (chatScope === channelId) chatScope = 'all';
+			if (chatScope === `channel:${channelId}`) chatScope = 'all';
+			if (expandedChannelId === channelId) expandedChannelId = null;
 			error = null;
 		} catch (err) {
 			error = toMessage(err);
@@ -284,6 +316,58 @@ export function createCyberfliesVM(
 		}
 	}
 
+	async function toggleChannel(channelId: string): Promise<void> {
+		// Collapse if it's already open.
+		if (expandedChannelId === channelId) {
+			expandedChannelId = null;
+			return;
+		}
+		expandedChannelId = channelId;
+		channelRecordings = [];
+		channelRecap = null;
+		channelContentsLoading = true;
+		try {
+			const res = await listChannelRecordings(channelId);
+			channelRecordings = res.items;
+			error = null;
+		} catch (err) {
+			error = toMessage(err);
+		} finally {
+			channelContentsLoading = false;
+		}
+	}
+
+	async function recapChannel(channelId: string): Promise<void> {
+		if (recapLoading) return;
+		expandedChannelId = channelId;
+		recapLoading = true;
+		try {
+			channelRecap = await generateChannelRecap(channelId);
+			error = null;
+		} catch (err) {
+			error = toMessage(err);
+		} finally {
+			recapLoading = false;
+		}
+	}
+
+	async function removeFromChannel(channelId: string, recordingId: string): Promise<void> {
+		if (busy) return;
+		busy = true;
+		try {
+			await removeRecordingFromChannel(channelId, recordingId);
+			if (expandedChannelId === channelId) {
+				channelRecordings = channelRecordings.filter((r) => r.id !== recordingId);
+			}
+			notice = 'Removed from channel';
+			error = null;
+		} catch (err) {
+			error = toMessage(err);
+		} finally {
+			busy = false;
+		}
+	}
+
 	async function sendChat(text: string): Promise<void> {
 		const trimmed = text.trim();
 		if (trimmed === '' || chatSending) return;
@@ -296,10 +380,14 @@ export function createCyberfliesVM(
 			content: t.content
 		}));
 		try {
-			const reply =
-				chatScope === 'all'
-					? await chatAll(history)
-					: await chatInChannel(chatScope, history);
+			let reply;
+			if (chatScope === 'all') {
+				reply = await chatAll(history);
+			} else if (chatScope.startsWith('recording:')) {
+				reply = await chatInRecording(chatScope.slice('recording:'.length), history);
+			} else {
+				reply = await chatInChannel(chatScope.slice('channel:'.length), history);
+			}
 			chatTurns = [
 				...chatTurns,
 				{ role: 'assistant', content: reply.reply, usedTools: reply.used_tools }
@@ -351,6 +439,21 @@ export function createCyberfliesVM(
 		get notice() {
 			return notice;
 		},
+		get expandedChannelId() {
+			return expandedChannelId;
+		},
+		get channelRecordings() {
+			return channelRecordings;
+		},
+		get channelContentsLoading() {
+			return channelContentsLoading;
+		},
+		get channelRecap() {
+			return channelRecap;
+		},
+		get recapLoading() {
+			return recapLoading;
+		},
 		refreshRecordings,
 		refreshChannels,
 		selectRecording: (id) => {
@@ -362,6 +465,9 @@ export function createCyberfliesVM(
 		createChannel: createChannel_,
 		deleteChannel: deleteChannel_,
 		addToChannel,
+		toggleChannel,
+		recapChannel,
+		removeFromChannel,
 		clearNotice: () => {
 			notice = null;
 		},

@@ -1,8 +1,14 @@
 <script lang="ts">
 	import { onDestroy, onMount, tick } from 'svelte';
-	import { Badge, Modal, PixelButton, PixelScrollArea } from '@cyberdynecorp/svelte-ui-core';
+	import {
+		Badge,
+		MarkdownPreview,
+		Modal,
+		PixelButton,
+		PixelScrollArea
+	} from '@cyberdynecorp/svelte-ui-core';
 	import { authVM } from '$lib/auth/authViewModel.svelte';
-	import { createCyberfliesVM } from '$lib/viewmodels/cyberfliesViewModel.svelte';
+	import { createCyberfliesVM, type ChatScope } from '$lib/viewmodels/cyberfliesViewModel.svelte';
 
 	type Tab = 'meetings' | 'chat' | 'channels';
 	let tab = $state<Tab>('meetings');
@@ -143,6 +149,15 @@
 		});
 	}
 
+	function onRemoveFromChannel(channelId: string, recordingId: string, title: string) {
+		askConfirm({
+			title: 'Remove from channel',
+			message: `Remove "${title}" from this channel? The meeting itself is kept.`,
+			label: 'Remove',
+			action: () => meetings.removeFromChannel(channelId, recordingId)
+		});
+	}
+
 	async function onAddToChannel(recordingId: string) {
 		if (!organizeChannelId) return;
 		await meetings.addToChannel(recordingId, organizeChannelId);
@@ -175,7 +190,7 @@
 			<span class="hero__chip">Meetings</span>
 		</div>
 		<p class="hero__tagline">
-			Upload audio, get transcripts + summaries, ask questions across your meetings, and crunch
+			Upload audio or video, get transcripts + summaries, ask questions across your meetings, and crunch
 			the data in a Python sandbox.
 		</p>
 		<nav class="tabs" aria-label="Cyberflies sections">
@@ -217,13 +232,13 @@
 				<div class="list__actions">
 					<input
 						type="file"
-						accept="audio/*"
+						accept="audio/*,video/*"
 						class="hidden-input"
 						bind:this={audioInputEl}
 						onchange={onAudioChange}
 					/>
 					<PixelButton variant="solid" size="sm" onclick={pickAudio} disabled={!authReady || meetings.uploading}>
-						{meetings.uploading ? 'Uploading…' : '⬆ Upload audio'}
+						{meetings.uploading ? 'Uploading…' : '⬆ Upload media'}
 					</PixelButton>
 				</div>
 
@@ -280,14 +295,15 @@
 					</p>
 					<div class="detail__actions">
 						<PixelButton variant="outline" size="sm" onclick={() => meetings.downloadAudio(rec.id)}>
-							⬇ Download audio
+							⬇ Download
 						</PixelButton>
 						<PixelButton
 							variant="ghost"
 							size="sm"
 							onclick={() => {
-								meetings.setChatScope('all');
-								chatInput = `Summarize the meeting "${rec.summary?.headline ?? rec.id}".`;
+								// Scope the chat to THIS meeting (POST /recordings/{id}/chat).
+								meetings.setChatScope(`recording:${rec.id}`);
+								chatInput = '';
 								tab = 'chat';
 							}}
 						>
@@ -401,11 +417,18 @@
 				<select
 					id="cf-scope"
 					value={meetings.chatScope}
-					onchange={(e) => meetings.setChatScope((e.currentTarget as HTMLSelectElement).value)}
+					onchange={(e) =>
+						meetings.setChatScope((e.currentTarget as HTMLSelectElement).value as ChatScope)}
 				>
 					<option value="all">All meetings</option>
+					{#if meetings.selectedRecording}
+						{@const sr = meetings.selectedRecording}
+						<option value={`recording:${sr.id}`}>
+							📄 {sr.summary?.headline ?? `Recording ${sr.id.slice(0, 8)}`}
+						</option>
+					{/if}
 					{#each meetings.channels as ch (ch.id)}
-						<option value={ch.id}>{ch.name}</option>
+						<option value={`channel:${ch.id}`}>🗂 {ch.name}</option>
 					{/each}
 				</select>
 			</div>
@@ -418,7 +441,12 @@
 					{#each meetings.chatTurns as turn, i (i)}
 						<div class="msg" class:msg--user={turn.role === 'user'}>
 							<span class="msg__role">{turn.role === 'user' ? 'You' : 'Cyberflies'}</span>
-							<p class="msg__content">{turn.content}</p>
+							{#if turn.role === 'assistant'}
+								<!-- Replies are markdown (bold, bullets, headings) — render them. -->
+								<div class="msg__md"><MarkdownPreview content={turn.content} /></div>
+							{:else}
+								<p class="msg__content">{turn.content}</p>
+							{/if}
 							{#if turn.usedTools && turn.usedTools.length > 0}
 								<span class="msg__tools">tools: {turn.usedTools.join(', ')}</span>
 							{/if}
@@ -502,19 +530,69 @@
 				<PixelScrollArea maxHeight="100%" ariaLabel="Channels">
 					<ul class="ch-list">
 						{#each meetings.channels as ch (ch.id)}
+							{@const open = meetings.expandedChannelId === ch.id}
 							<li class="ch-item">
-								<div class="ch-item__main">
-									<span class="ch-item__name">{ch.name}</span>
-									{#if ch.description}<span class="ch-item__desc">{ch.description}</span>{/if}
+								<div class="ch-item__head">
+									<button
+										type="button"
+										class="ch-item__main"
+										onclick={() => meetings.toggleChannel(ch.id)}
+										aria-expanded={open}
+									>
+										<span class="ch-item__caret">{open ? '▾' : '▸'}</span>
+										<span class="ch-item__name">{ch.name}</span>
+										{#if ch.description}<span class="ch-item__desc">{ch.description}</span>{/if}
+									</button>
+									<div class="ch-item__actions">
+										<PixelButton variant="outline" size="sm" onclick={() => meetings.recapChannel(ch.id)} disabled={meetings.recapLoading}>
+											✨ Recap
+										</PixelButton>
+										<PixelButton variant="ghost" size="sm" onclick={() => onDeleteChannel(ch.id, ch.name)} disabled={meetings.busy}>
+											🗑 Delete
+										</PixelButton>
+									</div>
 								</div>
-								<PixelButton
-									variant="ghost"
-									size="sm"
-									onclick={() => onDeleteChannel(ch.id, ch.name)}
-									disabled={meetings.busy}
-								>
-									🗑 Delete
-								</PixelButton>
+
+								{#if open}
+									<div class="ch-body">
+										{#if meetings.recapLoading}
+											<p class="ch-muted">Generating recap…</p>
+										{:else if meetings.channelRecap}
+											<div class="ch-recap">
+												<h4 class="ch-recap__headline">{meetings.channelRecap.headline}</h4>
+												<div class="msg__md"><MarkdownPreview content={meetings.channelRecap.abstract} /></div>
+												{#if meetings.channelRecap.bullets.length > 0}
+													<ul class="bullets">
+														{#each meetings.channelRecap.bullets as b}<li>{b}</li>{/each}
+													</ul>
+												{/if}
+											</div>
+										{/if}
+
+										{#if meetings.channelContentsLoading}
+											<p class="ch-muted">Loading meetings…</p>
+										{:else if meetings.channelRecordings.length === 0}
+											<p class="ch-muted">No meetings in this channel yet. Add some from the Meetings tab.</p>
+										{:else}
+											<ul class="ch-rec-list">
+												{#each meetings.channelRecordings as r (r.id)}
+													<li class="ch-rec">
+														<span class="ch-rec__title">{r.summary?.headline ?? `Recording ${r.id.slice(0, 8)}`}</span>
+														<button
+															type="button"
+															class="ch-rec__remove"
+															onclick={() => onRemoveFromChannel(ch.id, r.id, r.summary?.headline ?? r.id)}
+															disabled={meetings.busy}
+															title="Remove from channel"
+														>
+															✕
+														</button>
+													</li>
+												{/each}
+											</ul>
+										{/if}
+									</div>
+								{/if}
 							</li>
 						{/each}
 					</ul>
@@ -591,10 +669,23 @@
 	.ch-list-title { margin: 0; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #0f766e; }
 	.ch-count { font-size: 0.65rem; color: #94a3b8; font-weight: 600; }
 	.ch-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-	.ch-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #f1f5f9; border: 2px solid #e2e8f0; border-left: 6px solid var(--accent); padding: 8px 12px; }
-	.ch-item__main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+	.ch-item { display: flex; flex-direction: column; background: #f1f5f9; border: 2px solid #e2e8f0; border-left: 6px solid var(--accent); padding: 8px 12px; }
+	.ch-item__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+	.ch-item__main { display: flex; align-items: baseline; gap: 6px; min-width: 0; flex: 1 1 auto; background: none; border: none; padding: 0; font-family: inherit; text-align: left; cursor: pointer; color: inherit; }
+	.ch-item__caret { color: var(--accent-dark); font-size: 0.7rem; }
 	.ch-item__name { font-size: 0.85rem; font-weight: 700; }
-	.ch-item__desc { font-size: 0.7rem; color: #64748b; }
+	.ch-item__desc { font-size: 0.7rem; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.ch-item__actions { display: flex; gap: 6px; flex-shrink: 0; }
+	.ch-body { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #cbd5e1; display: flex; flex-direction: column; gap: 8px; }
+	.ch-muted { margin: 0; font-size: 0.75rem; color: #64748b; font-style: italic; }
+	.ch-recap { background: #ecfeff; border: 1px solid #99f6e4; padding: 8px 10px; }
+	.ch-recap__headline { margin: 0 0 4px; font-size: 0.82rem; font-weight: 800; color: #0f766e; }
+	.ch-rec-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+	.ch-rec { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: #fff; border: 1px solid #e2e8f0; padding: 5px 8px; font-size: 0.78rem; }
+	.ch-rec__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.ch-rec__remove { background: transparent; border: 1px solid #cbd5e1; color: #991b1b; width: 22px; height: 22px; cursor: pointer; flex-shrink: 0; }
+	.ch-rec__remove:hover:not(:disabled) { border-color: #b91c1c; background: #fee2e2; }
+	.ch-rec__remove:disabled { opacity: 0.5; cursor: not-allowed; }
 
 	/* Confirm dialog */
 	.confirm__msg { margin: 0; font-size: 0.85rem; line-height: 1.55; color: #111827; }
@@ -664,6 +755,18 @@
 	.msg--user { border-left-color: var(--accent); background: #ecfeff; }
 	.msg__role { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #0f766e; }
 	.msg__content { margin: 4px 0 0; font-size: 0.85rem; line-height: 1.55; white-space: pre-wrap; }
+	/* Rendered-markdown assistant replies: tighten the library defaults so
+	   they sit naturally in the chat bubble. */
+	.msg__md { margin-top: 4px; font-size: 0.85rem; line-height: 1.55; }
+	.msg__md :global(p) { margin: 0 0 8px; }
+	.msg__md :global(p:last-child) { margin-bottom: 0; }
+	.msg__md :global(ul),
+	.msg__md :global(ol) { margin: 4px 0 8px; padding-left: 20px; }
+	.msg__md :global(li) { margin: 2px 0; }
+	.msg__md :global(h1),
+	.msg__md :global(h2),
+	.msg__md :global(h3) { font-size: 0.95rem; margin: 8px 0 4px; }
+	.msg__md :global(code) { font-size: 0.8rem; }
 	.msg__tools { display: block; margin-top: 6px; font-size: 0.65rem; color: #94a3b8; }
 	.chat__form { display: flex; gap: 8px; padding: 10px 16px; border-top: 2px solid #000; background: #fff; }
 	.chat__input { flex: 1 1 auto; font-family: inherit; font-size: 0.85rem; padding: 8px 12px; border: 2px solid var(--accent); outline: none; }
