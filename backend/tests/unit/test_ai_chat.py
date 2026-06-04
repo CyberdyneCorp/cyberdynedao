@@ -434,6 +434,28 @@ class _FakePython:
         )
 
 
+class _FakeCyberflies:
+    """Records ask/list calls; returns canned meeting data."""
+
+    def __init__(self) -> None:
+        self.ask_calls: list[dict[str, object]] = []
+        self.list_calls = 0
+
+    async def ask_meetings(self, *, question, bearer):
+        self.ask_calls.append({"question": question, "bearer": bearer})
+        return "You discussed the Q3 budget."
+
+    async def list_meetings(self, *, bearer):
+        from cyberdyne_backend.domain.ai_chat import MeetingSummary
+
+        self.list_calls += 1
+        return (
+            MeetingSummary(
+                id="rec-1", headline="Standup", status="completed", created_at="2026-06-01"
+            ),
+        )
+
+
 class _FakeBlogRepo:
     def __init__(self, posts=None) -> None:
         self._posts = posts or []
@@ -475,6 +497,7 @@ def _build_ctx(
     user: object | None = None,
     matlab: object | None = None,
     python: object | None = None,
+    cyberflies: object | None = None,
     bearer: str | None = None,
     blog_posts: list | None = None,
     dao: bool = False,
@@ -522,6 +545,7 @@ def _build_ctx(
         user=user,  # type: ignore[arg-type]
         matlab=matlab,  # type: ignore[arg-type]
         python=python,  # type: ignore[arg-type]
+        cyberflies=cyberflies,  # type: ignore[arg-type]
         bearer=bearer,
         dao_overview=dao_overview,
         list_blog_posts=ListBlogPosts(repo=blog),  # type: ignore[arg-type]
@@ -929,6 +953,45 @@ class TestToolDispatcher:
             chat_session_id="s",
         )
         assert json.loads(result)["error"] == "python_unavailable"
+
+    async def test_ask_meetings_forwards_question_and_bearer(self) -> None:
+        cyberflies = _FakeCyberflies()
+        ctx = _build_ctx(cyberflies=cyberflies, bearer="tok-m")
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x",
+                name="ask_meetings",
+                arguments_json=json.dumps({"question": "what did we decide on budget?"}),
+            )
+        )
+        data = json.loads(result)
+        assert "Q3 budget" in data["reply"]
+        assert cyberflies.ask_calls[0]["question"] == "what did we decide on budget?"
+        assert cyberflies.ask_calls[0]["bearer"] == "tok-m"
+
+    async def test_ask_meetings_empty_question_rejected(self) -> None:
+        ctx = _build_ctx(cyberflies=_FakeCyberflies())
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(id="x", name="ask_meetings", arguments_json=json.dumps({"question": " "}))
+        )
+        assert json.loads(result)["error"] == "empty_question"
+
+    async def test_list_meetings_returns_summaries(self) -> None:
+        cyberflies = _FakeCyberflies()
+        ctx = _build_ctx(cyberflies=cyberflies, bearer="t")
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(id="x", name="list_meetings", arguments_json="{}")
+        )
+        data = json.loads(result)
+        assert data["meetings"][0]["headline"] == "Standup"
+        assert data["meetings"][0]["id"] == "rec-1"
+
+    async def test_meetings_unavailable_when_port_missing(self) -> None:
+        ctx = _build_ctx()  # cyberflies defaults to None
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(id="x", name="ask_meetings", arguments_json=json.dumps({"question": "hi"}))
+        )
+        assert json.loads(result)["error"] == "cyberflies_unavailable"
 
     async def test_get_dao_treasury(self) -> None:
         ctx = _build_ctx(dao=True)

@@ -44,6 +44,7 @@ from cyberdyne_backend.application.learning import (
 from cyberdyne_backend.application.marketplace import GetProduct
 from cyberdyne_backend.application.quizzes import GetQuiz
 from cyberdyne_backend.domain.ai_chat import (
+    CyberfliesPort,
     KnowledgeSearchPort,
     MatlabDiagnostic,
     MatlabPort,
@@ -297,6 +298,33 @@ CYBERDYNE_TOOLS: list[ToolSchema] = [
         },
     ),
     ToolSchema(
+        name="ask_meetings",
+        description=(
+            "Answer a question about the signed-in user's recorded meetings (Cyberflies). "
+            "Use for anything about what was said, decided, or discussed in their meetings — "
+            "summaries, action items, 'what did we decide about X'. It searches the user's "
+            "transcripts and returns an answer."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "question": {
+                    "type": "string",
+                    "description": "The user's question about their meetings.",
+                },
+            },
+            "required": ["question"],
+        },
+    ),
+    ToolSchema(
+        name="list_meetings",
+        description=(
+            "List the user's recent recorded meetings (id, headline, status, date). Use to "
+            "enumerate meetings or before asking about a specific one."
+        ),
+        parameters={"type": "object", "properties": {}},
+    ),
+    ToolSchema(
         name="get_dao_treasury",
         description=(
             "Fetch the Cyberdyne DAO treasury snapshot on Base: token balances, AAVE v3 "
@@ -494,6 +522,8 @@ class ToolContext:
     # Python interpreter sandbox for the python_exec tool (same bearer
     # forwarding so files land in the user's workspace).
     python: PythonInterpreterPort | None = None
+    # Cyberflies (meetings) backend for ask_meetings / list_meetings.
+    cyberflies: CyberfliesPort | None = None
     bearer: str | None = None
     # DAO treasury + blog (read-only); learning actions run as the
     # signed-in user (user_id from the profile).
@@ -566,6 +596,10 @@ class ToolDispatcher:
                 )
             if call.name == "python_exec":
                 return await self._python_exec(cast(str, args.get("code", "")), chat_session_id)
+            if call.name == "ask_meetings":
+                return await self._ask_meetings(cast(str, args.get("question", "")))
+            if call.name == "list_meetings":
+                return await self._list_meetings()
             if call.name == "get_dao_treasury":
                 return await self._get_dao_treasury()
             if call.name == "list_blog_posts":
@@ -746,6 +780,32 @@ class ToolDispatcher:
                 "figures": figures,
                 "session_id": res.session_id,
                 "has_figure": len(figures) > 0,
+            }
+        )
+
+    async def _ask_meetings(self, question: str) -> str:
+        if not question.strip():
+            return json.dumps({"error": "empty_question"})
+        if self._ctx.cyberflies is None:
+            return json.dumps({"error": "cyberflies_unavailable"})
+        reply = await self._ctx.cyberflies.ask_meetings(question=question, bearer=self._ctx.bearer)
+        return json.dumps({"reply": reply})
+
+    async def _list_meetings(self) -> str:
+        if self._ctx.cyberflies is None:
+            return json.dumps({"error": "cyberflies_unavailable"})
+        meetings = await self._ctx.cyberflies.list_meetings(bearer=self._ctx.bearer)
+        return json.dumps(
+            {
+                "meetings": [
+                    {
+                        "id": m.id,
+                        "headline": m.headline,
+                        "status": m.status,
+                        "created_at": m.created_at,
+                    }
+                    for m in meetings
+                ]
             }
         )
 

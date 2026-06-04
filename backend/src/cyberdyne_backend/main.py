@@ -762,8 +762,9 @@ def create_app() -> FastAPI:
                 user=profile,
                 matlab=container.matlab,
                 python=container.python,
-                # Forward the user's bearer so the agent's MATLAB / Python
-                # calls run in that user's per-session workspace.
+                cyberflies=container.cyberflies,
+                # Forward the user's bearer so the agent's MATLAB / Python /
+                # Cyberflies calls run as (and only see) that user.
                 bearer=extract_token(request),
                 # A-tools: DAO treasury (HTTP-only), blog (read), and
                 # learning actions that run as the signed-in user.
