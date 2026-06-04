@@ -763,6 +763,7 @@ def create_app() -> FastAPI:
                 matlab=container.matlab,
                 python=container.python,
                 cyberflies=container.cyberflies,
+                documents=container.document_renderer,
                 # Forward the user's bearer so the agent's MATLAB / Python /
                 # Cyberflies calls run as (and only see) that user.
                 bearer=extract_token(request),

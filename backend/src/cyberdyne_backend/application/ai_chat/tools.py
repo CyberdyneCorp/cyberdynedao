@@ -45,6 +45,7 @@ from cyberdyne_backend.application.marketplace import GetProduct
 from cyberdyne_backend.application.quizzes import GetQuiz
 from cyberdyne_backend.domain.ai_chat import (
     CyberfliesPort,
+    DocumentRendererPort,
     KnowledgeSearchPort,
     MatlabDiagnostic,
     MatlabPort,
@@ -325,6 +326,35 @@ CYBERDYNE_TOOLS: list[ToolSchema] = [
         parameters={"type": "object", "properties": {}},
     ),
     ToolSchema(
+        name="create_document",
+        description=(
+            "Create a downloadable document for the user and return its filename. Use whenever "
+            "the user asks to export, save, or download something (a summary, report, notes, "
+            "diagram, mind map). Put the FULL document in `content`. Formats: 'markdown' (.md), "
+            "'mermaid' (a Mermaid diagram definition, .mmd), 'xmind' (markdown headings/bullets "
+            "for XMind import, .md), 'pdf' (rendered from markdown). After calling, tell the "
+            "user the file is ready to download — do NOT paste the whole content again."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "filename": {
+                    "type": "string",
+                    "description": "Desired filename, e.g. 'meeting-summary'. Extension optional.",
+                },
+                "content": {
+                    "type": "string",
+                    "description": "Full document content (markdown, or a Mermaid definition).",
+                },
+                "format": {
+                    "type": "string",
+                    "enum": ["markdown", "mermaid", "xmind", "pdf"],
+                },
+            },
+            "required": ["filename", "content", "format"],
+        },
+    ),
+    ToolSchema(
         name="get_dao_treasury",
         description=(
             "Fetch the Cyberdyne DAO treasury snapshot on Base: token balances, AAVE v3 "
@@ -524,6 +554,8 @@ class ToolContext:
     python: PythonInterpreterPort | None = None
     # Cyberflies (meetings) backend for ask_meetings / list_meetings.
     cyberflies: CyberfliesPort | None = None
+    # Renders document bytes (e.g. markdown → PDF) for create_document.
+    documents: DocumentRendererPort | None = None
     bearer: str | None = None
     # DAO treasury + blog (read-only); learning actions run as the
     # signed-in user (user_id from the profile).
@@ -600,6 +632,12 @@ class ToolDispatcher:
                 return await self._ask_meetings(cast(str, args.get("question", "")))
             if call.name == "list_meetings":
                 return await self._list_meetings()
+            if call.name == "create_document":
+                return await self._create_document(
+                    cast(str, args.get("filename", "")),
+                    cast(str, args.get("content", "")),
+                    cast(str, args.get("format", "markdown")),
+                )
             if call.name == "get_dao_treasury":
                 return await self._get_dao_treasury()
             if call.name == "list_blog_posts":
@@ -751,18 +789,24 @@ class ToolDispatcher:
             }
         )
 
+    async def _ensure_py_session(self) -> str:
+        """The interpreter rejects client-invented session ids; create one
+        server-side and reuse it for the rest of this turn so python_exec /
+        create_document calls share a workspace."""
+        if self._ctx.python is None:
+            raise RuntimeError("python_unavailable")
+        if self._py_session_id is None:
+            self._py_session_id = await self._ctx.python.create_session(bearer=self._ctx.bearer)
+        return self._py_session_id
+
     async def _python_exec(self, code: str, chat_session_id: str) -> str:
         if not code.strip():
             return json.dumps({"error": "empty_code"})
         if self._ctx.python is None:
             return json.dumps({"error": "python_unavailable"})
-        # The interpreter rejects client-invented session ids; create one
-        # server-side and reuse it for the rest of this turn so multiple
-        # python_exec calls share a workspace.
-        if self._py_session_id is None:
-            self._py_session_id = await self._ctx.python.create_session(bearer=self._ctx.bearer)
+        session_id = await self._ensure_py_session()
         res = await self._ctx.python.execute(
-            code=code, session_id=self._py_session_id, bearer=self._ctx.bearer
+            code=code, session_id=session_id, bearer=self._ctx.bearer
         )
         # Reference produced files by name + session id only — the frontend
         # downloads them through the authed /api/interpreter proxy. Image
@@ -790,6 +834,50 @@ class ToolDispatcher:
             return json.dumps({"error": "cyberflies_unavailable"})
         reply = await self._ctx.cyberflies.ask_meetings(question=question, bearer=self._ctx.bearer)
         return json.dumps({"reply": reply})
+
+    async def _create_document(self, filename: str, content: str, fmt: str) -> str:
+        if not content.strip():
+            return json.dumps({"error": "empty_content"})
+        if self._ctx.python is None:
+            return json.dumps({"error": "python_unavailable"})
+        fmt = (fmt or "markdown").lower()
+        ext_by_fmt = {"markdown": ".md", "mermaid": ".mmd", "xmind": ".md", "pdf": ".pdf"}
+        if fmt not in ext_by_fmt:
+            return json.dumps({"error": "unsupported_format", "format": fmt})
+
+        if fmt == "pdf":
+            if self._ctx.documents is None:
+                return json.dumps({"error": "documents_unavailable"})
+            data = self._ctx.documents.render_pdf(content=content)
+            content_type = "application/pdf"
+        else:
+            data = content.encode("utf-8")
+            content_type = "text/markdown" if ext_by_fmt[fmt] == ".md" else "text/plain"
+
+        # Normalise the filename to the format's extension.
+        base = (filename or "document").strip() or "document"
+        base = base.rsplit("/", 1)[-1]
+        ext = ext_by_fmt[fmt]
+        if not base.lower().endswith(ext):
+            base = f"{base.rsplit('.', 1)[0] if '.' in base else base}{ext}"
+
+        session_id = await self._ensure_py_session()
+        stored = await self._ctx.python.upload_file(
+            session_id=session_id,
+            filename=base,
+            content=data,
+            content_type=content_type,
+            bearer=self._ctx.bearer,
+        )
+        return json.dumps(
+            {
+                "ok": True,
+                "session_id": session_id,
+                "filename": stored,
+                "format": fmt,
+                "size": len(data),
+            }
+        )
 
     async def _list_meetings(self) -> str:
         if self._ctx.cyberflies is None:
