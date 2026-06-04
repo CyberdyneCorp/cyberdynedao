@@ -1,8 +1,13 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { Badge, PixelButton, PixelScrollArea } from '@cyberdynecorp/svelte-ui-core';
-	import { createAgentVM, type AgentPlot } from '$lib/viewmodels/agentViewModel.svelte';
+	import {
+		createAgentVM,
+		type AgentArtifact,
+		type AgentPlot
+	} from '$lib/viewmodels/agentViewModel.svelte';
 	import { downloadArtifact } from '$lib/api/matlabApi';
+	import { downloadFile } from '$lib/api/interpreterApi';
 
 	const vm = createAgentVM();
 
@@ -56,6 +61,46 @@
 			plotUrlCache.set(key, pending);
 		}
 		return pending;
+	}
+
+	function fileIcon(name: string): string {
+		const ext = name.split('.').pop()?.toLowerCase() ?? '';
+		if (ext === 'pdf') return '📕';
+		if (ext === 'md' || ext === 'markdown') return '📝';
+		if (ext === 'mmd' || ext === 'mermaid') return '🧜';
+		if (ext === 'csv' || ext === 'json' || ext === 'txt') return '📄';
+		return '📎';
+	}
+
+	function formatBytes(n: number): string {
+		if (n <= 0) return '';
+		if (n < 1024) return `${n} B`;
+		if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+		return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+	}
+
+	// Stream the agent-generated file through the authed /api/interpreter
+	// proxy and save it. Per-artifact in-flight guard so a double-click
+	// doesn't double-download.
+	let downloading = $state<Set<string>>(new Set());
+	async function downloadAgentFile(a: AgentArtifact): Promise<void> {
+		const key = `${a.sessionId}/${a.name}`;
+		if (downloading.has(key)) return;
+		downloading = new Set(downloading).add(key);
+		try {
+			const { url } = await downloadFile(a.sessionId, a.name);
+			const anchor = document.createElement('a');
+			anchor.href = url;
+			anchor.download = a.name.split('/').pop() ?? a.name;
+			document.body.appendChild(anchor);
+			anchor.click();
+			document.body.removeChild(anchor);
+			setTimeout(() => URL.revokeObjectURL(url), 30_000);
+		} finally {
+			const next = new Set(downloading);
+			next.delete(key);
+			downloading = next;
+		}
 	}
 
 	onMount(async () => {
@@ -215,6 +260,27 @@
 										<div class="plot__loading">Figure unavailable.</div>
 									{/await}
 								</figure>
+							{/each}
+						</div>
+					{/if}
+
+					{#if bubble.artifacts.length > 0}
+						<div class="files">
+							{#each bubble.artifacts as file (file.sessionId + '/' + file.name)}
+								{@const key = file.sessionId + '/' + file.name}
+								<button
+									type="button"
+									class="file"
+									onclick={() => downloadAgentFile(file)}
+									disabled={downloading.has(key)}
+									title={`Download ${file.name}`}
+								>
+									<span class="file__icon" aria-hidden="true">{fileIcon(file.name)}</span>
+									<span class="file__name">{file.name}</span>
+									<span class="file__meta">
+										{downloading.has(key) ? 'downloading…' : `⬇ ${formatBytes(file.sizeBytes)}`}
+									</span>
+								</button>
 							{/each}
 						</div>
 					{/if}
@@ -549,6 +615,52 @@
 		flex-direction: column;
 		gap: 8px;
 		margin-top: 8px;
+	}
+
+	/* Downloadable files produced by python_exec / create_document. */
+	.files {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		margin-top: 8px;
+	}
+	.file {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		width: 100%;
+		text-align: left;
+		background: #0f172a;
+		border: 2px solid #334155;
+		border-left: 6px solid #7dd3fc;
+		padding: 8px 10px;
+		font-family: inherit;
+		color: #e2e8f0;
+		cursor: pointer;
+	}
+	.file:hover:not(:disabled) {
+		border-color: #7dd3fc;
+	}
+	.file:disabled {
+		opacity: 0.6;
+		cursor: progress;
+	}
+	.file__icon {
+		font-size: 1rem;
+	}
+	.file__name {
+		flex: 1 1 auto;
+		font-size: 0.82rem;
+		font-weight: 700;
+		color: #7dd3fc;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.file__meta {
+		font-size: 0.7rem;
+		color: #94a3b8;
+		flex-shrink: 0;
 	}
 	.plot {
 		margin: 0;
