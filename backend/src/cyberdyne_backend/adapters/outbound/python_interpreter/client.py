@@ -52,6 +52,35 @@ class PythonInterpreterClient:
         body = await self._post("/execute", payload, bearer)
         return self._to_result(body, session_id)
 
+    async def upload_file(
+        self,
+        *,
+        session_id: str,
+        filename: str,
+        content: bytes,
+        content_type: str,
+        bearer: str | None,
+    ) -> str:
+        headers: dict[str, str] = {"accept": "application/json"}
+        if bearer:
+            headers["authorization"] = f"Bearer {bearer}"
+        url = f"{self._base_url}/files?session_id={session_id}"
+        response = await self._http.post(
+            url,
+            files={"file": (filename, content, content_type)},
+            headers=headers,
+            timeout=self._timeout,
+        )
+        if response.status_code >= 400:
+            raise RuntimeError(
+                f"python_interpreter /files {response.status_code}: {response.text[:240]}"
+            )
+        body = cast(dict[str, Any], response.json())
+        file_meta = body.get("file")
+        if isinstance(file_meta, dict) and isinstance(file_meta.get("name"), str):
+            return cast(str, file_meta["name"])
+        return filename
+
     @staticmethod
     def _to_result(body: dict[str, Any], session_id: str) -> PythonExecResult:
         # Upstream artifacts are FileMeta objects ({name, size_bytes,

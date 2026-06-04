@@ -406,12 +406,25 @@ class _FakePython:
 
     def __init__(self, artifacts: tuple[str, ...] = ()) -> None:
         self.calls: list[dict[str, object]] = []
+        self.uploads: list[dict[str, object]] = []
         self.created = 0
         self._artifacts = artifacts
 
     async def create_session(self, *, bearer):
         self.created += 1
         return f"srv-session-{self.created}"
+
+    async def upload_file(self, *, session_id, filename, content, content_type, bearer):
+        self.uploads.append(
+            {
+                "session_id": session_id,
+                "filename": filename,
+                "content": content,
+                "content_type": content_type,
+                "bearer": bearer,
+            }
+        )
+        return filename
 
     async def execute(self, *, code, session_id, bearer, restricted=True):
         from cyberdyne_backend.domain.ai_chat import PythonExecResult
@@ -432,6 +445,17 @@ class _FakePython:
             artifacts=self._artifacts,
             session_id=session_id,
         )
+
+
+class _FakeDocs:
+    """Records render_pdf calls; returns a tiny PDF-looking byte string."""
+
+    def __init__(self) -> None:
+        self.calls: list[dict[str, object]] = []
+
+    def render_pdf(self, *, content, title=None):
+        self.calls.append({"content": content, "title": title})
+        return b"%PDF-1.4 fake"
 
 
 class _FakeCyberflies:
@@ -498,6 +522,7 @@ def _build_ctx(
     matlab: object | None = None,
     python: object | None = None,
     cyberflies: object | None = None,
+    documents: object | None = None,
     bearer: str | None = None,
     blog_posts: list | None = None,
     dao: bool = False,
@@ -546,6 +571,7 @@ def _build_ctx(
         matlab=matlab,  # type: ignore[arg-type]
         python=python,  # type: ignore[arg-type]
         cyberflies=cyberflies,  # type: ignore[arg-type]
+        documents=documents,  # type: ignore[arg-type]
         bearer=bearer,
         dao_overview=dao_overview,
         list_blog_posts=ListBlogPosts(repo=blog),  # type: ignore[arg-type]
@@ -992,6 +1018,83 @@ class TestToolDispatcher:
             ToolCall(id="x", name="ask_meetings", arguments_json=json.dumps({"question": "hi"}))
         )
         assert json.loads(result)["error"] == "cyberflies_unavailable"
+
+    async def test_create_document_writes_markdown_to_workspace(self) -> None:
+        python = _FakePython()
+        ctx = _build_ctx(python=python, bearer="tok-d")
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x",
+                name="create_document",
+                arguments_json=json.dumps(
+                    {"filename": "summary", "content": "# Notes\n- a\n- b", "format": "markdown"}
+                ),
+            )
+        )
+        data = json.loads(result)
+        assert data["ok"] is True
+        assert data["filename"] == "summary.md"
+        assert data["session_id"] == "srv-session-1"
+        up = python.uploads[0]
+        assert up["filename"] == "summary.md"
+        assert up["content"] == b"# Notes\n- a\n- b"
+        assert up["content_type"] == "text/markdown"
+        assert up["bearer"] == "tok-d"
+
+    async def test_create_document_mermaid_uses_mmd_extension(self) -> None:
+        python = _FakePython()
+        ctx = _build_ctx(python=python, bearer="t")
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x",
+                name="create_document",
+                arguments_json=json.dumps(
+                    {"filename": "flow", "content": "graph TD;A-->B", "format": "mermaid"}
+                ),
+            )
+        )
+        assert json.loads(result)["filename"] == "flow.mmd"
+
+    async def test_create_document_pdf_renders_via_document_port(self) -> None:
+        python = _FakePython()
+        docs = _FakeDocs()
+        ctx = _build_ctx(python=python, documents=docs, bearer="t")
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x",
+                name="create_document",
+                arguments_json=json.dumps(
+                    {"filename": "report.pdf", "content": "# Report", "format": "pdf"}
+                ),
+            )
+        )
+        data = json.loads(result)
+        assert data["filename"] == "report.pdf"
+        assert docs.calls[0]["content"] == "# Report"
+        assert python.uploads[0]["content"] == b"%PDF-1.4 fake"
+        assert python.uploads[0]["content_type"] == "application/pdf"
+
+    async def test_create_document_empty_content_rejected(self) -> None:
+        ctx = _build_ctx(python=_FakePython())
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x",
+                name="create_document",
+                arguments_json=json.dumps({"filename": "x", "content": "  ", "format": "markdown"}),
+            )
+        )
+        assert json.loads(result)["error"] == "empty_content"
+
+    async def test_create_document_pdf_without_renderer_reports_unavailable(self) -> None:
+        ctx = _build_ctx(python=_FakePython())  # documents=None
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x",
+                name="create_document",
+                arguments_json=json.dumps({"filename": "x", "content": "hi", "format": "pdf"}),
+            )
+        )
+        assert json.loads(result)["error"] == "documents_unavailable"
 
     async def test_get_dao_treasury(self) -> None:
         ctx = _build_ctx(dao=True)

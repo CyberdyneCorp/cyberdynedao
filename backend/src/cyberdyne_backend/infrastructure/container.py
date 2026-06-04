@@ -28,6 +28,7 @@ from cyberdyne_backend.adapters.outbound.chain.caching_reader import CachingChai
 from cyberdyne_backend.adapters.outbound.chain.fake_reader import FakeChainReader
 from cyberdyne_backend.adapters.outbound.chain.web3py_reader import Web3PyChainReader
 from cyberdyne_backend.adapters.outbound.cyberflies.client import CyberfliesClient
+from cyberdyne_backend.adapters.outbound.documents.pdf import ReportlabDocumentRenderer
 from cyberdyne_backend.adapters.outbound.email.notifiers import (
     LoggingEmailNotifier,
     LoggingLicenseEmailNotifier,
@@ -52,6 +53,7 @@ from cyberdyne_backend.adapters.outbound.stripe.webhook_verifier import (
 from cyberdyne_backend.domain.ai_chat import (
     ChatLLMPort,
     CyberfliesPort,
+    DocumentRendererPort,
     KnowledgeSearchPort,
     MatlabPort,
     PythonInterpreterPort,
@@ -90,6 +92,7 @@ class Container:
         self._matlab: MatlabPort | None = None
         self._python: PythonInterpreterPort | None = None
         self._cyberflies: CyberfliesPort | None = None
+        self._document_renderer: DocumentRendererPort | None = None
 
     # ── HTTP ──────────────────────────────────────────────────────────
     @property
@@ -301,6 +304,12 @@ class Container:
                 http_client=self.http_client,
             )
         return self._cyberflies
+
+    @property
+    def document_renderer(self) -> DocumentRendererPort:
+        if self._document_renderer is None:
+            self._document_renderer = ReportlabDocumentRenderer()
+        return self._document_renderer
 
     @property
     def knowledge_search(self) -> KnowledgeSearchPort:

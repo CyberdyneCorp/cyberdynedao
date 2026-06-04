@@ -147,6 +147,27 @@ class PythonInterpreterPort(Protocol):
         self, *, code: str, session_id: str, bearer: str | None, restricted: bool = True
     ) -> PythonExecResult: ...
 
+    async def upload_file(
+        self,
+        *,
+        session_id: str,
+        filename: str,
+        content: bytes,
+        content_type: str,
+        bearer: str | None,
+    ) -> str:
+        """Write a file into the session workspace (no code execution).
+        Returns the stored filename. Used by ``create_document`` to make a
+        generated file downloadable via the same artifact path."""
+        ...
+
+
+@runtime_checkable
+class DocumentRendererPort(Protocol):
+    """Renders document bytes from text content (e.g. markdown → PDF)."""
+
+    def render_pdf(self, *, content: str, title: str | None = None) -> bytes: ...
+
 
 @dataclass(frozen=True, slots=True)
 class MeetingSummary:
