@@ -8,6 +8,8 @@
 	} from '$lib/viewmodels/agentViewModel.svelte';
 	import { downloadArtifact } from '$lib/api/matlabApi';
 	import { downloadFile } from '$lib/api/interpreterApi';
+	import { parseSegments } from '$lib/utils/chatSegments';
+	import MermaidDiagram from './MermaidDiagram.svelte';
 
 	const vm = createAgentVM();
 
@@ -24,30 +26,9 @@
 		expandedPlots = next;
 	}
 
-	// Split assistant text into prose + fenced code blocks so code (e.g.
-	// the MATLAB the agent wrote) renders monospace/bordered instead of
-	// as a wall of plain text. XSS-safe: rendered through Svelte markup,
-	// no {@html}.
-	type Segment = { kind: 'text'; text: string } | { kind: 'code'; lang: string; code: string };
-	function parseSegments(content: string): Segment[] {
-		const segments: Segment[] = [];
-		const fence = /```([a-zA-Z0-9_+-]*)\n?([\s\S]*?)```/g;
-		let last = 0;
-		let m: RegExpExecArray | null;
-		while ((m = fence.exec(content)) !== null) {
-			if (m.index > last) {
-				const text = content.slice(last, m.index).trim();
-				if (text) segments.push({ kind: 'text', text });
-			}
-			segments.push({ kind: 'code', lang: m[1] || '', code: m[2].replace(/\n$/, '') });
-			last = fence.lastIndex;
-		}
-		const tail = content.slice(last).trim();
-		if (tail) segments.push({ kind: 'text', text: tail });
-		// No fences → a single text segment (covers the common case).
-		if (segments.length === 0 && content) segments.push({ kind: 'text', text: content });
-		return segments;
-	}
+	// Assistant text is split into prose / fenced code / Mermaid segments by
+	// the shared `parseSegments` util (unit-tested). Mermaid renders as a
+	// diagram; everything else stays XSS-safe Svelte markup (no {@html}).
 
 	// Download each figure once (authed /api/matlab proxy → blob URL) and
 	// memoize the promise so re-renders don't re-fetch. Reuses the same
@@ -231,6 +212,8 @@
 										{#if seg.lang}<span class="code__lang">{seg.lang}</span>{/if}
 										<pre>{seg.code}</pre>
 									</div>
+								{:else if seg.kind === 'mermaid'}
+									<MermaidDiagram code={seg.code} />
 								{:else}
 									<p class="bubble__text">{seg.text}</p>
 								{/if}
