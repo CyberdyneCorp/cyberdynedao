@@ -1,7 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createCyberfliesVM } from '../cyberfliesViewModel.svelte';
 import * as cyberfliesApi from '$lib/api/cyberfliesApi';
-import type { ChannelResponse, RecordingResponse } from '$lib/api/cyberfliesApi';
+import type {
+	ChannelResponse,
+	MeetingSession,
+	RecordingResponse
+} from '$lib/api/cyberfliesApi';
+
+function session(over: Partial<MeetingSession> = {}): MeetingSession {
+	return {
+		id: 'sess-1',
+		owner_id: 'u-1',
+		platform: 'google_meet',
+		meeting_url: 'https://meet.google.com/abc',
+		status: 'scheduled',
+		created_at: '2026-06-05T10:00:00Z',
+		updated_at: '2026-06-05T10:00:00Z',
+		...over
+	};
+}
 
 function channel(over: Partial<ChannelResponse> = {}): ChannelResponse {
 	return {
@@ -469,6 +486,92 @@ describe('cyberfliesViewModel', () => {
 			expect(vm.channelRecap?.bullets).toEqual(['a', 'b']);
 		});
 
+	});
+
+	describe('meeting bot', () => {
+		it('joinMeeting trims fields, inserts the session, and polls until terminal', async () => {
+			const joinSpy = vi
+				.spyOn(cyberfliesApi, 'joinMeeting')
+				.mockResolvedValue(session({ id: 'm1', status: 'scheduled' }));
+			vi.spyOn(cyberfliesApi, 'getMeetingSession')
+				.mockResolvedValueOnce(session({ id: 'm1', status: 'recording' }))
+				.mockResolvedValueOnce(
+					session({ id: 'm1', status: 'completed', recording_id: 'rec-99' })
+				);
+			vi.spyOn(cyberfliesApi, 'listRecordings').mockResolvedValue({
+				items: [],
+				limit: 50,
+				offset: 0
+			});
+			const vm = createCyberfliesVM(1);
+			await vm.joinMeeting({
+				platform: 'google_meet',
+				meeting_url: '  https://meet.google.com/x  ',
+				bot_display_name: '  Notetaker  ',
+				consent_message: ''
+			});
+			expect(joinSpy).toHaveBeenCalledWith({
+				platform: 'google_meet',
+				meeting_url: 'https://meet.google.com/x',
+				bot_display_name: 'Notetaker',
+				consent_message: undefined
+			});
+			expect(vm.meetingSessions[0].id).toBe('m1');
+			await flush(20);
+			expect(vm.meetingSessions[0].status).toBe('completed');
+			expect(vm.meetingSessions[0].recording_id).toBe('rec-99');
+		});
+
+		it('joinMeeting requires a URL', async () => {
+			const joinSpy = vi.spyOn(cyberfliesApi, 'joinMeeting');
+			const vm = createCyberfliesVM(1);
+			await vm.joinMeeting({ platform: 'google_meet', meeting_url: '   ' });
+			expect(joinSpy).not.toHaveBeenCalled();
+			expect(vm.botError).toMatch(/url is required/i);
+		});
+
+		it('joinMeeting surfaces errors', async () => {
+			vi.spyOn(cyberfliesApi, 'joinMeeting').mockRejectedValue(new Error('bot busy'));
+			const vm = createCyberfliesVM(1);
+			await vm.joinMeeting({ platform: 'microsoft_teams', meeting_url: 'https://teams/x' });
+			expect(vm.botError).toMatch(/bot busy/);
+		});
+
+		it('refreshMeetingSessions lists sessions and resumes polling non-terminal ones', async () => {
+			vi.spyOn(cyberfliesApi, 'listMeetingSessions').mockResolvedValue({
+				items: [session({ id: 'm2', status: 'joining' })],
+				limit: 50,
+				offset: 0
+			});
+			const getSpy = vi
+				.spyOn(cyberfliesApi, 'getMeetingSession')
+				.mockResolvedValue(session({ id: 'm2', status: 'failed', error: 'lobby timeout' }));
+			const vm = createCyberfliesVM(1);
+			await vm.refreshMeetingSessions();
+			expect(vm.meetingSessions).toHaveLength(1);
+			await flush(20);
+			expect(getSpy).toHaveBeenCalledWith('m2');
+			expect(vm.meetingSessions[0].status).toBe('failed');
+		});
+
+		it('does not poll a session that is already terminal', async () => {
+			vi.spyOn(cyberfliesApi, 'joinMeeting').mockResolvedValue(
+				session({ id: 'm3', status: 'completed', recording_id: 'r1' })
+			);
+			vi.spyOn(cyberfliesApi, 'listRecordings').mockResolvedValue({
+				items: [],
+				limit: 50,
+				offset: 0
+			});
+			const getSpy = vi.spyOn(cyberfliesApi, 'getMeetingSession');
+			const vm = createCyberfliesVM(1);
+			await vm.joinMeeting({ platform: 'google_meet', meeting_url: 'https://meet/x' });
+			await flush(20);
+			expect(getSpy).not.toHaveBeenCalled();
+		});
+	});
+
+	describe('organize remove (cont.)', () => {
 		it('removeFromChannel drops the recording from the expanded list', async () => {
 			vi.spyOn(cyberfliesApi, 'listChannelRecordings').mockResolvedValue({
 				items: [recording({ id: 'r1' }), recording({ id: 'r2' })],

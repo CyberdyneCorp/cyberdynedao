@@ -9,8 +9,9 @@
 	} from '@cyberdynecorp/svelte-ui-core';
 	import { authVM } from '$lib/auth/authViewModel.svelte';
 	import { createCyberfliesVM, type ChatScope } from '$lib/viewmodels/cyberfliesViewModel.svelte';
+	import type { MeetingPlatform } from '$lib/api/cyberfliesApi';
 
-	type Tab = 'meetings' | 'chat' | 'channels';
+	type Tab = 'meetings' | 'chat' | 'channels' | 'bot';
 	let tab = $state<Tab>('meetings');
 
 	const meetings = createCyberfliesVM();
@@ -18,6 +19,11 @@
 	let audioInputEl = $state<HTMLInputElement | null>(null);
 	let chatInput = $state<string>('');
 	let chatScrollBottom = $state<HTMLElement | null>(null);
+	// Bot tab: send-to-meeting form.
+	let botPlatform = $state<MeetingPlatform>('google_meet');
+	let botUrl = $state<string>('');
+	let botName = $state<string>('');
+	let botConsent = $state<string>('');
 	// Organize-into-channel controls (per detail panel).
 	let organizeChannelId = $state<string>('');
 	let newChannelName = $state<string>('');
@@ -62,6 +68,7 @@
 		if (authReady) {
 			void meetings.refreshRecordings();
 			void meetings.refreshChannels();
+			void meetings.refreshMeetingSessions();
 		}
 	});
 
@@ -179,6 +186,36 @@
 		await meetings.sendChat(text);
 	}
 
+	async function onSendBot(e: SubmitEvent) {
+		e.preventDefault();
+		await meetings.joinMeeting({
+			platform: botPlatform,
+			meeting_url: botUrl,
+			bot_display_name: botName,
+			consent_message: botConsent
+		});
+		if (!meetings.botError) botUrl = '';
+	}
+
+	async function onViewRecording(recordingId: string) {
+		await meetings.refreshRecordings();
+		meetings.selectRecording(recordingId);
+		tab = 'meetings';
+	}
+
+	function platformLabel(p: string): string {
+		if (p === 'google_meet') return 'Google Meet';
+		if (p === 'microsoft_teams') return 'Microsoft Teams';
+		return p;
+	}
+
+	function botStatusVariant(status: string): 'success' | 'warning' | 'danger' {
+		const s = status.toLowerCase();
+		if (s === 'completed') return 'success';
+		if (s === 'failed') return 'danger';
+		return 'warning';
+	}
+
 	const heroStyle = '--accent: #14b8a6; --accent-dark: #0f766e;';
 </script>
 
@@ -202,6 +239,9 @@
 			</button>
 			<button type="button" class="tab" class:tab--active={tab === 'channels'} onclick={() => (tab = 'channels')}>
 				🗂 Channels
+			</button>
+			<button type="button" class="tab" class:tab--active={tab === 'bot'} onclick={() => (tab = 'bot')}>
+				🤖 Bot
 			</button>
 		</nav>
 	</header>
@@ -600,6 +640,109 @@
 			{/if}
 		</div>
 	{/if}
+
+	<!-- ── Bot (meeting capture) ────────────────────────────────── -->
+	{#if tab === 'bot'}
+		<div class="bot-view">
+			<form class="bot-form" onsubmit={onSendBot}>
+				<h2 class="bot-form__title">Send the bot to a meeting</h2>
+				<p class="bot-form__hint">
+					A capture bot joins your Google Meet / Microsoft Teams call, records it, and the
+					recording lands in your Meetings list — transcribed and summarized like an upload.
+				</p>
+				<div class="bot-form__row">
+					<select
+						class="ch-input"
+						value={botPlatform}
+						onchange={(e) => (botPlatform = (e.currentTarget as HTMLSelectElement).value as MeetingPlatform)}
+						disabled={!authReady || meetings.sendingBot}
+					>
+						<option value="google_meet">Google Meet</option>
+						<option value="microsoft_teams">Microsoft Teams</option>
+					</select>
+					<input
+						class="ch-input ch-input--desc"
+						type="url"
+						placeholder="Meeting URL (https://meet.google.com/… or Teams link)"
+						value={botUrl}
+						oninput={(e) => (botUrl = (e.currentTarget as HTMLInputElement).value)}
+						disabled={!authReady || meetings.sendingBot}
+					/>
+				</div>
+				<div class="bot-form__row">
+					<input
+						class="ch-input"
+						type="text"
+						placeholder="Bot display name (optional)"
+						value={botName}
+						oninput={(e) => (botName = (e.currentTarget as HTMLInputElement).value)}
+						disabled={!authReady || meetings.sendingBot}
+					/>
+					<input
+						class="ch-input ch-input--desc"
+						type="text"
+						placeholder="Consent message posted in chat (optional)"
+						value={botConsent}
+						oninput={(e) => (botConsent = (e.currentTarget as HTMLInputElement).value)}
+						disabled={!authReady || meetings.sendingBot}
+					/>
+					<PixelButton
+						variant="solid"
+						size="sm"
+						type="submit"
+						disabled={!authReady || meetings.sendingBot || botUrl.trim() === ''}
+					>
+						{meetings.sendingBot ? 'Sending…' : '🤖 Send bot'}
+					</PixelButton>
+				</div>
+			</form>
+
+			{#if meetings.botError}
+				<div class="banner banner--err">{meetings.botError}</div>
+			{/if}
+
+			<div class="ch-list-head">
+				<h2 class="ch-list-title">
+					Bot sessions <span class="ch-count">{meetings.meetingSessions.length}</span>
+				</h2>
+				<button type="button" class="icon-btn" onclick={() => meetings.refreshMeetingSessions()} disabled={!authReady || meetings.sessionsLoading}>
+					{meetings.sessionsLoading ? '…' : '↻'}
+				</button>
+			</div>
+
+			{#if meetings.meetingSessions.length === 0}
+				<p class="empty">{authReady ? 'No bot sessions yet. Paste a meeting link above and send the bot.' : 'Sign in to dispatch the capture bot.'}</p>
+			{:else}
+				<PixelScrollArea maxHeight="100%" ariaLabel="Bot sessions">
+					<ul class="sess-list">
+						{#each meetings.meetingSessions as s (s.id)}
+							<li class="sess">
+								<div class="sess__top">
+									<span class="sess__platform">{platformLabel(s.platform)}</span>
+									<Badge variant={botStatusVariant(s.status)} size="sm">{s.status}</Badge>
+								</div>
+								<a class="sess__url" href={s.meeting_url} target="_blank" rel="noopener">{s.meeting_url}</a>
+								<div class="sess__meta">
+									{formatDate(s.started_at ?? s.created_at)}
+									{#if s.bot_display_name} · as “{s.bot_display_name}”{/if}
+								</div>
+								{#if s.error}
+									<div class="banner banner--err">{s.error}</div>
+								{/if}
+								{#if s.status.toLowerCase() === 'completed' && s.recording_id}
+									<div class="sess__actions">
+										<PixelButton variant="outline" size="sm" onclick={() => onViewRecording(s.recording_id!)}>
+											🎧 View recording
+										</PixelButton>
+									</div>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+				</PixelScrollArea>
+			{/if}
+		</div>
+	{/if}
 </div>
 
 <!-- Styled confirmation dialog (replaces the native browser confirm()) -->
@@ -686,6 +829,20 @@
 	.ch-rec__remove { background: transparent; border: 1px solid #cbd5e1; color: #991b1b; width: 22px; height: 22px; cursor: pointer; flex-shrink: 0; }
 	.ch-rec__remove:hover:not(:disabled) { border-color: #b91c1c; background: #fee2e2; }
 	.ch-rec__remove:disabled { opacity: 0.5; cursor: not-allowed; }
+
+	/* Bot subview */
+	.bot-view { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; overflow-y: auto; }
+	.bot-form { display: flex; flex-direction: column; gap: 8px; }
+	.bot-form__title { margin: 0; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #0f766e; }
+	.bot-form__hint { margin: 0; font-size: 0.72rem; color: #64748b; line-height: 1.5; }
+	.bot-form__row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+	.sess-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+	.sess { display: flex; flex-direction: column; gap: 4px; background: #f1f5f9; border: 2px solid #e2e8f0; border-left: 6px solid var(--accent); padding: 8px 12px; }
+	.sess__top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+	.sess__platform { font-size: 0.82rem; font-weight: 700; }
+	.sess__url { font-size: 0.72rem; color: #0f766e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.sess__meta { font-size: 0.68rem; color: #64748b; }
+	.sess__actions { display: flex; gap: 6px; margin-top: 2px; }
 
 	/* Confirm dialog */
 	.confirm__msg { margin: 0; font-size: 0.85rem; line-height: 1.55; color: #111827; }

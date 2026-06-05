@@ -78,6 +78,47 @@ export interface ChatMessage {
 	content: string;
 }
 
+/** Platforms the capture bot can join. */
+export type MeetingPlatform = 'google_meet' | 'microsoft_teams';
+
+/** A meeting-capture bot session. `status` walks
+ *  scheduled → joining → in_call → recording → uploading → completed,
+ *  or → failed. On completion `recording_id` links the produced Recording. */
+export interface MeetingSession {
+	id: string;
+	owner_id: string;
+	platform: MeetingPlatform;
+	meeting_url: string;
+	status: string;
+	bot_display_name?: string | null;
+	consent_message?: string | null;
+	recording_id?: string | null;
+	started_at?: string | null;
+	ended_at?: string | null;
+	error?: string | null;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface MeetingSessionListResponse {
+	items: MeetingSession[];
+	limit: number;
+	offset: number;
+}
+
+export interface JoinMeetingRequest {
+	platform: MeetingPlatform;
+	meeting_url: string;
+	bot_display_name?: string;
+	consent_message?: string;
+}
+
+/** True when the capture bot session has reached a terminal state. */
+export function isTerminalMeetingStatus(status: string): boolean {
+	const s = status.toLowerCase();
+	return s === 'completed' || s === 'failed';
+}
+
 export interface ChatReplyResponse {
 	reply: string;
 	used_tools: string[];
@@ -331,4 +372,20 @@ export function chatInRecording(
 		`/api/v1/recordings/${encodeURIComponent(recordingId)}/chat`,
 		{ messages }
 	);
+}
+
+// ── Meeting-capture bot ─────────────────────────────────────────────
+
+/** Dispatch the capture bot to join + record a live meeting. 202. */
+export function joinMeeting(req: JoinMeetingRequest): Promise<MeetingSession> {
+	return postJson<MeetingSession>('/api/v1/meetings', req);
+}
+
+export function listMeetingSessions(limit = 50, offset = 0): Promise<MeetingSessionListResponse> {
+	const qs = `?limit=${encodeURIComponent(limit)}&offset=${encodeURIComponent(offset)}`;
+	return getJson<MeetingSessionListResponse>(`/api/v1/meetings${qs}`);
+}
+
+export function getMeetingSession(sessionId: string): Promise<MeetingSession> {
+	return getJson<MeetingSession>(`/api/v1/meetings/${encodeURIComponent(sessionId)}`);
 }

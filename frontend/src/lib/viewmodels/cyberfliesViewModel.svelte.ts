@@ -29,12 +29,19 @@ import {
 	chat as chatAll,
 	chatInChannel,
 	chatInRecording,
+	joinMeeting as joinMeetingApi,
+	listMeetingSessions,
+	getMeetingSession,
 	isTerminalStatus,
+	isTerminalMeetingStatus,
 	CyberfliesApiError,
 	type RecordingResponse,
 	type ChannelResponse,
 	type SummarySchema,
-	type ChatMessage
+	type ChatMessage,
+	type MeetingSession,
+	type MeetingPlatform,
+	type JoinMeetingRequest
 } from '$lib/api/cyberfliesApi';
 
 /**
@@ -79,8 +86,16 @@ export interface CyberfliesViewModel {
 	readonly channelRecap: SummarySchema | null;
 	readonly recapLoading: boolean;
 
+	/** Bot tab: meeting-capture sessions. */
+	readonly meetingSessions: MeetingSession[];
+	readonly sessionsLoading: boolean;
+	readonly sendingBot: boolean;
+	readonly botError: string | null;
+
 	refreshRecordings(): Promise<void>;
 	refreshChannels(): Promise<void>;
+	refreshMeetingSessions(): Promise<void>;
+	joinMeeting(req: JoinMeetingRequest): Promise<void>;
 	selectRecording(id: string | null): void;
 	uploadAudio(file: File): Promise<void>;
 	/** Stream the original audio/video through the API and save it. */
@@ -132,6 +147,12 @@ export function createCyberfliesVM(
 	let busy = $state<boolean>(false);
 	let notice = $state<string | null>(null);
 
+	// Meeting-capture bot sessions.
+	let meetingSessions = $state<MeetingSession[]>([]);
+	let sessionsLoading = $state<boolean>(false);
+	let sendingBot = $state<boolean>(false);
+	let botError = $state<string | null>(null);
+
 	// Channels tab: the currently-expanded channel and its lazily-loaded
 	// contents / recap.
 	let expandedChannelId = $state<string | null>(null);
@@ -160,7 +181,46 @@ export function createCyberfliesVM(
 		}
 	}
 
+	function upsertMeetingSession(session: MeetingSession): void {
+		const idx = meetingSessions.findIndex((s) => s.id === session.id);
+		if (idx === -1) {
+			meetingSessions = [session, ...meetingSessions];
+		} else {
+			meetingSessions = meetingSessions.map((s) => (s.id === session.id ? session : s));
+		}
+	}
+
 	const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+	const meetingPolling = new Set<string>();
+	async function pollMeetingUntilTerminal(id: string): Promise<void> {
+		if (meetingPolling.has(id)) return;
+		meetingPolling.add(id);
+		try {
+			for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
+				if (destroyed) return;
+				await sleep(pollIntervalMs);
+				if (destroyed) return;
+				try {
+					const session = await getMeetingSession(id);
+					upsertMeetingSession(session);
+					if (isTerminalMeetingStatus(session.status)) {
+						// Once the bot's capture is ingested, the produced
+						// recording shows up in the meetings list — refresh so
+						// "View recording" resolves.
+						if (session.status.toLowerCase() === 'completed' && session.recording_id) {
+							void refreshRecordings();
+						}
+						return;
+					}
+				} catch (err) {
+					botError = toMessage(err);
+				}
+			}
+		} finally {
+			meetingPolling.delete(id);
+		}
+	}
 
 	async function pollUntilTerminal(id: string): Promise<void> {
 		if (polling.has(id)) return;
@@ -210,6 +270,47 @@ export function createCyberfliesVM(
 			// Channels are optional context for the chat scope selector;
 			// don't clobber the recordings error banner over it.
 			chatError = toMessage(err);
+		}
+	}
+
+	async function refreshMeetingSessions(): Promise<void> {
+		sessionsLoading = true;
+		try {
+			const res = await listMeetingSessions();
+			meetingSessions = res.items;
+			botError = null;
+			// Resume polling any bot still in flight after a reload.
+			for (const s of res.items) {
+				if (!isTerminalMeetingStatus(s.status)) void pollMeetingUntilTerminal(s.id);
+			}
+		} catch (err) {
+			botError = toMessage(err);
+		} finally {
+			sessionsLoading = false;
+		}
+	}
+
+	async function joinMeeting(req: JoinMeetingRequest): Promise<void> {
+		if (sendingBot) return;
+		if (!req.meeting_url.trim()) {
+			botError = 'A meeting URL is required.';
+			return;
+		}
+		sendingBot = true;
+		try {
+			const session = await joinMeetingApi({
+				platform: req.platform,
+				meeting_url: req.meeting_url.trim(),
+				bot_display_name: req.bot_display_name?.trim() || undefined,
+				consent_message: req.consent_message?.trim() || undefined
+			});
+			upsertMeetingSession(session);
+			botError = null;
+			if (!isTerminalMeetingStatus(session.status)) void pollMeetingUntilTerminal(session.id);
+		} catch (err) {
+			botError = toMessage(err);
+		} finally {
+			sendingBot = false;
 		}
 	}
 
@@ -454,8 +555,22 @@ export function createCyberfliesVM(
 		get recapLoading() {
 			return recapLoading;
 		},
+		get meetingSessions() {
+			return meetingSessions;
+		},
+		get sessionsLoading() {
+			return sessionsLoading;
+		},
+		get sendingBot() {
+			return sendingBot;
+		},
+		get botError() {
+			return botError;
+		},
 		refreshRecordings,
 		refreshChannels,
+		refreshMeetingSessions,
+		joinMeeting,
 		selectRecording: (id) => {
 			selectedId = id;
 		},
@@ -478,6 +593,7 @@ export function createCyberfliesVM(
 		destroy: () => {
 			destroyed = true;
 			polling.clear();
+			meetingPolling.clear();
 		}
 	};
 }
