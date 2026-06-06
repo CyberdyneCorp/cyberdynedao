@@ -274,23 +274,34 @@ describe('agentViewModel', () => {
 		expect(spy).not.toHaveBeenCalled();
 	});
 
-	it('send creates a session on first call and persists bubbles', async () => {
+	// Mock streamMessage to emit optional deltas then a final `done` message.
+	function mockStream(message: Partial<agentApi.AgentMessage> = {}, deltas: string[] = []) {
+		return vi
+			.spyOn(agentApi, 'streamMessage')
+			.mockImplementation(async (_sid, _content, handlers) => {
+				for (const d of deltas) handlers.onDelta(d);
+				handlers.onDone({
+					id: 'm',
+					sessionId: 's',
+					role: 'assistant',
+					content: deltas.join('') || 'ok',
+					toolCalls: [],
+					toolCallId: null,
+					tokensIn: 0,
+					tokensOut: 0,
+					model: null,
+					createdAt: '',
+					...message
+				});
+			});
+	}
+
+	it('send creates a session on first call and streams + persists bubbles', async () => {
 		vi.spyOn(agentApi, 'startSession').mockResolvedValue({
 			sessionId: 's-new',
 			createdAt: '2026-05-26T09:00:00Z'
 		});
-		vi.spyOn(agentApi, 'sendMessage').mockResolvedValue({
-			id: 'm-r',
-			sessionId: 's-new',
-			role: 'assistant',
-			content: 'pong',
-			toolCalls: [],
-			toolCallId: null,
-			tokensIn: 1,
-			tokensOut: 1,
-			model: 'gpt-4o-mini',
-			createdAt: '2026-05-26T09:00:01Z'
-		});
+		mockStream({ id: 'm-r', content: 'pong', model: 'gpt-4o-mini' }, ['po', 'ng']);
 		const vm = createAgentVM();
 		vm.setInput('ping');
 		await vm.send();
@@ -307,12 +318,35 @@ describe('agentViewModel', () => {
 		expect(stored.bubbles).toHaveLength(2);
 	});
 
+	it('shows a tool-status line during the turn, cleared once tokens arrive', async () => {
+		vi.spyOn(agentApi, 'startSession').mockResolvedValue({ sessionId: 's', createdAt: '' });
+		let captured: agentApi.StreamHandlers | null = null;
+		vi.spyOn(agentApi, 'streamMessage').mockImplementation(async (_s, _c, handlers) => {
+			captured = handlers;
+			handlers.onStatus('python_exec');
+		});
+		const vm = createAgentVM();
+		vm.setInput('plot it');
+		const inflight = vm.send();
+		await new Promise((r) => setTimeout(r, 0));
+		expect(vm.bubbles[1].status).toBe('running python_exec…');
+		// First token clears the status; done finalizes.
+		captured!.onDelta('Here');
+		expect(vm.bubbles[1].status).toBe('');
+		captured!.onDone({
+			id: 'm', sessionId: 's', role: 'assistant', content: 'Here you go',
+			toolCalls: [], toolCallId: null, tokensIn: 0, tokensOut: 0, model: null, createdAt: ''
+		});
+		await inflight;
+		expect(vm.bubbles[1].content).toBe('Here you go');
+	});
+
 	it('send surfaces 401 with a "Sign in required" prefix', async () => {
 		vi.spyOn(agentApi, 'startSession').mockResolvedValue({
 			sessionId: 's',
 			createdAt: ''
 		});
-		vi.spyOn(agentApi, 'sendMessage').mockRejectedValue(
+		vi.spyOn(agentApi, 'streamMessage').mockRejectedValue(
 			new agentApi.AgentApiError(401, 'authentication required')
 		);
 		const vm = createAgentVM();
@@ -323,23 +357,23 @@ describe('agentViewModel', () => {
 		expect(vm.error).toMatch(/Sign in required/);
 	});
 
+	it('surfaces an in-band stream error event', async () => {
+		vi.spyOn(agentApi, 'startSession').mockResolvedValue({ sessionId: 's', createdAt: '' });
+		vi.spyOn(agentApi, 'streamMessage').mockImplementation(async (_s, _c, handlers) => {
+			handlers.onError('provider exploded');
+		});
+		const vm = createAgentVM();
+		vm.setInput('hi');
+		await vm.send();
+		expect(vm.bubbles[vm.bubbles.length - 1].error).toMatch(/provider exploded/);
+	});
+
 	it('resetSession clears bubbles + storage and starts a fresh session', async () => {
 		const startSpy = vi
 			.spyOn(agentApi, 'startSession')
 			.mockResolvedValueOnce({ sessionId: 's-1', createdAt: '' })
 			.mockResolvedValueOnce({ sessionId: 's-2', createdAt: '' });
-		vi.spyOn(agentApi, 'sendMessage').mockResolvedValue({
-			id: 'm',
-			sessionId: 's-1',
-			role: 'assistant',
-			content: 'ok',
-			toolCalls: [],
-			toolCallId: null,
-			tokensIn: 0,
-			tokensOut: 0,
-			model: null,
-			createdAt: ''
-		});
+		mockStream();
 		const vm = createAgentVM();
 		vm.setInput('q1');
 		await vm.send();
@@ -353,39 +387,28 @@ describe('agentViewModel', () => {
 	});
 
 	it('refuses to start a second send while one is in flight', async () => {
-		let resolveSend!: (v: agentApi.AgentMessage) => void;
+		let resolveSend!: () => void;
 		vi.spyOn(agentApi, 'startSession').mockResolvedValue({
 			sessionId: 's',
 			createdAt: ''
 		});
-		const sendSpy = vi.spyOn(agentApi, 'sendMessage').mockImplementation(
-			() => new Promise((r) => (resolveSend = r))
-		);
+		const sendSpy = vi
+			.spyOn(agentApi, 'streamMessage')
+			.mockImplementation(() => new Promise((r) => (resolveSend = () => r())));
 		const vm = createAgentVM();
 		vm.setInput('first');
 		const inflight = vm.send();
 		expect(vm.running).toBe(true);
 		// Let the first send's ``await ensureSession()`` flush so
-		// sendMessage actually fires and resolveSend gets assigned.
+		// streamMessage actually fires and resolveSend gets assigned.
 		await new Promise((r) => setTimeout(r, 0));
 		expect(sendSpy).toHaveBeenCalledTimes(1);
 		vm.setInput('second');
 		await vm.send();
-		// The running-guard short-circuited; sendMessage still called once.
+		// The running-guard short-circuited; streamMessage still called once.
 		expect(sendSpy).toHaveBeenCalledTimes(1);
 		expect(vm.bubbles.length).toBe(2);
-		resolveSend({
-			id: 'm',
-			sessionId: 's',
-			role: 'assistant',
-			content: 'ok',
-			toolCalls: [],
-			toolCallId: null,
-			tokensIn: 0,
-			tokensOut: 0,
-			model: null,
-			createdAt: ''
-		});
+		resolveSend();
 		await inflight;
 		expect(vm.running).toBe(false);
 	});
@@ -417,18 +440,22 @@ describe('agentViewModel', () => {
 			sessionId: 's-att',
 			createdAt: '2026-06-06T09:00:00Z'
 		});
-		const sendSpy = vi.spyOn(agentApi, 'sendMessage').mockResolvedValue({
-			id: 'm', sessionId: 's-att', role: 'assistant', content: 'done',
-			toolCalls: [], toolCallId: null, tokensIn: 0, tokensOut: 0, model: null,
-			createdAt: '2026-06-06T09:00:01Z'
-		});
+		const sendSpy = vi
+			.spyOn(agentApi, 'streamMessage')
+			.mockImplementation(async (_s, _c, handlers) => {
+				handlers.onDone({
+					id: 'm', sessionId: 's-att', role: 'assistant', content: 'done',
+					toolCalls: [], toolCallId: null, tokensIn: 0, tokensOut: 0, model: null,
+					createdAt: '2026-06-06T09:00:01Z'
+				});
+			});
 		const vm = createAgentVM();
 		await vm.attachFile(new File(['x'], 'data.csv'));
 		vm.setInput('analyze this');
 		await vm.send();
-		// sendMessage(sessionId, content, {interpreterSessionId, filenames})
+		// streamMessage(sessionId, content, handlers, {interpreterSessionId, filenames})
 		expect(sendSpy.mock.calls[0][1]).toBe('analyze this');
-		expect(sendSpy.mock.calls[0][2]).toEqual({
+		expect(sendSpy.mock.calls[0][3]).toEqual({
 			interpreterSessionId: 'isid-9',
 			filenames: ['data.csv']
 		});
@@ -446,11 +473,15 @@ describe('agentViewModel', () => {
 			sessionId: 's-x',
 			createdAt: '2026-06-06T09:00:00Z'
 		});
-		const sendSpy = vi.spyOn(agentApi, 'sendMessage').mockResolvedValue({
-			id: 'm', sessionId: 's-x', role: 'assistant', content: 'ok',
-			toolCalls: [], toolCallId: null, tokensIn: 0, tokensOut: 0, model: null,
-			createdAt: '2026-06-06T09:00:01Z'
-		});
+		const sendSpy = vi
+			.spyOn(agentApi, 'streamMessage')
+			.mockImplementation(async (_s, _c, handlers) => {
+				handlers.onDone({
+					id: 'm', sessionId: 's-x', role: 'assistant', content: 'ok',
+					toolCalls: [], toolCallId: null, tokensIn: 0, tokensOut: 0, model: null,
+					createdAt: '2026-06-06T09:00:01Z'
+				});
+			});
 		const vm = createAgentVM();
 		await vm.attachFile(new File(['x'], 'report.txt'));
 		await vm.send();

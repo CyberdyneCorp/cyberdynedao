@@ -9,6 +9,8 @@ from cyberdyne_backend.application.ai_chat.use_cases import (
     GetChatHistory,
     RunChatTurn,
     StartChatSession,
+    StreamChatTurn,
+    StreamEvent,
 )
 
 __all__ = [
@@ -16,6 +18,8 @@ __all__ = [
     "GetChatHistory",
     "RunChatTurn",
     "StartChatSession",
+    "StreamChatTurn",
+    "StreamEvent",
     "ToolContext",
     "ToolDispatcher",
 ]

@@ -15,8 +15,8 @@
 import {
 	AgentApiError,
 	getHistory,
-	sendMessage,
 	startSession,
+	streamMessage,
 	type AgentMessage,
 	type AgentToolCall
 } from '$lib/api/agentApi';
@@ -69,6 +69,9 @@ export interface AgentBubble {
 	createdAt: string;
 	pending: boolean;
 	error: string | null;
+	/** Transient streaming status (e.g. "running python_exec…"); cleared once
+	 *  the answer starts or the turn finishes. Not meaningful after a reload. */
+	status: string;
 }
 
 interface Persisted {
@@ -134,7 +137,8 @@ function toBubble(m: AgentMessage): AgentBubble {
 		model: m.model,
 		createdAt: m.createdAt,
 		pending: false,
-		error: null
+		error: null,
+		status: ''
 	};
 }
 
@@ -392,7 +396,8 @@ export function createAgentVM(): AgentViewModel {
 			model: null,
 			createdAt: nowIso(),
 			pending: false,
-			error: null
+			error: null,
+			status: ''
 		};
 		const assistantBubble: AgentBubble = {
 			id: localId('local-assistant'),
@@ -404,16 +409,43 @@ export function createAgentVM(): AgentViewModel {
 			model: null,
 			createdAt: nowIso(),
 			pending: true,
-			error: null
+			error: null,
+			status: ''
 		};
 		bubbles = [...bubbles, userBubble, assistantBubble];
 		persist();
 
 		try {
 			const sid = await ensureSession();
-			const reply = await sendMessage(
+			let acc = '';
+			let streamError: string | null = null;
+			await streamMessage(
 				sid,
 				messageText,
+				{
+					onStatus: (tool) => {
+						patchBubble(assistantBubble.id, { status: `running ${tool}…` });
+					},
+					onDelta: (text) => {
+						acc += text;
+						// First token means tool rounds are done — clear the status.
+						patchBubble(assistantBubble.id, { content: acc, status: '' });
+					},
+					onDone: (reply) => {
+						patchBubble(assistantBubble.id, {
+							id: reply.id,
+							content: reply.content || acc || '(no response)',
+							toolCalls: reply.toolCalls ?? [],
+							model: reply.model,
+							createdAt: reply.createdAt,
+							pending: false,
+							status: ''
+						});
+					},
+					onError: (detail) => {
+						streamError = detail;
+					}
+				},
 				turnInterpreterSession && turnAttachments.length > 0
 					? {
 							interpreterSessionId: turnInterpreterSession,
@@ -421,21 +453,10 @@ export function createAgentVM(): AgentViewModel {
 						}
 					: undefined
 			);
-			patchBubble(assistantBubble.id, {
-				id: reply.id,
-				content: reply.content || '(no response)',
-				toolCalls: reply.toolCalls ?? [],
-				model: reply.model,
-				createdAt: reply.createdAt,
-				pending: false
-			});
-			// The send response is only the FINAL assistant message — and
-			// on a tool-using turn that message has empty tool_calls (the
-			// calls live on an earlier intermediate message). So we can't
-			// tell from the reply whether a figure was produced. Re-read
-			// the full history so any matlab figures attach to their
-			// bubble. The text is already shown via the patch above, so
-			// this just enriches; failure is non-fatal.
+			if (streamError) throw new AgentApiError(0, streamError);
+			// The streamed text is already shown. Re-read history so figures /
+			// downloadable files produced by tool calls attach to their bubble.
+			// Non-fatal enrichment — keep the streamed bubbles on failure.
 			try {
 				const remote = await getHistory(sid);
 				bubbles = bubblesFromMessages(remote.messages);

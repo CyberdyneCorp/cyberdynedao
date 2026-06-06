@@ -13,6 +13,7 @@ from cyberdyne_backend.application.ai_chat import (
     GetChatHistory,
     RunChatTurn,
     StartChatSession,
+    StreamChatTurn,
     ToolContext,
     ToolDispatcher,
 )
@@ -70,6 +71,16 @@ class _ScriptedLLM:
         if not self._replies:
             return LLMResponse(content="(no more scripted replies)")
         return self._replies.pop(0)
+
+    async def stream(self, *, messages, tools, system_prompt):
+        from cyberdyne_backend.domain.ai_chat import LLMStreamChunk
+
+        self.calls += 1
+        self.last_system_prompt = system_prompt
+        reply = self._replies.pop(0) if self._replies else LLMResponse(content="(no more replies)")
+        if reply.content:
+            yield LLMStreamChunk(content_delta=reply.content)
+        yield LLMStreamChunk(response=reply)
 
 
 class _FakeContentRepo:
@@ -764,6 +775,84 @@ class TestRunChatTurn:
             session_id=session.id, user_content="hello"
         )
         assert "Attached files" not in llm.last_system_prompt
+
+
+class TestStreamChatTurn:
+    async def test_streams_content_deltas_then_done(self) -> None:
+        repo = _FakeChatRepo()
+        session = await StartChatSession(repo=repo).execute()
+        llm = _ScriptedLLM([LLMResponse(content="Hello world", model="m")])
+        uc = StreamChatTurn(repo=repo, llm=llm, dispatcher=ToolDispatcher(_build_ctx()))
+        events = [ev async for ev in uc.execute(session_id=session.id, user_content="hi")]
+        kinds = [e.kind for e in events]
+        assert "delta" in kinds
+        assert kinds[-1] == "done"
+        assert "".join(e.text for e in events if e.kind == "delta") == "Hello world"
+        assert events[-1].message is not None
+        assert events[-1].message.content == "Hello world"
+
+    async def test_tool_round_emits_status_then_final(self) -> None:
+        repo = _FakeChatRepo()
+        session = await StartChatSession(repo=repo).execute()
+        llm = _ScriptedLLM(
+            [
+                LLMResponse(
+                    content="",
+                    tool_calls=(ToolCall(id="c1", name="list_projects", arguments_json="{}"),),
+                ),
+                LLMResponse(content="We build CyberSTAC."),
+            ]
+        )
+        uc = StreamChatTurn(repo=repo, llm=llm, dispatcher=ToolDispatcher(_build_ctx()))
+        events = [ev async for ev in uc.execute(session_id=session.id, user_content="what?")]
+        status = [e for e in events if e.kind == "status"]
+        assert status and status[0].text == "list_projects"
+        assert events[-1].kind == "done"
+        assert events[-1].message is not None
+        assert events[-1].message.content == "We build CyberSTAC."
+        # Persisted: user, assistant(tool_call), tool(result), assistant(final).
+        roles = [m.role for m in repo.messages]
+        assert roles == [
+            ChatRole.USER,
+            ChatRole.ASSISTANT,
+            ChatRole.TOOL,
+            ChatRole.ASSISTANT,
+        ]
+
+    async def test_stream_threads_interpreter_session_and_attachments(self) -> None:
+        repo = _FakeChatRepo()
+        session = await StartChatSession(repo=repo).execute()
+        python = _FakePython()
+        llm = _ScriptedLLM(
+            [
+                LLMResponse(
+                    content="",
+                    tool_calls=(
+                        ToolCall(
+                            id="c1",
+                            name="python_exec",
+                            arguments_json=json.dumps({"code": "open('f.csv')"}),
+                        ),
+                    ),
+                ),
+                LLMResponse(content="done"),
+            ]
+        )
+        uc = StreamChatTurn(
+            repo=repo, llm=llm, dispatcher=ToolDispatcher(_build_ctx(python=python, bearer="t"))
+        )
+        _ = [
+            ev
+            async for ev in uc.execute(
+                session_id=session.id,
+                user_content="analyze",
+                interpreter_session_id="up-1",
+                attachments=("f.csv",),
+            )
+        ]
+        assert python.created == 0
+        assert python.calls[0]["session_id"] == "up-1"
+        assert "f.csv" in llm.last_system_prompt
 
 
 # ── ToolDispatcher unit ──────────────────────────────────────────────

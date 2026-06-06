@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
+from typing import Literal
 from uuid import UUID
 
 from cyberdyne_backend.application.ai_chat.tools import CYBERDYNE_TOOLS, ToolDispatcher
@@ -12,6 +14,7 @@ from cyberdyne_backend.domain.ai_chat import (
     ChatMessage,
     ChatRepository,
     ChatSession,
+    LLMResponse,
     new_assistant_message,
     new_session,
     new_tool_message,
@@ -278,3 +281,93 @@ class RunChatTurn:
         # Hit the cap — return the last assistant turn we wrote.
         transcript = await self.repo.list_messages(session_id)
         return transcript[-1]
+
+
+@dataclass(frozen=True, slots=True)
+class StreamEvent:
+    """One server-sent event from a streamed turn.
+
+    - ``status`` — a tool round started; ``text`` is the tool name.
+    - ``delta``  — a chunk of the final answer; ``text`` is the token(s).
+    - ``done``   — the turn finished; ``message`` is the final assistant message.
+    - ``error``  — the turn failed; ``text`` is a human-readable reason.
+    """
+
+    kind: Literal["status", "delta", "done", "error"]
+    text: str = ""
+    message: ChatMessage | None = None
+
+
+@dataclass(slots=True)
+class StreamChatTurn:
+    """Streaming twin of RunChatTurn: same persist + tool-call loop, but it
+    yields events as it goes — tool-round status, final-answer token deltas,
+    then a terminal ``done`` (or ``error``). The non-streaming RunChatTurn is
+    kept as a fallback; this shares the same dispatcher/tools/prompt."""
+
+    repo: ChatRepository
+    llm: ChatLLMPort
+    dispatcher: ToolDispatcher
+    system_prompt: str = SYSTEM_PROMPT
+    user: UserProfile | None = None
+    max_tool_rounds: int = MAX_TOOL_ROUNDS
+
+    async def execute(
+        self,
+        *,
+        session_id: UUID,
+        user_content: str,
+        interpreter_session_id: str | None = None,
+        attachments: tuple[str, ...] = (),
+    ) -> AsyncIterator[StreamEvent]:
+        await self.repo.get_session(session_id)  # raises ChatSessionNotFoundError
+        await self.repo.append_message(
+            new_user_message(session_id=session_id, content=user_content)
+        )
+
+        if interpreter_session_id:
+            self.dispatcher.use_python_session(interpreter_session_id)
+        effective_prompt = self.system_prompt + build_user_context_block(self.user)
+        if attachments:
+            effective_prompt += build_attachments_block(attachments)
+
+        for _ in range(self.max_tool_rounds):
+            transcript = await self.repo.list_messages(session_id)
+            content_parts: list[str] = []
+            final: LLMResponse | None = None
+            async for chunk in self.llm.stream(
+                messages=transcript,
+                tools=CYBERDYNE_TOOLS,
+                system_prompt=effective_prompt,
+            ):
+                if chunk.content_delta:
+                    content_parts.append(chunk.content_delta)
+                    yield StreamEvent(kind="delta", text=chunk.content_delta)
+                if chunk.response is not None:
+                    final = chunk.response
+            if final is None:  # stream ended without a terminal chunk
+                final = LLMResponse(content="".join(content_parts))
+
+            assistant_msg = new_assistant_message(
+                session_id=session_id,
+                content=final.content,
+                tool_calls=final.tool_calls,
+                tokens_in=final.tokens_in,
+                tokens_out=final.tokens_out,
+                model=final.model,
+            )
+            await self.repo.append_message(assistant_msg)
+            if not final.tool_calls:
+                yield StreamEvent(kind="done", message=assistant_msg)
+                return
+            for call in final.tool_calls:
+                yield StreamEvent(kind="status", text=call.name)
+                result_text = await self.dispatcher.dispatch(call, chat_session_id=str(session_id))
+                await self.repo.append_message(
+                    new_tool_message(
+                        session_id=session_id, tool_call_id=call.id, content=result_text
+                    )
+                )
+        # Hit the round cap — emit the last assistant message we stored.
+        transcript = await self.repo.list_messages(session_id)
+        yield StreamEvent(kind="done", message=transcript[-1])

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
 from uuid import UUID
@@ -31,6 +32,16 @@ class ToolSchema:
     parameters: dict[str, object] = field(default_factory=dict)
 
 
+@dataclass(frozen=True, slots=True)
+class LLMStreamChunk:
+    """One streamed step. ``content_delta`` is text to append to the visible
+    answer as it's generated; ``response`` is set exactly once, on the final
+    chunk, with the fully-accumulated result (content + tool_calls + usage)."""
+
+    content_delta: str = ""
+    response: LLMResponse | None = None
+
+
 @runtime_checkable
 class ChatLLMPort(Protocol):
     async def complete(
@@ -40,6 +51,19 @@ class ChatLLMPort(Protocol):
         tools: list[ToolSchema],
         system_prompt: str,
     ) -> LLMResponse: ...
+
+    def stream(
+        self,
+        *,
+        messages: list[ChatMessage],
+        tools: list[ToolSchema],
+        system_prompt: str,
+    ) -> AsyncIterator[LLMStreamChunk]:
+        """Stream one inference step. Yields content deltas as they arrive,
+        then a final chunk carrying the complete LLMResponse. Tool-call rounds
+        emit no content deltas (content is empty) — only the final chunk, whose
+        response carries the tool_calls to dispatch."""
+        ...
 
 
 @runtime_checkable

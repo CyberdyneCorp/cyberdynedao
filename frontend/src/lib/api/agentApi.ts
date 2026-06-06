@@ -116,3 +116,79 @@ export function sendMessage(
 export function getHistory(sessionId: string): Promise<AgentHistory> {
 	return getJson<AgentHistory>(`/api/v1/chat/sessions/${encodeURIComponent(sessionId)}`);
 }
+
+/** Callbacks for the streamed turn. `onDone` carries the final persisted
+ *  assistant message; `onError` fires for in-band stream errors. */
+export interface StreamHandlers {
+	onDelta(text: string): void;
+	onStatus(tool: string): void;
+	onDone(message: AgentMessage): void;
+	onError(detail: string): void;
+}
+
+function dispatchSseEvent(evt: Record<string, unknown>, h: StreamHandlers): void {
+	switch (evt.type) {
+		case 'delta':
+			if (typeof evt.text === 'string') h.onDelta(evt.text);
+			break;
+		case 'status':
+			if (typeof evt.tool === 'string') h.onStatus(evt.tool);
+			break;
+		case 'done':
+			if (evt.message) h.onDone(evt.message as AgentMessage);
+			break;
+		case 'error':
+			h.onError(typeof evt.detail === 'string' ? evt.detail : 'stream error');
+			break;
+	}
+}
+
+/**
+ * Stream a turn over Server-Sent Events. Reads the response body manually
+ * (the bearer header rules out EventSource), splits on the SSE `\n\n`
+ * delimiter, and routes each `data:` event to the handlers.
+ */
+export async function streamMessage(
+	sessionId: string,
+	content: string,
+	handlers: StreamHandlers,
+	attachments?: MessageAttachments
+): Promise<void> {
+	if (!API_BASE) throw new AgentApiError(0, 'VITE_BACKEND_API_URL is not configured');
+	const body: Record<string, unknown> = { content };
+	if (attachments && attachments.filenames.length > 0) {
+		body.interpreterSessionId = attachments.interpreterSessionId;
+		body.attachments = attachments.filenames;
+	}
+	const res = await fetch(
+		`${API_BASE}/api/v1/chat/sessions/${encodeURIComponent(sessionId)}/messages/stream`,
+		{
+			method: 'POST',
+			headers: withAuth({ 'content-type': 'application/json', accept: 'text/event-stream' }),
+			body: JSON.stringify(body)
+		}
+	);
+	if (!res.ok || !res.body) throw new AgentApiError(res.status, await readError(res));
+	const reader = res.body.getReader();
+	const decoder = new TextDecoder();
+	let buffer = '';
+	for (;;) {
+		const { value, done } = await reader.read();
+		if (done) break;
+		buffer += decoder.decode(value, { stream: true });
+		let sep: number;
+		while ((sep = buffer.indexOf('\n\n')) !== -1) {
+			const frame = buffer.slice(0, sep);
+			buffer = buffer.slice(sep + 2);
+			const dataLine = frame.split('\n').find((l) => l.startsWith('data:'));
+			if (!dataLine) continue;
+			const json = dataLine.slice('data:'.length).trim();
+			if (!json) continue;
+			try {
+				dispatchSseEvent(JSON.parse(json) as Record<string, unknown>, handlers);
+			} catch {
+				/* ignore a malformed frame */
+			}
+		}
+	}
+}

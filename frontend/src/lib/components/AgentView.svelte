@@ -221,13 +221,16 @@
 						{/if}
 					</header>
 
-					{#if bubble.pending && !bubble.content}
+					{#if bubble.status}
+						<p class="bubble__status">▸ {bubble.status}</p>
+					{/if}
+					{#if bubble.pending && !bubble.content && !bubble.status}
 						<p class="bubble__placeholder">
 							<span class="dot"></span><span class="dot"></span><span class="dot"></span>
 						</p>
 					{:else if bubble.error}
 						<p class="bubble__error">{bubble.error}</p>
-					{:else}
+					{:else if bubble.content}
 						<div class="bubble__content">
 							{#each parseSegments(bubble.content) as seg}
 								{#if seg.kind === 'code'}
@@ -485,6 +488,15 @@
 		font-size: 0.8125rem;
 		line-height: 1.6;
 		color: #4338ca;
+	}
+
+	/* Transient streaming status (e.g. "▸ running python_exec…"). */
+	.bubble__status {
+		margin: 0;
+		font-size: 0.75rem;
+		font-style: italic;
+		color: #6d28d9;
+		opacity: 0.85;
 	}
 
 	/* ---------- Bubble (relies on .agent's --accent vars) ---------- */

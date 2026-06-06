@@ -9,7 +9,9 @@ finishes in one POST today.
 
 from __future__ import annotations
 
+import json
 import logging
+from collections.abc import AsyncIterator
 from typing import cast
 
 import httpx
@@ -19,6 +21,7 @@ from cyberdyne_backend.domain.ai_chat import (
     ChatProviderError,
     ChatRole,
     LLMResponse,
+    LLMStreamChunk,
     ToolCall,
 )
 from cyberdyne_backend.domain.ai_chat.ports import ToolSchema
@@ -88,6 +91,121 @@ class OpenAIChatClient:
                 )
             return _parse_openai_response(response.json(), default_model=self._model)
         raise ChatProviderError(f"openai transport error: {last_exc!r}")
+
+    async def stream(
+        self,
+        *,
+        messages: list[ChatMessage],
+        tools: list[ToolSchema],
+        system_prompt: str,
+    ) -> AsyncIterator[LLMStreamChunk]:
+        wire_messages: list[dict[str, object]] = [{"role": "system", "content": system_prompt}]
+        for m in messages:
+            wire_messages.append(_message_to_openai(m))
+        body: dict[str, object] = {
+            "model": self._model,
+            "messages": wire_messages,
+            "stream": True,
+            # Usage is omitted from streamed responses unless we ask for it.
+            "stream_options": {"include_usage": True},
+        }
+        if tools:
+            body["tools"] = [_tool_to_openai(t) for t in tools]
+
+        acc = _StreamAccumulator(default_model=self._model)
+        try:
+            async with self._http.stream(
+                "POST",
+                f"{self._base_url}/chat/completions",
+                json=body,
+                headers={
+                    "Authorization": f"Bearer {self._api_key}",
+                    "Content-Type": "application/json",
+                },
+                timeout=self._timeout_s,
+            ) as response:
+                if response.status_code >= 400:
+                    text = (await response.aread()).decode("utf-8", "replace")
+                    raise ChatProviderError(f"openai error {response.status_code}: {text[:500]}")
+                async for line in response.aiter_lines():
+                    if not line.startswith("data:"):
+                        continue
+                    data = line[len("data:") :].strip()
+                    if not data or data == "[DONE]":
+                        continue
+                    delta = acc.feed(json.loads(data))
+                    if delta:
+                        yield LLMStreamChunk(content_delta=delta)
+        except httpx.HTTPError as exc:
+            raise ChatProviderError(f"openai transport error: {exc!r}") from exc
+        yield LLMStreamChunk(response=acc.finish())
+
+
+class _StreamAccumulator:
+    """Folds OpenAI streaming chunks into a final LLMResponse. Content arrives
+    as deltas; tool calls arrive fragmented and keyed by ``index`` (the first
+    fragment carries id + name, later ones append argument text)."""
+
+    def __init__(self, *, default_model: str) -> None:
+        self._content: list[str] = []
+        self._tool_calls: dict[int, dict[str, str]] = {}
+        self._model = default_model
+        self._finish_reason = ""
+        self._tokens_in = 0
+        self._tokens_out = 0
+
+    def feed(self, chunk: dict[str, object]) -> str:
+        model = chunk.get("model")
+        if isinstance(model, str) and model:
+            self._model = model
+        usage = chunk.get("usage")
+        if isinstance(usage, dict):
+            self._tokens_in = cast(int, usage.get("prompt_tokens", self._tokens_in))
+            self._tokens_out = cast(int, usage.get("completion_tokens", self._tokens_out))
+        choices = chunk.get("choices")
+        if not isinstance(choices, list) or not choices:
+            return ""
+        choice = cast(dict[str, object], choices[0])
+        finish = choice.get("finish_reason")
+        if isinstance(finish, str) and finish:
+            self._finish_reason = finish
+        delta = cast(dict[str, object], choice.get("delta") or {})
+        for raw in cast(list[dict[str, object]], delta.get("tool_calls") or []):
+            self._feed_tool_call(raw)
+        content = delta.get("content")
+        if isinstance(content, str) and content:
+            self._content.append(content)
+            return content
+        return ""
+
+    def _feed_tool_call(self, raw: dict[str, object]) -> None:
+        index = cast(int, raw.get("index", 0))
+        slot = self._tool_calls.setdefault(index, {"id": "", "name": "", "arguments": ""})
+        if raw.get("id"):
+            slot["id"] = cast(str, raw["id"])
+        fn = cast(dict[str, object], raw.get("function") or {})
+        if fn.get("name"):
+            slot["name"] = cast(str, fn["name"])
+        if fn.get("arguments"):
+            slot["arguments"] += cast(str, fn["arguments"])
+
+    def finish(self) -> LLMResponse:
+        tool_calls = tuple(
+            ToolCall(
+                id=slot["id"],
+                name=slot["name"],
+                arguments_json=slot["arguments"] or "{}",
+            )
+            for _, slot in sorted(self._tool_calls.items())
+        )
+        return LLMResponse(
+            content="".join(self._content),
+            tool_calls=tool_calls,
+            tokens_in=self._tokens_in,
+            tokens_out=self._tokens_out,
+            model=self._model,
+            finish_reason=self._finish_reason,
+        )
 
 
 def _message_to_openai(m: ChatMessage) -> dict[str, object]:
@@ -178,6 +296,19 @@ class StaticChatClient:
         system_prompt: str,
     ) -> LLMResponse:
         return LLMResponse(content=self._reply, model="mock-offline")
+
+    async def stream(
+        self,
+        *,
+        messages: list[ChatMessage],
+        tools: list[ToolSchema],
+        system_prompt: str,
+    ) -> AsyncIterator[LLMStreamChunk]:
+        # Emit the canned reply word-by-word so the offline UI still streams.
+        words = self._reply.split(" ")
+        for i, word in enumerate(words):
+            yield LLMStreamChunk(content_delta=word if i == 0 else f" {word}")
+        yield LLMStreamChunk(response=LLMResponse(content=self._reply, model="mock-offline"))
 
 
 class StubKnowledgeSearch:

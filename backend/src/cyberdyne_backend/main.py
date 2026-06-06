@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from cyberdyne_backend import __version__
 from cyberdyne_backend.adapters.inbound.api.ai_chat.router import (
@@ -21,6 +22,7 @@ from cyberdyne_backend.adapters.inbound.api.ai_chat.router import (
 from cyberdyne_backend.adapters.inbound.api.ai_chat.router import (
     get_run_turn_uc,
     get_start_session_uc,
+    get_stream_turn_uc,
 )
 from cyberdyne_backend.adapters.inbound.api.ai_chat.router import (
     router as chat_router,
@@ -235,6 +237,7 @@ from cyberdyne_backend.application.ai_chat import (
     GetChatHistory,
     RunChatTurn,
     StartChatSession,
+    StreamChatTurn,
     ToolContext,
     ToolDispatcher,
 )
@@ -734,68 +737,87 @@ def create_app() -> FastAPI:
         async with session_scope() as session:
             yield GetChatHistory(repo=SqlAlchemyChatRepository(session))
 
-    async def _run_turn_dep(request: Request) -> AsyncIterator[RunChatTurn]:
+    async def _chat_profile(request: Request) -> UserProfile | None:
         # Best-effort profile enrichment: if the caller is a signed-in
         # user, fetch their /users/me so the agent can personalize and
         # pre-fill leads. Service tokens / anonymous / upstream errors
         # all resolve to None and the turn runs un-personalized.
         principal = getattr(request.state, "principal", None)
-        profile: UserProfile | None = None
         if isinstance(principal, UserPrincipal):
             token = extract_token(request)
             if token:
-                profile = await container.user_profile_port.get_profile(token)
+                return await container.user_profile_port.get_profile(token)
+        return None
+
+    def _chat_tools_ctx(
+        request: Request, session: AsyncSession, profile: UserProfile | None
+    ) -> ToolContext:
+        learning_repo = SqlAlchemyLearningRepository(session)
+        blog_repo = SqlAlchemyBlogRepository(session)
+        course_repo = SqlAlchemyCourseRepository(session)
+        return ToolContext(
+            list_projects=ListProjects(repo=SqlAlchemyContentRepository(session)),
+            list_paths=ListPaths(repo=learning_repo),
+            get_product=GetProduct(repo=SqlAlchemyMarketplaceRepository(session)),
+            learning_repo=learning_repo,
+            knowledge=container.knowledge_search,
+            ask_repo=SqlAlchemyAskRepository(session),
+            captcha=container.captcha_port,
+            ask_notifier=container.email_notifier,
+            user=profile,
+            matlab=container.matlab,
+            python=container.python,
+            cyberflies=container.cyberflies,
+            documents=container.document_renderer,
+            # Forward the user's bearer so the agent's MATLAB / Python /
+            # Cyberflies calls run as (and only see) that user.
+            bearer=extract_token(request),
+            # A-tools: DAO treasury (HTTP-only), blog (read), and
+            # learning actions that run as the signed-in user.
+            dao_overview=GetDaoOverview(
+                reader=container.chain_reader,
+                treasury_address=settings.dao_treasury_address,
+                holders=settings.dao_holders_count,
+            ),
+            list_blog_posts=ListBlogPosts(repo=blog_repo),
+            get_blog_post=GetBlogPost(repo=blog_repo),
+            enroll_in_path=EnrollInPath(repo=learning_repo),
+            get_my_learning=GetMyLearningState(repo=learning_repo),
+            update_progress=UpdateModuleProgress(repo=learning_repo),
+            # New learning surface so the agent can guide + recommend.
+            list_courses=ListCourses(repo=course_repo),
+            get_course=GetCourse(repo=course_repo),
+            get_my_course_progress=GetMyCourseProgress(
+                courses=course_repo,
+                progress=SqlAlchemyCourseProgressRepository(session),
+            ),
+            get_my_deadlines=GetMyDeadlines(repo=learning_repo),
+            path_gating=GetPathGating(repo=learning_repo),
+            get_quiz=GetQuiz(repo=SqlAlchemyQuizRepository(session)),
+            learner_dashboard=GetLearnerDashboard(repo=SqlAlchemyAnalyticsRepository(session)),
+            user_id=profile.user_id if profile else None,
+        )
+
+    async def _run_turn_dep(request: Request) -> AsyncIterator[RunChatTurn]:
+        profile = await _chat_profile(request)
         async with session_scope() as session:
-            chat_repo = SqlAlchemyChatRepository(session)
-            learning_repo = SqlAlchemyLearningRepository(session)
-            blog_repo = SqlAlchemyBlogRepository(session)
-            course_repo = SqlAlchemyCourseRepository(session)
-            tools_ctx = ToolContext(
-                list_projects=ListProjects(repo=SqlAlchemyContentRepository(session)),
-                list_paths=ListPaths(repo=learning_repo),
-                get_product=GetProduct(repo=SqlAlchemyMarketplaceRepository(session)),
-                learning_repo=learning_repo,
-                knowledge=container.knowledge_search,
-                ask_repo=SqlAlchemyAskRepository(session),
-                captcha=container.captcha_port,
-                ask_notifier=container.email_notifier,
-                user=profile,
-                matlab=container.matlab,
-                python=container.python,
-                cyberflies=container.cyberflies,
-                documents=container.document_renderer,
-                # Forward the user's bearer so the agent's MATLAB / Python /
-                # Cyberflies calls run as (and only see) that user.
-                bearer=extract_token(request),
-                # A-tools: DAO treasury (HTTP-only), blog (read), and
-                # learning actions that run as the signed-in user.
-                dao_overview=GetDaoOverview(
-                    reader=container.chain_reader,
-                    treasury_address=settings.dao_treasury_address,
-                    holders=settings.dao_holders_count,
-                ),
-                list_blog_posts=ListBlogPosts(repo=blog_repo),
-                get_blog_post=GetBlogPost(repo=blog_repo),
-                enroll_in_path=EnrollInPath(repo=learning_repo),
-                get_my_learning=GetMyLearningState(repo=learning_repo),
-                update_progress=UpdateModuleProgress(repo=learning_repo),
-                # New learning surface so the agent can guide + recommend.
-                list_courses=ListCourses(repo=course_repo),
-                get_course=GetCourse(repo=course_repo),
-                get_my_course_progress=GetMyCourseProgress(
-                    courses=course_repo,
-                    progress=SqlAlchemyCourseProgressRepository(session),
-                ),
-                get_my_deadlines=GetMyDeadlines(repo=learning_repo),
-                path_gating=GetPathGating(repo=learning_repo),
-                get_quiz=GetQuiz(repo=SqlAlchemyQuizRepository(session)),
-                learner_dashboard=GetLearnerDashboard(repo=SqlAlchemyAnalyticsRepository(session)),
-                user_id=profile.user_id if profile else None,
-            )
             yield RunChatTurn(
-                repo=chat_repo,
+                repo=SqlAlchemyChatRepository(session),
                 llm=container.chat_llm,
-                dispatcher=ToolDispatcher(tools_ctx),
+                dispatcher=ToolDispatcher(_chat_tools_ctx(request, session, profile)),
+                user=profile,
+            )
+
+    async def _stream_turn_dep(request: Request) -> AsyncIterator[StreamChatTurn]:
+        # Same wiring as _run_turn_dep; the session stays open for the whole
+        # SSE stream because FastAPI defers yield-dependency cleanup until the
+        # StreamingResponse is fully consumed.
+        profile = await _chat_profile(request)
+        async with session_scope() as session:
+            yield StreamChatTurn(
+                repo=SqlAlchemyChatRepository(session),
+                llm=container.chat_llm,
+                dispatcher=ToolDispatcher(_chat_tools_ctx(request, session, profile)),
                 user=profile,
             )
 
@@ -867,6 +889,7 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_start_session_uc] = _start_session_dep
     app.dependency_overrides[get_chat_history_uc] = _chat_history_dep
     app.dependency_overrides[get_run_turn_uc] = _run_turn_dep
+    app.dependency_overrides[get_stream_turn_uc] = _stream_turn_dep
     # Lets require_editor fall back to a /users/me admin-flag check when
     # introspection doesn't surface it. Reuses the container's cached
     # profile client.

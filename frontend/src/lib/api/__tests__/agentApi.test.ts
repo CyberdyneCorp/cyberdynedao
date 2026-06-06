@@ -3,7 +3,9 @@ import {
 	AgentApiError,
 	getHistory,
 	sendMessage,
-	startSession
+	startSession,
+	streamMessage,
+	type AgentMessage
 } from '../agentApi';
 import { clearAuthToken, setAuthToken } from '$lib/auth/authToken';
 
@@ -62,6 +64,65 @@ describe('agentApi', () => {
 		const [url, init] = (globalThis.fetch as unknown as FetchMock).mock.calls[0];
 		expect(String(url)).toMatch(/\/chat\/sessions\/s%2F1\/messages$/);
 		expect(JSON.parse(init.body as string)).toEqual({ content: 'hello' });
+	});
+
+	it('streamMessage parses SSE frames and routes events to handlers', async () => {
+		const doneMsg = {
+			id: 'm-9',
+			sessionId: 's-1',
+			role: 'assistant',
+			content: 'Hi there',
+			toolCalls: [],
+			toolCallId: null,
+			tokensIn: 0,
+			tokensOut: 0,
+			model: 'gpt-4o-mini',
+			createdAt: '2026-06-06T09:00:00Z'
+		};
+		const sse =
+			'data: {"type":"status","tool":"python_exec"}\n\n' +
+			'data: {"type":"delta","text":"Hi "}\n\n' +
+			'data: {"type":"delta","text":"there"}\n\n' +
+			`data: {"type":"done","message":${JSON.stringify(doneMsg)}}\n\n`;
+		(globalThis.fetch as unknown as FetchMock).mockResolvedValueOnce(
+			new Response(sse, { status: 200, headers: { 'content-type': 'text/event-stream' } })
+		);
+		const statuses: string[] = [];
+		const deltas: string[] = [];
+		let done: AgentMessage | null = null;
+		await streamMessage('s-1', 'hi', {
+			onStatus: (t) => statuses.push(t),
+			onDelta: (t) => deltas.push(t),
+			onDone: (m) => (done = m),
+			onError: () => {}
+		});
+		expect(statuses).toEqual(['python_exec']);
+		expect(deltas).toEqual(['Hi ', 'there']);
+		expect(done).not.toBeNull();
+		expect(done!.content).toBe('Hi there');
+		const [url, init] = (globalThis.fetch as unknown as FetchMock).mock.calls[0];
+		expect(String(url)).toMatch(/\/chat\/sessions\/s-1\/messages\/stream$/);
+		expect(init.method).toBe('POST');
+	});
+
+	it('streamMessage forwards attachments in the body', async () => {
+		(globalThis.fetch as unknown as FetchMock).mockResolvedValueOnce(
+			new Response('data: {"type":"error","detail":"x"}\n\n', { status: 200 })
+		);
+		const errors: string[] = [];
+		await streamMessage(
+			's-1',
+			'analyze',
+			{ onStatus: () => {}, onDelta: () => {}, onDone: () => {}, onError: (d) => errors.push(d) },
+			{ interpreterSessionId: 'isid-1', filenames: ['a.csv'] }
+		);
+		expect(errors).toEqual(['x']);
+		const [, init] = (globalThis.fetch as unknown as FetchMock).mock.calls[0];
+		expect(JSON.parse(init.body as string)).toEqual({
+			content: 'analyze',
+			interpreterSessionId: 'isid-1',
+			attachments: ['a.csv']
+		});
 	});
 
 	it('getHistory returns the message list', async () => {
