@@ -424,10 +424,12 @@ describe('agentViewModel', () => {
 		const vm = createAgentVM();
 		await vm.attachFile(new File(['name,score\n'], 'scores.csv', { type: 'text/csv' }));
 		expect(createSpy).toHaveBeenCalledOnce();
-		// uploadFile(file, filename, sessionId)
+		// uploadFile(blob, filename, sessionId) — non-PDF uploads as-is.
 		expect(uploadSpy.mock.calls[0][1]).toBe('scores.csv');
 		expect(uploadSpy.mock.calls[0][2]).toBe('isid-1');
-		expect(vm.attachments).toEqual([{ name: 'scores.csv', sizeBytes: 35 }]);
+		expect(vm.attachments).toEqual([
+			{ name: 'scores.csv', displayName: 'scores.csv', sizeBytes: 35 }
+		]);
 	});
 
 	it('send forwards staged attachments + interpreter session, then clears them', async () => {

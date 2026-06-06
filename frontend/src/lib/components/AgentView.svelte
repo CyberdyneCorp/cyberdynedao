@@ -11,7 +11,7 @@
 	import { parseSegments } from '$lib/utils/chatSegments';
 	import MermaidDiagram from './MermaidDiagram.svelte';
 	import KatexMath from './KatexMath.svelte';
-	import MathText from './MathText.svelte';
+	import Markdown from './Markdown.svelte';
 
 	const vm = createAgentVM();
 
@@ -22,6 +22,8 @@
 	let expandedTools = $state<Set<string>>(new Set());
 	let expandedPlots = $state<Set<string>>(new Set());
 
+	let dragOver = $state<boolean>(false);
+
 	// Upload the picked file(s) into the agent's interpreter workspace, then
 	// reset the input so the same file can be re-picked later.
 	async function onPickFiles(e: Event): Promise<void> {
@@ -29,6 +31,22 @@
 		const files = Array.from(input.files ?? []);
 		for (const f of files) await vm.attachFile(f);
 		input.value = '';
+	}
+
+	function onDragOver(e: DragEvent): void {
+		if (vm.running) return;
+		e.preventDefault();
+		dragOver = true;
+	}
+	function onDragLeave(): void {
+		dragOver = false;
+	}
+	async function onDrop(e: DragEvent): Promise<void> {
+		e.preventDefault();
+		dragOver = false;
+		if (vm.running) return;
+		const files = Array.from(e.dataTransfer?.files ?? []);
+		for (const f of files) await vm.attachFile(f);
 	}
 
 	function humanSize(bytes: number): string {
@@ -243,7 +261,7 @@
 								{:else if seg.kind === 'math'}
 									<KatexMath code={seg.code} display={true} />
 								{:else}
-									<p class="bubble__text"><MathText text={seg.text} /></p>
+									<Markdown source={seg.text} />
 								{/if}
 							{/each}
 						</div>
@@ -328,17 +346,27 @@
 	</div>
 
 	<!-- Input -->
-	<form class="prompt" onsubmit={onSubmit}>
+	<form
+		class="prompt"
+		class:prompt--drop={dragOver}
+		onsubmit={onSubmit}
+		ondragover={onDragOver}
+		ondragleave={onDragLeave}
+		ondrop={onDrop}
+	>
+		{#if dragOver}
+			<div class="prompt__dropzone">⬇ Drop files to attach</div>
+		{/if}
 		{#if vm.attachments.length > 0 || vm.uploading}
 			<div class="attachments">
 				{#each vm.attachments as att (att.name)}
-					<span class="chip" title={att.name}>
-						<span class="chip__name">📎 {att.name}</span>
+					<span class="chip" title={att.displayName}>
+						<span class="chip__name">📎 {att.displayName}</span>
 						{#if att.sizeBytes}<span class="chip__size">{humanSize(att.sizeBytes)}</span>{/if}
 						<button
 							type="button"
 							class="chip__x"
-							aria-label={`Remove ${att.name}`}
+							aria-label={`Remove ${att.displayName}`}
 							onclick={() => vm.removeAttachment(att.name)}
 							disabled={vm.running}>×</button
 						>
@@ -642,12 +670,30 @@
 
 	/* ---------- Prompt ---------- */
 	.prompt {
+		position: relative;
 		padding: 10px 14px 14px;
 		background: #ffffff;
 		border-top: 2px solid #000;
 		display: flex;
 		flex-direction: column;
 		gap: 8px;
+	}
+	.prompt--drop {
+		outline: 2px dashed var(--accent);
+		outline-offset: -4px;
+	}
+	.prompt__dropzone {
+		position: absolute;
+		inset: 4px;
+		z-index: 2;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(124, 58, 237, 0.08);
+		color: var(--accent-dark, #6d28d9);
+		font-size: 0.85rem;
+		font-weight: 700;
+		pointer-events: none;
 	}
 	.prompt__input {
 		width: 100%;

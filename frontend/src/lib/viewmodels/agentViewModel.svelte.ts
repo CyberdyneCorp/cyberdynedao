@@ -21,13 +21,17 @@ import {
 	type AgentToolCall
 } from '$lib/api/agentApi';
 import { createSession as createInterpreterSession, uploadFile } from '$lib/api/interpreterApi';
+import { prepareUpload } from '$lib/utils/fileAttachment';
 
 const STORAGE_KEY = 'cyberdyne.agent.v1';
 
 /** A file the user attached, staged in the interpreter workspace and waiting
  *  to be referenced on the next send. */
 export interface PendingAttachment {
+	/** Workspace filename the agent reads (may be a .txt extracted from a PDF). */
 	name: string;
+	/** Original filename, shown on the chip. */
+	displayName: string;
 	sizeBytes: number;
 }
 
@@ -350,11 +354,14 @@ export function createAgentVM(): AgentViewModel {
 		error = null;
 		try {
 			const isid = await ensureInterpreterSession();
-			const { file: stored } = await uploadFile(file, file.name, isid);
+			// PDFs are converted to extractable text first (the sandbox can't
+			// parse PDFs); everything else uploads as-is.
+			const prepared = await prepareUpload(file);
+			const { file: stored } = await uploadFile(prepared.blob, prepared.uploadName, isid);
 			// Replace a same-named entry so re-uploading updates rather than dupes.
 			attachments = [
-				...attachments.filter((a) => a.name !== stored.name),
-				{ name: stored.name, sizeBytes: stored.size_bytes }
+				...attachments.filter((a) => a.displayName !== prepared.displayName),
+				{ name: stored.name, displayName: prepared.displayName, sizeBytes: stored.size_bytes }
 			];
 		} catch (err) {
 			error = err instanceof Error ? err.message : String(err);
@@ -379,8 +386,10 @@ export function createAgentVM(): AgentViewModel {
 		attachments = [];
 
 		// The backend requires non-empty content; if the user only attached
-		// files, supply a default ask. The bubble shows the attachments too.
-		const fileList = turnAttachments.map((a) => a.name).join(', ');
+		// files, supply a default ask. User-facing text uses the original
+		// filenames; the agent gets the readable workspace names via the
+		// attachments array.
+		const fileList = turnAttachments.map((a) => a.displayName).join(', ');
 		const messageText =
 			text || (fileList ? `Please analyze the attached file(s): ${fileList}.` : text);
 		const displayText =
