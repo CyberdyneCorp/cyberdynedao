@@ -10,6 +10,8 @@
 	import { downloadFile } from '$lib/api/interpreterApi';
 	import { parseSegments } from '$lib/utils/chatSegments';
 	import MermaidDiagram from './MermaidDiagram.svelte';
+	import KatexMath from './KatexMath.svelte';
+	import MathText from './MathText.svelte';
 
 	const vm = createAgentVM();
 
@@ -218,8 +220,10 @@
 									</div>
 								{:else if seg.kind === 'mermaid'}
 									<MermaidDiagram code={seg.code} />
+								{:else if seg.kind === 'math'}
+									<KatexMath code={seg.code} display={true} />
 								{:else}
-									<p class="bubble__text">{seg.text}</p>
+									<p class="bubble__text"><MathText text={seg.text} /></p>
 								{/if}
 							{/each}
 						</div>

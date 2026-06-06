@@ -36,4 +36,33 @@ describe('parseSegments', () => {
 		const segs = parseSegments('```ts\nconst x = 1;\n```');
 		expect(segs[0]).toEqual({ kind: 'code', lang: 'ts', code: 'const x = 1;' });
 	});
+
+	it('carves \\[ … \\] display math out of prose into a math segment', () => {
+		const segs = parseSegments('The sine function:\n\\[\ny = \\sin(x)\n\\]\nis periodic.');
+		expect(segs).toEqual([
+			{ kind: 'text', text: 'The sine function:' },
+			{ kind: 'math', code: 'y = \\sin(x)' },
+			{ kind: 'text', text: 'is periodic.' }
+		]);
+	});
+
+	it('treats $$ … $$ as display math', () => {
+		const segs = parseSegments('Euler: $$e^{i\\pi} + 1 = 0$$ done');
+		expect(segs).toEqual([
+			{ kind: 'text', text: 'Euler:' },
+			{ kind: 'math', code: 'e^{i\\pi} + 1 = 0' },
+			{ kind: 'text', text: 'done' }
+		]);
+	});
+
+	it('leaves single-$ prices as plain text (not math)', () => {
+		const segs = parseSegments('Budget is $5k-15k for the project.');
+		expect(segs).toEqual([{ kind: 'text', text: 'Budget is $5k-15k for the project.' }]);
+	});
+
+	it('does not parse math inside a code fence', () => {
+		const segs = parseSegments('```python\nx = "\\\\[not math\\\\]"\n```');
+		expect(segs).toHaveLength(1);
+		expect(segs[0].kind).toBe('code');
+	});
 });

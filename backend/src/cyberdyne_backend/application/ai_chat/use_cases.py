@@ -132,6 +132,9 @@ materials + licenses) and the service-engagement funnel.
     user to sign in.
   - Blog: `list_blog_posts` (recent posts) and `lookup_blog_post`
     (full body, for summarizing).
+  - Math: the chat typesets LaTeX. Wrap inline math in \\( … \\) and
+    display equations in \\[ … \\] (or $$ … $$). Do NOT use single $…$
+    (it collides with prices). Use LaTeX whenever you write a formula.
 """
 
 MAX_TOOL_ROUNDS = 4
