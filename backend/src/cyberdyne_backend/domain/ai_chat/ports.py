@@ -180,6 +180,24 @@ class MeetingSummary:
     created_at: str
 
 
+@dataclass(frozen=True, slots=True)
+class MeetingDetail:
+    """Full detail for one meeting/recording, for the ``get_meeting`` tool:
+    the AI summary (headline / abstract / key points) plus the transcript
+    text, so the agent can summarize it, extract action items, or draft a
+    follow-up grounded in what was actually said."""
+
+    id: str
+    headline: str
+    abstract: str
+    bullets: tuple[str, ...]
+    transcript: str
+    status: str
+    created_at: str
+    word_count: int = 0
+    duration_seconds: float | None = None
+
+
 @runtime_checkable
 class CyberfliesPort(Protocol):
     """Thin client over the Cyberflies (meetings) backend. The agent calls
@@ -189,6 +207,8 @@ class CyberfliesPort(Protocol):
     async def ask_meetings(self, *, question: str, bearer: str | None) -> str: ...
 
     async def list_meetings(self, *, bearer: str | None) -> tuple[MeetingSummary, ...]: ...
+
+    async def get_meeting(self, *, meeting_id: str, bearer: str | None) -> MeetingDetail | None: ...
 
 
 @runtime_checkable

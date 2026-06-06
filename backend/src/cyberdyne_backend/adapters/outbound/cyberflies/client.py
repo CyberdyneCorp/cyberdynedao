@@ -16,7 +16,7 @@ from typing import Any, cast
 
 import httpx
 
-from cyberdyne_backend.domain.ai_chat import MeetingSummary
+from cyberdyne_backend.domain.ai_chat import MeetingDetail, MeetingSummary
 
 logger = logging.getLogger("cyberdyne_backend.cyberflies")
 
@@ -68,6 +68,39 @@ class CyberfliesClient:
                 )
             )
         return tuple(out)
+
+    async def get_meeting(self, *, meeting_id: str, bearer: str | None) -> MeetingDetail | None:
+        url = f"{self._base_url}/api/v1/recordings/{meeting_id}"
+        response = await self._http.get(url, headers=self._headers(bearer), timeout=self._timeout)
+        if response.status_code == 404:
+            return None
+        if response.status_code >= 400:
+            raise RuntimeError(
+                f"cyberflies /api/v1/recordings/{meeting_id} "
+                f"{response.status_code}: {response.text[:240]}"
+            )
+        return self._to_detail(cast(dict[str, Any], response.json()))
+
+    @staticmethod
+    def _to_detail(body: dict[str, Any]) -> MeetingDetail:
+        summary = body.get("summary")
+        summary = summary if isinstance(summary, dict) else {}
+        transcription = body.get("transcription")
+        transcription = transcription if isinstance(transcription, dict) else {}
+        raw_bullets = summary.get("bullets")
+        bullets = tuple(str(b) for b in raw_bullets) if isinstance(raw_bullets, list) else ()
+        duration = transcription.get("duration_seconds")
+        return MeetingDetail(
+            id=str(body.get("id", "")),
+            headline=str(summary.get("headline") or ""),
+            abstract=str(summary.get("abstract") or ""),
+            bullets=bullets,
+            transcript=str(transcription.get("text") or ""),
+            status=str(body.get("status", "")),
+            created_at=str(body.get("captured_at") or body.get("created_at") or ""),
+            word_count=int(transcription.get("word_count") or 0),
+            duration_seconds=float(duration) if duration is not None else None,
+        )
 
     async def _request(
         self,

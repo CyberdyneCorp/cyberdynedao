@@ -460,11 +460,13 @@ class _FakeDocs:
 
 
 class _FakeCyberflies:
-    """Records ask/list calls; returns canned meeting data."""
+    """Records ask/list/get calls; returns canned meeting data."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, found: bool = True) -> None:
         self.ask_calls: list[dict[str, object]] = []
         self.list_calls = 0
+        self.get_calls: list[dict[str, object]] = []
+        self._found = found
 
     async def ask_meetings(self, *, question, bearer):
         self.ask_calls.append({"question": question, "bearer": bearer})
@@ -478,6 +480,24 @@ class _FakeCyberflies:
             MeetingSummary(
                 id="rec-1", headline="Standup", status="completed", created_at="2026-06-01"
             ),
+        )
+
+    async def get_meeting(self, *, meeting_id, bearer):
+        from cyberdyne_backend.domain.ai_chat import MeetingDetail
+
+        self.get_calls.append({"meeting_id": meeting_id, "bearer": bearer})
+        if not self._found:
+            return None
+        return MeetingDetail(
+            id=meeting_id,
+            headline="Standup",
+            abstract="The team synced on the Q3 budget.",
+            bullets=("Approve budget", "Ship the agent"),
+            transcript="Alice: budget looks good. Bob: I'll ship the agent Friday.",
+            status="completed",
+            created_at="2026-06-01",
+            word_count=12,
+            duration_seconds=320.0,
         )
 
 
@@ -1072,6 +1092,48 @@ class TestToolDispatcher:
         ctx = _build_ctx()  # cyberflies defaults to None
         result = await ToolDispatcher(ctx).dispatch(
             ToolCall(id="x", name="ask_meetings", arguments_json=json.dumps({"question": "hi"}))
+        )
+        assert json.loads(result)["error"] == "cyberflies_unavailable"
+
+    async def test_get_meeting_returns_summary_and_transcript(self) -> None:
+        cyberflies = _FakeCyberflies()
+        ctx = _build_ctx(cyberflies=cyberflies, bearer="tok-g")
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x",
+                name="get_meeting",
+                arguments_json=json.dumps({"meeting_id": "rec-1"}),
+            )
+        )
+        data = json.loads(result)
+        assert data["id"] == "rec-1"
+        assert data["headline"] == "Standup"
+        assert data["bullets"] == ["Approve budget", "Ship the agent"]
+        assert "ship the agent" in data["transcript"].lower()
+        assert data["word_count"] == 12
+        # id + bearer are forwarded to the port.
+        assert cyberflies.get_calls[0] == {"meeting_id": "rec-1", "bearer": "tok-g"}
+
+    async def test_get_meeting_missing_id_rejected(self) -> None:
+        ctx = _build_ctx(cyberflies=_FakeCyberflies())
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(id="x", name="get_meeting", arguments_json=json.dumps({"meeting_id": " "}))
+        )
+        assert json.loads(result)["error"] == "missing_meeting_id"
+
+    async def test_get_meeting_not_found(self) -> None:
+        ctx = _build_ctx(cyberflies=_FakeCyberflies(found=False), bearer="t")
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(id="x", name="get_meeting", arguments_json=json.dumps({"meeting_id": "nope"}))
+        )
+        data = json.loads(result)
+        assert data["error"] == "not_found"
+        assert data["meeting_id"] == "nope"
+
+    async def test_get_meeting_unavailable_when_port_missing(self) -> None:
+        ctx = _build_ctx()  # cyberflies defaults to None
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(id="x", name="get_meeting", arguments_json=json.dumps({"meeting_id": "rec-1"}))
         )
         assert json.loads(result)["error"] == "cyberflies_unavailable"
 

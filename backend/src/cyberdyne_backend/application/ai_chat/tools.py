@@ -366,6 +366,28 @@ CYBERDYNE_TOOLS: list[ToolSchema] = [
         parameters={"type": "object", "properties": {}},
     ),
     ToolSchema(
+        name="get_meeting",
+        description=(
+            "Fetch ONE meeting in full: its AI summary (headline, abstract, key points) AND "
+            "the transcript text. Use this when the user wants to work WITH a specific meeting "
+            "— summarize it, pull out action items / decisions, or draft a follow-up email — "
+            "because you get the actual content to ground your answer. Get the meeting id from "
+            "`list_meetings` first. For a cross-meeting or fuzzy question, prefer `ask_meetings`. "
+            "To make the result downloadable, pass your summary to `create_document`; to hand "
+            "action items to a human, use a lead tool."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "meeting_id": {
+                    "type": "string",
+                    "description": "Recording/meeting id from list_meetings.",
+                }
+            },
+            "required": ["meeting_id"],
+        },
+    ),
+    ToolSchema(
         name="create_document",
         description=(
             "Create a downloadable document for the user and return its filename. Use whenever "
@@ -676,6 +698,8 @@ class ToolDispatcher:
                 return await self._ask_meetings(cast(str, args.get("question", "")))
             if call.name == "list_meetings":
                 return await self._list_meetings()
+            if call.name == "get_meeting":
+                return await self._get_meeting(cast(str, args.get("meeting_id", "")))
             if call.name == "create_document":
                 return await self._create_document(
                     cast(str, args.get("filename", "")),
@@ -927,6 +951,30 @@ class ToolDispatcher:
                 "filename": stored,
                 "format": fmt,
                 "size": len(data),
+            }
+        )
+
+    async def _get_meeting(self, meeting_id: str) -> str:
+        if not meeting_id.strip():
+            return json.dumps({"error": "missing_meeting_id"})
+        if self._ctx.cyberflies is None:
+            return json.dumps({"error": "cyberflies_unavailable"})
+        detail = await self._ctx.cyberflies.get_meeting(
+            meeting_id=meeting_id, bearer=self._ctx.bearer
+        )
+        if detail is None:
+            return json.dumps({"error": "not_found", "meeting_id": meeting_id})
+        return json.dumps(
+            {
+                "id": detail.id,
+                "headline": detail.headline,
+                "abstract": detail.abstract,
+                "bullets": list(detail.bullets),
+                "transcript": detail.transcript,
+                "status": detail.status,
+                "created_at": detail.created_at,
+                "word_count": detail.word_count,
+                "duration_seconds": detail.duration_seconds,
             }
         )
 
