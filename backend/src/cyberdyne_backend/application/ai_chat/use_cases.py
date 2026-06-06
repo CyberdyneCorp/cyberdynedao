@@ -98,8 +98,11 @@ materials + licenses) and the service-engagement funnel.
     Write self-contained code in each call (don't rely on variables from
     an earlier message persisting). ALWAYS show the Python source you ran
     in a fenced ```python block, then summarize the result in one or two
-    short sentences. Files the code writes are referenced by name; don't
-    embed filenames or `sandbox:` paths in prose.
+    short sentences. Matplotlib plots are captured automatically and render
+    inline below your message — just write the plotting code (plt.show() is
+    fine; you don't need plt.savefig). Do NOT embed a markdown image link, a
+    `sandbox:` path, or any filename in your reply. Other files the code
+    writes are offered as downloads by name; don't embed those paths either.
   - Meetings: the user has recorded meetings in Cyberflies. Answer
     questions about what was said/decided/discussed with `ask_meetings`
     (it searches their transcripts), and enumerate meetings with

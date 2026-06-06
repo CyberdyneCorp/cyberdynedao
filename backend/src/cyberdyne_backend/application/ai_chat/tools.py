@@ -93,6 +93,44 @@ def looks_like_plot(source: str) -> bool:
     return bool(_PLOT_VERB.search(source))
 
 
+# matplotlib in the headless sandbox uses the Agg backend, so ``plt.show()``
+# saves nothing — only ``plt.savefig`` produces a file the frontend can
+# render. Rather than rely on the LLM to remember savefig, we auto-capture
+# any open figures for plotting code (mirrors how ``matlab_plot`` captures a
+# figure without the model writing ``saveas``).
+_MATPLOTLIB_HINT = re.compile(
+    r"\b(?:matplotlib|pyplot|pylab|seaborn)\b|\bplt\b|\bsns\b|\.plot\s*\(",
+    re.IGNORECASE,
+)
+
+# Appended to plotting code before execution. Names are NOT underscore-prefixed
+# because RestrictedPython rejects leading-underscore identifiers; ``cyb_`` keeps
+# collision risk with user code low. ``{seq}`` is filled per call so figures from
+# separate python_exec calls in the same turn don't overwrite each other. The
+# whole block is wrapped in try/except so it can never break the user's run.
+_AUTO_CAPTURE_TEMPLATE = """
+
+# --- auto-capture open matplotlib figures so they render inline ---
+try:
+    import matplotlib.pyplot as cyb_plt
+    cyb_fignums = cyb_plt.get_fignums()
+    for cyb_idx in range(len(cyb_fignums)):
+        cyb_plt.figure(cyb_fignums[cyb_idx]).savefig("figure_{seq}_%d.png" % (cyb_idx + 1))
+    cyb_plt.close("all")
+except Exception:
+    pass
+"""
+
+
+def wants_figure_capture(code: str) -> bool:
+    """True when ``code`` looks like matplotlib plotting and doesn't already
+    save figures itself. ``savefig`` present → trust the user's own save and
+    skip auto-capture (avoids duplicate figures)."""
+    if "savefig" in code:
+        return False
+    return bool(_MATPLOTLIB_HINT.search(code))
+
+
 CYBERDYNE_TOOLS: list[ToolSchema] = [
     ToolSchema(
         name="list_projects",
@@ -288,7 +326,9 @@ CYBERDYNE_TOOLS: list[ToolSchema] = [
             "The session is stateful across calls in this conversation — variables and files "
             "persist to the next call. Use for computation, data analysis, generating and "
             "running plots (matplotlib etc.), or any general Python the user asks for. Always "
-            "show the Python source you ran in a fenced ```python block in your reply."
+            "show the Python source you ran in a fenced ```python block in your reply. "
+            "Matplotlib figures are captured automatically and render inline — you do NOT need "
+            "to call plt.savefig, and plt.show() alone is fine."
         ),
         parameters={
             "type": "object",
@@ -589,6 +629,10 @@ class ToolDispatcher:
         # them. (A new dispatcher per turn means no cross-turn state —
         # the agent writes self-contained code, which is fine.)
         self._py_session_id: str | None = None
+        # Per-turn counter so auto-captured figures from separate python_exec
+        # calls get distinct filenames (figure_<seq>_<n>.png) and don't clobber
+        # each other in the shared workspace.
+        self._py_fig_seq = 0
 
     async def dispatch(self, call: ToolCall, *, chat_session_id: str = "") -> str:
         try:
@@ -805,8 +849,15 @@ class ToolDispatcher:
         if self._ctx.python is None:
             return json.dumps({"error": "python_unavailable"})
         session_id = await self._ensure_py_session()
+        # For matplotlib code that doesn't save its own figures, append an
+        # epilogue that captures any open figures — otherwise plt.show() in the
+        # headless sandbox produces no file and the user sees no plot.
+        exec_code = code
+        if wants_figure_capture(code):
+            exec_code = code + _AUTO_CAPTURE_TEMPLATE.format(seq=self._py_fig_seq)
+            self._py_fig_seq += 1
         res = await self._ctx.python.execute(
-            code=code, session_id=session_id, bearer=self._ctx.bearer
+            code=exec_code, session_id=session_id, bearer=self._ctx.bearer
         )
         # Reference produced files by name + session id only — the frontend
         # downloads them through the authed /api/interpreter proxy. Image

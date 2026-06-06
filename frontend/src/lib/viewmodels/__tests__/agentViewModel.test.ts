@@ -106,6 +106,49 @@ describe('agentViewModel', () => {
 		expect(assistant.plots).toHaveLength(1);
 		expect(assistant.plots[0].artifactPath).toBe('plot_abc.png');
 		expect(assistant.plots[0].sessionId).toBe('agent-s-plot');
+		// matlab_* figures download through the MATLAB proxy.
+		expect(assistant.plots[0].source).toBe('matlab');
+	});
+
+	it('attaches a python_exec figure tagged as an interpreter-sourced plot', async () => {
+		// Regression: python figures live in the interpreter workspace and must
+		// be tagged 'interpreter' so the view downloads them via /api/interpreter,
+		// not the MATLAB proxy (which would 404 → "Figure unavailable").
+		sessionStorage.setItem(
+			'cyberdyne.agent.v1',
+			JSON.stringify({ sessionId: 's-py', bubbles: [] })
+		);
+		vi.spyOn(agentApi, 'getHistory').mockResolvedValue({
+			sessionId: 's-py',
+			messages: [
+				{
+					id: 'u1', sessionId: 's-py', role: 'user', content: 'plot a sine in python',
+					toolCalls: [], toolCallId: null, tokensIn: 0, tokensOut: 0, model: null,
+					createdAt: '2026-06-06T09:00:00Z'
+				},
+				{
+					id: 'a1', sessionId: 's-py', role: 'assistant', content: 'Here it is.',
+					toolCalls: [{ id: 'call_1', name: 'python_exec', argumentsJson: '{}' }],
+					toolCallId: null, tokensIn: 0, tokensOut: 0, model: 'gpt-4o-mini',
+					createdAt: '2026-06-06T09:00:01Z'
+				},
+				{
+					id: 't1', sessionId: 's-py', role: 'tool',
+					content: JSON.stringify({ ok: true, has_figure: true, figures: ['figure_0_1.png'], session_id: 'srv-9' }),
+					toolCalls: [], toolCallId: 'call_1', tokensIn: 0, tokensOut: 0, model: null,
+					createdAt: '2026-06-06T09:00:02Z'
+				}
+			]
+		});
+		const vm = createAgentVM();
+		await vm.bootstrap();
+		const assistant = vm.bubbles[1];
+		expect(assistant.plots).toHaveLength(1);
+		expect(assistant.plots[0].artifactPath).toBe('figure_0_1.png');
+		expect(assistant.plots[0].sessionId).toBe('srv-9');
+		expect(assistant.plots[0].source).toBe('interpreter');
+		// The image is rendered inline as a plot, not listed as a download.
+		expect(assistant.artifacts).toHaveLength(0);
 	});
 
 	it('attaches python_exec file artifacts (download links) to the assistant bubble, skipping images', async () => {

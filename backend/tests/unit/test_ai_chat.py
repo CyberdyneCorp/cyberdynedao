@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import uuid
 from datetime import UTC, datetime
+from typing import cast
 
 import pytest
 
@@ -963,6 +964,61 @@ class TestToolDispatcher:
         assert data["has_figure"] is True
         assert data["figures"] == ["plot.png"]
         assert data["artifacts"] == ["plot.png", "data.csv"]
+
+    async def test_python_exec_auto_captures_matplotlib_without_savefig(self) -> None:
+        # Regression: plt.show() in the headless sandbox saves nothing, so the
+        # agent's plotting code must be auto-savefig'd or the user sees no plot.
+        python = _FakePython()
+        ctx = _build_ctx(python=python, bearer="tok")
+        code = "import matplotlib.pyplot as plt\nplt.plot([1, 2, 3])\nplt.show()"
+        await ToolDispatcher(ctx).dispatch(
+            ToolCall(id="x", name="python_exec", arguments_json=json.dumps({"code": code})),
+            chat_session_id="s",
+        )
+        sent = cast(str, python.calls[0]["code"])
+        assert code in sent  # user's code is preserved verbatim
+        assert "savefig" in sent  # capture epilogue appended
+        assert "figure_0_" in sent  # per-call sequence in the filename
+
+    async def test_python_exec_does_not_auto_capture_when_savefig_present(self) -> None:
+        # The agent saved its own figure — don't double-capture it.
+        python = _FakePython()
+        ctx = _build_ctx(python=python, bearer="tok")
+        code = "import matplotlib.pyplot as plt\nplt.plot([1])\nplt.savefig('mine.png')"
+        await ToolDispatcher(ctx).dispatch(
+            ToolCall(id="x", name="python_exec", arguments_json=json.dumps({"code": code})),
+            chat_session_id="s",
+        )
+        assert python.calls[0]["code"] == code  # unchanged
+
+    async def test_python_exec_no_capture_for_non_plotting_code(self) -> None:
+        python = _FakePython()
+        ctx = _build_ctx(python=python, bearer="tok")
+        code = "print(sum(range(10)))"
+        await ToolDispatcher(ctx).dispatch(
+            ToolCall(id="x", name="python_exec", arguments_json=json.dumps({"code": code})),
+            chat_session_id="s",
+        )
+        assert python.calls[0]["code"] == code  # no epilogue for plain code
+
+    async def test_python_exec_capture_sequence_is_unique_per_call(self) -> None:
+        # Two plotting calls in one turn must capture to distinct filenames so
+        # the second figure doesn't overwrite the first.
+        python = _FakePython()
+        dispatcher = ToolDispatcher(_build_ctx(python=python, bearer="tok"))
+        for _ in range(2):
+            await dispatcher.dispatch(
+                ToolCall(
+                    id="x",
+                    name="python_exec",
+                    arguments_json=json.dumps(
+                        {"code": "import matplotlib.pyplot as plt\nplt.plot([1])"}
+                    ),
+                ),
+                chat_session_id="s",
+            )
+        assert "figure_0_" in cast(str, python.calls[0]["code"])
+        assert "figure_1_" in cast(str, python.calls[1]["code"])
 
     async def test_python_exec_empty_code_rejected(self) -> None:
         ctx = _build_ctx(python=_FakePython())

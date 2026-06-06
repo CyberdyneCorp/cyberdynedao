@@ -30,15 +30,19 @@
 	// the shared `parseSegments` util (unit-tested). Mermaid renders as a
 	// diagram; everything else stays XSS-safe Svelte markup (no {@html}).
 
-	// Download each figure once (authed /api/matlab proxy → blob URL) and
-	// memoize the promise so re-renders don't re-fetch. Reuses the same
-	// client + auth path as the MATLAB window.
+	// Download each figure once (→ blob URL) and memoize the promise so
+	// re-renders don't re-fetch. The proxy depends on the figure's source:
+	// matlab_* figures live in the MATLAB workspace (/api/matlab); python_exec
+	// figures live in the interpreter workspace (/api/interpreter).
 	const plotUrlCache = new Map<string, Promise<string>>();
 	function plotUrl(p: AgentPlot): Promise<string> {
-		const key = `${p.sessionId}/${p.artifactPath}`;
+		const key = `${p.source}:${p.sessionId}/${p.artifactPath}`;
 		let pending = plotUrlCache.get(key);
 		if (!pending) {
-			pending = downloadArtifact(p.artifactPath, p.sessionId).then((r) => r.url);
+			pending =
+				p.source === 'interpreter'
+					? downloadFile(p.sessionId, p.artifactPath).then((r) => r.url)
+					: downloadArtifact(p.artifactPath, p.sessionId).then((r) => r.url);
 			plotUrlCache.set(key, pending);
 		}
 		return pending;

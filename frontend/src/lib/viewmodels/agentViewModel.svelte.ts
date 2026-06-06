@@ -24,11 +24,16 @@ import {
 const STORAGE_KEY = 'cyberdyne.agent.v1';
 
 export interface AgentPlot {
-	/** Artifact filename in the MATLAB workspace (e.g. plot_abc.png). */
+	/** Artifact filename in the workspace (e.g. plot_abc.png, figure_0_1.png). */
 	artifactPath: string;
-	/** The agent's MATLAB session (agent-<chatSessionId>) the figure
-	 *  lives in. The view downloads it via the authed /api/matlab proxy. */
+	/** The session the figure lives in. For 'matlab' it's the agent MATLAB
+	 *  session; for 'interpreter' it's the python interpreter session. The view
+	 *  downloads it through the matching authed proxy. */
 	sessionId: string;
+	/** Which backend produced the figure — decides which proxy downloads it.
+	 *  matlab_* tools write to the MATLAB workspace (/api/matlab); python_exec
+	 *  writes to the interpreter workspace (/api/interpreter). */
+	source: 'matlab' | 'interpreter';
 	caption: string;
 }
 
@@ -125,8 +130,9 @@ function toBubble(m: AgentMessage): AgentBubble {
 	};
 }
 
-/** Pull figure references out of a matlab tool-result JSON. */
-function extractPlots(toolResultContent: string): AgentPlot[] {
+/** Pull figure references out of a matlab/python_exec tool-result JSON.
+ *  `source` decides which proxy the view uses to download the image. */
+function extractPlots(toolResultContent: string, source: 'matlab' | 'interpreter'): AgentPlot[] {
 	try {
 		const parsed = JSON.parse(toolResultContent) as {
 			figures?: string[];
@@ -135,10 +141,12 @@ function extractPlots(toolResultContent: string): AgentPlot[] {
 		const figures = parsed.figures ?? [];
 		const sessionId = parsed.session_id ?? '';
 		if (!figures.length || !sessionId) return [];
+		const label = source === 'matlab' ? 'MATLAB figure' : 'Figure';
 		return figures.map((artifactPath, i) => ({
 			artifactPath,
 			sessionId,
-			caption: figures.length > 1 ? `MATLAB figure ${i + 1}` : 'MATLAB figure'
+			source,
+			caption: figures.length > 1 ? `${label} ${i + 1}` : label
 		}));
 	} catch {
 		return [];
@@ -201,7 +209,8 @@ function bubblesFromMessages(messages: AgentMessage[]): AgentBubble[] {
 			for (const tc of m.toolCalls ?? []) {
 				const res = toolResultsById.get(tc.id);
 				if (res) {
-					pendingPlots.push(...extractPlots(res.content));
+					const source = tc.name === 'python_exec' ? 'interpreter' : 'matlab';
+					pendingPlots.push(...extractPlots(res.content, source));
 					pendingArtifacts.push(...extractArtifacts(res.content));
 				}
 			}
