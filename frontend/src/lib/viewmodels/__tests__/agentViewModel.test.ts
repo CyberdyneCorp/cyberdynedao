@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAgentVM } from '../agentViewModel.svelte';
 import * as agentApi from '$lib/api/agentApi';
+import * as interpreterApi from '$lib/api/interpreterApi';
 
 beforeEach(() => {
 	sessionStorage.clear();
@@ -387,5 +388,73 @@ describe('agentViewModel', () => {
 		});
 		await inflight;
 		expect(vm.running).toBe(false);
+	});
+
+	it('attachFile uploads to a new interpreter session and stages a chip', async () => {
+		const createSpy = vi.spyOn(interpreterApi, 'createSession').mockResolvedValue({
+			session_id: 'isid-1'
+		});
+		const uploadSpy = vi.spyOn(interpreterApi, 'uploadFile').mockResolvedValue({
+			session_id: 'isid-1',
+			file: { name: 'scores.csv', size_bytes: 35, modified_at: 1 }
+		});
+		const vm = createAgentVM();
+		await vm.attachFile(new File(['name,score\n'], 'scores.csv', { type: 'text/csv' }));
+		expect(createSpy).toHaveBeenCalledOnce();
+		// uploadFile(file, filename, sessionId)
+		expect(uploadSpy.mock.calls[0][1]).toBe('scores.csv');
+		expect(uploadSpy.mock.calls[0][2]).toBe('isid-1');
+		expect(vm.attachments).toEqual([{ name: 'scores.csv', sizeBytes: 35 }]);
+	});
+
+	it('send forwards staged attachments + interpreter session, then clears them', async () => {
+		vi.spyOn(interpreterApi, 'createSession').mockResolvedValue({ session_id: 'isid-9' });
+		vi.spyOn(interpreterApi, 'uploadFile').mockResolvedValue({
+			session_id: 'isid-9',
+			file: { name: 'data.csv', size_bytes: 10, modified_at: 1 }
+		});
+		vi.spyOn(agentApi, 'startSession').mockResolvedValue({
+			sessionId: 's-att',
+			createdAt: '2026-06-06T09:00:00Z'
+		});
+		const sendSpy = vi.spyOn(agentApi, 'sendMessage').mockResolvedValue({
+			id: 'm', sessionId: 's-att', role: 'assistant', content: 'done',
+			toolCalls: [], toolCallId: null, tokensIn: 0, tokensOut: 0, model: null,
+			createdAt: '2026-06-06T09:00:01Z'
+		});
+		const vm = createAgentVM();
+		await vm.attachFile(new File(['x'], 'data.csv'));
+		vm.setInput('analyze this');
+		await vm.send();
+		// sendMessage(sessionId, content, {interpreterSessionId, filenames})
+		expect(sendSpy.mock.calls[0][1]).toBe('analyze this');
+		expect(sendSpy.mock.calls[0][2]).toEqual({
+			interpreterSessionId: 'isid-9',
+			filenames: ['data.csv']
+		});
+		// Staged attachments are cleared after the turn.
+		expect(vm.attachments).toEqual([]);
+	});
+
+	it('send with only an attachment (no text) supplies a default ask', async () => {
+		vi.spyOn(interpreterApi, 'createSession').mockResolvedValue({ session_id: 'isid-2' });
+		vi.spyOn(interpreterApi, 'uploadFile').mockResolvedValue({
+			session_id: 'isid-2',
+			file: { name: 'report.txt', size_bytes: 4, modified_at: 1 }
+		});
+		vi.spyOn(agentApi, 'startSession').mockResolvedValue({
+			sessionId: 's-x',
+			createdAt: '2026-06-06T09:00:00Z'
+		});
+		const sendSpy = vi.spyOn(agentApi, 'sendMessage').mockResolvedValue({
+			id: 'm', sessionId: 's-x', role: 'assistant', content: 'ok',
+			toolCalls: [], toolCallId: null, tokensIn: 0, tokensOut: 0, model: null,
+			createdAt: '2026-06-06T09:00:01Z'
+		});
+		const vm = createAgentVM();
+		await vm.attachFile(new File(['x'], 'report.txt'));
+		await vm.send();
+		expect(sendSpy.mock.calls[0][1]).toContain('report.txt');
+		expect(vm.bubbles[0].content).toContain('report.txt');
 	});
 });

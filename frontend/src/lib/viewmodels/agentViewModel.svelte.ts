@@ -20,8 +20,16 @@ import {
 	type AgentMessage,
 	type AgentToolCall
 } from '$lib/api/agentApi';
+import { createSession as createInterpreterSession, uploadFile } from '$lib/api/interpreterApi';
 
 const STORAGE_KEY = 'cyberdyne.agent.v1';
+
+/** A file the user attached, staged in the interpreter workspace and waiting
+ *  to be referenced on the next send. */
+export interface PendingAttachment {
+	name: string;
+	sizeBytes: number;
+}
 
 export interface AgentPlot {
 	/** Artifact filename in the workspace (e.g. plot_abc.png, figure_0_1.png). */
@@ -257,9 +265,15 @@ export interface AgentViewModel {
 	readonly running: boolean;
 	readonly error: string | null;
 	readonly bootstrapped: boolean;
+	/** Files staged for the next send (uploaded to the interpreter workspace). */
+	readonly attachments: PendingAttachment[];
+	/** True while a file upload is in flight. */
+	readonly uploading: boolean;
 	bootstrap(): Promise<void>;
 	setInput(value: string): void;
 	send(): Promise<void>;
+	attachFile(file: File): Promise<void>;
+	removeAttachment(name: string): void;
 	resetSession(): Promise<void>;
 	clearError(): void;
 }
@@ -271,6 +285,11 @@ export function createAgentVM(): AgentViewModel {
 	let running = $state<boolean>(false);
 	let error = $state<string | null>(null);
 	let bootstrapped = $state<boolean>(false);
+	// Upload-and-analyze: a per-conversation interpreter session the user's
+	// attached files live in, the staged attachments, and an in-flight flag.
+	let interpreterSessionId = $state<string | null>(null);
+	let attachments = $state<PendingAttachment[]>([]);
+	let uploading = $state<boolean>(false);
 
 	function persist(): void {
 		if (sessionId !== null) {
@@ -314,17 +333,59 @@ export function createAgentVM(): AgentViewModel {
 		}
 	}
 
+	async function ensureInterpreterSession(): Promise<string> {
+		if (interpreterSessionId !== null) return interpreterSessionId;
+		const s = await createInterpreterSession();
+		interpreterSessionId = s.session_id;
+		return s.session_id;
+	}
+
+	async function attachFile(file: File): Promise<void> {
+		if (uploading) return;
+		uploading = true;
+		error = null;
+		try {
+			const isid = await ensureInterpreterSession();
+			const { file: stored } = await uploadFile(file, file.name, isid);
+			// Replace a same-named entry so re-uploading updates rather than dupes.
+			attachments = [
+				...attachments.filter((a) => a.name !== stored.name),
+				{ name: stored.name, sizeBytes: stored.size_bytes }
+			];
+		} catch (err) {
+			error = err instanceof Error ? err.message : String(err);
+		} finally {
+			uploading = false;
+		}
+	}
+
+	function removeAttachment(name: string): void {
+		attachments = attachments.filter((a) => a.name !== name);
+	}
+
 	async function send(): Promise<void> {
 		const text = input.trim();
-		if (!text || running) return;
+		if ((!text && attachments.length === 0) || running) return;
 		running = true;
 		error = null;
 		input = '';
+		// Snapshot + clear the staged attachments for this turn.
+		const turnAttachments = attachments;
+		const turnInterpreterSession = interpreterSessionId;
+		attachments = [];
+
+		// The backend requires non-empty content; if the user only attached
+		// files, supply a default ask. The bubble shows the attachments too.
+		const fileList = turnAttachments.map((a) => a.name).join(', ');
+		const messageText =
+			text || (fileList ? `Please analyze the attached file(s): ${fileList}.` : text);
+		const displayText =
+			text && fileList ? `${text}\n\n📎 ${fileList}` : text || (fileList ? `📎 ${fileList}` : text);
 
 		const userBubble: AgentBubble = {
 			id: localId('local-user'),
 			role: 'user',
-			content: text,
+			content: displayText,
 			toolCalls: [],
 			plots: [],
 			artifacts: [],
@@ -350,7 +411,16 @@ export function createAgentVM(): AgentViewModel {
 
 		try {
 			const sid = await ensureSession();
-			const reply = await sendMessage(sid, text);
+			const reply = await sendMessage(
+				sid,
+				messageText,
+				turnInterpreterSession && turnAttachments.length > 0
+					? {
+							interpreterSessionId: turnInterpreterSession,
+							filenames: turnAttachments.map((a) => a.name)
+						}
+					: undefined
+			);
 			patchBubble(assistantBubble.id, {
 				id: reply.id,
 				content: reply.content || '(no response)',
@@ -395,6 +465,8 @@ export function createAgentVM(): AgentViewModel {
 		bubbles = [];
 		input = '';
 		error = null;
+		interpreterSessionId = null;
+		attachments = [];
 		wipe();
 		// Spawn a fresh session eagerly so the next send is one round-
 		// trip, not two. Failure here is non-fatal — `send()` will
@@ -413,11 +485,15 @@ export function createAgentVM(): AgentViewModel {
 		get running() { return running; },
 		get error() { return error; },
 		get bootstrapped() { return bootstrapped; },
+		get attachments() { return attachments; },
+		get uploading() { return uploading; },
 		bootstrap,
 		setInput: (value) => {
 			input = value;
 		},
 		send,
+		attachFile,
+		removeAttachment,
 		resetSession,
 		clearError: () => {
 			error = null;

@@ -180,6 +180,22 @@ def build_user_context_block(profile: UserProfile | None) -> str:
     return "\n".join(lines)
 
 
+def build_attachments_block(filenames: tuple[str, ...]) -> str:
+    """Per-turn note telling the agent which files the user attached. The
+    files are already in the python_exec workspace (the request carried the
+    interpreter session id), so the agent reads them directly by name."""
+    if not filenames:
+        return ""
+    names = ", ".join(filenames)
+    return (
+        "\n\n# Attached files (already in your python_exec workspace)\n"
+        f"The user attached: {names}. Read them directly by filename with "
+        "python_exec (e.g. open('name.txt') or pd.read_csv('name.csv')) and "
+        "analyze / plot / summarize as asked. Don't ask them to paste the "
+        "contents — you can read the files yourself."
+    )
+
+
 @dataclass(slots=True)
 class StartChatSession:
     repo: ChatRepository
@@ -213,13 +229,26 @@ class RunChatTurn:
     user: UserProfile | None = None
     max_tool_rounds: int = MAX_TOOL_ROUNDS
 
-    async def execute(self, *, session_id: UUID, user_content: str) -> ChatMessage:
+    async def execute(
+        self,
+        *,
+        session_id: UUID,
+        user_content: str,
+        interpreter_session_id: str | None = None,
+        attachments: tuple[str, ...] = (),
+    ) -> ChatMessage:
         # Raises ChatSessionNotFoundError if missing.
         await self.repo.get_session(session_id)
         user_msg = new_user_message(session_id=session_id, content=user_content)
         await self.repo.append_message(user_msg)
 
+        # Upload-and-analyze: run python_exec in the workspace the user
+        # uploaded files to, and tell the agent which files are there.
+        if interpreter_session_id:
+            self.dispatcher.use_python_session(interpreter_session_id)
         effective_prompt = self.system_prompt + build_user_context_block(self.user)
+        if attachments:
+            effective_prompt += build_attachments_block(attachments)
         for _ in range(self.max_tool_rounds):
             transcript = await self.repo.list_messages(session_id)
             response = await self.llm.complete(

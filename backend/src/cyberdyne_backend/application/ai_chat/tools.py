@@ -22,7 +22,7 @@ import re
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import cast
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from cyberdyne_backend.application.analytics import GetLearnerDashboard
 from cyberdyne_backend.application.blog.use_cases import (
@@ -105,9 +105,10 @@ _MATPLOTLIB_HINT = re.compile(
 
 # Appended to plotting code before execution. Names are NOT underscore-prefixed
 # because RestrictedPython rejects leading-underscore identifiers; ``cyb_`` keeps
-# collision risk with user code low. ``{seq}`` is filled per call so figures from
-# separate python_exec calls in the same turn don't overwrite each other. The
-# whole block is wrapped in try/except so it can never break the user's run.
+# collision risk with user code low. ``{tag}`` is a per-call unique tag
+# (dispatcher token + call seq) so figures never overwrite each other — within a
+# turn OR across turns when the session is reused. The whole block is wrapped in
+# try/except so it can never break the user's run.
 _AUTO_CAPTURE_TEMPLATE = """
 
 # --- auto-capture open matplotlib figures so they render inline ---
@@ -115,7 +116,7 @@ try:
     import matplotlib.pyplot as cyb_plt
     cyb_fignums = cyb_plt.get_fignums()
     for cyb_idx in range(len(cyb_fignums)):
-        cyb_plt.figure(cyb_fignums[cyb_idx]).savefig("figure_{seq}_%d.png" % (cyb_idx + 1))
+        cyb_plt.figure(cyb_fignums[cyb_idx]).savefig("figure_{tag}_%d.png" % (cyb_idx + 1))
     cyb_plt.close("all")
 except Exception:
     pass
@@ -646,15 +647,26 @@ class ToolDispatcher:
 
     def __init__(self, ctx: ToolContext) -> None:
         self._ctx = ctx
-        # Lazily-created interpreter session, reused across python_exec
-        # calls within a single turn so variables/files persist between
-        # them. (A new dispatcher per turn means no cross-turn state —
-        # the agent writes self-contained code, which is fine.)
+        # Interpreter session for python_exec. Normally lazily created and
+        # reused across calls within a single turn so variables/files persist.
+        # It can also be pre-seeded via ``use_python_session`` when the user
+        # uploaded files to a specific workspace (upload-and-analyze), in
+        # which case that session may be shared across turns of a chat.
         self._py_session_id: str | None = None
-        # Per-turn counter so auto-captured figures from separate python_exec
-        # calls get distinct filenames (figure_<seq>_<n>.png) and don't clobber
-        # each other in the shared workspace.
+        # Per-call counter so auto-captured figures from separate python_exec
+        # calls get distinct filenames. Combined with a per-dispatcher token so
+        # figures don't collide ACROSS turns when the session is reused
+        # (figure_<token>_<seq>_<n>.png).
         self._py_fig_seq = 0
+        self._fig_token = uuid4().hex[:8]
+
+    def use_python_session(self, session_id: str) -> None:
+        """Pre-seed the interpreter session (e.g. one the user uploaded files
+        to) so python_exec runs in that workspace instead of creating a new
+        one. Called once per turn, before dispatching, when the chat request
+        carries an interpreter session id."""
+        if session_id:
+            self._py_session_id = session_id
 
     async def dispatch(self, call: ToolCall, *, chat_session_id: str = "") -> str:
         try:
@@ -878,7 +890,8 @@ class ToolDispatcher:
         # headless sandbox produces no file and the user sees no plot.
         exec_code = code
         if wants_figure_capture(code):
-            exec_code = code + _AUTO_CAPTURE_TEMPLATE.format(seq=self._py_fig_seq)
+            tag = f"{self._fig_token}_{self._py_fig_seq}"
+            exec_code = code + _AUTO_CAPTURE_TEMPLATE.format(tag=tag)
             self._py_fig_seq += 1
         res = await self._ctx.python.execute(
             code=exec_code, session_id=session_id, bearer=self._ctx.bearer

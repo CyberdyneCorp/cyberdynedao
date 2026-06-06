@@ -99,6 +99,8 @@ async def send_message(
         message = await use_case.execute(
             session_id=session_id,
             user_content=body.content,
+            interpreter_session_id=body.interpreter_session_id,
+            attachments=tuple(body.attachments),
         )
     except ChatSessionNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

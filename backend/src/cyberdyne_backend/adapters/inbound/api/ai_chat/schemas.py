@@ -30,6 +30,11 @@ class SendMessageRequest(_CamelModel):
     )
 
     content: str = Field(min_length=1, max_length=4000)
+    # Upload-and-analyze: the interpreter session the user uploaded files to
+    # (so python_exec runs in that workspace) and the attached filenames (so
+    # the agent knows what to read). Optional — absent for plain chat.
+    interpreter_session_id: str | None = Field(default=None, max_length=128)
+    attachments: list[str] = Field(default_factory=list, max_length=20)
 
 
 class ToolCallView(_CamelModel):

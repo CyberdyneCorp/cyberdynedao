@@ -18,8 +18,25 @@
 	let scrollEl = $state<HTMLElement | null>(null);
 	let bottomSentinelEl = $state<HTMLElement | null>(null);
 	let textareaEl = $state<HTMLTextAreaElement | null>(null);
+	let fileInputEl = $state<HTMLInputElement | null>(null);
 	let expandedTools = $state<Set<string>>(new Set());
 	let expandedPlots = $state<Set<string>>(new Set());
+
+	// Upload the picked file(s) into the agent's interpreter workspace, then
+	// reset the input so the same file can be re-picked later.
+	async function onPickFiles(e: Event): Promise<void> {
+		const input = e.currentTarget as HTMLInputElement;
+		const files = Array.from(input.files ?? []);
+		for (const f of files) await vm.attachFile(f);
+		input.value = '';
+	}
+
+	function humanSize(bytes: number): string {
+		if (!bytes) return '';
+		if (bytes < 1024) return `${bytes} B`;
+		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+		return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+	}
 
 	function togglePlot(key: string): void {
 		const next = new Set(expandedPlots);
@@ -309,6 +326,24 @@
 
 	<!-- Input -->
 	<form class="prompt" onsubmit={onSubmit}>
+		{#if vm.attachments.length > 0 || vm.uploading}
+			<div class="attachments">
+				{#each vm.attachments as att (att.name)}
+					<span class="chip" title={att.name}>
+						<span class="chip__name">📎 {att.name}</span>
+						{#if att.sizeBytes}<span class="chip__size">{humanSize(att.sizeBytes)}</span>{/if}
+						<button
+							type="button"
+							class="chip__x"
+							aria-label={`Remove ${att.name}`}
+							onclick={() => vm.removeAttachment(att.name)}
+							disabled={vm.running}>×</button
+						>
+					</span>
+				{/each}
+				{#if vm.uploading}<span class="chip chip--loading">⏳ uploading…</span>{/if}
+			</div>
+		{/if}
 		<textarea
 			bind:this={textareaEl}
 			class="prompt__input"
@@ -320,11 +355,35 @@
 			placeholder={vm.running ? 'Agent is thinking…' : 'Ask the Cyberdyne agent…'}
 			disabled={vm.running}
 		></textarea>
+		<input
+			bind:this={fileInputEl}
+			type="file"
+			class="prompt__file"
+			multiple
+			onchange={onPickFiles}
+			hidden
+		/>
 		<div class="prompt__row">
-			<PixelButton variant="ghost" size="sm" onclick={() => vm.resetSession()} disabled={vm.running}>
-				New conversation
-			</PixelButton>
-			<PixelButton type="submit" variant="solid" size="md" disabled={vm.running || !vm.input.trim()}>
+			<div class="prompt__left">
+				<PixelButton variant="ghost" size="sm" onclick={() => vm.resetSession()} disabled={vm.running}>
+					New conversation
+				</PixelButton>
+				<button
+					type="button"
+					class="attach-btn"
+					onclick={() => fileInputEl?.click()}
+					disabled={vm.running || vm.uploading}
+					title="Attach a file for the agent to analyze (CSV, data, text, image…)"
+				>
+					📎 Attach
+				</button>
+			</div>
+			<PixelButton
+				type="submit"
+				variant="solid"
+				size="md"
+				disabled={vm.running || vm.uploading || (!vm.input.trim() && vm.attachments.length === 0)}
+			>
 				{vm.running ? 'Sending…' : '→ Send'}
 			</PixelButton>
 		</div>
@@ -599,6 +658,59 @@
 		gap: 8px;
 		flex-wrap: wrap;
 	}
+	.prompt__left {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		flex-wrap: wrap;
+	}
+	.attach-btn {
+		background: transparent;
+		border: 2px solid var(--accent);
+		color: var(--accent-dark, #6d28d9);
+		font-family: inherit;
+		font-size: 0.75rem;
+		padding: 4px 10px;
+		cursor: pointer;
+	}
+	.attach-btn:hover:not(:disabled) { background: rgba(124, 58, 237, 0.1); }
+	.attach-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+	/* ---------- Attachment chips ---------- */
+	.attachments {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+	}
+	.chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		background: #f3e8ff;
+		border: 1px solid var(--accent);
+		color: #4c1d95;
+		font-size: 0.72rem;
+		padding: 2px 6px 2px 8px;
+		max-width: 100%;
+	}
+	.chip__name {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		max-width: 220px;
+	}
+	.chip__size { color: #7c3aed; opacity: 0.8; }
+	.chip__x {
+		background: transparent;
+		border: none;
+		color: #6d28d9;
+		font-size: 0.95rem;
+		line-height: 1;
+		cursor: pointer;
+		padding: 0 2px;
+	}
+	.chip__x:hover:not(:disabled) { color: #b91c1c; }
+	.chip--loading { background: #f5f3ff; color: #6d28d9; }
 
 	/* ---------- Inline MATLAB figures ---------- */
 	.plots {

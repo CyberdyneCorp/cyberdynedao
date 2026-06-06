@@ -90,10 +90,26 @@ export function startSession(): Promise<AgentSessionStart> {
 	return postJson<AgentSessionStart>('/api/v1/chat/sessions', {});
 }
 
-export function sendMessage(sessionId: string, content: string): Promise<AgentMessage> {
+/** Files the user attached this turn: the interpreter session they were
+ *  uploaded to, plus their filenames (so the agent knows what to read). */
+export interface MessageAttachments {
+	interpreterSessionId: string;
+	filenames: string[];
+}
+
+export function sendMessage(
+	sessionId: string,
+	content: string,
+	attachments?: MessageAttachments
+): Promise<AgentMessage> {
+	const body: Record<string, unknown> = { content };
+	if (attachments && attachments.filenames.length > 0) {
+		body.interpreterSessionId = attachments.interpreterSessionId;
+		body.attachments = attachments.filenames;
+	}
 	return postJson<AgentMessage>(
 		`/api/v1/chat/sessions/${encodeURIComponent(sessionId)}/messages`,
-		{ content }
+		body
 	);
 }
 

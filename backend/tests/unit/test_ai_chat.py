@@ -62,9 +62,11 @@ class _ScriptedLLM:
     def __init__(self, replies: list[LLMResponse]) -> None:
         self._replies = list(replies)
         self.calls = 0
+        self.last_system_prompt = ""
 
     async def complete(self, *, messages, tools, system_prompt):
         self.calls += 1
+        self.last_system_prompt = system_prompt
         if not self._replies:
             return LLMResponse(content="(no more scripted replies)")
         return self._replies.pop(0)
@@ -719,6 +721,50 @@ class TestRunChatTurn:
         # 3 rounds + the final loop-cap fallback.
         assert llm.calls == 3
 
+    async def test_interpreter_session_and_attachments_thread_to_dispatch(self) -> None:
+        # Upload-and-analyze end to end: the request's interpreter session is
+        # used by python_exec, and the attachment filenames reach the agent via
+        # the system prompt.
+        repo = _FakeChatRepo()
+        session = await StartChatSession(repo=repo).execute()
+        python = _FakePython()
+        llm = _ScriptedLLM(
+            [
+                LLMResponse(
+                    content="",
+                    tool_calls=(
+                        ToolCall(
+                            id="call_1",
+                            name="python_exec",
+                            arguments_json=json.dumps({"code": "open('scores.csv')"}),
+                        ),
+                    ),
+                ),
+                LLMResponse(content="The average score is 83."),
+            ]
+        )
+        dispatcher = ToolDispatcher(_build_ctx(python=python, bearer="tok"))
+        await RunChatTurn(repo=repo, llm=llm, dispatcher=dispatcher).execute(
+            session_id=session.id,
+            user_content="analyze my file",
+            interpreter_session_id="uploaded-7",
+            attachments=("scores.csv",),
+        )
+        # python_exec ran in the uploaded workspace, no new session created.
+        assert python.created == 0
+        assert python.calls[0]["session_id"] == "uploaded-7"
+        # The agent was told what file is attached.
+        assert "scores.csv" in llm.last_system_prompt
+
+    async def test_no_attachment_block_without_attachments(self) -> None:
+        repo = _FakeChatRepo()
+        session = await StartChatSession(repo=repo).execute()
+        llm = _ScriptedLLM([LLMResponse(content="hi")])
+        await RunChatTurn(repo=repo, llm=llm, dispatcher=ToolDispatcher(_build_ctx())).execute(
+            session_id=session.id, user_content="hello"
+        )
+        assert "Attached files" not in llm.last_system_prompt
+
 
 # ── ToolDispatcher unit ──────────────────────────────────────────────
 
@@ -998,7 +1044,8 @@ class TestToolDispatcher:
         sent = cast(str, python.calls[0]["code"])
         assert code in sent  # user's code is preserved verbatim
         assert "savefig" in sent  # capture epilogue appended
-        assert "figure_0_" in sent  # per-call sequence in the filename
+        assert 'savefig("figure_' in sent  # captured to a figure_<tag> file
+        assert "_0_" in sent  # per-call sequence in the filename
 
     async def test_python_exec_does_not_auto_capture_when_savefig_present(self) -> None:
         # The agent saved its own figure — don't double-capture it.
@@ -1037,8 +1084,21 @@ class TestToolDispatcher:
                 ),
                 chat_session_id="s",
             )
-        assert "figure_0_" in cast(str, python.calls[0]["code"])
-        assert "figure_1_" in cast(str, python.calls[1]["code"])
+        assert "_0_" in cast(str, python.calls[0]["code"])
+        assert "_1_" in cast(str, python.calls[1]["code"])
+
+    async def test_use_python_session_seeds_uploaded_workspace(self) -> None:
+        # Upload-and-analyze: a pre-seeded session is reused (no new session
+        # created) so python_exec runs where the user's files live.
+        python = _FakePython()
+        dispatcher = ToolDispatcher(_build_ctx(python=python, bearer="tok"))
+        dispatcher.use_python_session("uploaded-session-1")
+        await dispatcher.dispatch(
+            ToolCall(id="x", name="python_exec", arguments_json=json.dumps({"code": "1"})),
+            chat_session_id="s",
+        )
+        assert python.created == 0  # did NOT create a new session
+        assert python.calls[0]["session_id"] == "uploaded-session-1"
 
     async def test_python_exec_empty_code_rejected(self) -> None:
         ctx = _build_ctx(python=_FakePython())
