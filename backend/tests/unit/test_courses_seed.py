@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 16
+        assert len(summary) == 18
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -134,6 +134,8 @@ class TestSeedCourses:
             "python-course",
             "blockchain-basics",
             "blockchain-beyond-basics",
+            "c-basics",
+            "c-intermediate",
             "cpp-basics",
             "cpp-intermediate",
             "swift-basics",
@@ -156,8 +158,8 @@ class TestSeedCourses:
     def test_language_courses_are_basics_plus_intermediate_with_quiz(self) -> None:
         from cyberdyne_backend.application.courses.seed_languages import LANGUAGE_COURSES
 
-        # Six languages, each with a basics + intermediate course.
-        assert len(LANGUAGE_COURSES) == 12
+        # Seven languages, each with a basics + intermediate course.
+        assert len(LANGUAGE_COURSES) == 14
         for course in LANGUAGE_COURSES:
             # Language lessons are text (no interpreter for these) + a quiz.
             kinds = {le.lesson_type for le in course.lessons}

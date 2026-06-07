@@ -21,6 +21,287 @@ def _quiz() -> SeedLesson:
     return SeedLesson(title="Check your knowledge", lesson_type="quiz", duration="3 min")
 
 
+# ── C ────────────────────────────────────────────────────────────────────────
+
+_C_BASICS = SeedCourse(
+    slug="c-basics",
+    title="C — Basics",
+    description=(
+        "The language behind operating systems, embedded devices and every other "
+        "language's runtime: compiling a program, types and operators, and control "
+        "flow with functions. Small, close to the machine, everywhere."
+    ),
+    level="Beginner",
+    lessons=(
+        _t(
+            "Getting started with C",
+            "8 min",
+            """\
+# Getting started with C
+
+C is a small, compiled, statically-typed language that maps closely to how the
+machine actually works — which is why Unix, Linux, and most language runtimes
+are written in it.
+
+```c
+#include <stdio.h>
+
+int main(void) {
+    printf("Hello, Cyberdyne!\\n");
+    return 0;   // 0 means success
+}
+```
+
+Compile, then run:
+
+```bash
+gcc -Wall -std=c17 hello.c -o hello && ./hello
+```
+
+- `#include <stdio.h>` pulls in declarations for `printf`.
+- `main` is the entry point and returns an `int`.
+- `\\n` is a newline; statements end with `;`.
+- `-Wall` turns on warnings — always keep it on.
+
+**Next:** types, variables, and operators.
+""",
+        ),
+        _t(
+            "Types, variables & operators",
+            "9 min",
+            """\
+# Types, variables & operators
+
+Every variable has a fixed type and must be declared before use.
+
+```c
+int    count = 42;       // whole number
+double ratio = 3.14;     // floating point
+char   grade = 'A';      // a single character (a small integer)
+const int MAX = 100;     // can't be reassigned
+```
+
+## printf format specifiers
+
+`printf` needs a specifier per value — mismatches are a classic bug:
+
+```c
+printf("%d items, %.2f ratio, grade %c\\n", count, ratio, grade);
+//      %d int    %f double      %c char     (%s for strings, %p pointer)
+```
+
+## Operators
+
+```c
+a + b   a - b   a * b   a / b   a % b      // arithmetic (% is remainder)
+==  !=  <  >  <=  >=                        // comparison
+&&  ||  !                                   // logical
+++a   a--                                   // increment / decrement
+```
+
+Watch out: integer division truncates — `7 / 2` is `3`, not `3.5`. Use a
+`double` to get `3.5`.
+
+**Next:** control flow and functions.
+""",
+        ),
+        _t(
+            "Control flow & functions",
+            "9 min",
+            """\
+# Control flow & functions
+
+```c
+if (score >= 90) grade = 'A';
+else if (score >= 80) grade = 'B';
+else grade = 'C';
+
+for (int i = 0; i < 5; i++) printf("%d ", i);
+
+while (x < 10) x++;
+do { read(); } while (more());     // body runs at least once
+
+switch (grade) {
+    case 'A': puts("great"); break;   // break stops fall-through
+    default:  puts("ok");
+}
+```
+
+## Functions
+
+Declare the prototype before use (often in a header), then define it:
+
+```c
+int add(int a, int b);          // declaration (prototype)
+
+int add(int a, int b) {         // definition
+    return a + b;
+}
+```
+
+C passes arguments **by value** — the function gets a copy, so changes to a
+parameter don't affect the caller's variable. (To change the caller's data you
+pass a pointer — next course.)
+
+**Next:** test what you've learned.
+""",
+        ),
+        _quiz(),
+    ),
+)
+
+_C_INTERMEDIATE = SeedCourse(
+    slug="c-intermediate",
+    title="C — Intermediate",
+    description=(
+        "The heart of C: pointers, arrays and strings, manual memory management "
+        "with malloc/free, and structs plus the preprocessor and multi-file builds."
+    ),
+    level="Intermediate",
+    lessons=(
+        _t(
+            "Pointers",
+            "11 min",
+            """\
+# Pointers
+
+A **pointer** holds the memory address of another variable. They're the
+defining feature of C — and the most common source of bugs.
+
+```c
+int x = 42;
+int *p = &x;     // & = "address of"; p points at x
+printf("%d\\n", *p);   // * = "dereference" -> 42
+*p = 99;               // writes through the pointer; x is now 99
+```
+
+## Why pointers matter: pass-by-reference
+
+C copies arguments, so to let a function modify the caller's variable you pass
+its address:
+
+```c
+void increment(int *n) { (*n)++; }
+
+int count = 5;
+increment(&count);     // count is now 6
+```
+
+## NULL and dangling pointers
+
+```c
+int *p = NULL;         // points at nothing — check before use
+if (p != NULL) *p = 1;
+```
+
+Dereferencing `NULL`, or a pointer to freed/out-of-scope memory ("dangling"),
+is undefined behaviour — typically a crash. Pointer discipline is C discipline.
+
+**Next:** arrays, strings, and dynamic memory.
+""",
+        ),
+        _t(
+            "Arrays, strings & dynamic memory",
+            "11 min",
+            """\
+# Arrays, strings & dynamic memory
+
+An array is a contiguous block; its name decays to a pointer to the first
+element.
+
+```c
+int nums[3] = {1, 2, 3};
+nums[0] = 10;                 // no bounds checking — your job!
+```
+
+## Strings are char arrays ending in '\\0'
+
+```c
+char name[] = "Ada";          // 4 bytes: 'A' 'd' 'a' '\\0'
+printf("%zu\\n", strlen(name)); // 3   (#include <string.h>)
+```
+
+The terminating `\\0` is how C knows where a string ends — forget it and
+functions read past the end.
+
+## Dynamic memory: malloc / free
+
+For memory whose size or lifetime isn't known at compile time, allocate on the
+**heap** and free it yourself:
+
+```c
+#include <stdlib.h>
+int *arr = malloc(n * sizeof(int));   // allocate
+if (arr == NULL) { /* out of memory */ }
+// ... use arr ...
+free(arr);                            // release — or you leak
+arr = NULL;                           // avoid a dangling pointer
+```
+
+Every `malloc` needs exactly one `free`. Leaks and double-frees are classic C
+bugs — tools like Valgrind and AddressSanitizer catch them.
+
+**Next:** structs and the build process.
+""",
+        ),
+        _t(
+            "Structs & the build process",
+            "10 min",
+            """\
+# Structs & the build process
+
+A **struct** groups related fields into one type:
+
+```c
+struct Point { int x; int y; };
+
+struct Point p = {1, 2};
+p.x = 10;                      // dot access
+struct Point *pp = &p;
+pp->y = 20;                    // -> when you have a pointer
+
+typedef struct { int x, y; } Point;   // typedef drops the `struct` keyword
+Point q = {3, 4};
+```
+
+## The preprocessor
+
+Runs before compilation — textual substitution:
+
+```c
+#include <stdio.h>     // paste in a header
+#define PI 3.14159     // constant macro
+#define SQ(a) ((a)*(a)) // function-like macro (parenthesise args!)
+```
+
+## Multi-file builds
+
+Split declarations into a **header** (`.h`) and code into a `.c`:
+
+```c
+// mathutil.h
+int add(int a, int b);
+
+// mathutil.c
+#include "mathutil.h"
+int add(int a, int b) { return a + b; }
+```
+
+```bash
+gcc -c mathutil.c        # compile -> mathutil.o
+gcc main.o mathutil.o -o app   # link objects into a binary
+```
+
+Compile each `.c` to an object file, then **link** them — this separate
+compilation is how large C projects build.
+
+**Next:** test what you've learned.
+""",
+        ),
+        _quiz(),
+    ),
+)
+
 # ── C++ (modern) ───────────────────────────────────────────────────────────
 
 _CPP_BASICS = SeedCourse(
@@ -1521,6 +1802,8 @@ Together, utility types + generics let you describe almost any shape precisely.
 
 
 LANGUAGE_COURSES: tuple[SeedCourse, ...] = (
+    _C_BASICS,
+    _C_INTERMEDIATE,
     _CPP_BASICS,
     _CPP_INTERMEDIATE,
     _SWIFT_BASICS,
