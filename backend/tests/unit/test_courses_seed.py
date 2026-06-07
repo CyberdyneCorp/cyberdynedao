@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 22
+        assert len(summary) == 28
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -152,6 +152,12 @@ class TestSeedCourses:
             "sql-intermediate",
             "mongodb",
             "postgresql",
+            "docker-basics",
+            "docker-intermediate",
+            "docker-advanced",
+            "kubernetes-basics",
+            "kubernetes-intermediate",
+            "kubernetes-advanced",
         }
         for course in ACADEMY_COURSES:
             assert course.lessons  # non-empty
@@ -180,6 +186,22 @@ class TestSeedCourses:
             kinds = {le.lesson_type for le in course.lessons}
             assert kinds <= {"text", "quiz"}
             assert any(le.lesson_type == "quiz" for le in course.lessons)
+
+    def test_devops_courses_cover_docker_and_k8s_three_levels(self) -> None:
+        from cyberdyne_backend.application.courses.seed_devops import DEVOPS_COURSES
+
+        slugs = {c.slug for c in DEVOPS_COURSES}
+        assert slugs == {
+            "docker-basics",
+            "docker-intermediate",
+            "docker-advanced",
+            "kubernetes-basics",
+            "kubernetes-intermediate",
+            "kubernetes-advanced",
+        }
+        levels = {c.slug: c.level for c in DEVOPS_COURSES}
+        assert levels["docker-advanced"] == "Advanced"
+        assert levels["kubernetes-advanced"] == "Advanced"
 
     def test_blockchain_course_covers_idea_pow_and_bitcoin(self) -> None:
         bc = next(c for c in ACADEMY_COURSES if c.slug == "blockchain-basics")

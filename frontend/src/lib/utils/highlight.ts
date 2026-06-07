@@ -21,6 +21,8 @@ import rust from 'highlight.js/lib/languages/rust';
 import swift from 'highlight.js/lib/languages/swift';
 import sql from 'highlight.js/lib/languages/sql';
 import json from 'highlight.js/lib/languages/json';
+import yaml from 'highlight.js/lib/languages/yaml';
+import dockerfile from 'highlight.js/lib/languages/dockerfile';
 
 hljs.registerLanguage('matlab', matlab);
 hljs.registerLanguage('python', python);
@@ -35,6 +37,8 @@ hljs.registerLanguage('rust', rust);
 hljs.registerLanguage('swift', swift);
 hljs.registerLanguage('sql', sql);
 hljs.registerLanguage('json', json);
+hljs.registerLanguage('yaml', yaml);
+hljs.registerLanguage('dockerfile', dockerfile);
 
 // Map the names authors actually type (fence labels / lesson language) to
 // the registered grammar.
@@ -48,6 +52,8 @@ hljs.registerAliases(['sh', 'shell', 'zsh'], { languageName: 'bash' });
 hljs.registerAliases(['golang'], { languageName: 'go' });
 hljs.registerAliases(['rs'], { languageName: 'rust' });
 hljs.registerAliases(['postgres', 'postgresql', 'psql', 'mysql'], { languageName: 'sql' });
+hljs.registerAliases(['yml'], { languageName: 'yaml' });
+hljs.registerAliases(['docker'], { languageName: 'dockerfile' });
 
 function escapeHtml(s: string): string {
 	return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
