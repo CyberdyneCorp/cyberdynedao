@@ -302,7 +302,8 @@ export function createCyberfliesVM(
 				platform: req.platform,
 				meeting_url: req.meeting_url.trim(),
 				bot_display_name: req.bot_display_name?.trim() || undefined,
-				consent_message: req.consent_message?.trim() || undefined
+				consent_message: req.consent_message?.trim() || undefined,
+				capture_video: req.capture_video || undefined
 			});
 			upsertMeetingSession(session);
 			botError = null;

@@ -16,12 +16,26 @@ import { withAuth } from '$lib/auth/authToken';
 
 const CYBERFLIES_BASE = '/api/cyberflies';
 
+/** One timestamped chunk of a transcript (seconds). */
+export interface TranscriptSegmentSchema {
+	start: number;
+	end: number;
+	text: string;
+}
+
 /** Transcription produced by the backend after a recording is processed. */
 export interface TranscriptionSchema {
 	text: string;
 	language?: string | null;
 	duration_seconds?: number | null;
 	word_count: number;
+	segments?: TranscriptSegmentSchema[];
+}
+
+/** A follow-up the AI extracted from the meeting. */
+export interface ActionItemSchema {
+	text: string;
+	assignee?: string | null;
 }
 
 /** AI summary — shared shape between a single recording and a channel recap. */
@@ -29,6 +43,16 @@ export interface SummarySchema {
 	headline: string;
 	abstract: string;
 	bullets: string[];
+	action_items?: ActionItemSchema[];
+}
+
+/** Original-media metadata for a recording (audio vs video, availability). */
+export interface MediaSchema {
+	kind: string; // 'audio' | 'video'
+	format: string;
+	size_bytes: number;
+	duration_seconds?: number | null;
+	available: boolean;
 }
 
 /**
@@ -46,6 +70,7 @@ export interface RecordingResponse {
 	captured_at?: string | null;
 	created_at: string;
 	updated_at: string;
+	media?: MediaSchema | null;
 	transcription?: TranscriptionSchema | null;
 	summary?: SummarySchema | null;
 	error?: string | null;
@@ -111,6 +136,8 @@ export interface JoinMeetingRequest {
 	meeting_url: string;
 	bot_display_name?: string;
 	consent_message?: string;
+	/** Capture video as well as audio (the bot records the screen). */
+	capture_video?: boolean;
 }
 
 /** True when the capture bot session has reached a terminal state. */

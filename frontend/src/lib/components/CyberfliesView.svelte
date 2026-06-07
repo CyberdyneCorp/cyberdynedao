@@ -24,6 +24,7 @@
 	let botUrl = $state<string>('');
 	let botName = $state<string>('');
 	let botConsent = $state<string>('');
+	let botCaptureVideo = $state<boolean>(false);
 	// Organize-into-channel controls (per detail panel).
 	let organizeChannelId = $state<string>('');
 	let newChannelName = $state<string>('');
@@ -192,7 +193,8 @@
 			platform: botPlatform,
 			meeting_url: botUrl,
 			bot_display_name: botName,
-			consent_message: botConsent
+			consent_message: botConsent,
+			capture_video: botCaptureVideo
 		});
 		if (!meetings.botError) botUrl = '';
 	}
@@ -430,6 +432,17 @@
 								<ul class="bullets">
 									{#each rec.summary.bullets as b}
 										<li>{b}</li>
+									{/each}
+								</ul>
+							{/if}
+							{#if rec.summary.action_items && rec.summary.action_items.length > 0}
+								<h4 class="block__subtitle">✅ Action items</h4>
+								<ul class="actions">
+									{#each rec.summary.action_items as item}
+										<li>
+											<span class="actions__text">{item.text}</span>
+											{#if item.assignee}<span class="actions__who">{item.assignee}</span>{/if}
+										</li>
 									{/each}
 								</ul>
 							{/if}
@@ -695,6 +708,15 @@
 						{meetings.sendingBot ? 'Sending…' : '🤖 Send bot'}
 					</PixelButton>
 				</div>
+				<label class="bot-form__video">
+					<input
+						type="checkbox"
+						checked={botCaptureVideo}
+						onchange={(e) => (botCaptureVideo = (e.currentTarget as HTMLInputElement).checked)}
+						disabled={!authReady || meetings.sendingBot}
+					/>
+					🎥 Capture video (record the screen, not just audio)
+				</label>
 			</form>
 
 			{#if meetings.botError}
@@ -886,6 +908,13 @@
 	.block__count { font-size: 0.65rem; color: #94a3b8; font-weight: 600; }
 	.block__abstract { margin: 0 0 8px; font-size: 0.85rem; line-height: 1.55; }
 	.bullets { margin: 0; padding-left: 18px; font-size: 0.82rem; line-height: 1.6; }
+	.block__subtitle { margin: 12px 0 6px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: #0f766e; }
+	.actions { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+	.actions li { display: flex; align-items: baseline; gap: 8px; font-size: 0.82rem; line-height: 1.5; }
+	.actions li::before { content: '☐'; color: #0f766e; }
+	.actions__text { flex: 1; }
+	.actions__who { font-size: 0.72rem; font-weight: 700; color: #0f766e; background: #ccfbf1; border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+	.bot-form__video { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: #374151; margin-top: 8px; cursor: pointer; }
 	/* The Foundation base.css styles every <pre> with a dark surface, so
 	   set explicit light text + a defined dark panel here — otherwise the
 	   transcript renders dark-on-dark and is unreadable. */
