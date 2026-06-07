@@ -26,6 +26,10 @@ export function createWindow(content: WindowState['content'], title: string) {
 
 		let x, y, width, height;
 
+		// Content-heavy windows (course catalogue, admin manager) open wider so
+		// their card grids show more columns; the rest keep the compact default.
+		const WIDE_CONTENT = new Set<WindowState['content']>(['courses', 'admin']);
+
 		// Position cart windows in bottom right corner by default
 		if (content === 'cart') {
 			width = Math.min(350, Math.max(280, screenWidth - 32));
@@ -34,8 +38,10 @@ export function createWindow(content: WindowState['content'], title: string) {
 			y = Math.max(16, screenHeight - height - 60);
 		} else {
 			// Default desired size, clamped to fit viewport with sensible margins
-			width = Math.min(800, Math.max(280, screenWidth - 32));
-			height = Math.min(600, Math.max(200, screenHeight - 120));
+			const desiredWidth = WIDE_CONTENT.has(content) ? 1200 : 800;
+			const desiredHeight = WIDE_CONTENT.has(content) ? 820 : 600;
+			width = Math.min(desiredWidth, Math.max(280, screenWidth - 32));
+			height = Math.min(desiredHeight, Math.max(200, screenHeight - 120));
 			const cascade = wins.length * 30;
 			x = Math.max(16, Math.min(100 + cascade, screenWidth - width - 16));
 			y = Math.max(16, Math.min(50 + cascade, screenHeight - height - 16));

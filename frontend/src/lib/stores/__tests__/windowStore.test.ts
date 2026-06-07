@@ -32,6 +32,13 @@ describe('windowStore', () => {
 		expect(wins[0].width).toBe(800);
 	});
 
+	it('createWindow("courses") opens wider for the catalogue grid', () => {
+		createWindow('courses', 'Learn');
+		const w = get(windows)[0];
+		expect(w.width).toBe(1200);
+		expect(w.width).toBeGreaterThan(800);
+	});
+
 	it('createWindow("cart") uses bottom-right positioning', () => {
 		createWindow('cart', 'Your Bag');
 		const w = get(windows)[0];
