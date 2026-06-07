@@ -112,6 +112,28 @@
 		urgent: 'Due urgently',
 		overdue: 'Overdue'
 	};
+
+	// ── Catalogue search + level filter (client-side over the loaded list) ──
+	let search = $state('');
+	type LevelFilter = 'all' | CourseLevel;
+	let levelFilter = $state<LevelFilter>('all');
+	const levelChips: { value: LevelFilter; label: string }[] = [
+		{ value: 'all', label: 'All' },
+		{ value: 'Beginner', label: 'Basic' },
+		{ value: 'Intermediate', label: 'Intermediate' },
+		{ value: 'Advanced', label: 'Advanced' }
+	];
+
+	const filteredCourses = $derived.by(() => {
+		const q = search.trim().toLowerCase();
+		return $courses.filter(
+			(c) =>
+				(levelFilter === 'all' || c.level === levelFilter) &&
+				(q === '' ||
+					c.title.toLowerCase().includes(q) ||
+					c.description.toLowerCase().includes(q))
+		);
+	});
 </script>
 
 <PixelScrollArea maxHeight="100%" ariaLabel="Cyberdyne Academy courses">
@@ -271,26 +293,71 @@
 		{:else if $courses.length === 0}
 			<p class="hint">No published courses yet — check back soon.</p>
 		{:else}
-			<ul class="catalogue">
-				{#each $courses as course (course.id)}
-					<li>
-						<button class="card" onclick={() => openCourse(course.slug)}>
-							<div class="card__top">
-								<Badge variant={levelVariant[course.level]} size="sm">{course.level}</Badge>
-								{#if course.mandatory}<Badge variant="neutral" size="sm">Required</Badge>{/if}
-								{#if course.deadlineStatus !== 'none'}
-									<Badge variant={deadlineVariant[course.deadlineStatus]} size="sm">
-										{deadlineLabel[course.deadlineStatus]}
-									</Badge>
-								{/if}
-							</div>
-							<h3>{course.title}</h3>
-							<p>{course.description}</p>
-							<span class="card__meta">{course.lessonCount} lessons</span>
-						</button>
-					</li>
-				{/each}
-			</ul>
+			<!-- Browse toolbar: search + level filter -->
+			<section class="browse">
+				<div class="browse__head">
+					<h2>Browse all courses</h2>
+					<span class="browse__count">{filteredCourses.length} of {$courses.length}</span>
+				</div>
+				<div class="toolbar">
+					<div class="toolbar__search">
+						<span class="toolbar__icon" aria-hidden="true">🔍</span>
+						<input
+							class="toolbar__input"
+							type="search"
+							placeholder="Search courses…"
+							bind:value={search}
+							aria-label="Search courses"
+						/>
+					</div>
+					<div class="chips" role="group" aria-label="Filter by level">
+						{#each levelChips as chip}
+							<button
+								type="button"
+								class="chip"
+								class:chip--active={levelFilter === chip.value}
+								onclick={() => (levelFilter = chip.value)}
+							>
+								{chip.label}
+							</button>
+						{/each}
+					</div>
+				</div>
+			</section>
+
+			{#if filteredCourses.length === 0}
+				<p class="hint empty">
+					No courses match “{search}”{levelFilter !== 'all' ? ` at ${levelFilter} level` : ''}.
+					<button class="link" onclick={() => { search = ''; levelFilter = 'all'; }}>Clear filters</button>
+				</p>
+			{:else}
+				<ul class="catalogue">
+					{#each filteredCourses as course (course.id)}
+						<li>
+							<button
+								class="card card--{course.level.toLowerCase()}"
+								onclick={() => openCourse(course.slug)}
+							>
+								<div class="card__top">
+									<Badge variant={levelVariant[course.level]} size="sm">{course.level}</Badge>
+									{#if course.mandatory}<Badge variant="neutral" size="sm">Required</Badge>{/if}
+									{#if course.deadlineStatus !== 'none'}
+										<Badge variant={deadlineVariant[course.deadlineStatus]} size="sm">
+											{deadlineLabel[course.deadlineStatus]}
+										</Badge>
+									{/if}
+								</div>
+								<h3>{course.title}</h3>
+								<p>{course.description}</p>
+								<span class="card__foot">
+									<span class="card__meta">📘 {course.lessonCount} lessons</span>
+									<span class="card__cta">Start →</span>
+								</span>
+							</button>
+						</li>
+					{/each}
+				</ul>
+			{/if}
 		{/if}
 
 		<!-- Public certificate verification -->
@@ -420,26 +487,134 @@
 		font-size: 0.75rem;
 		color: #374151;
 	}
+	/* ── Browse toolbar (search + level chips) ── */
+	.browse {
+		margin: 0.5rem 0 0.9rem;
+	}
+	.browse__head {
+		display: flex;
+		align-items: baseline;
+		gap: 0.6rem;
+		margin-bottom: 0.5rem;
+	}
+	.browse__head h2 {
+		margin: 0;
+		font-size: 1.05rem;
+	}
+	.browse__count {
+		font-size: 0.78rem;
+		color: #6b7280;
+	}
+	.toolbar {
+		display: flex;
+		gap: 0.6rem;
+		flex-wrap: wrap;
+		align-items: center;
+	}
+	.toolbar__search {
+		flex: 1 1 240px;
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		background: #ffffff;
+		border: 2px solid #000000;
+		border-radius: 8px;
+		padding: 0.35rem 0.6rem;
+	}
+	.toolbar__search:focus-within {
+		border-color: #3b82f6;
+	}
+	.toolbar__icon {
+		font-size: 0.85rem;
+		opacity: 0.7;
+	}
+	.toolbar__input {
+		flex: 1;
+		border: 0;
+		outline: none;
+		font: inherit;
+		font-size: 0.9rem;
+		background: transparent;
+		color: #111827;
+	}
+	.chips {
+		display: flex;
+		gap: 0.35rem;
+		flex-wrap: wrap;
+	}
+	.chip {
+		font: inherit;
+		font-size: 0.8rem;
+		padding: 0.35rem 0.8rem;
+		border: 2px solid #000000;
+		border-radius: 999px;
+		background: #ffffff;
+		color: #374151;
+		cursor: pointer;
+		transition:
+			background 0.12s ease,
+			color 0.12s ease;
+	}
+	.chip:hover {
+		border-color: #3b82f6;
+	}
+	.chip--active {
+		background: #111827;
+		color: #ffffff;
+		border-color: #111827;
+	}
+	.empty {
+		padding: 1rem 0;
+	}
+	.link {
+		background: none;
+		border: 0;
+		color: #2563eb;
+		cursor: pointer;
+		font: inherit;
+		text-decoration: underline;
+		padding: 0;
+	}
+
 	.catalogue {
 		list-style: none;
 		margin: 0;
 		padding: 0;
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-		gap: 0.75rem;
+		grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+		gap: 0.9rem;
 	}
 	.card {
 		width: 100%;
+		height: 100%;
 		text-align: left;
 		background: #ffffff;
 		border: 2px solid #000000;
+		border-left-width: 6px;
 		border-radius: 8px;
-		padding: 0.85rem;
+		padding: 0.9rem 0.95rem;
 		cursor: pointer;
 		color: inherit;
+		display: flex;
+		flex-direction: column;
+		transition:
+			transform 0.12s ease,
+			box-shadow 0.12s ease,
+			border-color 0.12s ease;
+	}
+	.card--beginner {
+		border-left-color: #22c55e;
+	}
+	.card--intermediate {
+		border-left-color: #3b82f6;
+	}
+	.card--advanced {
+		border-left-color: #ef4444;
 	}
 	.card:hover {
 		border-color: #3b82f6;
+		transform: translateY(-2px);
+		box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.18);
 	}
 	.card__top {
 		display: flex;
@@ -449,21 +624,38 @@
 	}
 	.card h3 {
 		margin: 0 0 0.25rem;
-		font-size: 1rem;
+		font-size: 1.02rem;
 	}
 	.card p {
-		margin: 0 0 0.5rem;
-		font-size: 0.8rem;
+		margin: 0 0 0.6rem;
+		font-size: 0.82rem;
 		color: #374151;
 		display: -webkit-box;
-		-webkit-line-clamp: 2;
-		line-clamp: 2;
+		-webkit-line-clamp: 3;
+		line-clamp: 3;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
+	}
+	.card__foot {
+		margin-top: auto;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
 	}
 	.card__meta {
 		font-size: 0.75rem;
 		color: #6b7280;
+	}
+	.card__cta {
+		font-size: 0.78rem;
+		font-weight: 700;
+		color: #2563eb;
+		opacity: 0;
+		transition: opacity 0.12s ease;
+	}
+	.card:hover .card__cta {
+		opacity: 1;
 	}
 	.detail__head {
 		display: flex;
