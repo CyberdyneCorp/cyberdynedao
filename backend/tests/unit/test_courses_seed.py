@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 3
+        assert len(summary) == 4
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -129,7 +129,12 @@ class TestSeedCourses:
 
     def test_curated_content_covers_all_courses(self) -> None:
         slugs = {c.slug for c in ACADEMY_COURSES}
-        assert slugs == {"matlab-basics", "python-course", "blockchain-basics"}
+        assert slugs == {
+            "matlab-basics",
+            "python-course",
+            "blockchain-basics",
+            "blockchain-beyond-basics",
+        }
         for course in ACADEMY_COURSES:
             assert course.lessons  # non-empty
             for lesson in course.lessons:
@@ -146,3 +151,12 @@ class TestSeedCourses:
         assert code.text_body and "toy_hash" in code.text_body and "nonce" in code.text_body
         # It must avoid hashlib (blocked in the restricted interpreter sandbox).
         assert "hashlib" not in (code.text_body or "")
+
+    def test_advanced_blockchain_course_covers_requested_topics(self) -> None:
+        bc = next(c for c in ACADEMY_COURSES if c.slug == "blockchain-beyond-basics")
+        titles = " | ".join(le.title for le in bc.lessons)
+        for needle in ("Bitcoin Script", "Consensus", "Cold wallets", "Ethereum", "Solidity"):
+            assert needle in titles, f"missing lesson about {needle!r}"
+        # The runnable Bitcoin Script toy avoids imports (restricted sandbox).
+        code = next(le for le in bc.lessons if le.lesson_type == "code")
+        assert code.text_body and "stack" in code.text_body and "import" not in code.text_body

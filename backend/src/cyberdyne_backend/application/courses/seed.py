@@ -813,7 +813,313 @@ mined around 2140.
     ),
 )
 
-ACADEMY_COURSES: tuple[SeedCourse, ...] = (_MATLAB, _PYTHON, _BLOCKCHAIN)
+_BLOCKCHAIN_ADVANCED = SeedCourse(
+    slug="blockchain-beyond-basics",
+    title="Blockchain: Beyond the Basics",
+    description=(
+        "Go deeper into how chains actually work: Bitcoin Script (with a stack "
+        "machine you run yourself), the main consensus families, self-custody "
+        "with cold wallets, and Ethereum + Solidity for programmable money."
+    ),
+    level="Intermediate",
+    lessons=(
+        SeedLesson(
+            title="Bitcoin Script",
+            lesson_type="text",
+            duration="9 min",
+            text_body="""\
+# Bitcoin Script
+
+Bitcoin doesn't have "balances" — it has coins (UTXOs) locked by a tiny
+program. To spend one you must supply inputs that make that program succeed.
+That program is written in **Bitcoin Script**: a simple, **stack-based**
+language that is deliberately **not Turing-complete** (no loops, no
+recursion) — so validation always terminates and can't hang the network.
+
+## Locking and unlocking
+
+Every coin carries a **locking script** (`scriptPubKey`) — the puzzle. To
+spend it you provide an **unlocking script** (`scriptSig`) — the solution. A
+node concatenates them and runs the stack machine; the spend is valid if the
+script finishes with a truthy value on top of the stack.
+
+## P2PKH — "pay to public-key hash"
+
+The classic locking script proves you own the private key behind an address:
+
+```text
+scriptPubKey:  OP_DUP OP_HASH160 <pubKeyHash> OP_EQUALVERIFY OP_CHECKSIG
+scriptSig:     <signature> <publicKey>
+```
+
+```mermaid
+flowchart TD
+  P[push sig + pubKey] --> D[OP_DUP duplicates pubKey]
+  D --> H[OP_HASH160 hashes it]
+  H --> E[OP_EQUALVERIFY: hash == pubKeyHash?]
+  E --> C[OP_CHECKSIG: signature valid?]
+  C --> R{stack top truthy?}
+  R -->|yes| OK([spend allowed])
+  R -->|no| NO([rejected])
+```
+
+Opcodes push data or pop operands and push results. Because the language is
+intentionally limited, richer logic lives off-chain or on programmable chains
+like Ethereum.
+
+**Next:** run a tiny stack machine yourself.
+""",
+        ),
+        SeedLesson(
+            title="Run a Bitcoin Script (toy)",
+            lesson_type="code",
+            duration="10 min",
+            text_body="""\
+# A toy Bitcoin Script evaluator. Edit and press Run.
+# Bitcoin Script is a STACK machine: numbers are pushed; opcodes pop
+# operands and push results. A script "succeeds" if it ends with a single
+# truthy value on the stack.
+
+script = ["2", "3", "OP_ADD", "5", "OP_EQUALVERIFY", "1"]
+
+stack = []
+for token in script:
+    if token == "OP_ADD":
+        b = stack.pop(); a = stack.pop(); stack.append(a + b)
+    elif token == "OP_DUP":
+        stack.append(stack[-1])
+    elif token == "OP_EQUALVERIFY":
+        b = stack.pop(); a = stack.pop()
+        if a != b:
+            raise ValueError("EQUALVERIFY failed - script invalid")
+    else:
+        stack.append(int(token))     # a number literal: push it
+    print(f"after {token:14} -> {stack}")
+
+ok = len(stack) == 1 and stack[-1] != 0
+print("script valid:", ok)
+
+# Try it yourself:
+#   1. Change the final "1" to "0" — the script ends "false" (invalid).
+#   2. Make EQUALVERIFY fail (e.g. "2 3 OP_ADD 6 OP_EQUALVERIFY 1") and watch
+#      the error — that's how an invalid spend is rejected.
+""",
+        ),
+        SeedLesson(
+            title="Consensus & its types",
+            lesson_type="text",
+            duration="10 min",
+            text_body="""\
+# Consensus & its types
+
+Consensus is the rule that lets thousands of nodes agree on the next block
+without a central authority. Different chains make different trade-offs between
+**decentralization, security, speed, and energy**.
+
+```mermaid
+mindmap
+  root((CONSENSUS))
+    Proof of Work
+      Mining
+      Energy heavy
+      Bitcoin
+    Proof of Stake
+      Validators stake
+      Energy light
+      Ethereum
+    Variants
+      DPoS
+      PoA
+      PoH
+      BFT
+```
+
+| Mechanism | Who may add a block | Notes |
+|-----------|---------------------|-------|
+| **PoW** (Proof of Work) | first to solve a hash puzzle | secure, energy-heavy — Bitcoin |
+| **PoS** (Proof of Stake) | a validator chosen by stake | energy-light — Ethereum, Cardano |
+| **DPoS** (Delegated PoS) | a few delegates token-holders vote in | fast, more centralized — EOS, Tron |
+| **PoA** (Proof of Authority) | a known, approved set of validators | private/consortium chains |
+| **PoH** (Proof of History) | a verifiable clock ordering events | pairs with PoS — Solana |
+| **BFT** (Byzantine Fault Tolerant) | validators vote in rounds | fast **finality** — Tendermint/Cosmos |
+
+## Finality
+
+- **Probabilistic** (PoW): a block gets *exponentially* safer as more blocks
+  pile on top — Bitcoin users wait ~6 confirmations.
+- **Deterministic** (BFT-style): once validators vote, the block is final and
+  can't be reverted.
+
+## Attacking consensus
+
+PoW needs **51% of hash power**; PoS needs **51% of stake**. PoS adds
+**slashing** — misbehaving validators lose part of their stake, making attacks
+costly without burning energy.
+
+**Next:** holding the keys to your coins safely.
+""",
+        ),
+        SeedLesson(
+            title="Cold wallets & self-custody",
+            lesson_type="text",
+            duration="8 min",
+            text_body="""\
+# Cold wallets & self-custody
+
+Your coins live on-chain; what you actually hold is the **private key** that
+authorizes spending them. "Not your keys, not your coins."
+
+| | Hot wallet | Cold wallet |
+|--|------------|-------------|
+| **Connected** | online (app, exchange, browser) | offline hardware device |
+| **Convenience** | high | lower |
+| **Attack surface** | large (malware, phishing, exchange hacks) | tiny — keys never leave the device |
+| **Use for** | small, day-to-day amounts | long-term savings |
+
+## How a hardware wallet works
+
+A device like a Ledger or Trezor stores the private key in a secure chip. When
+you send funds, the transaction is sent **to** the device, you confirm on its
+screen, and only the **signature** comes back — the key never touches your
+(possibly compromised) computer.
+
+```mermaid
+flowchart LR
+  PC[Laptop builds tx] --> D[Hardware wallet signs offline]
+  D --> PC2[Signed tx returns]
+  PC2 --> N[Broadcast to network]
+```
+
+## The seed phrase (BIP-39)
+
+Your key is backed up as **12 or 24 words**. Anyone with those words controls
+the funds, so:
+
+- write them on paper or steel — **never** a photo, cloud note, or password
+  manager;
+- store copies in separate secure places;
+- nobody legitimate will ever ask for them.
+
+> Self-custody means you are the bank: total control, total responsibility.
+
+**Next:** programmable money on Ethereum.
+""",
+        ),
+        SeedLesson(
+            title="Ethereum",
+            lesson_type="text",
+            duration="9 min",
+            text_body="""\
+# Ethereum
+
+If Bitcoin is digital gold, **Ethereum is a world computer**. Launched in 2015
+by Vitalik Buterin, it lets anyone deploy **smart contracts** — programs that
+run exactly as written on every node.
+
+| Property | Value |
+|----------|-------|
+| Created | 2015 |
+| Consensus | Proof of Stake (since 2022) |
+| Block time | ~12 seconds |
+| Languages | Solidity, Vyper |
+| Supply | no hard cap (fee-burning can make it deflationary) |
+
+## Accounts, not UTXOs
+
+Bitcoin tracks unspent outputs; Ethereum keeps running **balances** in
+accounts — closer to a bank ledger, and simpler for contracts to reason about.
+
+| | Bitcoin | Ethereum |
+|--|---------|----------|
+| **Model** | UTXO | Account balances |
+| **Question** | "What if money couldn't be printed?" | "What if contracts couldn't be broken?" |
+
+Two account kinds: **EOAs** (controlled by a private key — people) and
+**contract accounts** (controlled by their code).
+
+## The EVM and gas
+
+The **Ethereum Virtual Machine** runs contract bytecode on every node. Each
+operation costs **gas**, paid in ETH — this both compensates validators and
+stops infinite loops (run out of gas → the transaction reverts).
+
+## Composability
+
+Contracts can call other contracts, so protocols snap together like
+money-legos — the foundation of DeFi, NFTs, and DAOs.
+
+**Next:** write a contract in Solidity.
+""",
+        ),
+        SeedLesson(
+            title="Solidity",
+            lesson_type="text",
+            duration="10 min",
+            text_body="""\
+# Solidity
+
+**Solidity** is the statically-typed language for Ethereum smart contracts. A
+`contract` is much like a class: it has persistent **state** (stored on-chain,
+so writing costs gas) and **functions** that read or change it.
+
+## Core types
+
+| Type | Use |
+|------|-----|
+| `uint` / `int` | numbers (`uint` = `uint256`) — counters, balances |
+| `address` / `address payable` | account addresses; payable can receive ETH |
+| `bool`, `string`, `bytes32` | flags, text, fixed hashes |
+| `mapping(key => value)` | on-chain hashmap (e.g. balances) |
+| `struct`, `enum`, arrays | grouped / custom data |
+
+## A first contract
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.19;
+
+contract SimpleStorage {
+    uint storedData;                 // state — lives on-chain
+
+    function set(uint x) public {    // changes state -> costs gas
+        storedData = x;
+    }
+
+    function get() public view returns (uint) {  // read-only -> free
+        return storedData;
+    }
+}
+```
+
+Functions marked `payable` may receive ETH; `view` functions only read and
+cost no gas when called externally.
+
+## Security matters most
+
+A deployed contract is public and immutable, and it holds real money — bugs are
+exploits. The classic one is **reentrancy**: a contract calls out to another
+*before* updating its own state, letting the callee re-enter and drain funds.
+
+> Follow **checks-effects-interactions**: validate inputs, update your state,
+> *then* make external calls. Audit before you deploy.
+
+**Next:** check your knowledge.
+""",
+        ),
+        SeedLesson(
+            title="Check your knowledge",
+            lesson_type="quiz",
+            duration="4 min",
+        ),
+    ),
+)
+
+ACADEMY_COURSES: tuple[SeedCourse, ...] = (
+    _MATLAB,
+    _PYTHON,
+    _BLOCKCHAIN,
+    _BLOCKCHAIN_ADVANCED,
+)
 
 
 # ── Apply ────────────────────────────────────────────────────────────────
