@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 28
+        assert len(summary) == 34
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -158,6 +158,12 @@ class TestSeedCourses:
             "kubernetes-basics",
             "kubernetes-intermediate",
             "kubernetes-advanced",
+            "terraform-basics",
+            "terraform-intermediate",
+            "terraform-advanced",
+            "ansible-basics",
+            "ansible-intermediate",
+            "ansible-advanced",
         }
         for course in ACADEMY_COURSES:
             assert course.lessons  # non-empty
@@ -202,6 +208,22 @@ class TestSeedCourses:
         levels = {c.slug: c.level for c in DEVOPS_COURSES}
         assert levels["docker-advanced"] == "Advanced"
         assert levels["kubernetes-advanced"] == "Advanced"
+
+    def test_iac_courses_cover_terraform_and_ansible_three_levels(self) -> None:
+        from cyberdyne_backend.application.courses.seed_iac import IAC_COURSES
+
+        slugs = {c.slug for c in IAC_COURSES}
+        assert slugs == {
+            "terraform-basics",
+            "terraform-intermediate",
+            "terraform-advanced",
+            "ansible-basics",
+            "ansible-intermediate",
+            "ansible-advanced",
+        }
+        levels = {c.slug: c.level for c in IAC_COURSES}
+        assert levels["terraform-advanced"] == "Advanced"
+        assert levels["ansible-advanced"] == "Advanced"
 
     def test_blockchain_course_covers_idea_pow_and_bitcoin(self) -> None:
         bc = next(c for c in ACADEMY_COURSES if c.slug == "blockchain-basics")

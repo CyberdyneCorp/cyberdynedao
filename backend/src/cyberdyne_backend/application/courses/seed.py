@@ -24,6 +24,7 @@ from datetime import datetime
 
 from cyberdyne_backend.application.courses.seed_databases import DATABASE_COURSES
 from cyberdyne_backend.application.courses.seed_devops import DEVOPS_COURSES
+from cyberdyne_backend.application.courses.seed_iac import IAC_COURSES
 from cyberdyne_backend.application.courses.seed_languages import LANGUAGE_COURSES
 from cyberdyne_backend.application.courses.seed_types import SeedCourse, SeedLesson
 from cyberdyne_backend.domain.courses import (
@@ -1107,6 +1108,7 @@ ACADEMY_COURSES: tuple[SeedCourse, ...] = (
     *LANGUAGE_COURSES,
     *DATABASE_COURSES,
     *DEVOPS_COURSES,
+    *IAC_COURSES,
 )
 
 
