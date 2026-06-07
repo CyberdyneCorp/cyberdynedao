@@ -545,19 +545,21 @@
 			{:else}
 				<ul class="list">
 					{#each $courses as course, ci (course.id)}
-						<li class="item">
+						<li class="item item--{course.status}">
 							<div class="item__main">
 								<Badge variant={STATUS_VARIANT[course.status]} size="sm">{course.status}</Badge>
 								<span class="item__title">{course.title}</span>
 								<span class="item__meta">{course.level} · {course.lessonCount} lessons</span>
 							</div>
 							<div class="item__actions">
-								<PixelButton variant="ghost" size="sm" ariaLabel="Move course up" disabled={$busy || ci === 0} onclick={() => vm.moveCourse(course.slug, 'up')}>
-									▲
-								</PixelButton>
-								<PixelButton variant="ghost" size="sm" ariaLabel="Move course down" disabled={$busy || ci === $courses.length - 1} onclick={() => vm.moveCourse(course.slug, 'down')}>
-									▼
-								</PixelButton>
+								<span class="item__reorder">
+									<PixelButton variant="ghost" size="sm" ariaLabel="Move course up" disabled={$busy || ci === 0} onclick={() => vm.moveCourse(course.slug, 'up')}>
+										▲
+									</PixelButton>
+									<PixelButton variant="ghost" size="sm" ariaLabel="Move course down" disabled={$busy || ci === $courses.length - 1} onclick={() => vm.moveCourse(course.slug, 'down')}>
+										▼
+									</PixelButton>
+								</span>
 								<PixelButton variant="outline" size="sm" disabled={$busy} onclick={() => vm.openCourse(course.slug)}>
 									Edit
 								</PixelButton>
@@ -683,16 +685,31 @@
 		background: #ffffff;
 		border: 2px solid #000000;
 		border-radius: 6px;
-		padding: 0.5rem 0.7rem;
+		padding: 0.55rem 0.7rem 0.55rem 0;
+		/* Status accent stripe on the left edge. */
+		border-left-width: 6px;
+		transition: border-color 0.12s ease;
+	}
+	.item--published {
+		border-left-color: #22c55e;
+	}
+	.item--draft {
+		border-left-color: #f59e0b;
+	}
+	.item:hover {
+		border-color: #3b82f6;
 	}
 	.item__main {
 		display: flex;
 		gap: 0.55rem;
 		align-items: center;
 		min-width: 0;
+		flex-wrap: wrap;
+		padding-left: 0.7rem;
 	}
 	.item__title {
-		font-size: 0.9rem;
+		font-size: 0.92rem;
+		font-weight: 700;
 	}
 	.item__meta {
 		font-size: 0.72rem;
@@ -702,6 +719,21 @@
 		display: flex;
 		gap: 0.4rem;
 		flex-shrink: 0;
+		align-items: center;
+		flex-wrap: wrap;
+		justify-content: flex-end;
+	}
+	/* Stack the ▲▼ reorder controls tightly so they read as one control. */
+	.item__reorder {
+		display: inline-flex;
+		flex-direction: column;
+		border: 2px solid #000;
+		border-radius: 5px;
+		overflow: hidden;
+	}
+	.item__reorder :global(button) {
+		padding: 0 0.35rem;
+		line-height: 1.1;
 	}
 	.hint {
 		color: #374151;

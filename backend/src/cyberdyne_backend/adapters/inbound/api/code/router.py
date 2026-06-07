@@ -42,6 +42,7 @@ async def run_lesson_code(
         source=body.source,
         user_id=principal.user_id,
         bearer=extract_token(request),
+        language=body.language,
     )
     return RunCodeResponse(
         ok=res.ok,

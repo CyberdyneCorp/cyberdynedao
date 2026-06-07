@@ -4,8 +4,10 @@
 	import { createCoursesViewModel } from '$lib/viewmodels/coursesViewModel';
 	import {
 		courseCertificatePdfUrl,
+		courseCodeLanguage,
 		type CourseLevel,
-		type DeadlineStatus
+		type DeadlineStatus,
+		type LessonType
 	} from '$lib/api/coursesApi';
 	import { authVM } from '$lib/auth/authViewModel.svelte';
 	import QuizPlayer from './QuizPlayer.svelte';
@@ -70,6 +72,26 @@
 	function lessonCompleted(lessonId: string): boolean {
 		return $progress?.lessons.find((l) => l.lessonId === lessonId)?.completed ?? false;
 	}
+
+	const lessonIcon: Record<LessonType, string> = {
+		text: '📄',
+		code: '💻',
+		quiz: '❓',
+		video: '🎬',
+		pdf: '📕',
+		presentation: '📊'
+	};
+
+	// The first not-yet-completed lesson — highlighted as "Next up" so the
+	// learner always knows where to resume.
+	const nextLessonId = $derived(
+		$selected?.lessons.find((l) => !lessonCompleted(l.id))?.id ?? null
+	);
+
+	// Code lessons run on the engine that matches the course (Python vs MATLAB).
+	const codeLanguage = $derived(
+		$selected ? courseCodeLanguage(`${$selected.slug} ${$selected.title}`) : 'matlab'
+	);
 
 	const levelVariant: Record<CourseLevel, 'success' | 'info' | 'danger'> = {
 		Beginner: 'success',
@@ -159,42 +181,55 @@
 			{/if}
 
 			<ol class="lessons">
-				{#each course.lessons as lesson (lesson.id)}
+				{#each course.lessons as lesson, i (lesson.id)}
+					{@const done = lessonCompleted(lesson.id)}
+					{@const isNext = authReady && lesson.id === nextLessonId}
 					<li class="lesson-wrap">
-						<div class="lesson" class:lesson--done={lessonCompleted(lesson.id)}>
-							<span class="lesson__type">{lesson.lessonType}</span>
-							<span class="lesson__title">{lesson.title}</span>
-							{#if lesson.duration}<span class="lesson__dur">{lesson.duration}</span>{/if}
-							{#if lesson.lessonType !== 'quiz'}
-								<PixelButton
-									variant="outline"
-									size="sm"
-									onclick={() => (openLesson = openLesson === lesson.id ? null : lesson.id)}
-								>
-									{openLesson === lesson.id ? 'Hide' : 'View'}
-								</PixelButton>
-							{/if}
-							{#if authReady}
-								{#if lesson.lessonType === 'quiz'}
+						<div class="lesson" class:lesson--done={done} class:lesson--next={isNext}>
+							<span class="lesson__num" class:lesson__num--done={done}>
+								{#if done}✓{:else}{i + 1}{/if}
+							</span>
+							<span class="lesson__icon" aria-hidden="true">{lessonIcon[lesson.lessonType]}</span>
+							<span class="lesson__main">
+								<span class="lesson__title">{lesson.title}</span>
+								<span class="lesson__meta">
+									<span class="lesson__type">{lesson.lessonType}</span>
+									{#if lesson.duration}<span class="lesson__dur">· {lesson.duration}</span>{/if}
+									{#if isNext}<span class="lesson__next">· Next up</span>{/if}
+								</span>
+							</span>
+							<span class="lesson__actions">
+								{#if lesson.lessonType !== 'quiz'}
 									<PixelButton
 										variant="outline"
 										size="sm"
-										onclick={() => (takingQuiz = takingQuiz === lesson.id ? null : lesson.id)}
+										onclick={() => (openLesson = openLesson === lesson.id ? null : lesson.id)}
 									>
-										{takingQuiz === lesson.id ? 'Hide quiz' : 'Take quiz'}
+										{openLesson === lesson.id ? 'Hide' : 'View'}
 									</PixelButton>
 								{/if}
-								{#if lessonCompleted(lesson.id)}
-									<span class="lesson__done">✓ done</span>
-								{:else if lesson.lessonType !== 'quiz'}
-									<PixelButton variant="ghost" size="sm" onclick={() => markComplete(lesson.id)}>
-										Mark complete
-									</PixelButton>
+								{#if authReady}
+									{#if lesson.lessonType === 'quiz'}
+										<PixelButton
+											variant="outline"
+											size="sm"
+											onclick={() => (takingQuiz = takingQuiz === lesson.id ? null : lesson.id)}
+										>
+											{takingQuiz === lesson.id ? 'Hide quiz' : 'Take quiz'}
+										</PixelButton>
+									{/if}
+									{#if done}
+										<span class="lesson__done">✓ done</span>
+									{:else if lesson.lessonType !== 'quiz'}
+										<PixelButton variant="ghost" size="sm" onclick={() => markComplete(lesson.id)}>
+											Mark complete
+										</PixelButton>
+									{/if}
 								{/if}
-							{/if}
+							</span>
 						</div>
 						{#if openLesson === lesson.id}
-							<LessonContent {lesson} />
+							<LessonContent {lesson} language={codeLanguage} />
 						{/if}
 						{#if takingQuiz === lesson.id}
 							<QuizPlayer lessonId={lesson.id} onDone={onQuizDone} />
@@ -502,32 +537,81 @@
 	}
 	.lesson {
 		display: flex;
-		gap: 0.6rem;
+		gap: 0.7rem;
 		align-items: center;
 		background: #ffffff;
 		border: 2px solid #000000;
 		border-radius: 6px;
-		padding: 0.5rem 0.7rem;
+		padding: 0.55rem 0.7rem;
+		transition: border-color 0.12s ease;
 	}
 	.lesson--done {
-		border-color: #14532d;
+		border-color: #bbf7d0;
+		background: #f6fef9;
 	}
-	.lesson__type {
-		font-size: 0.65rem;
-		text-transform: uppercase;
-		color: #6b7280;
-		min-width: 70px;
+	.lesson--next {
+		border-color: #3b82f6;
+		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+	}
+	.lesson__num {
+		flex: none;
+		width: 26px;
+		height: 26px;
+		display: grid;
+		place-items: center;
+		border: 2px solid #000;
+		border-radius: 999px;
+		font-size: 0.78rem;
+		font-weight: 700;
+		background: #fff;
+	}
+	.lesson__num--done {
+		background: #22c55e;
+		border-color: #166534;
+		color: #fff;
+	}
+	.lesson__icon {
+		font-size: 1.05rem;
+		flex: none;
+	}
+	.lesson__main {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 0.1rem;
+		min-width: 0;
 	}
 	.lesson__title {
-		flex: 1;
-		font-size: 0.85rem;
+		font-size: 0.88rem;
+		font-weight: 600;
+	}
+	.lesson__meta {
+		display: flex;
+		gap: 0.3rem;
+		align-items: center;
+		font-size: 0.7rem;
+		color: #6b7280;
+	}
+	.lesson__type {
+		text-transform: uppercase;
+		letter-spacing: 0.03em;
 	}
 	.lesson__dur {
-		font-size: 0.72rem;
 		color: #6b7280;
+	}
+	.lesson__next {
+		color: #1d4ed8;
+		font-weight: 700;
+	}
+	.lesson__actions {
+		display: flex;
+		gap: 0.4rem;
+		align-items: center;
+		flex: none;
 	}
 	.lesson__done {
 		font-size: 0.75rem;
+		font-weight: 600;
 		color: #166534;
 	}
 	.verify {

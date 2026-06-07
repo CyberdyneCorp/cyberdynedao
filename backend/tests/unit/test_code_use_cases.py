@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 
 from cyberdyne_backend.application.code import RunLessonCode
-from cyberdyne_backend.domain.ai_chat import MatlabRunResult
+from cyberdyne_backend.domain.ai_chat import MatlabRunResult, PythonExecResult
 
 
 class _FakeMatlab:
@@ -18,6 +18,22 @@ class _FakeMatlab:
 
     async def run_plot(self, *, source, session_id, bearer, fmt="png"):
         return MatlabRunResult(ok=True, stdout="", stderr="", session_id=session_id)
+
+
+class _FakePython:
+    def __init__(self) -> None:
+        self.calls: list[dict[str, object]] = []
+        self.created = 0
+
+    async def create_session(self, *, bearer):
+        self.created += 1
+        return f"srv-{self.created}"
+
+    async def execute(self, *, code, session_id, bearer, restricted=True):
+        self.calls.append({"code": code, "session_id": session_id, "bearer": bearer})
+        return PythonExecResult(
+            ok=True, stdout="hello\n", stderr="", result=None, error=None, session_id=session_id
+        )
 
 
 class TestRunLessonCode:
@@ -43,3 +59,46 @@ class TestRunLessonCode:
         await uc.execute(lesson_id=lesson_id, source="x=1", user_id=uuid.uuid4(), bearer=None)
         await uc.execute(lesson_id=lesson_id, source="x=1", user_id=uuid.uuid4(), bearer=None)
         assert matlab.calls[0]["session_id"] != matlab.calls[1]["session_id"]
+
+    async def test_python_language_runs_on_interpreter(self) -> None:
+        matlab = _FakeMatlab()
+        python = _FakePython()
+        res = await RunLessonCode(matlab=matlab, python=python).execute(
+            lesson_id=uuid.uuid4(),
+            source="print('hello')",
+            user_id=uuid.uuid4(),
+            bearer="tok",
+            language="python",
+        )
+        assert res.ok is True
+        assert res.stdout == "hello\n"
+        assert res.timed_out is False
+        # Ran on the interpreter (server-issued session), NOT MATLAB.
+        assert python.created == 1
+        assert python.calls[0]["code"] == "print('hello')"
+        assert python.calls[0]["bearer"] == "tok"
+        assert matlab.calls == []
+
+    async def test_python_error_is_folded_into_stderr(self) -> None:
+        matlab = _FakeMatlab()
+
+        class _ErrPython(_FakePython):
+            async def execute(self, *, code, session_id, bearer, restricted=True):
+                return PythonExecResult(
+                    ok=False, stdout="", stderr="", error="NameError: x", session_id=session_id
+                )
+
+        res = await RunLessonCode(matlab=matlab, python=_ErrPython()).execute(
+            lesson_id=uuid.uuid4(), source="x", user_id=uuid.uuid4(), bearer=None, language="python"
+        )
+        assert res.ok is False
+        assert "NameError: x" in res.stderr
+
+    async def test_matlab_is_the_default_language(self) -> None:
+        matlab = _FakeMatlab()
+        python = _FakePython()
+        await RunLessonCode(matlab=matlab, python=python).execute(
+            lesson_id=uuid.uuid4(), source="2+2", user_id=uuid.uuid4(), bearer=None
+        )
+        assert len(matlab.calls) == 1
+        assert python.calls == []

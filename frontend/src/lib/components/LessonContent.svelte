@@ -1,10 +1,17 @@
 <script lang="ts">
 	import { PixelButton, MarkdownPreview } from '@cyberdynecorp/svelte-ui-core';
-	import { runLessonCode, type CourseLesson, type RunCodeResult } from '$lib/api/coursesApi';
+	import {
+		runLessonCode,
+		type CodeLanguage,
+		type CourseLesson,
+		type RunCodeResult
+	} from '$lib/api/coursesApi';
 	import CodeEditor from './CodeEditor.svelte';
 	import { highlightElement } from '$lib/utils/highlight';
 
-	let { lesson }: { lesson: CourseLesson } = $props();
+	let { lesson, language = 'matlab' }: { lesson: CourseLesson; language?: CodeLanguage } =
+		$props();
+	const langLabel = $derived(language === 'python' ? 'Python' : 'MATLAB');
 
 	// Colour fenced code blocks inside rendered markdown (```python, ```matlab,
 	// ```systemverilog, …). MarkdownPreview emits <code class="language-x">;
@@ -41,7 +48,7 @@
 		running = true;
 		runError = null;
 		try {
-			result = await runLessonCode(lesson.id, source);
+			result = await runLessonCode(lesson.id, source, language);
 		} catch (err) {
 			runError = err instanceof Error ? err.message : String(err);
 		} finally {
@@ -72,8 +79,13 @@
 			<MarkdownPreview content={lesson.textBody ?? 'No content.'} />
 		</div>
 	{:else if lesson.lessonType === 'code'}
-		<p class="hint">Edit and run against the MATLAB engine:</p>
-		<CodeEditor bind:value={source} language="matlab" ariaLabel="MATLAB code" minHeight="9rem" />
+		<p class="hint">Edit and run against the {langLabel} engine:</p>
+		<CodeEditor
+			bind:value={source}
+			{language}
+			ariaLabel="{langLabel} code"
+			minHeight="9rem"
+		/>
 		<div class="run">
 			<PixelButton variant="solid" size="sm" disabled={running || !source.trim()} onclick={run}>
 				{running ? 'Running…' : 'Run'}

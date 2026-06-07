@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
@@ -13,7 +15,10 @@ class _CamelModel(BaseModel):
 class RunCodeRequest(_CamelModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")
 
-    source: str = Field(min_length=1, description="Source to execute on the MATLAB engine.")
+    source: str = Field(min_length=1, description="Source to execute.")
+    language: Literal["matlab", "python"] = Field(
+        default="matlab", description="Engine to run on; defaults to MATLAB."
+    )
 
 
 class RunCodeResponse(_CamelModel):

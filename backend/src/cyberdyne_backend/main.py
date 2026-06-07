@@ -690,8 +690,9 @@ def create_app() -> FastAPI:
         )
 
     async def _run_code_dep() -> AsyncIterator[RunLessonCode]:
-        # No DB session — execution is HTTP-only against the MATLAB engine.
-        yield RunLessonCode(matlab=container.matlab)
+        # No DB session — execution is HTTP-only against the MATLAB engine
+        # (matlab lessons) or the Python interpreter sandbox (python lessons).
+        yield RunLessonCode(matlab=container.matlab, python=container.python)
 
     async def _list_marketplace_products_dep() -> AsyncIterator[ListMarketplaceProducts]:
         async with session_scope() as session:

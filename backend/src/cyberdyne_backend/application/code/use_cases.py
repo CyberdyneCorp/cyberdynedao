@@ -1,10 +1,15 @@
 """Use case for the interactive code-interpreter lesson type.
 
-Runs a learner's code against the MATLAB-LLVM engine (the same engine the
-chat agent's ``matlab_*`` tools use). Each (lesson, user) pair gets its
-own stateful workspace so variables persist across runs within a lesson
-but never bleed between learners. The bearer is forwarded so execution
-and any artifacts land in the signed-in user's sandbox.
+Runs a learner's code on the engine that matches the lesson's language:
+MATLAB lessons execute on the MATLAB-LLVM engine (the same one the chat
+agent's ``matlab_*`` tools use); Python lessons execute on the Python
+interpreter sandbox. The bearer is forwarded either way so execution and
+any artifacts land in the signed-in user's workspace.
+
+MATLAB uses a deterministic per-(lesson, user) session so variables persist
+across runs within a lesson. The Python interpreter only accepts
+server-issued session ids, so each Python run gets a fresh session (each run
+is self-contained) — see [[interpreter-backend-constraints]].
 """
 
 from __future__ import annotations
@@ -12,20 +17,48 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import UUID
 
-from cyberdyne_backend.domain.ai_chat import MatlabPort, MatlabRunResult
+from cyberdyne_backend.domain.ai_chat import MatlabPort, MatlabRunResult, PythonInterpreterPort
 
 
 @dataclass(slots=True)
 class RunLessonCode:
     matlab: MatlabPort
+    python: PythonInterpreterPort | None = None
 
     async def execute(
-        self, *, lesson_id: UUID, source: str, user_id: UUID, bearer: str | None
+        self,
+        *,
+        lesson_id: UUID,
+        source: str,
+        user_id: UUID,
+        bearer: str | None,
+        language: str = "matlab",
     ) -> MatlabRunResult:
-        # Per-(lesson, user) workspace: stateful within a lesson, isolated
-        # between learners.
+        if language == "python" and self.python is not None:
+            return await self._run_python(source=source, bearer=bearer)
+        # Default: MATLAB. Per-(lesson, user) workspace — stateful within a
+        # lesson, isolated between learners.
         session_id = f"lesson-{lesson_id}-{user_id}"
         return await self.matlab.run_repl(source=source, session_id=session_id, bearer=bearer)
+
+    async def _run_python(self, *, source: str, bearer: str | None) -> MatlabRunResult:
+        assert self.python is not None
+        session_id = await self.python.create_session(bearer=bearer)
+        res = await self.python.execute(code=source, session_id=session_id, bearer=bearer)
+        # Fold the interpreter's `error` into stderr and adapt to the shared
+        # run-result shape the endpoint already speaks (MatlabRunResult has the
+        # same fields the response needs; Python has no timeout signal).
+        stderr = res.stderr
+        if res.error:
+            stderr = f"{stderr}\n{res.error}" if stderr else res.error
+        return MatlabRunResult(
+            ok=res.ok,
+            stdout=res.stdout,
+            stderr=stderr,
+            artifacts=res.artifacts,
+            session_id=res.session_id,
+            timed_out=False,
+        )
 
 
 __all__ = ["RunLessonCode"]

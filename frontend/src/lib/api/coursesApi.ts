@@ -307,6 +307,21 @@ export function fetchQuizFeedback(
 
 // ── Code lessons (me) ─────────────────────────────────────────────────
 
-export function runLessonCode(lessonId: string, source: string): Promise<RunCodeResult> {
-	return sendJson<RunCodeResult>('POST', `/api/v1/lessons/${enc(lessonId)}/code/run`, { source });
+export type CodeLanguage = 'matlab' | 'python';
+
+export function runLessonCode(
+	lessonId: string,
+	source: string,
+	language: CodeLanguage = 'matlab'
+): Promise<RunCodeResult> {
+	return sendJson<RunCodeResult>('POST', `/api/v1/lessons/${enc(lessonId)}/code/run`, {
+		source,
+		language
+	});
+}
+
+/** Infer a code lesson's language from its course (no per-lesson language
+ *  field yet): Python courses run Python, everything else MATLAB. */
+export function courseCodeLanguage(slugOrTitle: string): CodeLanguage {
+	return /python|\bpy\b/i.test(slugOrTitle) ? 'python' : 'matlab';
 }

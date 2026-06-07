@@ -149,14 +149,34 @@ describe('coursesApi — quiz player', () => {
 		expect(JSON.parse(init.body as string)).toEqual({ answers: { q1: 'o1' } });
 	});
 
-	it('runLessonCode POSTs the source to the code-run route', async () => {
+	it('runLessonCode POSTs the source + default matlab language', async () => {
 		mockJsonOnce(200, { ok: true, stdout: '4', stderr: '', artifacts: [], sessionId: 's', timedOut: false });
 		const res = await runLessonCode('l-1', 'disp(2+2)');
 		expect(res.stdout).toBe('4');
 		const [url, init] = lastCall();
 		expect(init.method).toBe('POST');
 		expect(String(url)).toMatch(/\/api\/v1\/lessons\/l-1\/code\/run$/);
-		expect(JSON.parse(init.body as string)).toEqual({ source: 'disp(2+2)' });
+		expect(JSON.parse(init.body as string)).toEqual({ source: 'disp(2+2)', language: 'matlab' });
+	});
+
+	it('runLessonCode forwards the python language', async () => {
+		mockJsonOnce(200, { ok: true, stdout: 'hi', stderr: '', artifacts: [], sessionId: 's', timedOut: false });
+		await runLessonCode('l-2', "print('hi')", 'python');
+		const [, init] = lastCall();
+		expect(JSON.parse(init.body as string)).toEqual({ source: "print('hi')", language: 'python' });
+	});
+});
+
+describe('courseCodeLanguage', () => {
+	it('detects Python courses', async () => {
+		const { courseCodeLanguage } = await import('../coursesApi');
+		expect(courseCodeLanguage('python-course Python Course')).toBe('python');
+		expect(courseCodeLanguage('Intro to Py')).toBe('python');
+	});
+	it('defaults to MATLAB otherwise', async () => {
+		const { courseCodeLanguage } = await import('../coursesApi');
+		expect(courseCodeLanguage('matlab-basics Matlab Basics')).toBe('matlab');
+		expect(courseCodeLanguage('Signals 101')).toBe('matlab');
 	});
 });
 
