@@ -5,7 +5,9 @@ Until now the academy's lesson content lived only in the database (created
 ad-hoc through the admin UI), so it couldn't be reviewed or re-provisioned.
 This module version-controls a rich curriculum and applies it idempotently.
 
-Reconciliation is deliberately **non-destructive and matched by title**:
+Titles are kept in sync with the live courses so reconciliation updates the
+existing lessons in place. Reconciliation is non-destructive and matched by
+title:
   * a lesson whose title (case-insensitive) already exists and has the same
     type is updated in place — its id is kept, so learner progress and any
     attached quiz survive;
@@ -51,7 +53,7 @@ class SeedCourse:
 
 _MATLAB = SeedCourse(
     slug="matlab-basics",
-    title="MATLAB Basics",
+    title="Matlab Basics",
     description=(
         "Go from zero to writing and running your own MATLAB scripts: the "
         "workspace, variables and matrices, element-wise vs. matrix math, and "
@@ -66,9 +68,10 @@ _MATLAB = SeedCourse(
             text_body="""\
 # Welcome to MATLAB
 
-MATLAB ("**MAT**rix **LAB**oratory") is a language built around one idea:
-**everything is a matrix**. A single number is just a 1x1 matrix, so the same
-operators work whether you're adding two numbers or two thousand.
+MATLAB (*Matrix Laboratory*) is a numerical computing language built around
+one idea: **everything is a matrix**. A single number is just a 1x1 matrix and
+a row vector is 1xN, so the same operators work whether you're adding two
+numbers or two thousand.
 
 ## Where you type things
 
@@ -90,7 +93,6 @@ line — use it to keep the Command Window tidy.
 ## Getting help
 
 `help sin` prints quick docs for any function; `doc sin` opens the full page.
-When you're stuck, the function name plus `help` is the fastest answer.
 
 **Next:** how MATLAB stores data — variables, vectors, and matrices.
 """,
@@ -141,7 +143,7 @@ v(end)      % last element
 ## Element-wise vs. matrix math
 
 This trips up everyone: `*` is **matrix** multiplication, `.*` is
-**element-wise**. The same goes for `./` and `.^`.
+**element-wise**. The same goes for `./` and `.^`, and `'` transposes.
 
 ```matlab
 [1 2 3] .* [4 5 6]   % [4 10 18]  element-wise
@@ -160,14 +162,18 @@ This trips up everyone: `*` is **matrix** multiplication, `.*` is
 
 A **script** is a `.m` file of statements that execute **top to bottom**,
 sharing the same workspace as the Command Window. There's no `main()` — the
-first line runs first.
+first line runs first, and each line updates the workspace as the interpreter
+walks the file:
 
-```matlab
-% wave.m
-clear;                 % start from a clean workspace
-x = linspace(0, 2*pi, 100);
-y = sin(x);
-disp(max(y));          % prints 1
+```mermaid
+flowchart TD
+  A[Read next line] --> B{Statement type?}
+  B -->|Assignment| C[Store variable in workspace]
+  B -->|Expression| D[Evaluate and display]
+  C --> E[More lines?]
+  D --> E
+  E -->|Yes| A
+  E -->|No| F([Done])
 ```
 
 ## Printing results
@@ -175,6 +181,16 @@ disp(max(y));          % prints 1
 - `disp(value)` — print one value, no name.
 - `fprintf("mean = %.2f\\n", mean(y))` — formatted, C-style printing.
 - Drop the `;` to let MATLAB echo a value with its variable name.
+
+## A small script
+
+```matlab
+total = 0;
+for k = 1:5
+    total = total + k^2;   % 1 + 4 + 9 + 16 + 25
+end
+fprintf('sum of squares = %d\\n', total)   % 55
+```
 
 ## Scripts vs. functions
 
@@ -186,16 +202,7 @@ function r = rms(v)
 end
 ```
 
-Start with scripts while you're exploring; reach for functions once you want
-to reuse logic without leaking variables.
-
-## Good habits
-
-- Comment the *why*, not the obvious *what*.
-- `clear` at the top of a script so stale variables can't mask bugs.
-- Suppress noisy lines with `;`, keep the one result you care about visible.
-
-**Next:** write and run your own script against the live engine.
+> Tip: open the **code** lesson next and run a script yourself.
 """,
         ),
         SeedLesson(
@@ -204,18 +211,19 @@ to reuse logic without leaking variables.
             duration="10 min",
             text_body="""\
 % Your first MATLAB script — edit it and press Run.
-% Goal: sample a sine wave, then report a couple of statistics.
+% Build a matrix, transpose it, and combine the two.
 
-x = linspace(0, 2*pi, 100);   % 100 points from 0 to 2*pi
-y = sin(x);
+A = [1 2; 3 4];
+B = A';            % transpose
+C = A * B;         % matrix multiply
 
-fprintf('points: %d\\n', numel(y));
-fprintf('max:    %.4f\\n', max(y));
-fprintf('mean:   %.4f\\n', mean(y));
+disp('A * A^T =')
+disp(C)
+fprintf('trace = %d\\n', trace(C))   % sum of the diagonal
 
 % Try it yourself:
-%   1. Change sin to cos and re-run — how does the mean change?
-%   2. Compute y2 = sin(x).^2 and print its mean (expect ~0.5).
+%   1. Change A to a 3x3 matrix and re-run.
+%   2. Compare C = A * B (matrix) with A .* B (element-wise) — why the error?
 """,
         ),
     ),
@@ -225,150 +233,123 @@ _PYTHON = SeedCourse(
     slug="python-course",
     title="Python Course",
     description=(
-        "A hands-on introduction to Python: values and variables, the core "
-        "data structures, control flow, and writing your first runnable "
-        "script — executed live in a sandboxed interpreter."
+        "A hands-on introduction to Python: values and types, how the "
+        "interpreter runs your code, and writing your first runnable script — "
+        "executed live in a sandboxed interpreter."
     ),
     level="Beginner",
     lessons=(
         SeedLesson(
-            title="Getting started with Python",
+            title="Welcome to Python",
             lesson_type="text",
             duration="6 min",
             text_body="""\
-# Getting started with Python
+# Welcome to Python
 
-Python is prized for being **readable**: the code looks close to the idea it
-expresses, and indentation (not braces) defines structure.
+Python is a readable, batteries-included language used for scripting, data,
+the web, and AI. Its defining trait: **indentation defines structure** — there
+are no curly braces.
 
-## Values and variables
+## What this course covers
 
-No type declarations — assign and go. Python infers the type.
+- values, variables and the core types
+- how the interpreter turns your file into output
+- writing and running your own script
+- a quick knowledge check
+
+## Your first lines
+
+```python
+print("hello, cyberdyne")
+name = "Ada"
+print(f"welcome, {name}")     # f-strings drop expressions in { }
+```
+
+`print()` shows a value and `type(x)` tells you its type. There's no compile
+step you manage by hand — you run the file and see the result.
+
+**Next:** the values and types you'll use everywhere.
+""",
+        ),
+        SeedLesson(
+            title="Variables & Types",
+            lesson_type="text",
+            duration="9 min",
+            text_body="""\
+# Variables & Types
+
+Python is **dynamically typed** — assign a value and the variable exists, no
+declaration needed.
 
 ```python
 name = "Ada"        # str
 age = 36            # int
-height = 1.7        # float
-is_admin = False    # bool
+pi = 3.14159        # float
+ready = True        # bool
 ```
 
-`print()` shows a value; `type(x)` tells you its type.
+Inspect a type with `type(x)`; format text with f-strings:
 
 ```python
-print(name, age)          # Ada 36
-print(type(height))       # <class 'float'>
+print(f"{name} is {age}")        # Ada is 36
+print(f"pi to 2dp = {pi:.2f}")   # pi to 2dp = 3.14
 ```
 
-## f-strings
-
-The idiomatic way to build text is an **f-string** — prefix `f` and drop
-expressions in `{ }`:
+## The everyday collections
 
 ```python
-print(f"{name} is {age} years old")   # Ada is 36 years old
-print(f"area = {3.14159 * 2**2:.2f}") # area = 12.57
+nums = [1, 2, 3]            # list — ordered, mutable
+nums.append(4)             # [1, 2, 3, 4]
+nums[0], nums[-1]          # 1, 4   (0-based; -1 is the last)
+
+user = {"name": "Ada", "role": "admin"}   # dict — key -> value
+user["role"]               # "admin"
+user.get("email", "—")    # default if the key is missing
 ```
 
-**Next:** the data structures you'll reach for every day.
+Rule of thumb: a **list** for an ordered collection, a **dict** when you look
+things up by name.
+
+**Next:** how Python actually runs the file you wrote.
 """,
         ),
         SeedLesson(
-            title="Lists, dicts & strings",
+            title="How Python runs your code",
             lesson_type="text",
-            duration="9 min",
+            duration="6 min",
             text_body="""\
-# Lists, dicts & strings
+# How Python runs your code
 
-Three workhorses cover most day-to-day Python.
+When you run a `.py` file, Python compiles it to **bytecode** and a virtual
+machine executes that, line by line, producing your output:
 
-## Lists — ordered, mutable
-
-```python
-nums = [3, 1, 4, 1, 5]
-nums.append(9)        # [3, 1, 4, 1, 5, 9]
-nums[0]               # 3   (indexing is 0-based)
-nums[-1]              # 9   (negative counts from the end)
-nums[1:3]             # [1, 4]  (slice: start:stop, stop excluded)
-len(nums)             # 6
+```mermaid
+flowchart LR
+  S([source.py]) --> C[Compile to bytecode]
+  C --> V[Python VM executes]
+  V --> O([Output])
 ```
 
-## Dicts — key → value
-
-```python
-user = {"name": "Ada", "role": "admin"}
-user["role"]              # "admin"
-user["active"] = True     # add a key
-user.get("email", "—")   # "—"  (default if missing)
-```
-
-## Strings behave like sequences
-
-```python
-s = "cyberdyne"
-s.upper()         # "CYBERDYNE"
-s[:5]             # "cyber"
-"dyne" in s       # True
-",".join(["a", "b", "c"])   # "a,b,c"
-```
-
-A rule of thumb: **list** for an ordered collection, **dict** when you look
-things up by name, **set** (`{1, 2, 3}`) when you only care about membership.
-
-**Next:** making decisions and repeating work.
-""",
-        ),
-        SeedLesson(
-            title="Control flow & functions",
-            lesson_type="text",
-            duration="8 min",
-            text_body="""\
-# Control flow & functions
-
-Indentation defines blocks — four spaces per level, and the `:` opens one.
-
-## Conditionals
-
-```python
-score = 82
-if score >= 90:
-    grade = "A"
-elif score >= 80:
-    grade = "B"
-else:
-    grade = "C"
-```
-
-## Loops
+Statements run top to bottom. Indentation (4 spaces) groups a block:
 
 ```python
 for n in [1, 2, 3]:
-    print(n * n)          # 1, 4, 9
-
-for i, name in enumerate(["a", "b"]):
-    print(i, name)        # 0 a / 1 b
+    print(n * n)        # 1, 4, 9
 
 total = 0
-while total < 10:
-    total += 3            # 3, 6, 9, 12 -> stops
+for k in range(1, 6):
+    total += k          # 1+2+3+4+5
+print("total =", total) # total = 15
 ```
 
 A **comprehension** builds a list in one expressive line:
 
 ```python
-squares = [n * n for n in range(5)]   # [0, 1, 4, 9, 16]
+squares = [k * k for k in range(1, 6)]
+print("sum of squares =", sum(squares))   # 55
 ```
 
-## Functions
-
-```python
-def rms(values):
-    \"\"\"Root-mean-square of a list of numbers.\"\"\"
-    return (sum(v ** 2 for v in values) / len(values)) ** 0.5
-
-rms([3, 4])    # 3.535...
-```
-
-**Next:** put it together in a script you run live.
+> Tip: open the **code** lesson next and run a script yourself.
 """,
         ),
         SeedLesson(
@@ -445,8 +426,8 @@ async def _get_or_create(
 
 def _apply_metadata(course: Course, spec: SeedCourse) -> None:
     course.description = spec.description
-    # Title/level are refreshed too, but the slug (the stable key) is left
-    # alone so existing links and progress keep resolving.
+    # The slug (the stable key) is left alone so existing links and progress
+    # keep resolving.
 
 
 def _reconcile_lessons(

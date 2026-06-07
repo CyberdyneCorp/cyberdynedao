@@ -45,7 +45,13 @@ class TestSeedCourses:
         welcome = next(le for le in matlab.lessons if le.title == "Welcome to MATLAB")
         assert welcome.text_body and "Command Window" in welcome.text_body
         code = next(le for le in matlab.lessons if le.lesson_type.value == "code")
-        assert code.text_body and "linspace" in code.text_body
+        assert code.text_body and "trace" in code.text_body
+        # Python course aligns to the live titles + gains a runnable code lesson.
+        py_titles = [le.title for le in python.lessons]
+        assert "Welcome to Python" in py_titles
+        assert "Run your first Python script" in py_titles
+        py_code = next(le for le in python.lessons if le.lesson_type.value == "code")
+        assert py_code.text_body and "scores" in py_code.text_body
 
     async def test_is_idempotent(self) -> None:
         repo = FakeCourseRepo()
