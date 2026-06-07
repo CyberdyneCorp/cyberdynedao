@@ -564,7 +564,256 @@ print(f"passed:  {len(passed)} of {len(scores)}")
     ),
 )
 
-ACADEMY_COURSES: tuple[SeedCourse, ...] = (_MATLAB, _PYTHON)
+_BLOCKCHAIN = SeedCourse(
+    slug="blockchain-basics",
+    title="Blockchain Basics",
+    description=(
+        "Understand blockchains from first principles: the distributed-ledger "
+        "idea, hashing and how blocks chain together, Proof-of-Work consensus "
+        "(with a miner you run yourself), and how Bitcoin ties it all into "
+        "peer-to-peer digital money."
+    ),
+    level="Beginner",
+    lessons=(
+        SeedLesson(
+            title="What is a blockchain?",
+            lesson_type="text",
+            duration="8 min",
+            text_body="""\
+# What is a blockchain?
+
+A blockchain is a **distributed ledger** — a database that many computers keep
+a copy of, where everyone agrees on the same history without trusting a central
+authority. A useful mental model is a very particular database:
+
+- **fast to read**, but **slow to write** — every write needs the network to
+  reach *consensus* first;
+- **append-only** — you add new records, you don't edit old ones;
+- **every write costs money** (a "gas" fee), so you store small things
+  (amounts, hashes, short strings), not files.
+
+## The problem it solves: double-spending
+
+Digital money is just data — and data can be copied. What stops Alice paying
+the same coin to two people?
+
+```mermaid
+flowchart TD
+  A[Alice has 1 coin] --> B[pays Bob]
+  A --> C[copies it]
+  C --> D[pays Carol the same coin]
+  B --> G[Double spend!]
+  D --> G
+  G --> H[Bank: a trusted middleman decides]
+  G --> I[Blockchain: shared ledger + consensus]
+```
+
+A bank solves this by being a trusted middleman. A blockchain solves it by
+making **everyone** hold the ledger and agree, via math, on which transaction
+came first — no middleman required.
+
+## A chain of blocks
+
+Transactions are grouped into **blocks**, and each block points back to the one
+before it, forming a chain:
+
+```mermaid
+flowchart LR
+  G([Genesis]) --> B1[Block 1] --> B2[Block 2] --> B3[Block N...]
+```
+
+**Next:** the cryptographic glue that makes this chain tamper-evident — hashing.
+""",
+        ),
+        SeedLesson(
+            title="Hashing & blocks",
+            lesson_type="text",
+            duration="9 min",
+            text_body="""\
+# Hashing & blocks
+
+A **hash function** (Bitcoin uses SHA-256) turns any input into a fixed-size
+fingerprint. Three properties make it the backbone of a blockchain:
+
+- **deterministic** — same input always gives the same hash;
+- **one-way** — you can't reverse the hash back into the input;
+- **avalanche** — change one character and the hash looks completely different.
+
+```python
+import hashlib
+hashlib.sha256(b"hello").hexdigest()   # 2cf24dba5fb0a30e26e83b2ac5b9e29e...
+hashlib.sha256(b"hellp").hexdigest()   # 7f1a... totally different
+```
+
+## What's in a block
+
+| Field | Purpose |
+|-------|---------|
+| **Previous hash** | links to the block before it |
+| **Transactions** | the data being recorded (a Merkle root, really) |
+| **Timestamp** | when it was made |
+| **Nonce** | a number miners search for (next lesson) |
+
+Because each block includes the **previous block's hash**, the blocks are
+chained — and that makes tampering obvious:
+
+```mermaid
+flowchart LR
+  B1["Block 1\\nhash: 00a1"] --> B2["Block 2\\nprev: 00a1\\nhash: 00b2"]
+  B2 --> B3["Block 3\\nprev: 00b2\\nhash: 00c3"]
+```
+
+If someone edits Block 1, its hash changes, so Block 2's "previous hash" no
+longer matches — and every block after it breaks. To rewrite history you'd have
+to redo **all** the following blocks, which (next lesson) is made deliberately
+expensive.
+
+**Next:** how the network agrees on new blocks — Proof of Work.
+""",
+        ),
+        SeedLesson(
+            title="Consensus & Proof of Work",
+            lesson_type="text",
+            duration="10 min",
+            text_body="""\
+# Consensus & Proof of Work
+
+Only one block can be added at a time, and thousands of nodes must agree on
+which. The rule they follow is the **consensus mechanism**. The original one,
+used by Bitcoin, is **Proof of Work (PoW)**.
+
+## The mining puzzle
+
+Miners race to find a **nonce** that makes the block's hash fall below a
+target — in practice, "start with N zeros". Hashing is unpredictable, so the
+only way to find it is to try nonces one by one:
+
+```mermaid
+flowchart TD
+  T[Take block data + nonce] --> H[Hash it]
+  H --> Q{Hash starts with N zeros?}
+  Q -->|no| I[nonce = nonce + 1] --> T
+  Q -->|yes| B[Broadcast block, claim reward]
+```
+
+Finding the nonce is **hard** (lots of guessing), but checking it is **instant**
+(one hash). That asymmetry is what secures the chain.
+
+## Why it's secure: the 51% attack
+
+To rewrite history an attacker must out-mine the rest of the network combined —
+controlling **>50% of the hash power**. For Bitcoin that's billions in hardware
+and energy. Even then they could only double-spend their own coins or censor
+transactions; they **cannot** steal others' coins or mint new ones.
+
+## Proof of Work vs Proof of Stake
+
+| | Proof of Work | Proof of Stake |
+|---|---|---|
+| **Who writes** | first to solve the hash puzzle | a validator chosen by stake |
+| **Cost to attack** | 51% of hash power | 51% of staked tokens |
+| **Energy** | very high | low |
+| **Examples** | Bitcoin, Litecoin | Ethereum, Cardano |
+
+**Next:** run a tiny miner yourself.
+""",
+        ),
+        SeedLesson(
+            title="Mine a block (toy example)",
+            lesson_type="code",
+            duration="10 min",
+            text_body="""\
+# A toy Proof-of-Work miner. Edit and press Run.
+# It searches for a nonce so the block "hash" starts with N zeros —
+# exactly what Bitcoin miners do, just with a tiny stand-in hash.
+
+def toy_hash(s):
+    # A tiny teaching hash (NOT secure!). Real Bitcoin uses SHA-256.
+    h = 2166136261
+    for ch in s:
+        h = ((h ^ ord(ch)) * 16777619) % (2 ** 32)
+    return format(h, "08x")
+
+block = "Alice -> Bob: 1 coin | prev: 0000abc"
+zeros = 4                      # the difficulty: more zeros = more work
+target = "0" * zeros
+
+nonce = 0
+digest = toy_hash(f"{block}{nonce}")
+while not digest.startswith(target):
+    nonce += 1
+    digest = toy_hash(f"{block}{nonce}")
+
+print(f"difficulty: {zeros} leading zeros")
+print(f"nonce found: {nonce}")
+print(f"block hash:  {digest}")
+
+# Try it yourself:
+#   1. Raise zeros to 5 and re-run — notice how much longer it takes.
+#   2. Change one character of `block` and watch the nonce change completely.
+""",
+        ),
+        SeedLesson(
+            title="Bitcoin",
+            lesson_type="text",
+            duration="9 min",
+            text_body="""\
+# Bitcoin
+
+Bitcoin (BTC) is the first cryptocurrency, launched in 2009 by the pseudonymous
+**Satoshi Nakamoto** as "a peer-to-peer electronic cash system". It was the
+first design to solve double-spending without a trusted middleman, by combining
+a distributed ledger with Proof of Work.
+
+| Property | Value |
+|----------|-------|
+| Created | January 2009 |
+| Max supply | 21 million (fixed) |
+| Block time | ~10 minutes |
+| Consensus | Proof of Work (SHA-256) |
+| Smallest unit | 1 satoshi = 0.00000001 BTC |
+
+## Why it matters
+
+- **Trust math, not institutions** — rules are enforced by code, not a bank.
+- **Fixed supply** — 21M cap creates digital scarcity (no money printing).
+- **Permissionless & borderless** — anyone can transact, 24/7, censorship-resistant.
+
+## The UTXO model
+
+Bitcoin doesn't store account balances. Instead your wallet owns **Unspent
+Transaction Outputs (UTXOs)** — like physical coins. To spend, you consume
+whole UTXOs as inputs and create new ones as outputs (the leftover is your
+change; the gap is the miner's fee):
+
+```mermaid
+flowchart LR
+  UA[UTXO 0.5 BTC] --> TX[Transaction]
+  UB[UTXO 0.3 BTC] --> TX
+  TX --> O1[0.6 BTC to Dave]
+  TX --> O2[0.199 BTC change to Alice]
+  TX --> FEE[0.001 BTC fee to miner]
+```
+
+## Halving
+
+Every ~4 years (210,000 blocks) the block reward halves — 50 → 25 → ... →
+3.125 BTC (2024). This steadily slows new supply until the last bitcoin is
+mined around 2140.
+
+> Bitcoin is intentionally simple and conservative. Programmable money — smart
+> contracts, DeFi — is where chains like Ethereum and Solana go next.
+""",
+        ),
+        SeedLesson(
+            title="Check your knowledge",
+            lesson_type="quiz",
+            duration="3 min",
+        ),
+    ),
+)
+
+ACADEMY_COURSES: tuple[SeedCourse, ...] = (_MATLAB, _PYTHON, _BLOCKCHAIN)
 
 
 # ── Apply ────────────────────────────────────────────────────────────────

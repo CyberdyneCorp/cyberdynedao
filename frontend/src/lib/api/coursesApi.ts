@@ -321,7 +321,8 @@ export function runLessonCode(
 }
 
 /** Infer a code lesson's language from its course (no per-lesson language
- *  field yet): Python courses run Python, everything else MATLAB. */
+ *  field yet): only explicitly-MATLAB courses run on the MATLAB engine;
+ *  everything else (Python, Blockchain toys, …) runs Python. */
 export function courseCodeLanguage(slugOrTitle: string): CodeLanguage {
-	return /python|\bpy\b/i.test(slugOrTitle) ? 'python' : 'matlab';
+	return /matlab/i.test(slugOrTitle) ? 'matlab' : 'python';
 }

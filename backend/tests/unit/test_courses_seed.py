@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 2
+        assert len(summary) == 3
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -127,11 +127,22 @@ class TestSeedCourses:
         assert intro_quiz.lesson_type.value == "quiz"  # untouched
         assert intro_quiz.text_body is None
 
-    def test_curated_content_covers_both_courses(self) -> None:
+    def test_curated_content_covers_all_courses(self) -> None:
         slugs = {c.slug for c in ACADEMY_COURSES}
-        assert slugs == {"matlab-basics", "python-course"}
+        assert slugs == {"matlab-basics", "python-course", "blockchain-basics"}
         for course in ACADEMY_COURSES:
             assert course.lessons  # non-empty
             for lesson in course.lessons:
                 if lesson.lesson_type in {"text", "code"}:
                     assert lesson.text_body, f"{course.slug}/{lesson.title} missing body"
+
+    def test_blockchain_course_covers_idea_pow_and_bitcoin(self) -> None:
+        bc = next(c for c in ACADEMY_COURSES if c.slug == "blockchain-basics")
+        titles = " | ".join(le.title for le in bc.lessons)
+        for needle in ("blockchain", "Hashing", "Proof of Work", "Mine a block", "Bitcoin"):
+            assert needle in titles, f"missing lesson about {needle!r}"
+        # The runnable miner is a Python code lesson with a working toy PoW.
+        code = next(le for le in bc.lessons if le.lesson_type == "code")
+        assert code.text_body and "toy_hash" in code.text_body and "nonce" in code.text_body
+        # It must avoid hashlib (blocked in the restricted interpreter sandbox).
+        assert "hashlib" not in (code.text_body or "")

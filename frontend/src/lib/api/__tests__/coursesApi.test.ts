@@ -168,15 +168,14 @@ describe('coursesApi — quiz player', () => {
 });
 
 describe('courseCodeLanguage', () => {
-	it('detects Python courses', async () => {
-		const { courseCodeLanguage } = await import('../coursesApi');
-		expect(courseCodeLanguage('python-course Python Course')).toBe('python');
-		expect(courseCodeLanguage('Intro to Py')).toBe('python');
-	});
-	it('defaults to MATLAB otherwise', async () => {
+	it('routes MATLAB courses to the MATLAB engine', async () => {
 		const { courseCodeLanguage } = await import('../coursesApi');
 		expect(courseCodeLanguage('matlab-basics Matlab Basics')).toBe('matlab');
-		expect(courseCodeLanguage('Signals 101')).toBe('matlab');
+	});
+	it('routes everything else (Python, Blockchain) to Python', async () => {
+		const { courseCodeLanguage } = await import('../coursesApi');
+		expect(courseCodeLanguage('python-course Python Course')).toBe('python');
+		expect(courseCodeLanguage('blockchain-basics Blockchain Basics')).toBe('python');
 	});
 });
 
