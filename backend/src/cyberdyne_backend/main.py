@@ -78,6 +78,7 @@ from cyberdyne_backend.adapters.inbound.api.courses.router import (
     get_delete_lesson_uc,
     get_list_courses_uc,
     get_my_course_progress_uc,
+    get_my_courses_progress_uc,
     get_reorder_courses_uc,
     get_reorder_lessons_uc,
     get_set_course_deadline_uc,
@@ -273,6 +274,7 @@ from cyberdyne_backend.application.courses import (
     GetMyCourseProgress,
     IssueCourseCertificate,
     ListCourses,
+    ListMyCourseProgress,
     RenderCourseCertificatePdf,
     ReorderCourses,
     ReorderLessons,
@@ -559,6 +561,13 @@ def create_app() -> FastAPI:
     async def _my_course_progress_dep() -> AsyncIterator[GetMyCourseProgress]:
         async with session_scope() as session:
             yield GetMyCourseProgress(
+                courses=SqlAlchemyCourseRepository(session),
+                progress=SqlAlchemyCourseProgressRepository(session),
+            )
+
+    async def _my_courses_progress_dep() -> AsyncIterator[ListMyCourseProgress]:
+        async with session_scope() as session:
+            yield ListMyCourseProgress(
                 courses=SqlAlchemyCourseRepository(session),
                 progress=SqlAlchemyCourseProgressRepository(session),
             )
@@ -857,6 +866,7 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_reorder_lessons_uc] = _reorder_lessons_dep
     app.dependency_overrides[get_set_lesson_progress_uc] = _set_lesson_progress_dep
     app.dependency_overrides[get_my_course_progress_uc] = _my_course_progress_dep
+    app.dependency_overrides[get_my_courses_progress_uc] = _my_courses_progress_dep
     app.dependency_overrides[get_quiz_uc] = _get_quiz_dep
     app.dependency_overrides[get_upsert_quiz_uc] = _upsert_quiz_dep
     app.dependency_overrides[get_delete_quiz_uc] = _delete_quiz_dep

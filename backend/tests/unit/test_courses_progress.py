@@ -11,6 +11,7 @@ import pytest
 from cyberdyne_backend.application.courses import (
     CourseLessonCompleter,
     GetMyCourseProgress,
+    ListMyCourseProgress,
     SetLessonProgress,
 )
 from cyberdyne_backend.domain.courses import (
@@ -153,6 +154,9 @@ class FakeProgressRepo:
 
     async def list_course_progress(self, *, user_id: UUID, course_id: UUID) -> list[LessonProgress]:
         return [p for (u, _), p in self.rows.items() if u == user_id and p.course_id == course_id]
+
+    async def list_all_progress_for_user(self, *, user_id: UUID) -> list[LessonProgress]:
+        return [p for (u, _), p in self.rows.items() if u == user_id]
 
     async def get_lesson_course_id(self, lesson_id: UUID) -> UUID | None:
         return self.lesson_courses.get(lesson_id)
@@ -316,3 +320,94 @@ class TestCertificateAwarding:
             user_id=user, lesson_id=lesson_id
         )
         assert awarder.awarded == [(user, course_id)]
+
+
+class _MultiCourseRepo:
+    """Lists several courses (with their lessons) — for ListMyCourseProgress."""
+
+    def __init__(self, courses: list[Course]) -> None:
+        self._courses = courses
+
+    async def list_courses(self, *, level: object = None, include_drafts: bool = False):  # type: ignore[no-untyped-def]
+        return list(self._courses)
+
+    async def save(self, course: Course) -> None:  # pragma: no cover - unused
+        raise NotImplementedError
+
+    async def get_by_slug(
+        self, slug: str, *, include_drafts: bool = False
+    ) -> Course:  # pragma: no cover
+        raise NotImplementedError
+
+    async def get_by_id(self, course_id: UUID) -> Course | None:  # pragma: no cover
+        return None
+
+    async def delete(self, course_id: UUID) -> None:  # pragma: no cover
+        raise NotImplementedError
+
+
+class TestListMyCourseProgress:
+    async def test_summarises_each_started_course(self) -> None:
+        user = uuid.uuid4()
+        c1 = new_course(title="Alpha", description="d", level="Beginner", slug="alpha")
+        c1.lessons = [
+            new_lesson(
+                course_id=c1.id, title=f"a{i}", lesson_type="text", text_body="b", sort_order=i
+            )
+            for i in range(2)
+        ]
+        c2 = new_course(title="Beta", description="d", level="Beginner", slug="beta")
+        c2.lessons = [
+            new_lesson(
+                course_id=c2.id, title=f"b{i}", lesson_type="text", text_body="b", sort_order=i
+            )
+            for i in range(4)
+        ]
+        prog = FakeProgressRepo()
+        # Finish both lessons of c1 (100%), one of c2 (25%).
+        for lesson in c1.lessons:
+            prog.rows[(user, lesson.id)] = new_lesson_progress(
+                user_id=user, course_id=c1.id, lesson_id=lesson.id, percent=100
+            )
+        prog.rows[(user, c2.lessons[0].id)] = new_lesson_progress(
+            user_id=user, course_id=c2.id, lesson_id=c2.lessons[0].id, percent=100
+        )
+
+        results = await ListMyCourseProgress(
+            courses=_MultiCourseRepo([c1, c2]), progress=prog
+        ).execute(user_id=user)
+        by_slug = {p.slug: p for p in results}
+
+        assert by_slug["alpha"].percent == 100
+        assert by_slug["alpha"].completed is True
+        assert by_slug["beta"].completed_lessons == 1
+        assert by_slug["beta"].percent == 25
+        assert by_slug["beta"].completed is False
+
+    async def test_two_queries_not_n_plus_one(self) -> None:
+        # ListMyCourseProgress must use the batch progress query, not per-course.
+        user = uuid.uuid4()
+        c = new_course(title="Alpha", description="d", level="Beginner", slug="alpha")
+        c.lessons = [new_lesson(course_id=c.id, title="a", lesson_type="text", text_body="b")]
+        prog = FakeProgressRepo()
+
+        calls = {"per_course": 0, "all": 0}
+        orig_course = prog.list_course_progress
+        orig_all = prog.list_all_progress_for_user
+
+        async def _count_course(**kw):  # type: ignore[no-untyped-def]
+            calls["per_course"] += 1
+            return await orig_course(**kw)
+
+        async def _count_all(**kw):  # type: ignore[no-untyped-def]
+            calls["all"] += 1
+            return await orig_all(**kw)
+
+        prog.list_course_progress = _count_course  # type: ignore[method-assign]
+        prog.list_all_progress_for_user = _count_all  # type: ignore[method-assign]
+
+        await ListMyCourseProgress(courses=_MultiCourseRepo([c]), progress=prog).execute(
+            user_id=user
+        )
+        assert calls["all"] == 1
+        assert calls["per_course"] == 0

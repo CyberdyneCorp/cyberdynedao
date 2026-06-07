@@ -142,6 +142,17 @@ class CourseProgressResponse(_CamelModel):
     lessons: list[LessonProgressResponse]
 
 
+class MyCourseProgressItem(_CamelModel):
+    """Compact per-course progress for the catalogue overview (no per-lesson
+    detail)."""
+
+    slug: str
+    total_lessons: int
+    completed_lessons: int
+    percent: int
+    completed: bool
+
+
 # ── Certificates ──────────────────────────────────────────────────────
 
 

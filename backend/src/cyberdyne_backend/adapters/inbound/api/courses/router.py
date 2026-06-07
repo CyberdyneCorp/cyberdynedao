@@ -18,6 +18,7 @@ from cyberdyne_backend.adapters.inbound.api.courses.schemas import (
     CreateLessonRequest,
     LessonProgressResponse,
     LessonResponse,
+    MyCourseProgressItem,
     ReorderCoursesRequest,
     ReorderLessonsRequest,
     SetCourseDeadlineRequest,
@@ -42,6 +43,7 @@ from cyberdyne_backend.application.courses import (
     GetMyCourseProgress,
     IssueCourseCertificate,
     ListCourses,
+    ListMyCourseProgress,
     RenderCourseCertificatePdf,
     ReorderCourses,
     ReorderLessons,
@@ -294,6 +296,38 @@ async def get_course(
 
 
 # ── Learner progress ─────────────────────────────────────────────────
+
+
+async def get_my_courses_progress_uc() -> ListMyCourseProgress:  # pragma: no cover
+    raise NotImplementedError
+
+
+# Declared BEFORE "/{slug}/progress" so "me" isn't captured as a slug.
+@public_router.get(
+    "/me/progress",
+    response_model=list[MyCourseProgressItem],
+    response_model_by_alias=True,
+)
+async def list_my_courses_progress(
+    use_case: Annotated[ListMyCourseProgress, Depends(get_my_courses_progress_uc)],
+    principal: Annotated[UserPrincipal, Depends(require_principal)],
+) -> list[MyCourseProgressItem]:
+    if not isinstance(principal, UserPrincipal):
+        raise HTTPException(status_code=403, detail="user token required")
+    items = await use_case.execute(user_id=principal.user_id)
+    # Only surface courses the learner has actually started — the catalogue
+    # shows "Start" for the rest.
+    return [
+        MyCourseProgressItem(
+            slug=p.slug,
+            total_lessons=p.total_lessons,
+            completed_lessons=p.completed_lessons,
+            percent=p.percent,
+            completed=p.completed,
+        )
+        for p in items
+        if p.completed_lessons > 0
+    ]
 
 
 @public_router.get(

@@ -78,6 +78,32 @@ class GetMyCourseProgress:
 
 
 @dataclass(slots=True)
+class ListMyCourseProgress:
+    """A learner's progress across EVERY published course, computed in two
+    queries (courses + all progress rows) rather than N+1. Powers the
+    catalogue's per-card progress bars and Continue buttons."""
+
+    courses: CourseRepository
+    progress: CourseProgressRepository
+
+    async def execute(self, *, user_id: UUID) -> list[CourseProgress]:
+        courses = await self.courses.list_courses(include_drafts=False)
+        rows = await self.progress.list_all_progress_for_user(user_id=user_id)
+        by_course: dict[UUID, dict[UUID, LessonProgress]] = {}
+        for row in rows:
+            by_course.setdefault(row.course_id, {})[row.lesson_id] = row
+        return [
+            build_course_progress(
+                course_id=course.id,
+                slug=course.slug,
+                lessons=[(lesson.id, lesson.title) for lesson in course.lessons],
+                progress_by_lesson=by_course.get(course.id, {}),
+            )
+            for course in courses
+        ]
+
+
+@dataclass(slots=True)
 class CourseLessonCompleter:
     """Marks a lesson 100% complete — the courses-side implementation of
     the quizzes ``LessonCompleter`` seam, so passing a quiz auto-completes
@@ -108,5 +134,6 @@ class CourseLessonCompleter:
 __all__ = [
     "CourseLessonCompleter",
     "GetMyCourseProgress",
+    "ListMyCourseProgress",
     "SetLessonProgress",
 ]

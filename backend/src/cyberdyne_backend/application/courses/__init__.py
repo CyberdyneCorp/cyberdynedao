@@ -11,6 +11,7 @@ from cyberdyne_backend.application.courses.certificates import (
 from cyberdyne_backend.application.courses.progress import (
     CourseLessonCompleter,
     GetMyCourseProgress,
+    ListMyCourseProgress,
     SetLessonProgress,
 )
 from cyberdyne_backend.application.courses.use_cases import (
@@ -47,6 +48,7 @@ __all__ = [
     "GetMyCourseProgress",
     "IssueCourseCertificate",
     "ListCourses",
+    "ListMyCourseProgress",
     "RenderCourseCertificatePdf",
     "ReorderCourses",
     "ReorderLessons",

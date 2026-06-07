@@ -83,6 +83,12 @@ class SqlAlchemyCourseProgressRepository:
         )
         return [_row_to_progress(row) for row in result.scalars().all()]
 
+    async def list_all_progress_for_user(self, *, user_id: UUID) -> list[LessonProgress]:
+        result = await self._session.execute(
+            select(LessonProgressRow).where(LessonProgressRow.user_id == user_id)
+        )
+        return [_row_to_progress(row) for row in result.scalars().all()]
+
     async def get_lesson_course_id(self, lesson_id: UUID) -> UUID | None:
         result = await self._session.execute(
             select(LessonRow.course_id).where(LessonRow.id == lesson_id)
