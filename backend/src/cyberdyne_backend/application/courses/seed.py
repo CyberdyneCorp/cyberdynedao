@@ -206,6 +206,102 @@ end
 """,
         ),
         SeedLesson(
+            title="Control flow: if, for & while",
+            lesson_type="text",
+            duration="11 min",
+            text_body="""\
+# Control flow: if, for & while
+
+Real programs make **decisions** and **repeat** work. MATLAB groups every
+block with the keyword `end` (indenting is style, not syntax). Conditions use
+`==`, `~=` (not equal), `&&` (and), `||` (or).
+
+## if / elseif / else
+
+Branches are tested top to bottom; the first true one runs.
+
+```matlab
+score = 82;
+if score >= 90
+    grade = 'A';
+elseif score >= 80
+    grade = 'B';
+else
+    grade = 'C';
+end
+disp(grade)   % B
+```
+
+```mermaid
+flowchart TD
+  A{score at least 90} -->|yes| B[grade A]
+  A -->|no| C{score at least 80}
+  C -->|yes| D[grade B]
+  C -->|no| E[grade C]
+```
+
+## for — repeat a known number of times
+
+A `for` walks the columns of whatever you give it; `1:5` is just a row vector.
+
+```matlab
+total = 0;
+for k = 1:5
+    total = total + k;     % 1+2+3+4+5
+end
+fprintf('total = %d\\n', total)   % 15
+```
+
+## while — repeat until the condition is false
+
+```matlab
+n = 1;
+while n < 100
+    n = n * 2;   % 1, 2, 4, ... 128 -> stops
+end
+```
+
+```mermaid
+flowchart TD
+  S([start]) --> C{condition true}
+  C -->|yes| B[run loop body]
+  B --> C
+  C -->|no| E([exit loop])
+```
+
+## break and continue
+
+Inside any loop:
+
+- **`break`** leaves the loop immediately.
+- **`continue`** skips the rest of this pass and jumps to the next one.
+
+```matlab
+for n = 1:7
+    if n == 5
+        break;        % stop entirely at 5
+    end
+    if mod(n, 2) == 0
+        continue;     % skip even numbers
+    end
+    disp(n)           % prints 1, 3
+end
+```
+
+```mermaid
+flowchart TD
+  N[next item] --> Q{break?}
+  Q -->|yes| X([leave loop])
+  Q -->|no| S{continue?}
+  S -->|yes| N
+  S -->|no| B[run body]
+  B --> N
+```
+
+> Every `if` / `for` / `while` must be closed with its own `end`.
+""",
+        ),
+        SeedLesson(
             title="Run your first script",
             lesson_type="code",
             duration="10 min",
@@ -350,6 +446,95 @@ print("sum of squares =", sum(squares))   # 55
 ```
 
 > Tip: open the **code** lesson next and run a script yourself.
+""",
+        ),
+        SeedLesson(
+            title="Control flow: if, for & while",
+            lesson_type="text",
+            duration="11 min",
+            text_body="""\
+# Control flow: if, for & while
+
+Real programs make **decisions** and **repeat** work. Python uses
+**indentation** (4 spaces) to mark a block and a colon `:` to open it.
+
+## if / elif / else
+
+Branches are tested top to bottom; the first true one runs.
+
+```python
+score = 82
+if score >= 90:
+    grade = "A"
+elif score >= 80:
+    grade = "B"
+else:
+    grade = "C"
+print(grade)   # B
+```
+
+```mermaid
+flowchart TD
+  A{score at least 90} -->|yes| B[grade A]
+  A -->|no| C{score at least 80}
+  C -->|yes| D[grade B]
+  C -->|no| E[grade C]
+```
+
+## for — repeat over a sequence
+
+```python
+for n in [1, 2, 3]:
+    print(n * n)        # 1, 4, 9
+
+for i in range(3):       # 0, 1, 2
+    print(i)
+```
+
+## while — repeat until the condition is false
+
+```python
+total = 0
+while total < 10:
+    total += 3           # 3, 6, 9, 12 -> stops
+```
+
+```mermaid
+flowchart TD
+  S([start]) --> C{condition true}
+  C -->|yes| B[run loop body]
+  B --> C
+  C -->|no| E([exit loop])
+```
+
+## break and continue
+
+Inside any loop:
+
+- **`break`** leaves the loop immediately.
+- **`continue`** skips the rest of this pass and jumps to the next one.
+
+```python
+for n in range(1, 8):
+    if n == 5:
+        break            # stop entirely at 5
+    if n % 2 == 0:
+        continue         # skip even numbers
+    print(n)             # prints 1, 3
+```
+
+```mermaid
+flowchart TD
+  N[next item] --> Q{break?}
+  Q -->|yes| X([leave loop])
+  Q -->|no| S{continue?}
+  S -->|yes| N
+  S -->|no| B[run body]
+  B --> N
+```
+
+> Reach for **for** when you know what you're iterating over, **while** when
+> you loop until something changes.
 """,
         ),
         SeedLesson(

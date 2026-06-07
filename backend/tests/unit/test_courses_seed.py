@@ -52,6 +52,13 @@ class TestSeedCourses:
         assert "Run your first Python script" in py_titles
         py_code = next(le for le in python.lessons if le.lesson_type.value == "code")
         assert py_code.text_body and "scores" in py_code.text_body
+        # Both courses carry a control-flow lesson covering if/for/while/
+        # break/continue, with a Mermaid diagram.
+        for course in (matlab, python):
+            cf = next(le for le in course.lessons if le.title.startswith("Control flow"))
+            body = cf.text_body or ""
+            for kw in ("if", "for", "while", "break", "continue", "```mermaid"):
+                assert kw in body, f"{course.slug} control-flow lesson missing {kw!r}"
 
     async def test_is_idempotent(self) -> None:
         repo = FakeCourseRepo()
