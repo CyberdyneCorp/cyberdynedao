@@ -22,6 +22,15 @@ import {
 	listChannels,
 	createChannel as createChannelApi,
 	deleteChannel as deleteChannelApi,
+	updateChannel as updateChannelApi,
+	listMcpServers,
+	createMcpServer,
+	setMcpServerEnabled,
+	deleteMcpServer,
+	requestUploadUrl,
+	putToPresignedUrl,
+	completeUpload,
+	recordingMediaUrl,
 	addRecordingToChannel,
 	removeRecordingFromChannel,
 	listChannelRecordings,
@@ -41,8 +50,13 @@ import {
 	type ChatMessage,
 	type MeetingSession,
 	type MeetingPlatform,
-	type JoinMeetingRequest
+	type JoinMeetingRequest,
+	type McpServer
 } from '$lib/api/cyberfliesApi';
+
+/** Files at or above this size upload directly to storage via a presigned
+ *  URL instead of the multipart proxy (which can time out on big video). */
+const PRESIGNED_UPLOAD_THRESHOLD = 20 * 1024 * 1024; // 20 MB
 
 /**
  * Chat scope, encoded as a string so it round-trips through a `<select>`:
@@ -92,6 +106,11 @@ export interface CyberfliesViewModel {
 	readonly sendingBot: boolean;
 	readonly botError: string | null;
 
+	/** MCP servers the meeting agent can call. */
+	readonly mcpServers: McpServer[];
+	readonly mcpLoading: boolean;
+	readonly mcpError: string | null;
+
 	refreshRecordings(): Promise<void>;
 	refreshChannels(): Promise<void>;
 	refreshMeetingSessions(): Promise<void>;
@@ -111,11 +130,22 @@ export interface CyberfliesViewModel {
 	addToChannel(recordingId: string, channelId: string): Promise<void>;
 	/** Expand/collapse a channel, loading its recordings on expand. */
 	toggleChannel(channelId: string): Promise<void>;
+	/** Rename a channel (and update its description). */
+	renameChannel(channelId: string, name: string, description?: string): Promise<void>;
 	/** Generate (and store) an AI recap for a channel. */
 	recapChannel(channelId: string): Promise<void>;
 	/** Remove a recording from a channel (keeps the recording). */
 	removeFromChannel(channelId: string, recordingId: string): Promise<void>;
 	clearNotice(): void;
+
+	/** MCP server management. */
+	refreshMcpServers(): Promise<void>;
+	addMcpServer(name: string, url: string, authToken?: string): Promise<void>;
+	toggleMcpServer(serverId: string, enabled: boolean): Promise<void>;
+	removeMcpServer(serverId: string): Promise<void>;
+
+	/** Fetch a presigned URL to play a recording's original media inline. */
+	mediaUrl(recordingId: string): Promise<string | null>;
 
 	setChatScope(scope: ChatScope): void;
 	sendChat(text: string): Promise<void>;
@@ -152,6 +182,11 @@ export function createCyberfliesVM(
 	let sessionsLoading = $state<boolean>(false);
 	let sendingBot = $state<boolean>(false);
 	let botError = $state<string | null>(null);
+
+	// MCP servers (the meeting agent's tools).
+	let mcpServers = $state<McpServer[]>([]);
+	let mcpLoading = $state<boolean>(false);
+	let mcpError = $state<string | null>(null);
 
 	// Channels tab: the currently-expanded channel and its lazily-loaded
 	// contents / recap.
@@ -319,7 +354,10 @@ export function createCyberfliesVM(
 		if (uploading) return;
 		uploading = true;
 		try {
-			const rec = await uploadRecording(file, { device: 'web' });
+			const rec =
+				file.size >= PRESIGNED_UPLOAD_THRESHOLD
+					? await uploadViaPresigned(file)
+					: await uploadRecording(file, { device: 'web' });
 			upsertRecording(rec);
 			selectedId = rec.id;
 			error = null;
@@ -329,6 +367,15 @@ export function createCyberfliesVM(
 		} finally {
 			uploading = false;
 		}
+	}
+
+	// Large files: get a presigned URL, PUT straight to storage, then tell the
+	// backend to ingest. Then fetch the freshly-created recording row.
+	async function uploadViaPresigned(file: File): Promise<RecordingResponse> {
+		const ticket = await requestUploadUrl(file.name, file.size);
+		await putToPresignedUrl(ticket.upload_url, file);
+		await completeUpload(ticket.recording_id);
+		return getRecording(ticket.recording_id);
 	}
 
 	async function downloadAudio(id: string): Promise<void> {
@@ -470,6 +517,89 @@ export function createCyberfliesVM(
 		}
 	}
 
+	async function renameChannel(
+		channelId: string,
+		name: string,
+		description?: string
+	): Promise<void> {
+		const trimmed = name.trim();
+		if (trimmed === '' || busy) return;
+		busy = true;
+		try {
+			const updated = await updateChannelApi(channelId, {
+				name: trimmed,
+				description: description?.trim() || undefined
+			});
+			channels = channels.map((c) => (c.id === channelId ? updated : c));
+			notice = 'Channel renamed';
+			error = null;
+		} catch (err) {
+			error = toMessage(err);
+		} finally {
+			busy = false;
+		}
+	}
+
+	// ── MCP servers ──────────────────────────────────────────────────
+	async function refreshMcpServers(): Promise<void> {
+		mcpLoading = true;
+		try {
+			mcpServers = (await listMcpServers()).items;
+			mcpError = null;
+		} catch (err) {
+			mcpError = toMessage(err);
+		} finally {
+			mcpLoading = false;
+		}
+	}
+
+	async function addMcpServer(name: string, url: string, authToken?: string): Promise<void> {
+		if (name.trim() === '' || url.trim() === '') return;
+		mcpLoading = true;
+		try {
+			const server = await createMcpServer({
+				name: name.trim(),
+				url: url.trim(),
+				auth_token: authToken?.trim() || undefined
+			});
+			mcpServers = [...mcpServers, server];
+			mcpError = null;
+		} catch (err) {
+			mcpError = toMessage(err);
+		} finally {
+			mcpLoading = false;
+		}
+	}
+
+	async function toggleMcpServer(serverId: string, enabled: boolean): Promise<void> {
+		try {
+			const updated = await setMcpServerEnabled(serverId, enabled);
+			mcpServers = mcpServers.map((s) => (s.id === serverId ? updated : s));
+			mcpError = null;
+		} catch (err) {
+			mcpError = toMessage(err);
+		}
+	}
+
+	async function removeMcpServer(serverId: string): Promise<void> {
+		try {
+			await deleteMcpServer(serverId);
+			mcpServers = mcpServers.filter((s) => s.id !== serverId);
+			mcpError = null;
+		} catch (err) {
+			mcpError = toMessage(err);
+		}
+	}
+
+	async function mediaUrl(recordingId: string): Promise<string | null> {
+		try {
+			return (await recordingMediaUrl(recordingId)).url;
+		} catch (err) {
+			error = toMessage(err);
+			return null;
+		}
+	}
+
 	async function sendChat(text: string): Promise<void> {
 		const trimmed = text.trim();
 		if (trimmed === '' || chatSending) return;
@@ -568,6 +698,15 @@ export function createCyberfliesVM(
 		get botError() {
 			return botError;
 		},
+		get mcpServers() {
+			return mcpServers;
+		},
+		get mcpLoading() {
+			return mcpLoading;
+		},
+		get mcpError() {
+			return mcpError;
+		},
 		refreshRecordings,
 		refreshChannels,
 		refreshMeetingSessions,
@@ -582,11 +721,17 @@ export function createCyberfliesVM(
 		deleteChannel: deleteChannel_,
 		addToChannel,
 		toggleChannel,
+		renameChannel,
 		recapChannel,
 		removeFromChannel,
 		clearNotice: () => {
 			notice = null;
 		},
+		refreshMcpServers,
+		addMcpServer,
+		toggleMcpServer,
+		removeMcpServer,
+		mediaUrl,
 		setChatScope: (scope) => {
 			chatScope = scope;
 		},

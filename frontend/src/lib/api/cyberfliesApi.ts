@@ -225,6 +225,25 @@ async function postNoContent(path: string, body: unknown): Promise<void> {
 	if (!res.ok) throw new CyberfliesApiError(res.status, await readError(res));
 }
 
+async function patchJson<T>(path: string, body: unknown): Promise<T> {
+	const res = await fetch(`${CYBERFLIES_BASE}${path}`, {
+		method: 'PATCH',
+		headers: withAuth({ 'content-type': 'application/json', accept: 'application/json' }),
+		body: JSON.stringify(body)
+	});
+	if (!res.ok) throw new CyberfliesApiError(res.status, await readError(res));
+	return (await res.json()) as T;
+}
+
+/** POST with no body that returns 204 (no content). */
+async function postEmpty(path: string): Promise<void> {
+	const res = await fetch(`${CYBERFLIES_BASE}${path}`, {
+		method: 'POST',
+		headers: withAuth({ accept: 'application/json' })
+	});
+	if (!res.ok) throw new CyberfliesApiError(res.status, await readError(res));
+}
+
 // ── Recordings ──────────────────────────────────────────────────────
 
 export function listRecordings(limit = 50, offset = 0): Promise<RecordingListResponse> {
@@ -415,4 +434,102 @@ export function listMeetingSessions(limit = 50, offset = 0): Promise<MeetingSess
 
 export function getMeetingSession(sessionId: string): Promise<MeetingSession> {
 	return getJson<MeetingSession>(`/api/v1/meetings/${encodeURIComponent(sessionId)}`);
+}
+
+// ── Channel rename ──────────────────────────────────────────────────
+
+/** Rename / re-describe a channel. */
+export function updateChannel(
+	channelId: string,
+	patch: { name?: string; description?: string | null }
+): Promise<ChannelResponse> {
+	return patchJson<ChannelResponse>(`/api/v1/channels/${encodeURIComponent(channelId)}`, patch);
+}
+
+// ── MCP servers (the meeting agent's tools) ─────────────────────────
+
+export interface McpServer {
+	id: string;
+	name: string;
+	url: string;
+	enabled: boolean;
+	has_auth_token: boolean;
+}
+
+export interface McpServerListResponse {
+	items: McpServer[];
+}
+
+export function listMcpServers(): Promise<McpServerListResponse> {
+	return getJson<McpServerListResponse>('/api/v1/mcp-servers');
+}
+
+export function createMcpServer(body: {
+	name: string;
+	url: string;
+	auth_token?: string | null;
+	enabled?: boolean;
+}): Promise<McpServer> {
+	return postJson<McpServer>('/api/v1/mcp-servers', body);
+}
+
+/** Enable / disable a registered MCP server. */
+export function setMcpServerEnabled(serverId: string, enabled: boolean): Promise<McpServer> {
+	return patchJson<McpServer>(`/api/v1/mcp-servers/${encodeURIComponent(serverId)}`, { enabled });
+}
+
+export function deleteMcpServer(serverId: string): Promise<void> {
+	return del(`/api/v1/mcp-servers/${encodeURIComponent(serverId)}`);
+}
+
+// ── Presigned media: direct large-file upload + playback URLs ───────
+
+export interface UploadUrlResponse {
+	recording_id: string;
+	upload_url: string;
+	storage_key: string;
+	expires_in: number;
+	status: string;
+}
+
+export interface PresignedUrlResponse {
+	url: string;
+	expires_seconds: number;
+}
+
+/** Ask the backend for a presigned URL to upload a large file directly to
+ *  storage (skips the API proxy). */
+export function requestUploadUrl(
+	filename: string,
+	sizeBytes: number,
+	capturedAt?: string
+): Promise<UploadUrlResponse> {
+	return postJson<UploadUrlResponse>('/api/v1/recordings/upload-url', {
+		filename,
+		size_bytes: sizeBytes,
+		captured_at: capturedAt ?? null
+	});
+}
+
+/** PUT the file bytes straight to the presigned storage URL (no auth header —
+ *  the signature is in the URL; cross-origin to the storage host). */
+export async function putToPresignedUrl(uploadUrl: string, file: File): Promise<void> {
+	const res = await fetch(uploadUrl, {
+		method: 'PUT',
+		headers: { 'content-type': file.type || 'application/octet-stream' },
+		body: file
+	});
+	if (!res.ok) throw new CyberfliesApiError(res.status, `storage upload failed (${res.status})`);
+}
+
+/** Confirm a direct upload finished — kicks off transcription/summarization. */
+export function completeUpload(recordingId: string): Promise<void> {
+	return postEmpty(`/api/v1/recordings/${encodeURIComponent(recordingId)}/complete-upload`);
+}
+
+/** Presigned URL to stream/download a recording's original media. */
+export function recordingMediaUrl(recordingId: string): Promise<PresignedUrlResponse> {
+	return getJson<PresignedUrlResponse>(
+		`/api/v1/recordings/${encodeURIComponent(recordingId)}/media`
+	);
 }

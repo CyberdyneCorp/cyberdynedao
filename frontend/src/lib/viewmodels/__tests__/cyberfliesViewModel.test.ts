@@ -589,4 +589,98 @@ describe('cyberfliesViewModel', () => {
 			expect(vm.notice).toBe('Removed from channel');
 		});
 	});
+
+	describe('channel rename', () => {
+		it('renameChannel updates the channel in the list', async () => {
+			vi.spyOn(cyberfliesApi, 'listChannels').mockResolvedValue({
+				items: [channel({ id: 'c1', name: 'Old' })],
+				limit: 50,
+				offset: 0
+			});
+			vi.spyOn(cyberfliesApi, 'updateChannel').mockResolvedValue(
+				channel({ id: 'c1', name: 'New name' })
+			);
+			const vm = createCyberfliesVM(1);
+			await vm.refreshChannels();
+			await vm.renameChannel('c1', 'New name');
+			expect(vm.channels[0].name).toBe('New name');
+			expect(vm.notice).toBe('Channel renamed');
+		});
+	});
+
+	describe('MCP servers', () => {
+		const srv = (over = {}) => ({
+			id: 's1',
+			name: 'Jira',
+			url: 'https://x/mcp',
+			enabled: true,
+			has_auth_token: false,
+			...over
+		});
+		it('refresh / add / toggle / remove', async () => {
+			vi.spyOn(cyberfliesApi, 'listMcpServers').mockResolvedValue({ items: [srv()] });
+			vi.spyOn(cyberfliesApi, 'createMcpServer').mockResolvedValue(srv({ id: 's2', name: 'GH' }));
+			vi.spyOn(cyberfliesApi, 'setMcpServerEnabled').mockResolvedValue(srv({ enabled: false }));
+			vi.spyOn(cyberfliesApi, 'deleteMcpServer').mockResolvedValue(undefined);
+			const vm = createCyberfliesVM(1);
+
+			await vm.refreshMcpServers();
+			expect(vm.mcpServers.map((s) => s.id)).toEqual(['s1']);
+
+			await vm.addMcpServer('GH', 'https://gh/mcp');
+			expect(vm.mcpServers.map((s) => s.id)).toEqual(['s1', 's2']);
+
+			await vm.toggleMcpServer('s1', false);
+			expect(vm.mcpServers.find((s) => s.id === 's1')?.enabled).toBe(false);
+
+			await vm.removeMcpServer('s1');
+			expect(vm.mcpServers.map((s) => s.id)).toEqual(['s2']);
+		});
+	});
+
+	describe('uploads', () => {
+		it('small files use the multipart upload', async () => {
+			const up = vi.spyOn(cyberfliesApi, 'uploadRecording').mockResolvedValue(recording());
+			const presign = vi.spyOn(cyberfliesApi, 'requestUploadUrl');
+			const vm = createCyberfliesVM(1);
+			await vm.uploadAudio(new File(['x'], 'small.m4a'));
+			expect(up).toHaveBeenCalledOnce();
+			expect(presign).not.toHaveBeenCalled();
+		});
+
+		it('large files use the presigned direct upload', async () => {
+			const big = new File(['x'], 'big.mp4');
+			Object.defineProperty(big, 'size', { value: 25 * 1024 * 1024 });
+			const presign = vi.spyOn(cyberfliesApi, 'requestUploadUrl').mockResolvedValue({
+				recording_id: 'r9',
+				upload_url: 'https://storage/put',
+				storage_key: 'k',
+				expires_in: 900,
+				status: 'pending'
+			});
+			const put = vi.spyOn(cyberfliesApi, 'putToPresignedUrl').mockResolvedValue(undefined);
+			const complete = vi.spyOn(cyberfliesApi, 'completeUpload').mockResolvedValue(undefined);
+			vi.spyOn(cyberfliesApi, 'getRecording').mockResolvedValue(recording({ id: 'r9' }));
+			const multipart = vi.spyOn(cyberfliesApi, 'uploadRecording');
+			const vm = createCyberfliesVM(1);
+
+			await vm.uploadAudio(big);
+			expect(presign).toHaveBeenCalledOnce();
+			expect(put).toHaveBeenCalledWith('https://storage/put', big);
+			expect(complete).toHaveBeenCalledWith('r9');
+			expect(multipart).not.toHaveBeenCalled();
+			expect(vm.selectedId).toBe('r9');
+		});
+	});
+
+	describe('media url', () => {
+		it('mediaUrl returns the presigned url', async () => {
+			vi.spyOn(cyberfliesApi, 'recordingMediaUrl').mockResolvedValue({
+				url: 'https://storage/play.mp4',
+				expires_seconds: 600
+			});
+			const vm = createCyberfliesVM(1);
+			expect(await vm.mediaUrl('rec-1')).toBe('https://storage/play.mp4');
+		});
+	});
 });

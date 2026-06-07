@@ -11,7 +11,7 @@
 	import { createCyberfliesVM, type ChatScope } from '$lib/viewmodels/cyberfliesViewModel.svelte';
 	import type { MeetingPlatform } from '$lib/api/cyberfliesApi';
 
-	type Tab = 'meetings' | 'chat' | 'channels' | 'bot';
+	type Tab = 'meetings' | 'chat' | 'channels' | 'bot' | 'agent';
 	let tab = $state<Tab>('meetings');
 
 	const meetings = createCyberfliesVM();
@@ -25,6 +25,56 @@
 	let botName = $state<string>('');
 	let botConsent = $state<string>('');
 	let botCaptureVideo = $state<boolean>(false);
+
+	// Inline media playback for the selected recording (presigned URL on demand).
+	let mediaSrc = $state<string | null>(null);
+	let mediaKind = $state<string>('audio');
+	let mediaLoading = $state<boolean>(false);
+	// Reset the player whenever the selected recording changes.
+	$effect(() => {
+		meetings.selectedId;
+		mediaSrc = null;
+	});
+	async function onPlayMedia(id: string, kind: string) {
+		mediaLoading = true;
+		const url = await meetings.mediaUrl(id);
+		mediaLoading = false;
+		if (url) {
+			mediaKind = kind;
+			mediaSrc = url;
+		}
+	}
+	function clockFromSeconds(s: number): string {
+		const m = Math.floor(s / 60);
+		const sec = Math.floor(s % 60);
+		return `${m}:${sec.toString().padStart(2, '0')}`;
+	}
+
+	// Inline channel rename.
+	let renamingId = $state<string | null>(null);
+	let renameValue = $state<string>('');
+	function startRename(id: string, name: string) {
+		renamingId = id;
+		renameValue = name;
+	}
+	async function saveRename(id: string) {
+		await meetings.renameChannel(id, renameValue);
+		if (!meetings.error) renamingId = null;
+	}
+
+	// Agent-tools tab: MCP server registration form.
+	let mcpName = $state<string>('');
+	let mcpUrl = $state<string>('');
+	let mcpToken = $state<string>('');
+	async function onAddMcp(e: SubmitEvent) {
+		e.preventDefault();
+		await meetings.addMcpServer(mcpName, mcpUrl, mcpToken);
+		if (!meetings.mcpError) {
+			mcpName = '';
+			mcpUrl = '';
+			mcpToken = '';
+		}
+	}
 	// Organize-into-channel controls (per detail panel).
 	let organizeChannelId = $state<string>('');
 	let newChannelName = $state<string>('');
@@ -245,6 +295,9 @@
 			<button type="button" class="tab" class:tab--active={tab === 'bot'} onclick={() => (tab = 'bot')}>
 				🤖 Bot
 			</button>
+			<button type="button" class="tab" class:tab--active={tab === 'agent'} onclick={() => { tab = 'agent'; void meetings.refreshMcpServers(); }}>
+				🔌 Agent tools
+			</button>
 		</nav>
 	</header>
 
@@ -336,6 +389,16 @@
 						· {rec.audio_format} · {formatBytes(rec.size_bytes)}
 					</p>
 					<div class="detail__actions">
+						{#if rec.media?.available}
+							<PixelButton
+								variant="outline"
+								size="sm"
+								disabled={mediaLoading}
+								onclick={() => onPlayMedia(rec.id, rec.media?.kind ?? 'audio')}
+							>
+								{mediaLoading ? 'Loading…' : mediaSrc ? '↻ Reload' : '▶ Play'}
+							</PixelButton>
+						{/if}
 						<PixelButton variant="outline" size="sm" onclick={() => meetings.downloadAudio(rec.id)}>
 							⬇ Download
 						</PixelButton>
@@ -360,6 +423,17 @@
 							🗑 Delete
 						</PixelButton>
 					</div>
+
+					{#if mediaSrc}
+						<div class="player">
+							{#if mediaKind === 'video'}
+								<!-- svelte-ignore a11y_media_has_caption -->
+								<video class="player__el" src={mediaSrc} controls></video>
+							{:else}
+								<audio class="player__el" src={mediaSrc} controls></audio>
+							{/if}
+						</div>
+					{/if}
 
 					<!-- Organize into a channel -->
 					<div class="organize">
@@ -453,7 +527,18 @@
 						<section class="block">
 							<h3 class="block__title">Transcript <span class="block__count">{rec.transcription.word_count} words</span></h3>
 							<PixelScrollArea maxHeight="320px" ariaLabel="Transcript">
-								<pre class="transcript">{rec.transcription.text}</pre>
+								{#if rec.transcription.segments && rec.transcription.segments.length > 0}
+									<ol class="segments">
+										{#each rec.transcription.segments as seg}
+											<li class="segment">
+												<span class="segment__t">{clockFromSeconds(seg.start)}</span>
+												<span class="segment__text">{seg.text}</span>
+											</li>
+										{/each}
+									</ol>
+								{:else}
+									<pre class="transcript">{rec.transcription.text}</pre>
+								{/if}
 							</PixelScrollArea>
 						</section>
 					{/if}
@@ -586,24 +671,41 @@
 							{@const open = meetings.expandedChannelId === ch.id}
 							<li class="ch-item">
 								<div class="ch-item__head">
-									<button
-										type="button"
-										class="ch-item__main"
-										onclick={() => meetings.toggleChannel(ch.id)}
-										aria-expanded={open}
-									>
-										<span class="ch-item__caret">{open ? '▾' : '▸'}</span>
-										<span class="ch-item__name">{ch.name}</span>
-										{#if ch.description}<span class="ch-item__desc">{ch.description}</span>{/if}
-									</button>
-									<div class="ch-item__actions">
-										<PixelButton variant="outline" size="sm" onclick={() => meetings.recapChannel(ch.id)} disabled={meetings.recapLoading}>
-											✨ Recap
-										</PixelButton>
-										<PixelButton variant="ghost" size="sm" onclick={() => onDeleteChannel(ch.id, ch.name)} disabled={meetings.busy}>
-											🗑 Delete
-										</PixelButton>
-									</div>
+									{#if renamingId === ch.id}
+										<input
+											class="ch-input ch-rename"
+											value={renameValue}
+											oninput={(e) => (renameValue = (e.currentTarget as HTMLInputElement).value)}
+											onkeydown={(e) => { if (e.key === 'Enter') void saveRename(ch.id); if (e.key === 'Escape') renamingId = null; }}
+											aria-label="New channel name"
+										/>
+										<div class="ch-item__actions">
+											<PixelButton variant="solid" size="sm" onclick={() => saveRename(ch.id)} disabled={meetings.busy || renameValue.trim() === ''}>Save</PixelButton>
+											<PixelButton variant="ghost" size="sm" onclick={() => (renamingId = null)}>Cancel</PixelButton>
+										</div>
+									{:else}
+										<button
+											type="button"
+											class="ch-item__main"
+											onclick={() => meetings.toggleChannel(ch.id)}
+											aria-expanded={open}
+										>
+											<span class="ch-item__caret">{open ? '▾' : '▸'}</span>
+											<span class="ch-item__name">{ch.name}</span>
+											{#if ch.description}<span class="ch-item__desc">{ch.description}</span>{/if}
+										</button>
+										<div class="ch-item__actions">
+											<PixelButton variant="ghost" size="sm" onclick={() => startRename(ch.id, ch.name)} disabled={meetings.busy}>
+												✏️ Rename
+											</PixelButton>
+											<PixelButton variant="outline" size="sm" onclick={() => meetings.recapChannel(ch.id)} disabled={meetings.recapLoading}>
+												✨ Recap
+											</PixelButton>
+											<PixelButton variant="ghost" size="sm" onclick={() => onDeleteChannel(ch.id, ch.name)} disabled={meetings.busy}>
+												🗑 Delete
+											</PixelButton>
+										</div>
+									{/if}
 								</div>
 
 								{#if open}
@@ -765,6 +867,91 @@
 			{/if}
 		</div>
 	{/if}
+
+	<!-- ── Agent tools (MCP servers) ────────────────────────────── -->
+	{#if tab === 'agent'}
+		<div class="bot">
+			<header class="bot__intro">
+				<h2 class="bot__title">🔌 Agent tools (MCP servers)</h2>
+				<p class="bot__lead">
+					Connect MCP servers so the meeting agent can call extra tools when you chat with your
+					meetings. Disabled servers stay registered but aren't used.
+				</p>
+			</header>
+
+			<form class="bot-form" onsubmit={onAddMcp}>
+				<div class="bot-form__row">
+					<input
+						class="ch-input"
+						type="text"
+						placeholder="Name (e.g. Jira)"
+						value={mcpName}
+						oninput={(e) => (mcpName = (e.currentTarget as HTMLInputElement).value)}
+						disabled={!authReady || meetings.mcpLoading}
+					/>
+					<input
+						class="ch-input ch-input--desc"
+						type="url"
+						placeholder="Server URL (https://…/mcp)"
+						value={mcpUrl}
+						oninput={(e) => (mcpUrl = (e.currentTarget as HTMLInputElement).value)}
+						disabled={!authReady || meetings.mcpLoading}
+					/>
+				</div>
+				<div class="bot-form__row">
+					<input
+						class="ch-input ch-input--desc"
+						type="password"
+						placeholder="Auth token (optional)"
+						value={mcpToken}
+						oninput={(e) => (mcpToken = (e.currentTarget as HTMLInputElement).value)}
+						disabled={!authReady || meetings.mcpLoading}
+					/>
+					<PixelButton
+						variant="solid"
+						size="sm"
+						type="submit"
+						disabled={!authReady || meetings.mcpLoading || mcpName.trim() === '' || mcpUrl.trim() === ''}
+					>
+						{meetings.mcpLoading ? 'Saving…' : '+ Add server'}
+					</PixelButton>
+				</div>
+			</form>
+
+			{#if meetings.mcpError}
+				<div class="banner banner--err">{meetings.mcpError}</div>
+			{/if}
+
+			{#if meetings.mcpServers.length === 0}
+				<p class="empty">No MCP servers yet. Add one above to extend the meeting agent.</p>
+			{:else}
+				<ul class="mcp-list">
+					{#each meetings.mcpServers as srv (srv.id)}
+						<li class="mcp" class:mcp--off={!srv.enabled}>
+							<div class="mcp__main">
+								<span class="mcp__name">{srv.name}</span>
+								<span class="mcp__url">{srv.url}</span>
+								{#if srv.has_auth_token}<span class="mcp__auth">🔑 auth</span>{/if}
+							</div>
+							<div class="mcp__actions">
+								<label class="toggle">
+									<input
+										type="checkbox"
+										checked={srv.enabled}
+										onchange={(e) => meetings.toggleMcpServer(srv.id, (e.currentTarget as HTMLInputElement).checked)}
+									/>
+									{srv.enabled ? 'Enabled' : 'Disabled'}
+								</label>
+								<PixelButton variant="ghost" size="sm" onclick={() => meetings.removeMcpServer(srv.id)}>
+									Delete
+								</PixelButton>
+							</div>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</div>
+	{/if}
 </div>
 
 <!-- Styled confirmation dialog (replaces the native browser confirm()) -->
@@ -915,6 +1102,22 @@
 	.actions__text { flex: 1; }
 	.actions__who { font-size: 0.72rem; font-weight: 700; color: #0f766e; background: #ccfbf1; border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
 	.bot-form__video { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: #374151; margin-top: 8px; cursor: pointer; }
+	.toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: #374151; cursor: pointer; }
+	.mcp-list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+	.mcp { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #ffffff; border: 2px solid #000; border-radius: 8px; padding: 10px 12px; }
+	.mcp--off { opacity: 0.6; }
+	.mcp__main { display: flex; align-items: baseline; gap: 8px; min-width: 0; flex-wrap: wrap; }
+	.mcp__name { font-weight: 700; font-size: 0.9rem; }
+	.mcp__url { font-size: 0.75rem; color: #6b7280; overflow: hidden; text-overflow: ellipsis; }
+	.mcp__auth { font-size: 0.7rem; color: #0f766e; }
+	.mcp__actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+	.player { margin: 10px 0; }
+	.player__el { width: 100%; border-radius: 8px; background: #000; }
+	.segments { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+	.segment { display: flex; gap: 10px; font-size: 0.82rem; line-height: 1.5; }
+	.segment__t { flex-shrink: 0; font-variant-numeric: tabular-nums; color: #0f766e; font-weight: 700; min-width: 42px; }
+	.segment__text { flex: 1; }
+	.ch-rename { flex: 1; }
 	/* The Foundation base.css styles every <pre> with a dark surface, so
 	   set explicit light text + a defined dark panel here — otherwise the
 	   transcript renders dark-on-dark and is unreadable. */
