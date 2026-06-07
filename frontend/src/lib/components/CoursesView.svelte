@@ -5,9 +5,12 @@
 	import {
 		courseCertificatePdfUrl,
 		courseCodeLanguage,
+		fetchMyCoursesProgress,
 		type CourseLevel,
+		type CourseSummary,
 		type DeadlineStatus,
-		type LessonType
+		type LessonType,
+		type MyCourseProgress
 	} from '$lib/api/coursesApi';
 	import { authVM } from '$lib/auth/authViewModel.svelte';
 	import QuizPlayer from './QuizPlayer.svelte';
@@ -41,6 +44,18 @@
 	let openLesson = $state<string | null>(null);
 	let meLoaded = $state(false);
 
+	// Per-course progress for the catalogue (slug -> progress), loaded once
+	// auth is ready. Powers per-card progress bars + Continue buttons.
+	let progressBySlug = $state<Record<string, MyCourseProgress>>({});
+	async function loadProgress(): Promise<void> {
+		try {
+			const rows = await fetchMyCoursesProgress();
+			progressBySlug = Object.fromEntries(rows.map((r) => [r.slug, r]));
+		} catch {
+			/* anonymous / offline — cards just show "Start" */
+		}
+	}
+
 	onMount(() => {
 		void vm.loadCatalogue();
 	});
@@ -50,6 +65,7 @@
 		if (authReady && !meLoaded) {
 			meLoaded = true;
 			void vm.loadMe();
+			void loadProgress();
 		}
 	});
 
@@ -124,16 +140,63 @@
 		{ value: 'Advanced', label: 'Advanced' }
 	];
 
+	// Sort options.
+	type SortKey = 'default' | 'title' | 'level' | 'lessons';
+	let sortBy = $state<SortKey>('default');
+	const sortOptions: { value: SortKey; label: string }[] = [
+		{ value: 'default', label: 'Recommended order' },
+		{ value: 'title', label: 'Title (A–Z)' },
+		{ value: 'level', label: 'Level (Basic → Advanced)' },
+		{ value: 'lessons', label: 'Most lessons' }
+	];
+	const levelRank: Record<CourseLevel, number> = { Beginner: 0, Intermediate: 1, Advanced: 2 };
+
+	// Topic grouping — derived from the slug (no per-course category field yet).
+	let groupByTopic = $state(true);
+	const topicOrder = ['Foundations', 'Languages', 'Databases', 'DevOps', 'Blockchain', 'Other'];
+	function courseTopic(slug: string): string {
+		if (/^(c|cpp|swift|go|rust|javascript|typescript)-/.test(slug)) return 'Languages';
+		if (slug === 'sql-basics' || slug === 'sql-intermediate' || slug === 'mongodb' || slug === 'postgresql')
+			return 'Databases';
+		if (/^(docker|kubernetes|terraform|ansible)-/.test(slug)) return 'DevOps';
+		if (slug.startsWith('blockchain')) return 'Blockchain';
+		if (slug === 'matlab-basics' || slug === 'python-course') return 'Foundations';
+		return 'Other';
+	}
+
 	const filteredCourses = $derived.by(() => {
 		const q = search.trim().toLowerCase();
-		return $courses.filter(
+		const list = $courses.filter(
 			(c) =>
 				(levelFilter === 'all' || c.level === levelFilter) &&
 				(q === '' ||
 					c.title.toLowerCase().includes(q) ||
 					c.description.toLowerCase().includes(q))
 		);
+		const sorted = [...list];
+		if (sortBy === 'title') sorted.sort((a, b) => a.title.localeCompare(b.title));
+		else if (sortBy === 'level')
+			sorted.sort((a, b) => levelRank[a.level] - levelRank[b.level] || a.title.localeCompare(b.title));
+		else if (sortBy === 'lessons') sorted.sort((a, b) => b.lessonCount - a.lessonCount);
+		return sorted;
 	});
+
+	// Group the filtered+sorted list by topic, in a stable topic order.
+	const groupedCourses = $derived.by(() => {
+		const groups = new Map<string, typeof filteredCourses>();
+		for (const c of filteredCourses) {
+			const t = courseTopic(c.slug);
+			(groups.get(t) ?? groups.set(t, []).get(t)!).push(c);
+		}
+		return topicOrder
+			.filter((t) => groups.has(t))
+			.map((t) => ({ topic: t, courses: groups.get(t)! }));
+	});
+
+	function backToCatalogue(): void {
+		vm.close();
+		if (authReady) void loadProgress(); // reflect any lessons just completed
+	}
 </script>
 
 <PixelScrollArea maxHeight="100%" ariaLabel="Cyberdyne Academy courses">
@@ -153,7 +216,7 @@
 	{#if $selected}
 		{@const course = $selected}
 		<!-- Course detail / player -->
-		<PixelButton variant="ghost" size="sm" onclick={() => vm.close()}>← All courses</PixelButton>
+		<PixelButton variant="ghost" size="sm" onclick={backToCatalogue}>← All courses</PixelButton>
 
 		<article class="detail">
 			<div class="detail__head">
@@ -293,7 +356,7 @@
 		{:else if $courses.length === 0}
 			<p class="hint">No published courses yet — check back soon.</p>
 		{:else}
-			<!-- Browse toolbar: search + level filter -->
+			<!-- Browse toolbar: search + level filter + sort + grouping -->
 			<section class="browse">
 				<div class="browse__head">
 					<h2>Browse all courses</h2>
@@ -322,40 +385,75 @@
 							</button>
 						{/each}
 					</div>
+					<div class="toolbar__opts">
+						<label class="sortsel">
+							<span class="sortsel__lbl">Sort</span>
+							<select bind:value={sortBy} aria-label="Sort courses">
+								{#each sortOptions as o}<option value={o.value}>{o.label}</option>{/each}
+							</select>
+						</label>
+						<label class="toggle">
+							<input type="checkbox" bind:checked={groupByTopic} /> Group by topic
+						</label>
+					</div>
 				</div>
 			</section>
+
+			{#snippet courseCard(course: CourseSummary)}
+				{@const prog = progressBySlug[course.slug]}
+				<li>
+					<button
+						class="card card--{course.level.toLowerCase()}"
+						class:card--done={prog?.completed}
+						onclick={() => openCourse(course.slug)}
+					>
+						<div class="card__top">
+							<Badge variant={levelVariant[course.level]} size="sm">{course.level}</Badge>
+							{#if course.mandatory}<Badge variant="neutral" size="sm">Required</Badge>{/if}
+							{#if course.deadlineStatus !== 'none'}
+								<Badge variant={deadlineVariant[course.deadlineStatus]} size="sm">
+									{deadlineLabel[course.deadlineStatus]}
+								</Badge>
+							{/if}
+							{#if prog?.completed}<span class="card__check">✓ Completed</span>{/if}
+						</div>
+						<h3>{course.title}</h3>
+						<p>{course.description}</p>
+						{#if prog && !prog.completed}
+							<div class="cardprog" aria-label="course progress">
+								<div class="cardprog__bar"><span style="width:{prog.percent}%"></span></div>
+								<span class="cardprog__label">{prog.completedLessons}/{prog.totalLessons} · {prog.percent}%</span>
+							</div>
+						{/if}
+						<span class="card__foot">
+							<span class="card__meta">📘 {course.lessonCount} lessons</span>
+							<span class="card__cta" class:card__cta--show={!!prog}>
+								{prog?.completed ? 'Review →' : prog ? 'Continue →' : 'Start →'}
+							</span>
+						</span>
+					</button>
+				</li>
+			{/snippet}
 
 			{#if filteredCourses.length === 0}
 				<p class="hint empty">
 					No courses match “{search}”{levelFilter !== 'all' ? ` at ${levelFilter} level` : ''}.
 					<button class="link" onclick={() => { search = ''; levelFilter = 'all'; }}>Clear filters</button>
 				</p>
+			{:else if groupByTopic}
+				{#each groupedCourses as group (group.topic)}
+					<section class="topic">
+						<h3 class="topic__head">
+							{group.topic} <span class="topic__count">{group.courses.length}</span>
+						</h3>
+						<ul class="catalogue">
+							{#each group.courses as course (course.id)}{@render courseCard(course)}{/each}
+						</ul>
+					</section>
+				{/each}
 			{:else}
 				<ul class="catalogue">
-					{#each filteredCourses as course (course.id)}
-						<li>
-							<button
-								class="card card--{course.level.toLowerCase()}"
-								onclick={() => openCourse(course.slug)}
-							>
-								<div class="card__top">
-									<Badge variant={levelVariant[course.level]} size="sm">{course.level}</Badge>
-									{#if course.mandatory}<Badge variant="neutral" size="sm">Required</Badge>{/if}
-									{#if course.deadlineStatus !== 'none'}
-										<Badge variant={deadlineVariant[course.deadlineStatus]} size="sm">
-											{deadlineLabel[course.deadlineStatus]}
-										</Badge>
-									{/if}
-								</div>
-								<h3>{course.title}</h3>
-								<p>{course.description}</p>
-								<span class="card__foot">
-									<span class="card__meta">📘 {course.lessonCount} lessons</span>
-									<span class="card__cta">Start →</span>
-								</span>
-							</button>
-						</li>
-					{/each}
+					{#each filteredCourses as course (course.id)}{@render courseCard(course)}{/each}
 				</ul>
 			{/if}
 		{/if}
@@ -563,6 +661,62 @@
 		color: #ffffff;
 		border-color: #111827;
 	}
+	.toolbar__opts {
+		display: flex;
+		gap: 0.6rem;
+		align-items: center;
+		flex-wrap: wrap;
+	}
+	.sortsel {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		font-size: 0.8rem;
+		color: #374151;
+	}
+	.sortsel select {
+		font: inherit;
+		font-size: 0.8rem;
+		padding: 0.3rem 0.5rem;
+		border: 2px solid #000000;
+		border-radius: 6px;
+		background: #ffffff;
+		cursor: pointer;
+	}
+	.toggle {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		font-size: 0.8rem;
+		color: #374151;
+		cursor: pointer;
+	}
+
+	/* ── Topic sections ── */
+	.topic {
+		margin-top: 1.1rem;
+	}
+	.topic__head {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin: 0 0 0.55rem;
+		font-size: 0.95rem;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: #111827;
+		border-bottom: 2px solid #e5e7eb;
+		padding-bottom: 0.3rem;
+	}
+	.topic__count {
+		font-size: 0.72rem;
+		font-weight: 700;
+		color: #ffffff;
+		background: #111827;
+		border-radius: 999px;
+		padding: 0.05rem 0.5rem;
+	}
+
 	.empty {
 		padding: 1rem 0;
 	}
@@ -654,8 +808,43 @@
 		opacity: 0;
 		transition: opacity 0.12s ease;
 	}
-	.card:hover .card__cta {
+	.card:hover .card__cta,
+	.card__cta--show {
 		opacity: 1;
+	}
+	.card--done {
+		border-left-color: #16a34a;
+		background: #f6fef9;
+	}
+	.card__check {
+		margin-left: auto;
+		font-size: 0.7rem;
+		font-weight: 700;
+		color: #166534;
+	}
+	/* Per-card progress bar */
+	.cardprog {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin: 0 0 0.55rem;
+	}
+	.cardprog__bar {
+		flex: 1;
+		height: 6px;
+		background: #e5e7eb;
+		border-radius: 999px;
+		overflow: hidden;
+	}
+	.cardprog__bar span {
+		display: block;
+		height: 100%;
+		background: #22c55e;
+	}
+	.cardprog__label {
+		font-size: 0.68rem;
+		color: #6b7280;
+		white-space: nowrap;
 	}
 	.detail__head {
 		display: flex;

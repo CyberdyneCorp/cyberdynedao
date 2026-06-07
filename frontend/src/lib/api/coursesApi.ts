@@ -74,6 +74,15 @@ export interface CourseProgress {
 	lessons: LessonProgressView[];
 }
 
+/** Compact per-course progress for the catalogue (only started courses). */
+export interface MyCourseProgress {
+	slug: string;
+	totalLessons: number;
+	completedLessons: number;
+	percent: number;
+	completed: boolean;
+}
+
 export interface CourseCertificate {
 	id: string;
 	userId: string;
@@ -234,6 +243,11 @@ export function fetchCourse(slug: string): Promise<CourseDetail> {
 
 export function fetchMyCourseProgress(slug: string): Promise<CourseProgress> {
 	return getJson<CourseProgress>(`/api/v1/courses/${enc(slug)}/progress`);
+}
+
+/** The signed-in learner's progress across every started course (one call). */
+export function fetchMyCoursesProgress(): Promise<MyCourseProgress[]> {
+	return getJson<MyCourseProgress[]>('/api/v1/courses/me/progress');
 }
 
 export function setLessonProgress(
