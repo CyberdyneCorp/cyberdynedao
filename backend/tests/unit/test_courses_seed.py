@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 4
+        assert len(summary) == 16
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -134,12 +134,36 @@ class TestSeedCourses:
             "python-course",
             "blockchain-basics",
             "blockchain-beyond-basics",
+            "cpp-basics",
+            "cpp-intermediate",
+            "swift-basics",
+            "swift-intermediate",
+            "go-basics",
+            "go-intermediate",
+            "rust-basics",
+            "rust-intermediate",
+            "javascript-basics",
+            "javascript-intermediate",
+            "typescript-basics",
+            "typescript-intermediate",
         }
         for course in ACADEMY_COURSES:
             assert course.lessons  # non-empty
             for lesson in course.lessons:
                 if lesson.lesson_type in {"text", "code"}:
                     assert lesson.text_body, f"{course.slug}/{lesson.title} missing body"
+
+    def test_language_courses_are_basics_plus_intermediate_with_quiz(self) -> None:
+        from cyberdyne_backend.application.courses.seed_languages import LANGUAGE_COURSES
+
+        # Six languages, each with a basics + intermediate course.
+        assert len(LANGUAGE_COURSES) == 12
+        for course in LANGUAGE_COURSES:
+            # Language lessons are text (no interpreter for these) + a quiz.
+            kinds = {le.lesson_type for le in course.lessons}
+            assert kinds <= {"text", "quiz"}, f"{course.slug} has a non-text lesson"
+            assert any(le.lesson_type == "quiz" for le in course.lessons)
+            assert course.level in {"Beginner", "Intermediate"}
 
     def test_blockchain_course_covers_idea_pow_and_bitcoin(self) -> None:
         bc = next(c for c in ACADEMY_COURSES if c.slug == "blockchain-basics")

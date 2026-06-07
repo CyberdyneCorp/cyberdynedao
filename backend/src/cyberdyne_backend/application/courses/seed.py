@@ -20,9 +20,10 @@ Run it with ``python -m cyberdyne_backend.cli.seed_academy`` (see that module).
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from datetime import datetime
 
+from cyberdyne_backend.application.courses.seed_languages import LANGUAGE_COURSES
+from cyberdyne_backend.application.courses.seed_types import SeedCourse, SeedLesson
 from cyberdyne_backend.domain.courses import (
     Course,
     CourseNotFoundError,
@@ -30,24 +31,6 @@ from cyberdyne_backend.domain.courses import (
     new_course,
     new_lesson,
 )
-
-
-@dataclass(frozen=True, slots=True)
-class SeedLesson:
-    title: str
-    lesson_type: str  # 'text' | 'code' | 'quiz' | …
-    text_body: str | None = None
-    duration: str | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class SeedCourse:
-    slug: str
-    title: str
-    description: str
-    level: str
-    lessons: tuple[SeedLesson, ...] = field(default_factory=tuple)
-
 
 # ── Content ──────────────────────────────────────────────────────────────
 
@@ -1119,6 +1102,7 @@ ACADEMY_COURSES: tuple[SeedCourse, ...] = (
     _PYTHON,
     _BLOCKCHAIN,
     _BLOCKCHAIN_ADVANCED,
+    *LANGUAGE_COURSES,
 )
 
 
