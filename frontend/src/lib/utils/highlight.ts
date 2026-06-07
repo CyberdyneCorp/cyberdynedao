@@ -19,6 +19,8 @@ import javascript from 'highlight.js/lib/languages/javascript';
 import go from 'highlight.js/lib/languages/go';
 import rust from 'highlight.js/lib/languages/rust';
 import swift from 'highlight.js/lib/languages/swift';
+import sql from 'highlight.js/lib/languages/sql';
+import json from 'highlight.js/lib/languages/json';
 
 hljs.registerLanguage('matlab', matlab);
 hljs.registerLanguage('python', python);
@@ -31,6 +33,8 @@ hljs.registerLanguage('javascript', javascript);
 hljs.registerLanguage('go', go);
 hljs.registerLanguage('rust', rust);
 hljs.registerLanguage('swift', swift);
+hljs.registerLanguage('sql', sql);
+hljs.registerLanguage('json', json);
 
 // Map the names authors actually type (fence labels / lesson language) to
 // the registered grammar.
@@ -43,6 +47,7 @@ hljs.registerAliases(['ts'], { languageName: 'typescript' });
 hljs.registerAliases(['sh', 'shell', 'zsh'], { languageName: 'bash' });
 hljs.registerAliases(['golang'], { languageName: 'go' });
 hljs.registerAliases(['rs'], { languageName: 'rust' });
+hljs.registerAliases(['postgres', 'postgresql', 'psql', 'mysql'], { languageName: 'sql' });
 
 function escapeHtml(s: string): string {
 	return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 18
+        assert len(summary) == 22
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -148,6 +148,10 @@ class TestSeedCourses:
             "javascript-intermediate",
             "typescript-basics",
             "typescript-intermediate",
+            "sql-basics",
+            "sql-intermediate",
+            "mongodb",
+            "postgresql",
         }
         for course in ACADEMY_COURSES:
             assert course.lessons  # non-empty
@@ -166,6 +170,16 @@ class TestSeedCourses:
             assert kinds <= {"text", "quiz"}, f"{course.slug} has a non-text lesson"
             assert any(le.lesson_type == "quiz" for le in course.lessons)
             assert course.level in {"Beginner", "Intermediate"}
+
+    def test_database_courses_present_with_text_and_quiz(self) -> None:
+        from cyberdyne_backend.application.courses.seed_databases import DATABASE_COURSES
+
+        slugs = {c.slug for c in DATABASE_COURSES}
+        assert slugs == {"sql-basics", "sql-intermediate", "mongodb", "postgresql"}
+        for course in DATABASE_COURSES:
+            kinds = {le.lesson_type for le in course.lessons}
+            assert kinds <= {"text", "quiz"}
+            assert any(le.lesson_type == "quiz" for le in course.lessons)
 
     def test_blockchain_course_covers_idea_pow_and_bitcoin(self) -> None:
         bc = next(c for c in ACADEMY_COURSES if c.slug == "blockchain-basics")

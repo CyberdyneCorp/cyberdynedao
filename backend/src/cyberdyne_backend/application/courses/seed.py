@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from cyberdyne_backend.application.courses.seed_databases import DATABASE_COURSES
 from cyberdyne_backend.application.courses.seed_languages import LANGUAGE_COURSES
 from cyberdyne_backend.application.courses.seed_types import SeedCourse, SeedLesson
 from cyberdyne_backend.domain.courses import (
@@ -1103,6 +1104,7 @@ ACADEMY_COURSES: tuple[SeedCourse, ...] = (
     _BLOCKCHAIN,
     _BLOCKCHAIN_ADVANCED,
     *LANGUAGE_COURSES,
+    *DATABASE_COURSES,
 )
 
 
