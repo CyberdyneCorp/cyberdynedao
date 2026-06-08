@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 34
+        assert len(summary) == 37
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -164,6 +164,9 @@ class TestSeedCourses:
             "ansible-basics",
             "ansible-intermediate",
             "ansible-advanced",
+            "physics-basics",
+            "physics-intermediate",
+            "physics-quadrotor-dynamics",
         }
         for course in ACADEMY_COURSES:
             assert course.lessons  # non-empty
@@ -224,6 +227,20 @@ class TestSeedCourses:
         levels = {c.slug: c.level for c in IAC_COURSES}
         assert levels["terraform-advanced"] == "Advanced"
         assert levels["ansible-advanced"] == "Advanced"
+
+    def test_physics_track_reaches_quadrotor_via_three_methods(self) -> None:
+        from cyberdyne_backend.application.courses.seed_physics import PHYSICS_COURSES
+
+        slugs = {c.slug for c in PHYSICS_COURSES}
+        assert slugs == {"physics-basics", "physics-intermediate", "physics-quadrotor-dynamics"}
+        # The advanced course covers all three derivation methods + a runnable sim.
+        adv = next(c for c in PHYSICS_COURSES if c.slug == "physics-quadrotor-dynamics")
+        assert adv.level == "Advanced"
+        titles = " | ".join(le.title for le in adv.lessons)
+        for needle in ("Newton", "Lagrangian", "Hamiltonian", "Simulate"):
+            assert needle in titles, f"advanced physics missing {needle!r}"
+        code = next(le for le in adv.lessons if le.lesson_type == "code")
+        assert code.text_body and "import" not in code.text_body  # restricted-safe sim
 
     def test_blockchain_course_covers_idea_pow_and_bitcoin(self) -> None:
         bc = next(c for c in ACADEMY_COURSES if c.slug == "blockchain-basics")

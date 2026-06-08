@@ -153,13 +153,22 @@
 
 	// Topic grouping — derived from the slug (no per-course category field yet).
 	let groupByTopic = $state(true);
-	const topicOrder = ['Foundations', 'Languages', 'Databases', 'DevOps', 'Blockchain', 'Other'];
+	const topicOrder = [
+		'Foundations',
+		'Languages',
+		'Databases',
+		'DevOps',
+		'Blockchain',
+		'Physics',
+		'Other'
+	];
 	function courseTopic(slug: string): string {
 		if (/^(c|cpp|swift|go|rust|javascript|typescript)-/.test(slug)) return 'Languages';
 		if (slug === 'sql-basics' || slug === 'sql-intermediate' || slug === 'mongodb' || slug === 'postgresql')
 			return 'Databases';
 		if (/^(docker|kubernetes|terraform|ansible)-/.test(slug)) return 'DevOps';
 		if (slug.startsWith('blockchain')) return 'Blockchain';
+		if (slug.startsWith('physics')) return 'Physics';
 		if (slug === 'matlab-basics' || slug === 'python-course') return 'Foundations';
 		return 'Other';
 	}
