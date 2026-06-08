@@ -638,6 +638,87 @@ describe('cyberfliesViewModel', () => {
 		});
 	});
 
+	describe('API keys', () => {
+		const key = (
+			over: Partial<cyberfliesApi.ApiKeyCreated> = {}
+		): cyberfliesApi.ApiKeyCreated => ({
+			id: 'k1',
+			name: 'Claude',
+			prefix: 'cf_abcd',
+			created_at: '2026-06-01T00:00:00Z',
+			last_used_at: null,
+			revoked: false,
+			token: 'cf_token_default',
+			...over
+		});
+
+		it('refreshApiKeys populates the list and clears error', async () => {
+			vi.spyOn(cyberfliesApi, 'listApiKeys').mockResolvedValue({ items: [key(), key({ id: 'k2' })] });
+			const vm = createCyberfliesVM(1);
+			await vm.refreshApiKeys();
+			expect(vm.apiKeys.map((k) => k.id)).toEqual(['k1', 'k2']);
+			expect(vm.apiKeyError).toBeNull();
+		});
+
+		it('createApiKey returns the one-time token, exposes it, and prepends the key (sans token)', async () => {
+			const spy = vi
+				.spyOn(cyberfliesApi, 'createApiKey')
+				.mockResolvedValue(key({ id: 'k9', name: 'Desktop', token: 'cf_SECRET_xyz' }));
+			const vm = createCyberfliesVM(1);
+			const token = await vm.createApiKey('  Desktop  ');
+			expect(spy).toHaveBeenCalledWith('Desktop');
+			expect(token).toBe('cf_SECRET_xyz');
+			expect(vm.newApiKeyToken).toBe('cf_SECRET_xyz');
+			expect(vm.apiKeys[0].id).toBe('k9');
+			// The raw secret must NOT be retained in the listed key.
+			expect('token' in vm.apiKeys[0]).toBe(false);
+		});
+
+		it('createApiKey ignores blank names without calling the API', async () => {
+			const spy = vi.spyOn(cyberfliesApi, 'createApiKey');
+			const vm = createCyberfliesVM(1);
+			expect(await vm.createApiKey('   ')).toBeNull();
+			expect(spy).not.toHaveBeenCalled();
+		});
+
+		it('createApiKey surfaces errors via apiKeyError', async () => {
+			vi.spyOn(cyberfliesApi, 'createApiKey').mockRejectedValue(new Error('quota'));
+			const vm = createCyberfliesVM(1);
+			expect(await vm.createApiKey('x')).toBeNull();
+			expect(vm.apiKeyError).toMatch(/quota/);
+			expect(vm.newApiKeyToken).toBeNull();
+		});
+
+		it('clearNewApiKeyToken drops the one-time secret', async () => {
+			vi.spyOn(cyberfliesApi, 'createApiKey').mockResolvedValue(key({ token: 'cf_secret' }));
+			const vm = createCyberfliesVM(1);
+			await vm.createApiKey('x');
+			expect(vm.newApiKeyToken).toBe('cf_secret');
+			vm.clearNewApiKeyToken();
+			expect(vm.newApiKeyToken).toBeNull();
+		});
+
+		it('revokeApiKey removes the key from the list', async () => {
+			vi.spyOn(cyberfliesApi, 'listApiKeys').mockResolvedValue({ items: [key(), key({ id: 'k2' })] });
+			const delSpy = vi.spyOn(cyberfliesApi, 'revokeApiKey').mockResolvedValue(undefined);
+			const vm = createCyberfliesVM(1);
+			await vm.refreshApiKeys();
+			await vm.revokeApiKey('k1');
+			expect(delSpy).toHaveBeenCalledWith('k1');
+			expect(vm.apiKeys.map((k) => k.id)).toEqual(['k2']);
+		});
+
+		it('revokeApiKey surfaces errors and keeps the key', async () => {
+			vi.spyOn(cyberfliesApi, 'listApiKeys').mockResolvedValue({ items: [key()] });
+			vi.spyOn(cyberfliesApi, 'revokeApiKey').mockRejectedValue(new Error('nope'));
+			const vm = createCyberfliesVM(1);
+			await vm.refreshApiKeys();
+			await vm.revokeApiKey('k1');
+			expect(vm.apiKeyError).toMatch(/nope/);
+			expect(vm.apiKeys).toHaveLength(1);
+		});
+	});
+
 	describe('uploads', () => {
 		it('small files use the multipart upload', async () => {
 			const up = vi.spyOn(cyberfliesApi, 'uploadRecording').mockResolvedValue(recording());
