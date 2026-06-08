@@ -2234,6 +2234,254 @@ for row in range(rows):
 )
 
 
+# ── Mathematics — Matrices in Practice ───────────────────────────────────────
+
+_MATRICES = SeedCourse(
+    slug="math-matrices",
+    title="Mathematics — Matrices in Practice",
+    description=(
+        "A hands-on tour of matrices for engineers & programmers: what they "
+        "represent, the core operations side-by-side in MATLAB and Python "
+        "(NumPy), matrices as geometric transformations, solving linear systems, "
+        "and where matrices power machine learning (data, layers, PCA, "
+        "attention). Runnable Python lab included."
+    ),
+    level="Intermediate",
+    lessons=(
+        _t(
+            "What a matrix is (and represents)",
+            "11 min",
+            """\
+# What a matrix is (and represents)
+
+A **matrix** is a rectangular grid of numbers with $m$ rows and $n$ columns (its
+**shape** $m\\times n$). That one object wears three hats:
+
+1. **A table of data** — rows are records, columns are fields (a spreadsheet, an
+   image's pixels, a dataset of samples × features).
+2. **A system of equations** — each row is one linear equation.
+3. **A linear transformation** — it moves every vector in space in a consistent
+   way. This is the view that unlocks everything else.
+
+The key fact: **the columns of a matrix are where the basis vectors land.** A
+$2\\times2$ matrix $A=\\begin{bmatrix} a & b \\\\ c & d \\end{bmatrix}$ sends
+$\\hat{x}=(1,0)$ to its first column $(a,c)$ and $\\hat{y}=(0,1)$ to its second
+$(b,d)$. Drag the entries and watch the basis vectors move — *that* is the whole
+transformation:
+
+```plot
+{"title": "A 2×2 matrix sends x̂, ŷ to its columns", "equal": true, "xRange": [-3, 3], "yRange": [-3, 3], "controls": [{"name": "a", "range": [-2, 2], "value": 1, "label": "a (col 1 x)"}, {"name": "c", "range": [-2, 2], "value": 0.5, "label": "c (col 1 y)"}, {"name": "b", "range": [-2, 2], "value": -0.5, "label": "b (col 2 x)"}, {"name": "d", "range": [-2, 2], "value": 1, "label": "d (col 2 y)"}], "vectors": [{"xExpr": "a", "yExpr": "c", "from": [0, 0], "label": "A·x̂ (col 1)", "color": "#dc2626"}, {"xExpr": "b", "yExpr": "d", "from": [0, 0], "label": "A·ŷ (col 2)", "color": "#16a34a"}]}
+```
+
+Some special matrices you'll meet constantly: the **identity** $I$ (leaves
+vectors unchanged), **diagonal** (scales each axis), **zero**, **symmetric**
+($A = A^T$), and **orthogonal** (rotations/reflections, $A^T A = I$).
+
+**Next:** the day-to-day operations, in MATLAB and Python.
+""",
+        ),
+        _t(
+            "Core operations in MATLAB & Python",
+            "13 min",
+            """\
+# Core operations in MATLAB & Python
+
+Matrices are first-class in MATLAB and in Python via **NumPy**. Here are the
+operations you'll use daily, side by side. (One gotcha up front: **MATLAB is
+1-indexed, NumPy is 0-indexed**.)
+
+## Create, inspect, transpose
+
+**MATLAB**
+```matlab
+A = [1 2; 3 4];     % 2x2 matrix
+size(A)             % 2 2
+A(2,1)              % row 2, col 1  -> 3
+A'                  % transpose
+eye(3)              % 3x3 identity
+```
+
+**Python (NumPy)**
+```python
+import numpy as np
+A = np.array([[1, 2], [3, 4]])
+A.shape             # (2, 2)
+A[1, 0]             # row 2, col 1 -> 3  (0-indexed!)
+A.T                 # transpose
+np.eye(3)           # 3x3 identity
+```
+
+## Multiplication — the big gotcha
+
+Matrix product $(m\\times n)(n\\times p) = (m\\times p)$: the **inner dimensions
+must match**, and each entry is a row · column dot product.
+
+| | matrix product | element-wise |
+|---|---|---|
+| **MATLAB** | `A * B` | `A .* B` |
+| **NumPy** | `A @ B` | `A * B` |
+
+⚠️ They're flipped: in MATLAB `*` is the matrix product; in NumPy `*` is
+element-wise and `@` is the matrix product. Mixing them up is a classic bug.
+
+## Inverse & solving
+
+To solve $A\\vec{x} = \\vec{b}$, *don't* invert — use a solver (faster, more
+stable):
+
+**MATLAB**
+```matlab
+x = A \\ b;          % backslash: solve A x = b
+inv(A)              % inverse (rarely what you want)
+det(A)              % determinant
+```
+
+**Python (NumPy)**
+```python
+x = np.linalg.solve(A, b)   # solve A x = b
+np.linalg.inv(A)            # inverse
+np.linalg.det(A)            # determinant
+```
+
+**Next:** the geometry — matrices as transformations.
+""",
+        ),
+        _t(
+            "Matrices as transformations",
+            "12 min",
+            """\
+# Matrices as transformations
+
+Multiplying by a matrix **transforms space**: rotate, scale, shear, project,
+reflect. **Composing** transformations is just **multiplying** their matrices
+(right-to-left), and the **determinant** tells you how areas scale (a determinant
+of 0 means space is squashed flat — and the matrix is non-invertible).
+
+Because a matrix is defined by where it sends the basis, it maps the unit circle
+to an **ellipse**. Drag the four entries and watch the circle deform — the axes
+of the resulting ellipse are the matrix's **singular values** (the heart of the
+SVD):
+
+```plot
+{"title": "Any 2×2 matrix maps the unit circle to an ellipse", "equal": true, "xRange": [-3, 3], "yRange": [-3, 3], "controls": [{"name": "a", "range": [-2, 2], "value": 1.4, "label": "a"}, {"name": "b", "range": [-2, 2], "value": 0.6, "label": "b"}, {"name": "c", "range": [-2, 2], "value": -0.4, "label": "c"}, {"name": "d", "range": [-2, 2], "value": 1, "label": "d"}], "parametric": [{"x": "cos(s)", "y": "sin(s)", "param": "s", "range": [0, 6.283], "color": "#cbd5e1", "label": "unit circle"}, {"x": "a*cos(s) + b*sin(s)", "y": "c*cos(s) + d*sin(s)", "param": "s", "range": [0, 6.283], "color": "#2563eb", "label": "A · (circle)"}]}
+```
+
+A pure **rotation** by $\\theta$ is $\\begin{bmatrix}\\cos\\theta & -\\sin\\theta \\\\ \\sin\\theta & \\cos\\theta\\end{bmatrix}$; **scaling** is diagonal; a **shear** is $\\begin{bmatrix}1 & k \\\\ 0 & 1\\end{bmatrix}$. This is exactly how 2D/3D graphics, robot kinematics, and computer-vision homographies move points — chain the matrices, transform once.
+
+**Next:** solving linear systems.
+""",
+        ),
+        _t(
+            "Solving linear systems",
+            "12 min",
+            """\
+# Solving linear systems
+
+A linear system $A\\vec{x} = \\vec{b}$ asks: *what input produces this output?*
+Geometrically each row is a line (or plane); the **solution is where they meet**.
+Slide the right-hand side and watch the crossing point — the unique solution —
+move:
+
+```plot
+{"title": "A 2×2 system = two lines; the solution is their crossing", "xLabel": "x", "yLabel": "y", "xRange": [-1, 6], "yRange": [-1, 6], "controls": [{"name": "b1", "range": [0, 8], "value": 5, "label": "row 1:  x + y = b₁"}, {"name": "b2", "range": [-4, 4], "value": 1, "label": "row 2:  x − y = b₂"}], "functions": [{"expr": "b1 - x", "label": "x + y = b₁", "color": "#2563eb"}, {"expr": "x - b2", "label": "x − y = b₂", "color": "#16a34a"}], "points": [{"xExpr": "(b1 + b2)/2", "yExpr": "(b1 - b2)/2", "label": "solution", "color": "#dc2626", "size": 7}]}
+```
+
+- **Unique solution** — lines cross at one point ($\\det A \\ne 0$).
+- **No / infinite solutions** — lines parallel or identical ($\\det A = 0$, the
+  matrix is **singular**). This is *ill-conditioning's* extreme.
+- **Overdetermined** (more equations than unknowns, noisy data) — no exact
+  solution, so we take the **least-squares** best fit: $A^T A\\,\\vec{x} = A^T\\vec{b}$ — the engine behind linear regression and calibration.
+
+Under the hood, solvers use **Gaussian elimination** / **LU decomposition**, not
+matrix inversion. Real uses: circuit node voltages, structural forces, chemical
+balancing, GPS trilateration, and curve fitting.
+
+**Next:** eigenvalues and the machine-learning view.
+""",
+        ),
+        _t(
+            "Eigenvalues & where ML uses matrices",
+            "14 min",
+            """\
+# Eigenvalues & where ML uses matrices
+
+## Eigenvectors: directions a matrix only stretches
+
+Most vectors change direction under a transform. A special few — the
+**eigenvectors** — stay on their own line and are merely scaled by a factor, the
+**eigenvalue** $\\lambda$: $A\\vec{v} = \\lambda\\vec{v}$. For $A=\\mathrm{diag}(2,\\tfrac12)$, drag the angle: at $0°$ and $90°$ the output $A\\vec v$ stays parallel to $\\vec v$ — those are the eigen-directions:
+
+```plot
+{"title": "Eigenvectors: directions A only scales (A = diag(2, 0.5))", "equal": true, "xRange": [-3, 3], "yRange": [-3, 3], "controls": [{"name": "th", "range": [0, 180], "value": 30, "label": "vector angle (°)"}], "vectors": [{"xExpr": "cos(rad(th))", "yExpr": "sin(rad(th))", "from": [0, 0], "label": "v", "color": "#2563eb"}, {"xExpr": "2*cos(rad(th))", "yExpr": "0.5*sin(rad(th))", "from": [0, 0], "label": "A·v", "color": "#dc2626"}]}
+```
+
+Eigen-analysis powers **PCA** (principal directions of data), **PageRank** (the
+web's dominant eigenvector), vibration modes, and stability analysis. The
+**SVD** generalises it to any matrix.
+
+## Machine learning *is* matrix math
+
+- **Data is a matrix** $X$: rows = samples, columns = features. A batch of 256
+  images is one big array.
+- **A dense (fully-connected) layer** computes $\\vec{y} = W\\vec{x} + \\vec{b}$ —
+  a matrix–vector product. A whole batch is one **matrix–matrix** product
+  $Y = XW^T + b$. The learned **weights** $W$ are matrices.
+- **Convolutions** unroll into matrix multiplies (`im2col`); **embeddings** are
+  rows looked up from a big matrix; **attention** is
+  $\\mathrm{softmax}(QK^T/\\sqrt{d})\\,V$ — three matrix products.
+- **Dimensionality reduction & recommenders** are **matrix factorization**
+  (SVD / low-rank).
+
+This is *why* GPUs and TPUs exist: they are giant matrix-multiply engines.
+Training a network is mostly a storm of $A\\,B$ and its gradient — the
+[[backpropagation]] you saw in the Optimization course.
+
+**Next:** build the operations yourself in code.
+""",
+        ),
+        _code(
+            "Lab: matrix operations from scratch",
+            "12 min",
+            """\
+# Matrices by hand in pure Python (lists of lists). In real work you'd use NumPy
+# (A @ B, np.linalg.solve) or MATLAB (A*B, A\\b) — see the lessons — but building
+# the 2x2 case by hand shows exactly what those one-liners compute.
+
+A = [[2.0, 1.0], [1.0, 3.0]]
+B = [[1.0, 0.0], [4.0, 1.0]]
+
+# MATRIX MULTIPLY  C = A * B   (each entry = a row of A dotted with a column of B)
+c00 = A[0][0] * B[0][0] + A[0][1] * B[1][0]
+c01 = A[0][0] * B[0][1] + A[0][1] * B[1][1]
+c10 = A[1][0] * B[0][0] + A[1][1] * B[1][0]
+c11 = A[1][0] * B[0][1] + A[1][1] * B[1][1]
+print("A * B =", [[c00, c01], [c10, c11]])
+
+# TRANSPOSE (swap rows and columns)
+print("A^T   =", [[A[0][0], A[1][0]], [A[0][1], A[1][1]]])
+
+# DETERMINANT of the 2x2
+det = A[0][0] * A[1][1] - A[0][1] * A[1][0]
+print("det(A) =", det)
+
+# SOLVE  A x = b  using the inverse formula (valid because det != 0)
+b0 = 5.0
+b1 = 10.0
+x0 = (A[1][1] * b0 - A[0][1] * b1) / det
+x1 = (-A[1][0] * b0 + A[0][0] * b1) / det
+print("solve A x = [5, 10]  ->  x =", round(x0, 4), round(x1, 4))
+print("check  A x =", round(A[0][0] * x0 + A[0][1] * x1, 4), round(A[1][0] * x0 + A[1][1] * x1, 4))
+
+# Try it:
+#   - Swap A and B in the multiply: in general A*B is NOT equal to B*A.
+#   - Make A singular (rows [1,2] and [2,4]): det = 0, so there is no unique solution.
+""",
+        ),
+        _quiz(),
+    ),
+)
+
+
 MATH_COURSES: tuple[SeedCourse, ...] = (
     _BASICS,
     _INTERMEDIATE,
@@ -2245,6 +2493,7 @@ MATH_COURSES: tuple[SeedCourse, ...] = (
     _NUMERICAL,
     _DISCRETE,
     _COMPLEX,
+    _MATRICES,
 )
 
 __all__ = ["MATH_COURSES"]
