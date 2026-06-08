@@ -571,6 +571,267 @@ print("integral of sin on [0, pi] ~", round(total, 4), "(exact = 2)")
 )
 
 
-MATH_COURSES: tuple[SeedCourse, ...] = (_BASICS, _INTERMEDIATE, _ADVANCED)
+# ── Mathematics — Optimization & Backpropagation ─────────────────────────────
+
+_OPTIMIZATION = SeedCourse(
+    slug="math-optimization",
+    title="Mathematics — Optimization & Backpropagation",
+    description=(
+        "The math that trains models and optimises systems: the multivariable "
+        "chain rule and computational graphs, backpropagation (reverse-mode "
+        "autodiff), linear programming, and convex quadratic optimization with "
+        "Lagrange multipliers and the KKT conditions. Builds on the gradients "
+        "and linear algebra from the Intermediate course."
+    ),
+    level="Advanced",
+    lessons=(
+        _t(
+            "The chain rule & computational graphs",
+            "12 min",
+            """\
+# The chain rule & computational graphs
+
+Every model is a **composition** of simple steps. To differentiate it you only
+need one rule applied repeatedly: the **chain rule**.
+
+$$\\frac{d}{dx}\\,f\\big(g(x)\\big) = f'\\big(g(x)\\big)\\cdot g'(x).$$
+
+"Multiply the local slopes along the path." For $h(x) = \\sin(x^2)$ the path is
+$x \\to x^2 \\to \\sin(\\cdot)$, so $h'(x) = \\cos(x^2)\\cdot 2x$. Drag the point and
+check the tangent matches that product:
+
+```plot
+{"title": "Chain rule: slope of a composite h(x) = sin(x²)", "xLabel": "x", "yLabel": "h(x)", "xRange": [-2.5, 2.5], "yRange": [-1.6, 1.6], "controls": [{"name": "a", "range": [-2.4, 2.4], "value": 1, "label": "point a"}], "functions": [{"expr": "sin(x^2)", "label": "h(x) = sin(x²)", "color": "#2563eb"}], "parametric": [{"x": "a + u", "y": "sin(a^2) + cos(a^2)*2*a*u", "param": "u", "range": [-1, 1], "color": "#dc2626", "label": "tangent, slope cos(a²)·2a"}], "points": [{"xExpr": "a", "yExpr": "sin(a^2)", "color": "#dc2626", "size": 7}]}
+```
+
+## Computational graphs
+
+We draw a calculation as a **graph**: inputs and parameters flow forward through
+operations to an output (a loss). This is literally how PyTorch, TensorFlow and
+JAX represent a model.
+
+```mermaid
+flowchart LR
+  x((x)) --> M1["× w"]
+  w((w)) --> M1
+  M1 --> A1["+ b"]
+  b((b)) --> A1
+  A1 --> R["ReLU"]
+  R --> L["loss (y − ŷ)²"]
+  y((y)) --> L
+```
+
+Each node has a simple **local derivative** with respect to its inputs. The
+**multivariable chain rule** combines them: if a quantity feeds several paths,
+you *add* the contributions from each path.
+
+$$\\frac{\\partial L}{\\partial x} = \\sum_{\\text{paths}} \\;\\prod_{\\text{edges on path}} (\\text{local derivative}).$$
+
+**Next:** doing this efficiently, backwards — backpropagation.
+""",
+        ),
+        _t(
+            "Backpropagation: gradients through a graph",
+            "14 min",
+            """\
+# Backpropagation: gradients through a graph
+
+**Backpropagation** is just the chain rule, organised to be cheap. Instead of
+recomputing every path, it sweeps the graph **once forward** then **once
+backward**.
+
+1. **Forward pass.** Evaluate each node left → right, caching its output.
+2. **Backward pass.** Start with $\\dfrac{\\partial L}{\\partial L}=1$ and push
+   gradients right → left, multiplying by each node's local derivative
+   (*reverse-mode automatic differentiation*).
+
+Because every parameter's gradient comes out of a **single** backward sweep,
+training a network with millions of weights costs about the same as one forward
+pass — the reason deep learning is feasible at all.
+
+## A tiny worked example
+
+For one linear neuron $\\hat y = wx + b$ with squared-error loss
+$L = (\\hat y - y)^2$:
+
+$$\\frac{\\partial L}{\\partial \\hat y} = 2(\\hat y - y), \\quad
+\\frac{\\partial L}{\\partial w} = 2(\\hat y - y)\\,x, \\quad
+\\frac{\\partial L}{\\partial b} = 2(\\hat y - y).$$
+
+Those gradients are exactly what the code lab computes. Gradient descent then
+steps each weight downhill: $w \\leftarrow w - \\eta\\,\\partial L/\\partial w$.
+
+## What training looks like
+
+Over a loss surface in weight space, descent slides toward the minimum; the loss
+falls epoch by epoch. **Rotate** the surface, then **Play** the training curve:
+
+```plot
+{"mode": "3d", "title": "Loss surface over two weights", "xRange": [-2, 3], "yRange": [-3, 2], "zRange": [0, 12], "azimuth": 40, "elevation": 28, "zLabel": "loss", "surfaces": [{"expr": "(x-1)^2 + (y+0.5)^2", "color": "#2563eb"}]}
+```
+
+```plot
+{"title": "Training: loss drops as gradients update the weights", "xLabel": "epoch", "yLabel": "loss", "xRange": [0, 30], "yRange": [0, 1.05], "animate": {"param": "t", "range": [0, 30], "label": "epoch"}, "functions": [{"expr": "exp(-x/6)", "label": "loss(epoch)", "color": "#dc2626"}], "points": [{"xExpr": "t", "yExpr": "exp(-t/6)", "label": "now", "color": "#2563eb", "size": 7, "trail": true}]}
+```
+
+**Next:** optimization with hard constraints — linear programming.
+""",
+        ),
+        _t(
+            "Linear optimization (Linear Programming)",
+            "13 min",
+            """\
+# Linear optimization (Linear Programming)
+
+A **linear program** optimises a linear objective subject to linear
+inequalities:
+
+$$\\max_{\\vec x}\\; \\vec c^{\\,T}\\vec x \\quad \\text{s.t.}\\quad A\\vec x \\le \\vec b,\\;\\; \\vec x \\ge 0.$$
+
+The constraints carve out a **feasible region** — a convex polygon (a *polytope*
+in higher dimensions). The objective's contour lines are parallel straight
+lines; pushing them as far as possible in the $\\vec c$ direction, the **optimum
+sits at a corner (vertex)** of that region. That single fact is why the
+**simplex** algorithm just walks from vertex to vertex.
+
+Maximise $3x + 2y$ subject to $x + y \\le 4$, $x + 3y \\le 6$, $x,y \\ge 0$. Slide
+the green iso-cost line — the last vertex it touches before leaving the region is
+the optimum, $(3, 1)$ with value $11$:
+
+```plot
+{"title": "LP: maximise 3x + 2y over a feasible region", "xLabel": "x", "yLabel": "y", "xRange": [0, 5], "yRange": [0, 5], "controls": [{"name": "k", "range": [0, 16], "value": 6, "label": "iso-cost level 3x+2y = k"}], "functions": [{"expr": "4 - x", "label": "x + y ≤ 4", "color": "#94a3b8"}, {"expr": "(6 - x)/3", "label": "x + 3y ≤ 6", "color": "#cbd5e1"}, {"expr": "(k - 3*x)/2", "label": "iso-cost 3x+2y = k", "color": "#16a34a"}], "series": [{"points": [[0, 0], [4, 0], [3, 1], [0, 2], [0, 0]], "label": "feasible region", "color": "#2563eb"}], "points": [{"x": 3, "y": 1, "label": "optimum (3,1), k = 11", "color": "#dc2626", "size": 8}]}
+```
+
+## Where it shows up
+
+- **Resource allocation / production planning** — maximise profit within
+  material, labour and time limits.
+- **Diet & blending problems** — cheapest mix meeting nutritional bounds.
+- **Logistics & transportation** — minimise shipping cost across a network.
+- **Scheduling and network flow** — assign jobs, route traffic.
+
+Every LP has a **dual** LP whose optimum equals the primal's (strong duality);
+the dual variables are the *shadow prices* — how much the optimum improves per
+unit of relaxed constraint.
+
+**Next:** curved objectives — quadratic optimization.
+""",
+        ),
+        _t(
+            "Quadratic optimization & Lagrange multipliers",
+            "14 min",
+            """\
+# Quadratic optimization & Lagrange multipliers
+
+A **quadratic program (QP)** has a quadratic objective and linear constraints:
+
+$$\\min_{\\vec x}\\; \\tfrac{1}{2}\\,\\vec x^{\\,T} Q\\,\\vec x + \\vec c^{\\,T}\\vec x
+\\quad \\text{s.t.}\\quad A\\vec x \\le \\vec b,\\; \\;E\\vec x = \\vec d.$$
+
+When $Q$ is positive (semi)definite the objective is a **convex bowl**, so any
+local minimum is the global one — the property that makes QPs reliable to solve.
+
+## Least squares is a QP
+
+Fitting a line $y = mx + b$ to data by minimising the sum of squared residuals
+$\\sum (mx_i + b - y_i)^2$ is an **unconstrained convex QP**. Slide $m$ and $b$ to
+shrink the gaps; the minimum has a closed form (the *normal equations*) and is
+the backbone of regression:
+
+```plot
+{"title": "Least squares = unconstrained QP: fit a line", "xLabel": "x", "yLabel": "y", "xRange": [-0.5, 4.5], "yRange": [0, 6], "controls": [{"name": "m", "range": [0, 2], "value": 1, "label": "slope m"}, {"name": "b", "range": [-1, 2], "value": 0.5, "label": "intercept b"}], "functions": [{"expr": "m*x + b", "label": "fit y = m x + b", "color": "#dc2626"}], "series": [{"points": [[0, 1], [1, 2.1], [2, 2.9], [3, 4.2], [4, 5.1]], "label": "data", "color": "#2563eb"}], "points": [{"x": 0, "y": 1, "color": "#2563eb", "size": 6}, {"x": 1, "y": 2.1, "color": "#2563eb", "size": 6}, {"x": 2, "y": 2.9, "color": "#2563eb", "size": 6}, {"x": 3, "y": 4.2, "color": "#2563eb", "size": 6}, {"x": 4, "y": 5.1, "color": "#2563eb", "size": 6}]}
+```
+
+## Constraints: Lagrange multipliers
+
+To minimise $f$ subject to an equality $g(\\vec x) = 0$, the optimum is where the
+objective's contour is **tangent** to the constraint — i.e. their gradients are
+parallel:
+
+$$\\nabla f = \\lambda\\,\\nabla g.$$
+
+Minimise $x^2 + y^2$ subject to $x + y = 2$. Grow the cost contour (radius $r$)
+until it just **touches** the line — tangency happens at $(1,1)$, the
+constrained minimum:
+
+```plot
+{"title": "Lagrange: min x²+y² s.t. x+y = 2 (tangency)", "equal": true, "xRange": [-0.5, 2.5], "yRange": [-0.5, 2.5], "controls": [{"name": "r", "range": [0.3, 2.2], "value": 1, "label": "cost contour radius r"}], "parametric": [{"x": "r*cos(s)", "y": "r*sin(s)", "param": "s", "range": [0, 6.283], "color": "#2563eb", "label": "cost contour x²+y² = r²"}], "functions": [{"expr": "2 - x", "label": "constraint x + y = 2", "color": "#16a34a"}], "points": [{"x": 1, "y": 1, "label": "optimum (1,1)", "color": "#dc2626", "size": 8}]}
+```
+
+For **inequality** constraints the generalisation is the **KKT conditions**
+(stationarity, primal/dual feasibility, complementary slackness) — a constraint
+either binds (active, $\\lambda > 0$) or is slack ($\\lambda = 0$).
+
+## Where it shows up
+
+- **Machine learning** — ridge regression, and the **SVM** margin is a QP.
+- **Finance** — Markowitz portfolio: minimise variance ($\\vec x^T \\Sigma \\vec x$)
+  at a target return.
+- **Control** — **MPC** solves a QP every timestep to plan optimal actions.
+
+**Next:** implement backprop and solve a QP in code.
+""",
+        ),
+        _code(
+            "Lab: backprop & a constrained QP in code",
+            "12 min",
+            """\
+# Backprop on the simplest model + a constrained QP — from scratch, no libraries.
+
+# Data roughly following  y = 1.0*x + 0.8
+xs = [0.0, 1.0, 2.0, 3.0, 4.0]
+ys = [0.9, 1.7, 2.9, 3.8, 4.7]
+n = 5
+
+# 1) LINEAR REGRESSION by gradient descent (this IS backprop for a 1-neuron net).
+#    Model: yhat = w*x + b.  Loss: mean squared error.
+#    Backprop gradients:  dL/dw = mean(2*(yhat-y)*x),  dL/db = mean(2*(yhat-y))
+w = 0.0
+b = 0.0
+lr = 0.05
+for epoch in range(3000):
+    gw = 0.0
+    gb = 0.0
+    for i in range(n):
+        yhat = w * xs[i] + b          # forward pass
+        err = yhat - ys[i]
+        gw = gw + 2.0 * err * xs[i]   # backward pass (chain rule)
+        gb = gb + 2.0 * err
+    w = w - lr * (gw / n)             # gradient-descent step
+    b = b - lr * (gb / n)
+print("fitted line:  y =", round(w, 3), "* x +", round(b, 3))
+
+# 2) EQUALITY-CONSTRAINED QP:  min x^2 + y^2  s.t.  x + y = c
+#    Lagrange:  2x = lambda, 2y = lambda  ->  x = y ;  with x + y = c  ->  x = y = c/2.
+c = 2.0
+x = c / 2.0
+y = c / 2.0
+print("constrained QP optimum:  x =", x, " y =", y, " cost =", x * x + y * y)
+
+# 3) Sanity-check the QP numerically with projected gradient descent.
+#    Step downhill on x^2+y^2, then project back onto the line x+y=c each step.
+px = 0.0
+py = 0.0
+step = 0.1
+for it in range(500):
+    px = px - step * 2.0 * px
+    py = py - step * 2.0 * py
+    drift = (px + py - c) / 2.0       # project onto x + y = c
+    px = px - drift
+    py = py - drift
+print("projected-GD optimum:    x =", round(px, 4), " y =", round(py, 4))
+
+# Try it:
+#   - Raise lr toward 0.2: faster fit, but too high diverges.
+#   - Change c: the QP optimum is always x = y = c/2.
+#   - Replace the data and watch the fitted slope/intercept track it.
+""",
+        ),
+        _quiz(),
+    ),
+)
+
+
+MATH_COURSES: tuple[SeedCourse, ...] = (_BASICS, _INTERMEDIATE, _ADVANCED, _OPTIMIZATION)
 
 __all__ = ["MATH_COURSES"]
