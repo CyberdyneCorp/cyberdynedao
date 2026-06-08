@@ -1778,6 +1778,462 @@ for h in [0.1, 0.4, 0.6]:
 )
 
 
+# ── Mathematics — Discrete Mathematics ───────────────────────────────────────
+
+_DISCRETE = SeedCourse(
+    slug="math-discrete",
+    title="Mathematics — Discrete Mathematics",
+    description=(
+        "The mathematics of computer science: logic and proofs, sets and "
+        "relations, combinatorics (counting), recurrences and induction, and "
+        "number theory with modular arithmetic. The foundation under algorithms, "
+        "data structures, databases and cryptography — with a pure-Python lab."
+    ),
+    level="Intermediate",
+    lessons=(
+        _t(
+            "Logic & proofs",
+            "12 min",
+            """\
+# Logic & proofs
+
+Computer science runs on **propositional logic** — statements that are true (1)
+or false (0), combined with **AND** ($\\wedge$), **OR** ($\\vee$), **NOT**
+($\\neg$), and **implication** ($\\Rightarrow$). These are the `&&`, `||`, `!` of
+code and the gates of hardware.
+
+| P | Q | P ∧ Q | P ∨ Q | P ⇒ Q |
+|---|---|-------|-------|-------|
+| 0 | 0 | 0 | 0 | 1 |
+| 0 | 1 | 0 | 1 | 1 |
+| 1 | 0 | 0 | 1 | 0 |
+| 1 | 1 | 1 | 1 | 1 |
+
+Note $P \\Rightarrow Q$ is only false when $P$ is true but $Q$ is false. Its
+**contrapositive** $\\neg Q \\Rightarrow \\neg P$ is logically equivalent — the
+basis of proof by contrapositive.
+
+## Quantifiers & proof techniques
+
+- $\\forall$ (for all), $\\exists$ (there exists).
+- **Direct**, **contrapositive**, **contradiction**, and **induction** (next
+  lesson) are the standard ways to prove a claim — the same rigour that proves a
+  program correct or an algorithm terminates.
+
+## Logic shapes data: XOR isn't linearly separable
+
+Not every boolean function is "simple". Plotting the four inputs of **XOR**, no
+single straight line separates the 1s (blue) from the 0s (red) — the famous
+limitation that a single perceptron can't learn XOR, motivating hidden layers:
+
+```plot
+{"title": "XOR is not linearly separable", "xLabel": "input A", "yLabel": "input B", "xRange": [-0.3, 1.3], "yRange": [-0.3, 1.3], "equal": true, "grid": true, "points": [{"x": 0, "y": 0, "label": "0", "color": "#dc2626", "size": 9}, {"x": 1, "y": 1, "label": "0", "color": "#dc2626", "size": 9}, {"x": 0, "y": 1, "label": "1", "color": "#2563eb", "size": 9}, {"x": 1, "y": 0, "label": "1", "color": "#2563eb", "size": 9}]}
+```
+
+**Next:** sets, relations & functions.
+""",
+        ),
+        _t(
+            "Sets, relations & functions",
+            "11 min",
+            """\
+# Sets, relations & functions
+
+**Sets** collect distinct objects; from them we build **relations** and
+**functions**, the scaffolding of databases and type systems.
+
+## Relations
+
+A **relation** pairs elements (a subset of $A \\times B$). Special kinds run all
+of CS:
+
+- **Equivalence relation** (reflexive, symmetric, transitive) → partitions a set
+  into classes (hashing buckets, "same-as").
+- **Partial order** (reflexive, antisymmetric, transitive) → dependency graphs,
+  build/topological order, version constraints.
+
+## Functions: injective, surjective, bijective
+
+A **function** maps each input to one output. It is **injective** (one-to-one)
+if distinct inputs give distinct outputs, **surjective** (onto) if it hits every
+output, and **bijective** if both — a perfect pairing (the meaning of "same
+size", and what an invertible/lossless map needs).
+
+$f(x)=x^2$ over the reals is **not** injective — $-2$ and $2$ both map to $4$
+(so it has no inverse without restricting the domain):
+
+```plot
+{"title": "Not injective: x² sends −2 and 2 to the same output", "xLabel": "x", "yLabel": "f(x)", "xRange": [-3, 3], "yRange": [0, 9], "functions": [{"expr": "x^2", "label": "f(x) = x²", "color": "#2563eb"}], "points": [{"x": -2, "y": 4, "label": "(−2, 4)", "color": "#dc2626", "size": 7}, {"x": 2, "y": 4, "label": "(2, 4)", "color": "#dc2626", "size": 7}]}
+```
+
+Cardinality even ranks infinities: the integers are countable, the reals are
+not — why "most" real numbers are uncomputable.
+
+**Next:** counting things — combinatorics.
+""",
+        ),
+        _t(
+            "Combinatorics: counting",
+            "12 min",
+            """\
+# Combinatorics: counting
+
+Counting possibilities is everywhere — probabilities, hash collisions, password
+strength, algorithm complexity.
+
+- **Product rule:** independent choices multiply ($n$ options then $m$ → $nm$).
+- **Permutations** (order matters): $P(n,k) = \\dfrac{n!}{(n-k)!}$.
+- **Combinations** (order doesn't): $\\dbinom{n}{k} = \\dfrac{n!}{k!(n-k)!}$.
+
+Factorials explode — $13!$ already exceeds a billion — which is why brute-forcing
+arrangements (e.g. the travelling salesman by hand) is hopeless and why we need
+clever algorithms.
+
+## Pascal's triangle → the bell curve
+
+The binomial coefficients $\\binom{n}{k}$ are the rows of **Pascal's triangle**
+($\\binom{n}{k} = \\binom{n-1}{k-1} + \\binom{n-1}{k}$). Plotted for $n=10$ they
+already trace a bell — the discrete root of the Normal distribution (CLT):
+
+```plot
+{"title": "Binomial coefficients C(10, k) → a bell shape", "xLabel": "k", "yLabel": "C(10, k)", "xRange": [0, 10], "yRange": [0, 270], "grid": true, "series": [{"points": [[0, 1], [1, 10], [2, 45], [3, 120], [4, 210], [5, 252], [6, 210], [7, 120], [8, 45], [9, 10], [10, 1]], "label": "C(10, k)", "color": "#2563eb"}], "points": [{"x": 5, "y": 252, "label": "peak C(10,5)=252", "color": "#dc2626", "size": 6}]}
+```
+
+**Inclusion–exclusion** corrects for overlap: $|A\\cup B| = |A|+|B|-|A\\cap B|$ —
+the logic behind `OR` selectivity in query planners and the sieve methods of
+number theory.
+
+**Next:** recurrences and induction.
+""",
+        ),
+        _t(
+            "Recurrences & induction",
+            "12 min",
+            """\
+# Recurrences & induction
+
+A **recurrence** defines each term from earlier ones — exactly how recursive
+algorithms and dynamic programming are described.
+
+## Induction
+
+To prove a statement for all $n$: show it for a **base case**, then that
+**$n \\Rightarrow n+1$**. Like dominoes — and the formal twin of writing a loop or
+a recursion that's correct for every size.
+
+## Fibonacci grows exponentially
+
+$F_n = F_{n-1} + F_{n-2}$. Solving the recurrence (Binet's formula) shows it grows
+like $\\varphi^n/\\sqrt5$ with the golden ratio $\\varphi \\approx 1.618$ — the
+points sit right on that exponential curve:
+
+```plot
+{"title": "Fibonacci grows like φⁿ (golden ratio)", "xLabel": "n", "yLabel": "Fₙ", "xRange": [1, 10], "yRange": [0, 60], "functions": [{"expr": "1.618^x/sqrt(5)", "label": "φⁿ/√5 (Binet)", "color": "#16a34a"}], "series": [{"points": [[1, 1], [2, 1], [3, 2], [4, 3], [5, 5], [6, 8], [7, 13], [8, 21], [9, 34], [10, 55]], "label": "Fibonacci", "color": "#2563eb"}]}
+```
+
+## Recurrences for algorithm cost
+
+A divide-and-conquer algorithm's runtime is a recurrence like
+$T(n) = 2\\,T(n/2) + n$. The **Master theorem** reads off the answer
+($T(n)=\\Theta(n\\log n)$ here — merge sort). Solving recurrences *is* analysing
+algorithm complexity.
+
+**Next:** number theory & modular arithmetic.
+""",
+        ),
+        _t(
+            "Number theory & modular arithmetic",
+            "12 min",
+            """\
+# Number theory & modular arithmetic
+
+Whole numbers, primes and remainders power cryptography, hashing and error
+detection.
+
+## Modular arithmetic — clock math
+
+$a \\bmod m$ is the remainder after dividing by $m$; it **wraps around** like a
+clock. Slide the modulus and watch the sawtooth — this wraparound is hash
+buckets, ring buffers, cyclic indices and checksums:
+
+```plot
+{"title": "x mod m wraps around (clock arithmetic)", "xLabel": "x", "yLabel": "x mod m", "xRange": [0, 24], "yRange": [0, 12], "controls": [{"name": "m", "range": [2, 12], "value": 5, "step": 1, "label": "modulus m"}], "functions": [{"expr": "mod(x, m)", "label": "x mod m", "color": "#2563eb"}]}
+```
+
+## Primes, GCD and RSA
+
+- **Primes** are the atoms of multiplication (Fundamental Theorem of Arithmetic).
+- **Euclid's algorithm** finds $\\gcd(a,b)$ astonishingly fast.
+- **Modular exponentiation** ($a^e \\bmod m$, computed without ever building the
+  giant $a^e$) underlies **RSA**: easy to multiply two big primes, brutally hard
+  to factor the product back — the asymmetry that secures the web.
+
+Error-detecting codes (ISBN, credit-card Luhn, CRC) are modular arithmetic too.
+
+**Next:** implement these in code.
+""",
+        ),
+        _code(
+            "Lab: Euclid, modular power, primes & Fibonacci",
+            "12 min",
+            """\
+# Discrete-math workhorses in pure Python — no libraries.
+
+# 1) GCD by Euclid's algorithm
+a = 1071
+b = 462
+while b != 0:
+    rem = a % b
+    a = b
+    b = rem
+print("gcd(1071, 462) =", a, "  (expect 21)")
+
+# 2) FAST modular exponentiation: 7^128 mod 13  (the heart of RSA)
+base = 7
+exponent = 128
+modulus = 13
+result = 1
+base = base % modulus
+while exponent > 0:
+    if exponent % 2 == 1:
+        result = (result * base) % modulus
+    exponent = exponent // 2
+    base = (base * base) % modulus
+print("7^128 mod 13 =", result)
+
+# 3) PRIMES up to 50 by trial division
+primes = []
+for num in range(2, 51):
+    isprime = True
+    d = 2
+    while d * d <= num:
+        if num % d == 0:
+            isprime = False
+        d = d + 1
+    if isprime:
+        primes.append(num)
+print("primes up to 50:", primes)
+
+# 4) FIBONACCI iteratively (the 10th number)
+prev = 0
+cur = 1
+for k in range(9):
+    nxt = prev + cur
+    prev = cur
+    cur = nxt
+print("10th Fibonacci number =", cur)
+
+# Try it:
+#   - Change a, b in the gcd; Euclid stays fast even for enormous numbers.
+#   - Modular exponentiation never builds the giant 7^128 — it stays mod 13 throughout.
+""",
+        ),
+        _quiz(),
+    ),
+)
+
+# ── Mathematics — Complex Analysis ───────────────────────────────────────────
+
+_COMPLEX = SeedCourse(
+    slug="math-complex",
+    title="Mathematics — Complex Analysis",
+    description=(
+        "Calculus in the complex plane and why engineers love it: complex "
+        "numbers and the Argand plane, polar form and Euler's formula, analytic "
+        "functions and conformal maps, contour integrals and residues, and poles "
+        "& stability — the language of signals, control and electromagnetics, "
+        "with a Mandelbrot code lab."
+    ),
+    level="Advanced",
+    lessons=(
+        _t(
+            "Complex numbers & the complex plane",
+            "12 min",
+            """\
+# Complex numbers & the complex plane
+
+A **complex number** $z = a + bi$ (with $i^2 = -1$) is a **point in the plane** —
+real part on the horizontal axis, imaginary part on the vertical (the **Argand
+plane**). Addition is vector addition; the real magic is **multiplication**.
+
+Multiplying by $i$ **rotates 90°**: $i\\,(a+bi) = -b + ai$. Drag $z$ and watch
+$i\\,z$ stay perpendicular — complex numbers *are* 2D rotations-and-scalings:
+
+```plot
+{"title": "z = a + bi in the plane; multiplying by i rotates 90°", "xLabel": "real", "yLabel": "imaginary", "equal": true, "xRange": [-3, 3], "yRange": [-3, 3], "controls": [{"name": "re", "range": [-2.5, 2.5], "value": 2, "label": "real part a"}, {"name": "im", "range": [-2.5, 2.5], "value": 1, "label": "imag part b"}], "vectors": [{"xExpr": "re", "yExpr": "im", "from": [0, 0], "label": "z", "color": "#2563eb"}, {"xExpr": "-im", "yExpr": "re", "from": [0, 0], "label": "i·z", "color": "#dc2626"}]}
+```
+
+The **modulus** $|z| = \\sqrt{a^2+b^2}$ is its length; the **argument** $\\arg z$ is
+its angle. These power AC circuits, 2D geometry, and the whole signals toolkit.
+
+**Next:** the polar form and Euler's formula.
+""",
+        ),
+        _t(
+            "Polar form & Euler's formula",
+            "12 min",
+            """\
+# Polar form & Euler's formula
+
+Write a complex number by **length and angle**: $z = r\\,e^{i\\theta}$, where
+**Euler's formula** gives $e^{i\\theta} = \\cos\\theta + i\\sin\\theta$. Then
+multiplication is dead simple — **multiply the lengths, add the angles**:
+
+$$r_1 e^{i\\theta_1}\\cdot r_2 e^{i\\theta_2} = r_1 r_2\\,e^{i(\\theta_1+\\theta_2)}.$$
+
+Euler's identity $e^{i\\pi} + 1 = 0$ falls straight out. The **$n$-th roots of
+unity** are $e^{2\\pi i k/n}$ — equally spaced points on the unit circle. Here are
+the 6 sixth-roots, with the phasor $e^{i\\theta}$ sweeping between them (press
+**Play**):
+
+```plot
+{"title": "Roots of unity on the circle; e^{iθ} sweeping", "equal": true, "xRange": [-1.4, 1.4], "yRange": [-1.4, 1.4], "animate": {"param": "t", "range": [0, 6.283], "label": "θ"}, "parametric": [{"x": "cos(s)", "y": "sin(s)", "param": "s", "range": [0, 6.283], "color": "#cbd5e1", "label": "unit circle"}], "points": [{"x": 1, "y": 0, "color": "#2563eb", "size": 7}, {"x": 0.5, "y": 0.866, "color": "#2563eb", "size": 7}, {"x": -0.5, "y": 0.866, "color": "#2563eb", "size": 7}, {"x": -1, "y": 0, "color": "#2563eb", "size": 7}, {"x": -0.5, "y": -0.866, "color": "#2563eb", "size": 7}, {"x": 0.5, "y": -0.866, "color": "#2563eb", "size": 7}], "vectors": [{"xExpr": "cos(t)", "yExpr": "sin(t)", "from": [0, 0], "label": "e^{iθ}", "color": "#dc2626"}]}
+```
+
+Roots of unity are the backbone of the **FFT**; the polar view turns calculus on
+sinusoids into algebra — the reason engineers reach for complex exponentials.
+
+**Next:** functions of a complex variable.
+""",
+        ),
+        _t(
+            "Functions, analyticity & conformal maps",
+            "13 min",
+            """\
+# Functions, analyticity & conformal maps
+
+A **complex function** $f(z)$ maps the plane to itself. If it's differentiable in
+the complex sense — **analytic (holomorphic)** — it is extraordinarily
+well-behaved. Analyticity requires the **Cauchy–Riemann equations**: for
+$f = u + iv$,
+
+$$\\frac{\\partial u}{\\partial x} = \\frac{\\partial v}{\\partial y}, \\qquad
+\\frac{\\partial u}{\\partial y} = -\\frac{\\partial v}{\\partial x}.$$
+
+A consequence: the real and imaginary parts are **harmonic** ($\\nabla^2 u = 0$) —
+they solve Laplace's equation. So analytic functions describe steady heat,
+electrostatic potential and ideal fluid flow. Here is the harmonic surface
+$\\operatorname{Re}(e^z) = e^x\\cos y$ — **rotate it**:
+
+```plot
+{"mode": "3d", "title": "A harmonic function: Re(e^z) = eˣ cos y", "xRange": [-2, 1], "yRange": [-3.14, 3.14], "zRange": [-3, 3], "azimuth": 40, "elevation": 25, "zLabel": "Re(e^z)", "surfaces": [{"expr": "exp(x)*cos(y)", "color": "#2563eb"}]}
+```
+
+Analytic maps are also **conformal** — they preserve angles. That's why complex
+maps morph aerofoil shapes into circles (Joukowski transform) and solve 2D field
+problems by reshaping the domain into an easy one.
+
+**Next:** integrating around poles — residues.
+""",
+        ),
+        _t(
+            "Contour integrals & residues",
+            "13 min",
+            """\
+# Contour integrals & residues
+
+In the complex plane we integrate along **paths (contours)**. Two results make
+this a superpower.
+
+- **Cauchy's theorem:** the integral of an analytic function around any closed
+  loop is **zero** — what's inside doesn't matter if it's smooth.
+- **Residue theorem:** if the function has **poles** (blow-ups) inside the loop,
+  the integral is $2\\pi i$ times the sum of the **residues** at those poles.
+
+A pole is where a function shoots to infinity, like $1/z$ at the origin — here is
+its magnitude $|1/z|$, a spike:
+
+```plot
+{"mode": "3d", "title": "A pole: |1/z| spikes to infinity at z = 0", "xRange": [-2, 2], "yRange": [-2, 2], "zRange": [0, 4], "azimuth": 40, "elevation": 30, "zLabel": "|1/z|", "surfaces": [{"expr": "1/sqrt(x^2 + y^2 + 0.06)", "color": "#9333ea"}]}
+```
+
+The astonishing payoff: hard **real** integrals (e.g. $\\int_{-\\infty}^{\\infty}
+\\frac{dx}{1+x^2} = \\pi$) are evaluated instantly by closing a contour in the
+complex plane and summing residues. This is the standard tool for inverse Laplace
+and Fourier transforms.
+
+**Next:** poles, transforms & stability.
+""",
+        ),
+        _t(
+            "Poles, transforms & stability",
+            "12 min",
+            """\
+# Poles, transforms & stability
+
+The **Laplace transform** sends a time signal to a function of complex $s$; the
+**Fourier transform** is the special case $s = i\\omega$ (the imaginary axis). A
+system's behaviour is captured by the **poles** of its transfer function — the
+roots of the denominator in the complex plane.
+
+The position of a pole $s = \\sigma + i\\omega$ decides everything: the time
+response is $e^{\\sigma t}\\cos(\\omega t)$, so the **real part $\\sigma$ sets
+stability**. Slide $\\sigma$ across zero:
+
+```plot
+{"title": "A pole's real part σ decides stability", "xLabel": "time", "yLabel": "response", "xRange": [0, 10], "yRange": [-2.5, 2.5], "animate": {"param": "t", "range": [0, 10], "label": "time"}, "controls": [{"name": "sig", "range": [-1, 0.5], "value": -0.3, "label": "pole real part σ"}], "functions": [{"expr": "exp(sig*x)*cos(3*x)", "label": "e^{σt} cos(ωt)", "color": "#2563eb"}], "points": [{"xExpr": "t", "yExpr": "exp(sig*t)*cos(3*t)", "color": "#dc2626", "size": 6, "trail": true}]}
+```
+
+- $\\sigma < 0$ (left half-plane) → the response **decays**: **stable**.
+- $\\sigma > 0$ (right half-plane) → it **grows**: **unstable**.
+- $\\sigma = 0$ (imaginary axis) → pure oscillation (the Fourier boundary).
+
+This is the heart of **control theory** and **filter design**: place the poles in
+the left half-plane and the system is stable; the imaginary axis is exactly where
+Laplace meets Fourier.
+
+**Next:** explore the complex plane in code.
+""",
+        ),
+        _code(
+            "Lab: complex arithmetic & the Mandelbrot set",
+            "12 min",
+            """\
+# Complex numbers in pure Python (track real & imaginary parts separately),
+# then draw the Mandelbrot set — defined purely by the iteration z -> z² + c.
+
+# 1) Complex multiply:  (1 + 2i) * (3 + i)
+ar = 1.0
+ai = 2.0
+br = 3.0
+bi = 1.0
+pre = ar * br - ai * bi      # real part
+pim = ar * bi + ai * br      # imaginary part
+print("(1+2i)*(3+i) =", pre, "+", pim, "i   (expect 1 + 7i)")
+
+# 2) MANDELBROT: for each point c in the plane, iterate z = z² + c from 0.
+#    If |z| stays bounded it's in the set (drawn as '#').
+rows = 22
+cols = 56
+for row in range(rows):
+    line = ""
+    for col in range(cols):
+        cr = -2.3 + 3.2 * col / cols     # real axis
+        ci = -1.2 + 2.4 * row / rows     # imaginary axis
+        zr = 0.0
+        zi = 0.0
+        it = 0
+        while it < 40 and zr * zr + zi * zi <= 4.0:
+            nzr = zr * zr - zi * zi + cr  # z = z² + c
+            zi = 2.0 * zr * zi + ci
+            zr = nzr
+            it = it + 1
+        if it >= 40:
+            line = line + "#"            # bounded -> inside the set
+        else:
+            line = line + " "
+    print(line)
+
+# Try it:
+#   - Zoom by narrowing the cr / ci ranges around an edge (e.g. -0.8..-0.7, 0.0..0.2).
+#   - Raise the 40-iteration cap for a crisper boundary (the set's edge is a fractal).
+""",
+        ),
+        _quiz(),
+    ),
+)
+
+
 MATH_COURSES: tuple[SeedCourse, ...] = (
     _BASICS,
     _INTERMEDIATE,
@@ -1787,6 +2243,8 @@ MATH_COURSES: tuple[SeedCourse, ...] = (
     _FOURIER,
     _INFORMATION,
     _NUMERICAL,
+    _DISCRETE,
+    _COMPLEX,
 )
 
 __all__ = ["MATH_COURSES"]
