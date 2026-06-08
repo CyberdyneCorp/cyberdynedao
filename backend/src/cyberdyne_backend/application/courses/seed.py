@@ -28,7 +28,9 @@ from cyberdyne_backend.application.courses.seed_iac import IAC_COURSES
 from cyberdyne_backend.application.courses.seed_languages import LANGUAGE_COURSES
 from cyberdyne_backend.application.courses.seed_math import MATH_COURSES
 from cyberdyne_backend.application.courses.seed_physics import PHYSICS_COURSES
+from cyberdyne_backend.application.courses.seed_statistics import STATISTICS_COURSES
 from cyberdyne_backend.application.courses.seed_types import SeedCourse, SeedLesson
+from cyberdyne_backend.application.courses.seed_vectorcalc import VECTORCALC_COURSES
 from cyberdyne_backend.domain.courses import (
     Course,
     CourseNotFoundError,
@@ -1113,6 +1115,8 @@ ACADEMY_COURSES: tuple[SeedCourse, ...] = (
     *IAC_COURSES,
     *PHYSICS_COURSES,
     *MATH_COURSES,
+    *VECTORCALC_COURSES,
+    *STATISTICS_COURSES,
 )
 
 
