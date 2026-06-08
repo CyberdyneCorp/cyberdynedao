@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from cyberdyne_backend.application.courses.seed_algorithms import ALGORITHMS_COURSES
 from cyberdyne_backend.application.courses.seed_databases import DATABASE_COURSES
 from cyberdyne_backend.application.courses.seed_devops import DEVOPS_COURSES
 from cyberdyne_backend.application.courses.seed_iac import IAC_COURSES
@@ -1119,6 +1120,7 @@ ACADEMY_COURSES: tuple[SeedCourse, ...] = (
     *VECTORCALC_COURSES,
     *STATISTICS_COURSES,
     *ROBOTICS_COURSES,
+    *ALGORITHMS_COURSES,
 )
 
 
