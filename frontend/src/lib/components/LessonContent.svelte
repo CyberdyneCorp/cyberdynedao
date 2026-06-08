@@ -7,7 +7,9 @@
 		type RunCodeResult
 	} from '$lib/api/coursesApi';
 	import CodeEditor from './CodeEditor.svelte';
+	import Plot from './Plot.svelte';
 	import { highlightElement } from '$lib/utils/highlight';
+	import { splitPlotSegments, parsePlot } from '$lib/utils/lessonPlot';
 
 	let { lesson, language = 'matlab' }: { lesson: CourseLesson; language?: CodeLanguage } =
 		$props();
@@ -76,7 +78,18 @@
 		<a class="ext" href={lesson.contentUrl} target="_blank" rel="noopener">Open presentation ↗</a>
 	{:else if lesson.lessonType === 'text'}
 		<div class="md" bind:this={mdWrap}>
-			<MarkdownPreview content={lesson.textBody ?? 'No content.'} />
+			{#each splitPlotSegments(lesson.textBody ?? 'No content.') as seg}
+				{#if seg.kind === 'plot'}
+					{@const parsed = parsePlot(seg.content)}
+					{#if 'error' in parsed}
+						<p class="plot-err">⚠ Plot spec error: {parsed.error}</p>
+					{:else}
+						<Plot spec={parsed} />
+					{/if}
+				{:else}
+					<MarkdownPreview content={seg.content} />
+				{/if}
+			{/each}
 		</div>
 	{:else if lesson.lessonType === 'code'}
 		<p class="hint">Edit and run against the {langLabel} engine:</p>

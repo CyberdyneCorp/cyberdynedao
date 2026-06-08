@@ -67,6 +67,12 @@ $$v(t) = v_0 + a\\,t, \\qquad x(t) = x_0 + v_0 t + \\tfrac{1}{2} a\\,t^2.$$
 **Example.** Drop a ball ($v_0 = 0$, $a = -g = -9.81\\,\\text{m/s}^2$). After
 $t = 1\\,\\text{s}$ it has fallen $\\tfrac{1}{2}g t^2 \\approx 4.9\\,\\text{m}$.
 
+```plot
+{"title": "Dropped ball: distance fallen vs time", "xLabel": "t (s)", "yLabel": "fallen (m)", "xRange": [0, 2], "functions": [{"expr": "0.5*9.81*x^2", "label": "½ g t²"}]}
+```
+
+The curve steepens — that upward bend *is* the (constant) acceleration.
+
 ## Vectors
 
 In 2D/3D, position/velocity/acceleration are **vectors** — they have direction.
@@ -106,13 +112,11 @@ Common forces:
 weight: $T - mg = m\\,a$. Hovering means $a = 0$, so $T = mg$. Thrust above $mg$
 makes it climb — that's the whole idea behind the quadrotor course later.
 
-```text
-        T (thrust, up)
-        ↑
-      [ drone ]
-        ↓
-        mg (weight, down)
+```vectors
+{"title": "Free-body diagram: hovering drone", "equal": true, "xRange": [-2, 2], "yRange": [-1.6, 1.6], "vectors": [{"x": 0, "y": 1.2, "from": [0, 0], "label": "T (thrust)", "color": "#16a34a"}, {"x": 0, "y": -1.2, "from": [0, 0], "label": "mg (weight)", "color": "#dc2626"}]}
 ```
+
+At hover the two arrows are equal and opposite, so the net force is zero.
 
 **Next:** energy and momentum — two powerful shortcuts.
 """,
@@ -227,6 +231,10 @@ $$m\\ddot{x} = -k x \\;\\;\\Rightarrow\\;\\; \\ddot{x} + \\omega^2 x = 0, \\quad
 Its solution oscillates: $x(t) = A\\cos(\\omega t + \\varphi)$. Dynamics is mostly
 the art of writing down such equations (the *equations of motion*) and solving
 or simulating them.
+
+```plot
+{"title": "Simple harmonic motion", "xLabel": "ω t (rad)", "yLabel": "x(t)", "xRange": [0, 12.566], "functions": [{"expr": "cos(x)", "label": "x = A cos(ω t)"}]}
+```
 
 ## The calculus toolkit
 
@@ -355,6 +363,13 @@ frame**.
 - **Thrust** acts up along the body: $\\vec{F}_T = (0,0,-T)$.
 - **Gravity** is simple in the Earth frame but must be rotated into the body
   frame: $\\vec{F}_g = m\\mathbf{R}^{T}(0,0,g)^{T} = m(-g\\sin\\theta,\\; g\\cos\\theta\\sin\\phi,\\; g\\cos\\theta\\cos\\phi)$.
+
+```vectors
+{"title": "Body-frame forces (pitched θ ≈ 35°)", "equal": true, "xRange": [-2, 2], "yRange": [-1.8, 1.8], "vectors": [{"x": 0, "y": 1.5, "label": "thrust T", "color": "#16a34a"}, {"x": 0.86, "y": -1.0, "label": "gravity (Rᵀg)", "color": "#dc2626"}]}
+```
+
+The net of these two arrows is what accelerates the body — tilt the thrust and
+the horizontal component is exactly what moves the quadrotor sideways.
 
 ## Translational dynamics (Newton, body frame)
 
