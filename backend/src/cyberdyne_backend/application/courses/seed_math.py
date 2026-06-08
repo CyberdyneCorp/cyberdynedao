@@ -1368,6 +1368,416 @@ print("detected period (samples):", bestlag, " (true period =", P, ")")
 )
 
 
+# ── Mathematics — Information Theory ─────────────────────────────────────────
+
+_INFORMATION = SeedCourse(
+    slug="math-information",
+    title="Mathematics — Information Theory",
+    description=(
+        "The mathematics of information itself: self-information and entropy, "
+        "source coding and compression limits, cross-entropy and KL divergence "
+        "(the loss that trains classifiers), and mutual information and channel "
+        "capacity. The theory behind compression, communication and modern ML, "
+        "with a pure-Python entropy lab."
+    ),
+    level="Advanced",
+    lessons=(
+        _t(
+            "Information & entropy",
+            "12 min",
+            """\
+# Information & entropy
+
+How much **information** is in a message? Shannon's answer: information is
+*surprise*. A certain event tells you nothing; a rare one tells you a lot. The
+information content of an outcome with probability $p$ is
+
+$$I = -\\log_2 p \\quad \\text{(bits)}.$$
+
+Probability 1 → 0 bits; probability $\\tfrac12$ → 1 bit; rarer events carry more:
+
+```plot
+{"title": "Surprise of an event: −log₂(p)", "xLabel": "p (probability)", "yLabel": "bits of information", "xRange": [0.01, 1], "yRange": [0, 7], "functions": [{"expr": "-log2(x)", "label": "−log₂ p", "color": "#16a34a"}]}
+```
+
+## Entropy: average information
+
+**Entropy** is the *expected* surprise of a source — the average bits per symbol:
+
+$$H(X) = -\\sum_x p(x)\\,\\log_2 p(x).$$
+
+It's maximised when every outcome is equally likely (most uncertain) and zero
+when one outcome is certain. For a coin with bias $p$, the **binary entropy** is
+
+```plot
+{"title": "Binary entropy H(p): uncertainty of a coin", "xLabel": "p (probability of heads)", "yLabel": "H(p) (bits)", "xRange": [0, 1], "yRange": [0, 1.1], "functions": [{"expr": "-(x*log2(x) + (1-x)*log2(1-x))", "label": "H(p)", "color": "#2563eb"}], "points": [{"x": 0.5, "y": 1, "label": "max = 1 bit at p = 0.5", "color": "#dc2626", "size": 7}]}
+```
+
+A fair coin carries a full bit; a predictable (biased) coin carries less. Entropy
+is the floor on lossless compression and the currency of decision trees
+(information gain), cryptography and thermodynamics.
+
+**Next:** turning entropy into actual codes.
+""",
+        ),
+        _t(
+            "Coding & compression",
+            "12 min",
+            """\
+# Coding & compression
+
+To store or send symbols we assign each a binary **codeword**. We want short
+codes for frequent symbols (like Morse: E is one dot, Z is long). **Shannon's
+source coding theorem** says the average code length can get arbitrarily close to
+the **entropy** $H$ — but never below it.
+
+$$H(X) \\le \\bar{L} < H(X) + 1.$$
+
+So entropy is the hard limit of lossless compression. The gap between a naive
+fixed-length code and $H$ is **redundancy** — exactly what ZIP, PNG and Huffman
+coding squeeze out:
+
+```plot
+{"title": "Compression limit: you can't beat entropy", "xLabel": "p", "yLabel": "bits per symbol", "xRange": [0, 1], "yRange": [0, 1.25], "functions": [{"expr": "-(x*log2(x) + (1-x)*log2(1-x))", "label": "entropy H(p) — best possible", "color": "#2563eb"}, {"expr": "1", "label": "naive 1-bit code", "color": "#94a3b8"}]}
+```
+
+The shaded gap (between the grey line and the blue curve) is the compressible
+redundancy — largest when the source is predictable.
+
+## Prefix codes & Huffman
+
+A **prefix code** (no codeword is a prefix of another) is instantly decodable.
+**Huffman coding** builds the optimal one by repeatedly merging the two least
+likely symbols — used in JPEG, MP3, DEFLATE (ZIP/gzip) and HTTP/2 header
+compression. **Arithmetic / range coding** gets even closer to $H$ for skewed
+sources.
+
+**Next:** comparing two distributions — cross-entropy & KL.
+""",
+        ),
+        _t(
+            "Cross-entropy & KL divergence",
+            "13 min",
+            """\
+# Cross-entropy & KL divergence
+
+What if you compress (or predict) using a **model** $q$ when the truth is $p$?
+You pay the **cross-entropy**:
+
+$$H(p, q) = -\\sum_x p(x)\\,\\log_2 q(x) = H(p) + D_{\\mathrm{KL}}(p \\,\\|\\, q).$$
+
+The extra cost over the ideal $H(p)$ is the **Kullback–Leibler divergence**:
+
+$$D_{\\mathrm{KL}}(p \\,\\|\\, q) = \\sum_x p(x)\\,\\log\\frac{p(x)}{q(x)} \\;\\ge\\; 0,$$
+
+zero only when $q = p$. It measures how many extra bits the wrong model wastes —
+and it is **not symmetric**. Drag the model mean and watch $q$ drift from the
+truth $p$:
+
+```plot
+{"title": "KL measures how far model q is from truth p", "xLabel": "x", "yLabel": "density", "xRange": [-6, 8], "yRange": [0, 0.5], "controls": [{"name": "mq", "range": [-2, 5], "value": 3, "label": "model mean μ_q"}], "functions": [{"expr": "exp(-(x-1)^2/2)/sqrt(2*pi)", "label": "truth p (μ=1)", "color": "#2563eb"}, {"expr": "exp(-(x-mq)^2/2)/sqrt(2*pi)", "label": "model q (μ=μ_q)", "color": "#dc2626"}]}
+```
+
+For these unit-variance Gaussians the divergence is $D_{\\mathrm{KL}} = (\\mu_p-\\mu_q)^2/2$ — zero at a perfect match, growing as the model drifts:
+
+```plot
+{"title": "KL(p‖q) grows as the model drifts from the truth", "xLabel": "model mean μ_q", "yLabel": "KL (nats)", "xRange": [-3, 5], "yRange": [0, 8], "controls": [{"name": "mq", "range": [-3, 5], "value": 3, "label": "μ_q"}], "functions": [{"expr": "(1-x)^2/2", "label": "KL(p‖q)", "color": "#9333ea"}], "points": [{"xExpr": "mq", "yExpr": "(1-mq)^2/2", "color": "#dc2626", "size": 7}, {"x": 1, "y": 0, "label": "KL = 0 when q = p", "color": "#16a34a", "size": 6}]}
+```
+
+This is **why classifiers minimise cross-entropy loss**: minimising $H(p,q)$ over
+the model $q$ is exactly minimising $D_{\\mathrm{KL}}(p\\|q)$, pulling the model
+toward the data distribution. KL also drives variational inference and t-SNE.
+
+**Next:** information through a noisy channel.
+""",
+        ),
+        _t(
+            "Mutual information & channel capacity",
+            "12 min",
+            """\
+# Mutual information & channel capacity
+
+**Mutual information** $I(X;Y) = H(X) - H(X\\mid Y)$ is how much observing $Y$
+reduces your uncertainty about $X$ — the information one variable carries about
+another. It underlies feature selection, registration, and decoding.
+
+## Sending bits through noise
+
+A channel corrupts symbols. The simplest is the **binary symmetric channel**: each
+bit flips with probability $p$.
+
+```mermaid
+flowchart LR
+  X["message bit X"] --> C["noisy channel (flips with prob p)"]
+  C --> Y["received bit Y"]
+```
+
+Its **capacity** — the maximum reliable bits per use — is
+
+$$C = 1 - H(p).$$
+
+A clean channel ($p=0$) carries 1 bit; pure noise ($p=0.5$) carries **nothing**;
+oddly, $p=1$ is perfect again (just invert every bit):
+
+```plot
+{"title": "Binary symmetric channel: capacity C = 1 − H(p)", "xLabel": "bit-flip probability p", "yLabel": "capacity (bits/use)", "xRange": [0, 1], "yRange": [0, 1.1], "functions": [{"expr": "1 + (x*log2(x) + (1-x)*log2(1-x))", "label": "C = 1 − H(p)", "color": "#2563eb"}], "points": [{"x": 0.5, "y": 0, "label": "p = 0.5: useless channel", "color": "#dc2626", "size": 7}]}
+```
+
+Shannon's **noisy-channel coding theorem** says that *below* capacity you can
+drive errors arbitrarily low with the right **error-correcting code** — the
+foundation of Wi-Fi, 5G, deep-space links, QR codes and storage (RAID, ECC RAM).
+
+**Next:** compute entropy and KL in code.
+""",
+        ),
+        _code(
+            "Lab: entropy, KL divergence & cross-entropy",
+            "12 min",
+            """\
+# Information theory from scratch — entropy, KL, cross-entropy (no libraries).
+
+# Probabilities of 4 symbols (a dyadic source: A is common, C and D are rare).
+probs = [0.5, 0.25, 0.125, 0.125]
+
+# We need log2. Compute ln(x) with the atanh series, then divide by ln(2).
+# (Inlined in the loop so there are no helper functions.)
+LN2 = 0.6931471805599453
+
+# ENTROPY  H(p) = -sum p*log2(p)
+H = 0.0
+for p in probs:
+    y = (p - 1.0) / (p + 1.0)
+    ssum = 0.0
+    pw = y
+    k = 0
+    while k < 200:
+        ssum = ssum + pw / (2 * k + 1)
+        pw = pw * y * y
+        k = k + 1
+    log2p = 2.0 * ssum / LN2
+    H = H - p * log2p
+print("entropy H(p)        =", round(H, 4), "bits   (this source = 1.75)")
+
+# Compare to a uniform model q = 1/4 each.  log2(1/4) = -2 exactly, so:
+#   cross-entropy H(p,q) = -sum p*log2(q) = 2 bits   (cost of the uniform code)
+#   KL(p || q) = H(p,q) - H(p) = wasted bits from using the wrong model
+CE = 2.0
+KL = CE - H
+print("cross-entropy H(p,q)=", round(CE, 4), "bits   (uniform code = log2 4)")
+print("KL(p || uniform)    =", round(KL, 4), "bits   (bits wasted by the wrong model)")
+
+# Try it:
+#   - Make probs uniform [0.25, 0.25, 0.25, 0.25]: H hits its max (2 bits), KL -> 0.
+#   - Skew probs further (e.g. 0.7, 0.1, 0.1, 0.1): H drops -> more compressible.
+""",
+        ),
+        _quiz(),
+    ),
+)
+
+# ── Mathematics — Numerical Methods ──────────────────────────────────────────
+
+_NUMERICAL = SeedCourse(
+    slug="math-numerical",
+    title="Mathematics — Numerical Methods",
+    description=(
+        "How computers actually do maths: floating-point error and conditioning, "
+        "root-finding (bisection & Newton), interpolation and curve fitting (and "
+        "the Runge trap), and the stability of numerical integration. The "
+        "practical core of scientific computing and simulation, with a "
+        "pure-Python solver lab."
+    ),
+    level="Advanced",
+    lessons=(
+        _t(
+            "Floating point, error & conditioning",
+            "11 min",
+            """\
+# Floating point, error & conditioning
+
+Computers store reals in finite precision (**floating point**), so almost every
+number is slightly rounded. Famously `0.1 + 0.2 != 0.3`. Two error sources fight
+each other:
+
+- **Round-off** — accumulated tiny representation errors (worse with *more*
+  operations / *smaller* steps).
+- **Truncation** — error from approximating a limit with a finite step
+  (smaller with *smaller* steps).
+
+For a finite-difference derivative the **total error** is U-shaped: shrink the
+step $h$ and truncation falls but round-off rises. There's a sweet spot —
+smaller is *not* always better:
+
+```plot
+{"title": "Step size: truncation vs round-off (total error)", "xLabel": "step size h", "yLabel": "error", "xRange": [0.002, 0.1], "yRange": [0, 0.12], "controls": [{"name": "eps", "range": [0.00002, 0.001], "value": 0.0001, "label": "round-off level"}], "functions": [{"expr": "x", "label": "truncation ∝ h", "color": "#94a3b8"}, {"expr": "eps/x", "label": "round-off ∝ 1/h", "color": "#cbd5e1"}, {"expr": "x + eps/x", "label": "total error", "color": "#2563eb"}]}
+```
+
+## Conditioning & cancellation
+
+A problem is **ill-conditioned** if tiny input changes cause big output changes
+(e.g. solving a near-singular linear system). **Catastrophic cancellation** —
+subtracting two nearly-equal numbers — destroys significant digits; the fix is
+usually a rearranged, *stable* formula (like the alternate quadratic-root form).
+Tracking **absolute vs relative error** keeps these honest.
+
+**Next:** solving equations numerically.
+""",
+        ),
+        _t(
+            "Root-finding: bisection & Newton",
+            "13 min",
+            """\
+# Root-finding: bisection & Newton
+
+Most equations have no closed-form solution, so we solve $f(x) = 0$ numerically.
+
+## Bisection — slow but bulletproof
+
+If $f$ changes sign across $[a,b]$, a root lies between. Halve the interval, keep
+the half that still brackets the root, repeat. It **always** converges, gaining
+one bit of accuracy per step.
+
+## Newton's method — fast when it works
+
+Follow the **tangent** down to the axis and jump there:
+
+$$x_{n+1} = x_n - \\frac{f(x_n)}{f'(x_n)}.$$
+
+It converges *quadratically* (the correct digits roughly double each step). Drag
+the guess for $f(x)=x^2-2$ — the green point (where the tangent hits zero) is the
+next iterate, leaping toward $\\sqrt{2}$:
+
+```plot
+{"title": "Newton's method: follow the tangent to the root", "xLabel": "x", "yLabel": "f(x)", "xRange": [0, 3], "yRange": [-3, 7], "controls": [{"name": "a", "range": [0.6, 3], "value": 2.5, "label": "current guess xₙ"}], "functions": [{"expr": "x^2 - 2", "label": "f(x) = x² − 2", "color": "#2563eb"}], "parametric": [{"x": "a + u", "y": "(a^2 - 2) + 2*a*u", "param": "u", "range": [-2.5, 2.5], "color": "#dc2626", "label": "tangent at xₙ"}], "points": [{"xExpr": "a", "yExpr": "a^2 - 2", "color": "#dc2626", "size": 6, "label": "xₙ"}, {"xExpr": "a - (a^2 - 2)/(2*a)", "y": 0, "color": "#16a34a", "size": 7, "label": "xₙ₊₁"}, {"x": 1.41421356, "y": 0, "color": "#9333ea", "size": 5, "label": "√2"}]}
+```
+
+Newton can diverge from a bad start or where $f'\\approx 0$; robust solvers blend
+it with bisection (Brent's method). This is how calculators take roots and how
+solvers crack implicit equations.
+
+**Next:** building curves through data — interpolation.
+""",
+        ),
+        _t(
+            "Interpolation & curve fitting",
+            "12 min",
+            """\
+# Interpolation & curve fitting
+
+Given data points, we often need values *between* them.
+
+- **Interpolation** passes a curve **through** the points (polynomial, or
+  piecewise **splines**).
+- **Fitting** (least squares) finds a simple curve **near** noisy points without
+  hitting each one.
+
+Tune a quadratic to sit among these points (the least-squares idea you met in the
+Optimization course):
+
+```plot
+{"title": "Fit a curve to data (quadratic)", "xLabel": "x", "yLabel": "y", "xRange": [-0.5, 4.5], "yRange": [-1, 8], "controls": [{"name": "c0", "range": [-2, 3], "value": 1, "label": "c₀"}, {"name": "c1", "range": [-2, 3], "value": 0.5, "label": "c₁"}, {"name": "c2", "range": [-1, 2], "value": 0.3, "label": "c₂"}], "functions": [{"expr": "c0 + c1*x + c2*x^2", "label": "y = c₀ + c₁x + c₂x²", "color": "#dc2626"}], "series": [{"points": [[0, 1], [1, 1.8], [2, 3.3], [3, 5.1], [4, 7.2]], "label": "data", "color": "#2563eb"}], "points": [{"x": 0, "y": 1, "color": "#2563eb", "size": 6}, {"x": 1, "y": 1.8, "color": "#2563eb", "size": 6}, {"x": 2, "y": 3.3, "color": "#2563eb", "size": 6}, {"x": 3, "y": 5.1, "color": "#2563eb", "size": 6}, {"x": 4, "y": 7.2, "color": "#2563eb", "size": 6}]}
+```
+
+## The Runge trap
+
+Fitting a **single high-degree polynomial** to many points backfires: it
+oscillates wildly between them (the **Runge phenomenon**). Here is the classic
+offender — a smooth bump that high-degree interpolation cannot tame:
+
+```plot
+{"title": "Runge phenomenon: high-degree fits oscillate", "xLabel": "x", "yLabel": "y", "xRange": [-1, 1], "yRange": [-0.5, 1.3], "functions": [{"expr": "1/(1 + 25*x^2)", "label": "f(x) = 1/(1+25x²)", "color": "#2563eb"}]}
+```
+
+The fix is **cubic splines**: low-degree polynomials stitched smoothly piece by
+piece — the workhorse of graphics curves, animation, font outlines and sensor
+calibration.
+
+**Next:** integrating in time, and staying stable.
+""",
+        ),
+        _t(
+            "Stability & integrating ODEs",
+            "12 min",
+            """\
+# Stability & integrating ODEs
+
+To simulate $\\dot y = f(t, y)$ we step forward. The simplest is **explicit
+Euler**: $y_{n+1} = y_n + h\\,f(t_n, y_n)$. Bigger steps are cheaper — but a step
+that's *too* big doesn't just lose accuracy, it can **blow up**.
+
+For decay $\\dot y = -k y$, Euler multiplies by $(1 - kh)$ each step, so the error
+grows unless
+
+$$|1 - kh| < 1 \\;\\Leftrightarrow\\; h < \\frac{2}{k}.$$
+
+Increase the rate $k$ and see the growth-per-step climb above 1 — past that, the
+simulation oscillates and diverges:
+
+```plot
+{"title": "Euler stability: |1 − k·h| must stay below 1", "xLabel": "step size h", "yLabel": "growth factor per step", "xRange": [0, 1], "yRange": [0, 2.5], "controls": [{"name": "k", "range": [1, 8], "value": 4, "label": "decay rate k"}], "functions": [{"expr": "abs(1 - k*x)", "label": "|1 − k h|", "color": "#2563eb"}, {"expr": "1", "label": "stability limit", "color": "#dc2626"}]}
+```
+
+## Better steppers
+
+- **Accuracy:** higher-order methods like **RK4** (Runge–Kutta) take cleverly
+  weighted sub-steps for far less error at the same $h$.
+- **Stiff systems** (very different time scales) force tiny explicit steps;
+  **implicit** methods (backward Euler) stay stable at large $h$.
+
+This is why physics engines, circuit simulators (SPICE) and weather models pick
+their integrator and step size so carefully — the EOM lab in the Physics track
+was a live example.
+
+**Next:** code the solvers yourself.
+""",
+        ),
+        _code(
+            "Lab: root-finding & a stable integrator",
+            "12 min",
+            """\
+# Root-finding & ODE integration from scratch — no libraries.
+
+# Solve f(x) = x^2 - 2 = 0   (root is sqrt(2) = 1.41421356...)
+
+# 1) BISECTION: shrink a sign-changing bracket [a, b].
+a = 1.0
+b = 2.0
+for it in range(50):
+    mid = (a + b) / 2.0
+    if (mid * mid - 2.0) > 0.0:
+        b = mid
+    else:
+        a = mid
+print("bisection root ~", round((a + b) / 2.0, 8))
+
+# 2) NEWTON: x <- x - f(x)/f'(x),  f'(x) = 2x.  Quadratic convergence.
+x = 2.0
+for it in range(8):
+    x = x - (x * x - 2.0) / (2.0 * x)
+print("newton root    ~", round(x, 8), "in 8 steps")
+
+# 3) EULER stability: integrate y' = -k y, y(0)=1 to t=2; true answer e^(-8).
+#    Compare a safe step to one past the stability limit h = 2/k = 0.5.
+k = 4.0
+true = 2.718281828459045 ** (-8)
+for h in [0.1, 0.4, 0.6]:
+    y = 1.0
+    steps = int(2.0 / h + 0.5)
+    for s in range(steps):
+        y = y + (-k * y) * h
+    print("Euler h =", h, "-> y(2) ~", round(y, 4), " (true ~", round(true, 4), ")")
+# h=0.6 gives k*h=2.4, so |1-kh|=1.4 > 1: the result oscillates and explodes.
+
+# Try it:
+#   - Newton reaches full precision in ~5 steps; bisection needs ~50.
+#   - Drop h to 0.05 for an accurate, stable decay; raise it past 0.5 to see it blow up.
+""",
+        ),
+        _quiz(),
+    ),
+)
+
+
 MATH_COURSES: tuple[SeedCourse, ...] = (
     _BASICS,
     _INTERMEDIATE,
@@ -1375,6 +1785,8 @@ MATH_COURSES: tuple[SeedCourse, ...] = (
     _OPTIMIZATION,
     _PROBABILITY,
     _FOURIER,
+    _INFORMATION,
+    _NUMERICAL,
 )
 
 __all__ = ["MATH_COURSES"]
