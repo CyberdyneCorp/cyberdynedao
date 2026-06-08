@@ -9,9 +9,9 @@
 	} from '@cyberdynecorp/svelte-ui-core';
 	import { authVM } from '$lib/auth/authViewModel.svelte';
 	import { createCyberfliesVM, type ChatScope } from '$lib/viewmodels/cyberfliesViewModel.svelte';
-	import type { MeetingPlatform } from '$lib/api/cyberfliesApi';
+	import { CYBERFLIES_MCP_URL, type MeetingPlatform } from '$lib/api/cyberfliesApi';
 
-	type Tab = 'meetings' | 'chat' | 'channels' | 'bot' | 'agent';
+	type Tab = 'meetings' | 'chat' | 'channels' | 'bot' | 'agent' | 'apikeys';
 	let tab = $state<Tab>('meetings');
 
 	const meetings = createCyberfliesVM();
@@ -75,6 +75,46 @@
 			mcpToken = '';
 		}
 	}
+	// API-keys tab: create-key form + copy feedback.
+	let apiKeyName = $state<string>('');
+	// The one-time-secret modal mirrors the VM's `newApiKeyToken`. Opening is
+	// driven by the VM; closing (X / backdrop / Done) clears the secret so it
+	// can't be reopened.
+	let tokenModalOpen = $state<boolean>(false);
+	$effect(() => {
+		if (meetings.newApiKeyToken !== null) tokenModalOpen = true;
+	});
+	$effect(() => {
+		if (!tokenModalOpen && meetings.newApiKeyToken !== null) meetings.clearNewApiKeyToken();
+	});
+	async function onCreateApiKey(e: SubmitEvent) {
+		e.preventDefault();
+		const token = await meetings.createApiKey(apiKeyName);
+		if (token) apiKeyName = '';
+	}
+	function onRevokeApiKey(id: string, name: string) {
+		askConfirm({
+			title: 'Revoke API key',
+			message: `Revoke "${name}"? Any Claude/ChatGPT connection using it stops working immediately. This can't be undone.`,
+			label: 'Revoke',
+			action: () => meetings.revokeApiKey(id)
+		});
+	}
+
+	// Generic "copy to clipboard" with transient per-key feedback.
+	let copiedKey = $state<string | null>(null);
+	let copyTimer: ReturnType<typeof setTimeout> | null = null;
+	async function copyToClipboard(text: string, marker: string) {
+		try {
+			await navigator.clipboard.writeText(text);
+			copiedKey = marker;
+			if (copyTimer) clearTimeout(copyTimer);
+			copyTimer = setTimeout(() => (copiedKey = null), 2000);
+		} catch {
+			/* clipboard blocked (insecure context / permissions) — no-op */
+		}
+	}
+
 	// Organize-into-channel controls (per detail panel).
 	let organizeChannelId = $state<string>('');
 	let newChannelName = $state<string>('');
@@ -124,6 +164,7 @@
 	});
 
 	onDestroy(() => {
+		if (copyTimer) clearTimeout(copyTimer);
 		meetings.destroy();
 	});
 
@@ -297,6 +338,9 @@
 			</button>
 			<button type="button" class="tab" class:tab--active={tab === 'agent'} onclick={() => { tab = 'agent'; void meetings.refreshMcpServers(); }}>
 				🔌 Agent tools
+			</button>
+			<button type="button" class="tab" class:tab--active={tab === 'apikeys'} onclick={() => { tab = 'apikeys'; void meetings.refreshApiKeys(); }}>
+				🔑 API keys
 			</button>
 		</nav>
 	</header>
@@ -952,7 +996,140 @@
 			{/if}
 		</div>
 	{/if}
+
+	<!-- ── API keys (connect Claude / ChatGPT via MCP) ──────────────── -->
+	{#if tab === 'apikeys'}
+		<div class="keys-view">
+			<header class="bot__intro">
+				<h2 class="bot__title">🔑 API keys</h2>
+				<p class="bot__lead">
+					Create a personal API key to connect <strong>Cyberflies as an MCP server</strong> inside
+					Claude or ChatGPT — then ask them to search, list and read your meeting transcripts. The
+					same key also works for the mobile app and scripts. Keys are read-only and scoped to you.
+				</p>
+			</header>
+
+			<form class="bot-form" onsubmit={onCreateApiKey}>
+				<div class="bot-form__row">
+					<input
+						class="ch-input ch-input--desc"
+						type="text"
+						maxlength="128"
+						placeholder="Key name (e.g. Claude Desktop)"
+						value={apiKeyName}
+						oninput={(e) => (apiKeyName = (e.currentTarget as HTMLInputElement).value)}
+						disabled={!authReady || meetings.apiKeysLoading}
+					/>
+					<PixelButton
+						variant="solid"
+						size="sm"
+						type="submit"
+						disabled={!authReady || meetings.apiKeysLoading || apiKeyName.trim() === ''}
+					>
+						{meetings.apiKeysLoading ? 'Creating…' : '+ Create key'}
+					</PixelButton>
+				</div>
+			</form>
+
+			{#if meetings.apiKeyError}
+				<div class="banner banner--err">{meetings.apiKeyError}</div>
+			{/if}
+
+			{#if meetings.apiKeys.length === 0}
+				<p class="empty">{authReady ? 'No API keys yet. Create one above to connect Claude or ChatGPT.' : 'Sign in to manage API keys.'}</p>
+			{:else}
+				<ul class="key-list">
+					{#each meetings.apiKeys as k (k.id)}
+						<li class="key" class:key--revoked={k.revoked}>
+							<div class="key__main">
+								<span class="key__name">{k.name}</span>
+								<code class="key__prefix">{k.prefix}…</code>
+								{#if k.revoked}<span class="key__badge">revoked</span>{/if}
+							</div>
+							<div class="key__meta">
+								Created {formatDate(k.created_at)}
+								· {k.last_used_at ? `last used ${formatDate(k.last_used_at)}` : 'never used'}
+							</div>
+							{#if !k.revoked}
+								<div class="key__actions">
+									<PixelButton variant="ghost" size="sm" onclick={() => onRevokeApiKey(k.id, k.name)} disabled={meetings.apiKeysLoading}>
+										🗑 Revoke
+									</PixelButton>
+								</div>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+			{/if}
+
+			<!-- How to connect -->
+			<section class="howto">
+				<h3 class="howto__title">Connect to Claude or ChatGPT</h3>
+				<div class="howto__url">
+					<span class="howto__url-label">MCP server URL</span>
+					<div class="howto__url-row">
+						<code class="howto__code">{CYBERFLIES_MCP_URL}</code>
+						<button type="button" class="copy-btn" onclick={() => copyToClipboard(CYBERFLIES_MCP_URL, 'mcp-url')}>
+							{copiedKey === 'mcp-url' ? '✓ Copied' : '⧉ Copy'}
+						</button>
+					</div>
+				</div>
+
+				<div class="howto__cols">
+					<div class="howto__card">
+						<h4>Claude (Desktop / Code)</h4>
+						<ol>
+							<li>Create an API key above and copy the secret.</li>
+							<li>Open <strong>Settings → Connectors</strong> (or add a custom MCP server).</li>
+							<li>Add a remote server with the URL above.</li>
+							<li>For auth, choose <strong>Bearer token</strong> and paste your API key.</li>
+							<li>Ask Claude: <em>“Search my Cyberflies meetings for …”</em></li>
+						</ol>
+						<p class="howto__hint">
+							Claude Code CLI:
+							<code>claude mcp add --transport http cyberflies {CYBERFLIES_MCP_URL} --header "Authorization: Bearer YOUR_KEY"</code>
+						</p>
+					</div>
+					<div class="howto__card">
+						<h4>ChatGPT</h4>
+						<ol>
+							<li>Create an API key above and copy the secret.</li>
+							<li>Open <strong>Settings → Connectors → Add</strong> (custom MCP / developer mode).</li>
+							<li>Paste the MCP server URL above.</li>
+							<li>Set authentication to <strong>Bearer</strong> and paste your API key.</li>
+							<li>Enable the connector in a chat, then ask about your meetings.</li>
+						</ol>
+						<p class="howto__hint">
+							Available tools: <code>list_recordings</code>, <code>search_recordings</code>,
+							<code>get_recording</code> (read-only).
+						</p>
+					</div>
+				</div>
+			</section>
+		</div>
+	{/if}
 </div>
+
+<!-- One-time secret: shown ONCE right after a key is created. -->
+<Modal bind:open={tokenModalOpen} title="Copy your API key now" size="md">
+	<p class="confirm__msg">
+		This is the only time the full key is shown. Copy it and store it somewhere safe —
+		you can't see it again. If you lose it, revoke it and create a new one.
+	</p>
+	{#if meetings.newApiKeyToken}
+		<div class="howto__url-row token-row">
+			<code class="howto__code token-code">{meetings.newApiKeyToken}</code>
+			<button type="button" class="copy-btn" onclick={() => copyToClipboard(meetings.newApiKeyToken!, 'new-token')}>
+				{copiedKey === 'new-token' ? '✓ Copied' : '⧉ Copy'}
+			</button>
+		</div>
+	{/if}
+	{#snippet footer()}
+		<div class="confirm__actions">
+			<PixelButton variant="solid" size="sm" onclick={() => (tokenModalOpen = false)}>Done</PixelButton>
+		</div>
+	{/snippet}
+</Modal>
 
 <!-- Styled confirmation dialog (replaces the native browser confirm()) -->
 <Modal bind:open={confirmOpen} title={confirmTitle} size="sm">
@@ -1166,4 +1343,36 @@
 	.icon-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 	.hidden-input { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+
+	/* API keys subview */
+	.keys-view { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; overflow-y: auto; }
+	.key-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+	.key { display: flex; flex-direction: column; gap: 4px; background: #ffffff; border: 2px solid #000; border-radius: 8px; padding: 10px 12px; }
+	.key--revoked { opacity: 0.55; }
+	.key__main { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+	.key__name { font-weight: 700; font-size: 0.9rem; }
+	.key__prefix { font-size: 0.75rem; color: #6b7280; background: #f1f5f9; padding: 1px 6px; border-radius: 4px; }
+	.key__badge { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: #991b1b; background: #fee2e2; border: 1px solid #b91c1c; padding: 1px 6px; }
+	.key__meta { font-size: 0.68rem; color: #64748b; }
+	.key__actions { display: flex; gap: 6px; margin-top: 2px; }
+
+	/* How-to (connect to Claude / ChatGPT) */
+	.howto { border-top: 2px solid #000; padding-top: 12px; display: flex; flex-direction: column; gap: 12px; }
+	.howto__title { margin: 0; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: #0f766e; }
+	.howto__url { display: flex; flex-direction: column; gap: 4px; }
+	.howto__url-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #0f766e; }
+	.howto__url-row { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; }
+	.howto__code { flex: 1 1 280px; min-width: 0; font-size: 0.78rem; background: #0f172a; color: #5eead4; padding: 8px 10px; border-radius: 6px; word-break: break-all; }
+	.copy-btn { font-family: inherit; font-size: 0.72rem; font-weight: 700; background: var(--accent); color: #fff; border: 2px solid #000; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+	.copy-btn:hover { background: var(--accent-dark); }
+	.howto__cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+	.howto__card { background: #f1f5f9; border: 2px solid #e2e8f0; border-left: 6px solid var(--accent); padding: 10px 12px; }
+	.howto__card h4 { margin: 0 0 8px; font-size: 0.82rem; font-weight: 800; color: #0f766e; }
+	.howto__card ol { margin: 0; padding-left: 18px; font-size: 0.8rem; line-height: 1.6; }
+	.howto__card li { margin: 2px 0; }
+	.howto__card em { color: #0f766e; font-style: italic; }
+	.howto__hint { margin: 8px 0 0; font-size: 0.72rem; color: #64748b; line-height: 1.5; }
+	.howto__hint code { font-size: 0.7rem; background: #e2e8f0; padding: 1px 4px; border-radius: 3px; word-break: break-all; }
+	.token-row { margin-top: 10px; }
+	.token-code { color: #fde68a; }
 </style>

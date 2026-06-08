@@ -27,6 +27,9 @@ import {
 	createMcpServer,
 	setMcpServerEnabled,
 	deleteMcpServer,
+	listApiKeys,
+	createApiKey,
+	revokeApiKey,
 	requestUploadUrl,
 	putToPresignedUrl,
 	completeUpload,
@@ -51,7 +54,8 @@ import {
 	type MeetingSession,
 	type MeetingPlatform,
 	type JoinMeetingRequest,
-	type McpServer
+	type McpServer,
+	type ApiKey
 } from '$lib/api/cyberfliesApi';
 
 /** Files at or above this size upload directly to storage via a presigned
@@ -111,6 +115,13 @@ export interface CyberfliesViewModel {
 	readonly mcpLoading: boolean;
 	readonly mcpError: string | null;
 
+	/** Personal API keys (authenticate external LLM clients to the MCP server). */
+	readonly apiKeys: ApiKey[];
+	readonly apiKeysLoading: boolean;
+	readonly apiKeyError: string | null;
+	/** The full secret of a just-created key — shown ONCE, then cleared. */
+	readonly newApiKeyToken: string | null;
+
 	refreshRecordings(): Promise<void>;
 	refreshChannels(): Promise<void>;
 	refreshMeetingSessions(): Promise<void>;
@@ -143,6 +154,14 @@ export interface CyberfliesViewModel {
 	addMcpServer(name: string, url: string, authToken?: string): Promise<void>;
 	toggleMcpServer(serverId: string, enabled: boolean): Promise<void>;
 	removeMcpServer(serverId: string): Promise<void>;
+
+	/** API key management. */
+	refreshApiKeys(): Promise<void>;
+	/** Create a key; returns the one-time secret (also exposed via newApiKeyToken). */
+	createApiKey(name: string): Promise<string | null>;
+	revokeApiKey(apiKeyId: string): Promise<void>;
+	/** Clear the one-time secret once the user has copied/dismissed it. */
+	clearNewApiKeyToken(): void;
 
 	/** Fetch a presigned URL to play a recording's original media inline. */
 	mediaUrl(recordingId: string): Promise<string | null>;
@@ -187,6 +206,12 @@ export function createCyberfliesVM(
 	let mcpServers = $state<McpServer[]>([]);
 	let mcpLoading = $state<boolean>(false);
 	let mcpError = $state<string | null>(null);
+
+	// Personal API keys (authenticate external LLM clients to the MCP server).
+	let apiKeys = $state<ApiKey[]>([]);
+	let apiKeysLoading = $state<boolean>(false);
+	let apiKeyError = $state<string | null>(null);
+	let newApiKeyToken = $state<string | null>(null);
 
 	// Channels tab: the currently-expanded channel and its lazily-loaded
 	// contents / recap.
@@ -591,6 +616,53 @@ export function createCyberfliesVM(
 		}
 	}
 
+	// ── API keys ─────────────────────────────────────────────────────
+	async function refreshApiKeys(): Promise<void> {
+		apiKeysLoading = true;
+		try {
+			apiKeys = (await listApiKeys()).items;
+			apiKeyError = null;
+		} catch (err) {
+			apiKeyError = toMessage(err);
+		} finally {
+			apiKeysLoading = false;
+		}
+	}
+
+	async function createApiKey_(name: string): Promise<string | null> {
+		const trimmed = name.trim();
+		if (trimmed === '') return null;
+		apiKeysLoading = true;
+		try {
+			const created = await createApiKey(trimmed);
+			// Surface the one-time secret, and add the key (without it) to the list.
+			newApiKeyToken = created.token;
+			const { token: _token, ...listed } = created;
+			apiKeys = [listed, ...apiKeys];
+			apiKeyError = null;
+			return created.token;
+		} catch (err) {
+			apiKeyError = toMessage(err);
+			return null;
+		} finally {
+			apiKeysLoading = false;
+		}
+	}
+
+	async function revokeApiKey_(apiKeyId: string): Promise<void> {
+		if (apiKeysLoading) return;
+		apiKeysLoading = true;
+		try {
+			await revokeApiKey(apiKeyId);
+			apiKeys = apiKeys.filter((k) => k.id !== apiKeyId);
+			apiKeyError = null;
+		} catch (err) {
+			apiKeyError = toMessage(err);
+		} finally {
+			apiKeysLoading = false;
+		}
+	}
+
 	async function mediaUrl(recordingId: string): Promise<string | null> {
 		try {
 			return (await recordingMediaUrl(recordingId)).url;
@@ -707,6 +779,18 @@ export function createCyberfliesVM(
 		get mcpError() {
 			return mcpError;
 		},
+		get apiKeys() {
+			return apiKeys;
+		},
+		get apiKeysLoading() {
+			return apiKeysLoading;
+		},
+		get apiKeyError() {
+			return apiKeyError;
+		},
+		get newApiKeyToken() {
+			return newApiKeyToken;
+		},
 		refreshRecordings,
 		refreshChannels,
 		refreshMeetingSessions,
@@ -731,6 +815,12 @@ export function createCyberfliesVM(
 		addMcpServer,
 		toggleMcpServer,
 		removeMcpServer,
+		refreshApiKeys,
+		createApiKey: createApiKey_,
+		revokeApiKey: revokeApiKey_,
+		clearNewApiKeyToken: () => {
+			newApiKeyToken = null;
+		},
 		mediaUrl,
 		setChatScope: (scope) => {
 			chatScope = scope;

@@ -16,6 +16,20 @@ import { withAuth } from '$lib/auth/authToken';
 
 const CYBERFLIES_BASE = '/api/cyberflies';
 
+/**
+ * Public Cyberflies MCP (Model Context Protocol) endpoint.
+ *
+ * External LLM clients (Claude, Claude Code, ChatGPT) connect here **directly**
+ * — NOT through the same-origin proxy — and authenticate with a personal API
+ * key as the Bearer token. The server resolves the owner from the key and
+ * scopes its read-only tools (list/search/get recordings) to that user.
+ *
+ * Override at build time with `VITE_CYBERFLIES_MCP_URL` if the domain changes.
+ */
+export const CYBERFLIES_MCP_URL: string =
+	import.meta.env.VITE_CYBERFLIES_MCP_URL ??
+	'https://cyberflies.mcp.coolify.cyberdynecorp.ai/mcp';
+
 /** One timestamped chunk of a transcript (seconds). */
 export interface TranscriptSegmentSchema {
 	start: number;
@@ -480,6 +494,46 @@ export function setMcpServerEnabled(serverId: string, enabled: boolean): Promise
 
 export function deleteMcpServer(serverId: string): Promise<void> {
 	return del(`/api/v1/mcp-servers/${encodeURIComponent(serverId)}`);
+}
+
+// ── API keys (inbound MCP + programmatic access) ────────────────────
+
+/**
+ * A personal API key as listed back. The raw secret is **never** returned
+ * after creation — only its `prefix` (the leading, non-secret characters)
+ * is shown so the user can tell keys apart.
+ */
+export interface ApiKey {
+	id: string;
+	name: string;
+	prefix: string;
+	created_at: string;
+	last_used_at?: string | null;
+	revoked: boolean;
+}
+
+/** Returned once, on creation. `token` is the full secret — shown a single
+ *  time and never recoverable afterwards. */
+export interface ApiKeyCreated extends ApiKey {
+	token: string;
+}
+
+export interface ApiKeyListResponse {
+	items: ApiKey[];
+}
+
+export function listApiKeys(): Promise<ApiKeyListResponse> {
+	return getJson<ApiKeyListResponse>('/api/v1/api-keys');
+}
+
+/** Create a personal API key. The response includes the one-time `token`. */
+export function createApiKey(name: string): Promise<ApiKeyCreated> {
+	return postJson<ApiKeyCreated>('/api/v1/api-keys', { name });
+}
+
+/** Revoke (delete) an API key. 204. */
+export function revokeApiKey(apiKeyId: string): Promise<void> {
+	return del(`/api/v1/api-keys/${encodeURIComponent(apiKeyId)}`);
 }
 
 // ── Presigned media: direct large-file upload + playback URLs ───────
