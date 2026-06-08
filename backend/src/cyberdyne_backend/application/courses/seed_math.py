@@ -832,6 +832,549 @@ print("projected-GD optimum:    x =", round(px, 4), " y =", round(py, 4))
 )
 
 
-MATH_COURSES: tuple[SeedCourse, ...] = (_BASICS, _INTERMEDIATE, _ADVANCED, _OPTIMIZATION)
+# ── Mathematics — Probability & Statistics ───────────────────────────────────
+
+_PROBABILITY = SeedCourse(
+    slug="math-probability",
+    title="Mathematics — Probability & Statistics",
+    description=(
+        "Reasoning under uncertainty for engineers & data people: probability "
+        "and events, random variables with expectation and variance, the "
+        "distributions you actually meet (Bernoulli, Binomial, Poisson, Normal, "
+        "Exponential), Bayes' theorem, and the Central Limit Theorem — with a "
+        "Monte-Carlo code lab."
+    ),
+    level="Intermediate",
+    lessons=(
+        _t(
+            "Probability, events & the long run",
+            "11 min",
+            """\
+# Probability, events & the long run
+
+**Probability** measures how likely an event is, on a scale from 0 (impossible)
+to 1 (certain). Formally we have a **sample space** of outcomes; an **event** is
+a subset of it, and $P(\\text{event}) = \\dfrac{\\text{favourable}}{\\text{total}}$
+when outcomes are equally likely.
+
+Three rules cover most of it:
+
+- **Complement:** $P(\\text{not } A) = 1 - P(A)$.
+- **Addition:** $P(A \\text{ or } B) = P(A) + P(B) - P(A \\text{ and } B)$.
+- **Multiplication:** $P(A \\text{ and } B) = P(A)\\,P(B \\mid A)$; if $A,B$ are
+  **independent**, $P(A \\text{ and } B) = P(A)\\,P(B)$.
+
+## Conditional probability
+
+$P(B \\mid A)$ is the probability of $B$ *given* $A$ happened. A probability tree
+tracks it:
+
+```mermaid
+flowchart LR
+  S(("start")) -->|"P(rain)=0.3"| R(("rain"))
+  S -->|"P(dry)=0.7"| D(("dry"))
+  R -->|"P(late|rain)=0.6"| RL["late"]
+  D -->|"P(late|dry)=0.1"| DL["late"]
+```
+
+## Probability is the long-run frequency
+
+Flip a fair coin many times and the fraction of heads settles toward $0.5$ — the
+**Law of Large Numbers**. Press **Play** and watch the running estimate converge
+(the wobble shrinks like $1/\\sqrt{n}$):
+
+```plot
+{"title": "Law of large numbers: estimate → true probability", "xLabel": "number of trials", "yLabel": "estimated P(heads)", "xRange": [1, 200], "yRange": [0, 1], "animate": {"param": "t", "range": [1, 200], "label": "trials"}, "functions": [{"expr": "0.5 + 0.45*sin(0.7*x)/sqrt(x)", "label": "running estimate", "color": "#2563eb"}, {"expr": "0.5", "label": "true p = 0.5", "color": "#16a34a"}], "points": [{"xExpr": "t", "yExpr": "0.5 + 0.45*sin(0.7*t)/sqrt(t)", "color": "#dc2626", "size": 6, "trail": true}]}
+```
+
+That convergence is exactly why **Monte-Carlo simulation**, casinos and A/B
+tests work: enough samples and the average is reliable.
+
+**Next:** summarising a random quantity — expectation & variance.
+""",
+        ),
+        _t(
+            "Random variables: expectation & variance",
+            "12 min",
+            """\
+# Random variables: expectation & variance
+
+A **random variable** $X$ assigns a number to each outcome (a die roll, a sensor
+reading, tomorrow's demand). Its distribution is described by a **PMF** (discrete)
+or **PDF** (continuous).
+
+## Expectation — the mean
+
+$$\\mathbb{E}[X] = \\sum_x x\\,P(x) \\quad\\text{or}\\quad \\int x\\,f(x)\\,dx.$$
+
+It's the long-run **average** — the balance point of the distribution. A fair die
+has $\\mathbb{E}[X] = 3.5$.
+
+## Variance — the spread
+
+$$\\operatorname{Var}(X) = \\mathbb{E}\\big[(X-\\mu)^2\\big] = \\mathbb{E}[X^2] - \\mu^2, \\qquad
+\\sigma = \\sqrt{\\operatorname{Var}(X)}.$$
+
+The **standard deviation** $\\sigma$ has the same units as $X$ and measures
+typical distance from the mean. Drag the mean $\\mu$ (where the bell sits) and the
+spread $\\sigma$ (how wide) — the markers show $\\mu$ and the $\\mu\\pm\\sigma$ band
+that holds about 68% of the probability:
+
+```plot
+{"title": "Mean μ (centre) and spread σ of a distribution", "xLabel": "x", "yLabel": "density f(x)", "xRange": [-6, 8], "yRange": [0, 0.85], "controls": [{"name": "mu", "range": [-2, 4], "value": 1, "label": "mean μ"}, {"name": "sg", "range": [0.5, 3], "value": 1.5, "label": "std dev σ"}], "functions": [{"expr": "exp(-(x-mu)^2/(2*sg^2))/(sg*sqrt(2*pi))", "label": "f(x)", "color": "#2563eb"}], "points": [{"xExpr": "mu", "y": 0, "label": "μ = E[X]", "color": "#dc2626", "size": 7}, {"xExpr": "mu-sg", "y": 0, "label": "μ−σ", "color": "#16a34a", "size": 5}, {"xExpr": "mu+sg", "y": 0, "label": "μ+σ", "color": "#16a34a", "size": 5}]}
+```
+
+**Linearity** makes these easy to combine: $\\mathbb{E}[aX+b]=a\\mathbb{E}[X]+b$,
+and for *independent* variables variances add. This is the backbone of error
+propagation, risk and signal-to-noise ratios.
+
+**Next:** the named distributions you'll keep meeting.
+""",
+        ),
+        _t(
+            "Distributions you'll actually use",
+            "12 min",
+            """\
+# Distributions you'll actually use
+
+A handful of distributions model most real situations.
+
+- **Bernoulli / Binomial** — yes/no trials. Number of successes in $n$ tries
+  (coin flips, click-through, defective parts).
+- **Poisson** — counts of rare events in an interval (arrivals per minute, server
+  requests, typos per page). One parameter, the rate $\\lambda$.
+- **Uniform** — every value equally likely (an ideal random generator).
+- **Exponential** — waiting time *until* the next event (time between arrivals,
+  component lifetime). Memoryless.
+- **Normal (Gaussian)** — the bell curve; sums of many small effects (measurement
+  noise, heights), and the limit in the CLT lesson.
+
+## The Gaussian
+
+$$f(x) = \\frac{1}{\\sigma\\sqrt{2\\pi}}\\,e^{-(x-\\mu)^2/(2\\sigma^2)}.$$
+
+It's everywhere because of the Central Limit Theorem. Reshape it:
+
+```plot
+{"title": "The Normal (Gaussian) distribution", "xLabel": "x", "yLabel": "density", "xRange": [-8, 8], "yRange": [0, 0.85], "controls": [{"name": "mu", "range": [-3, 3], "value": 0, "label": "mean μ"}, {"name": "sg", "range": [0.5, 3], "value": 1, "label": "std dev σ"}], "functions": [{"expr": "exp(-(x-mu)^2/(2*sg^2))/(sg*sqrt(2*pi))", "label": "Normal(μ, σ)", "color": "#2563eb"}]}
+```
+
+## The Exponential (waiting times)
+
+$$f(x) = \\lambda e^{-\\lambda x}, \\quad x \\ge 0, \\qquad \\mathbb{E}[X] = 1/\\lambda.$$
+
+Higher rate $\\lambda$ → shorter waits. This models queue inter-arrival times and
+time-to-failure in reliability engineering:
+
+```plot
+{"title": "Exponential: time until the next event", "xLabel": "wait time", "yLabel": "density", "xRange": [0, 6], "yRange": [0, 3], "controls": [{"name": "lam", "range": [0.3, 3], "value": 1, "label": "rate λ"}], "functions": [{"expr": "lam*exp(-lam*x)", "label": "λ e^(−λx)", "color": "#dc2626"}]}
+```
+
+## A discrete one: Poisson(λ = 3)
+
+Counts come in spikes (a **PMF**), here the probability of seeing $k$ events when
+the average is 3:
+
+```plot
+{"title": "Poisson(λ = 3) PMF", "xLabel": "count k", "yLabel": "P(k)", "xRange": [0, 11], "yRange": [0, 0.27], "grid": true, "series": [{"points": [[0, 0.0498], [1, 0.1494], [2, 0.224], [3, 0.224], [4, 0.168], [5, 0.1008], [6, 0.0504], [7, 0.0216], [8, 0.0081], [9, 0.0027], [10, 0.0008]], "label": "P(k)", "color": "#16a34a"}], "points": [{"x": 3, "y": 0.224, "label": "mode ≈ λ", "color": "#dc2626", "size": 6}]}
+```
+
+**Next:** updating beliefs with evidence — Bayes.
+""",
+        ),
+        _t(
+            "Bayes' theorem & inference",
+            "13 min",
+            """\
+# Bayes' theorem & inference
+
+**Bayes' theorem** flips a conditional probability — it tells you how to update a
+belief when evidence arrives:
+
+$$P(H \\mid E) = \\frac{P(E \\mid H)\\,P(H)}{P(E)} \\;\\;\\propto\\;\\; \\underbrace{P(E \\mid H)}_{\\text{likelihood}}\\cdot\\underbrace{P(H)}_{\\text{prior}}.$$
+
+**posterior ∝ likelihood × prior.** It's the engine behind spam filters, medical
+diagnosis, fault detection and all of Bayesian machine learning.
+
+## The base-rate trap (a medical test)
+
+A test is 99% accurate; a disease affects 1% of people. You test positive — odds
+you're sick? Not 99%. Of 10,000 people, 100 are sick (≈99 test positive) and
+9,900 are healthy (≈99 *false* positives). So
+
+$$P(\\text{sick}\\mid +) = \\frac{99}{99 + 99} \\approx 50\\%.$$
+
+Rare conditions make even good tests misleading — the **prior** dominates.
+
+## Updating beliefs with data
+
+Estimating a coin's bias (or a conversion rate): start from a flat prior and let
+each observation reshape the **posterior**. Add heads and tails and watch the
+belief sharpen and shift — exactly Bayesian A/B testing:
+
+```plot
+{"title": "Bayesian updating: posterior over a probability p", "xLabel": "p (probability of heads)", "yLabel": "belief density", "xRange": [0, 1], "yRange": [0, 4], "controls": [{"name": "h", "range": [0, 20], "value": 3, "step": 1, "label": "heads observed"}, {"name": "t", "range": [0, 20], "value": 1, "step": 1, "label": "tails observed"}], "functions": [{"expr": "x^h*(1-x)^t", "label": "posterior ∝ p^H (1−p)^T", "color": "#2563eb"}]}
+```
+
+With 0 observations it's flat (we know nothing); each head pushes the peak right,
+each tail pushes it left, and more data makes it narrower (more certain).
+
+**Next:** why the Normal keeps appearing — the CLT.
+""",
+        ),
+        _t(
+            "Sampling & the Central Limit Theorem",
+            "11 min",
+            """\
+# Sampling & the Central Limit Theorem
+
+We rarely measure a whole population — we take a **sample** and **estimate**.
+Two results make that trustworthy.
+
+- **Law of Large Numbers:** the sample mean converges to the true mean as $n$
+  grows.
+- **Central Limit Theorem (CLT):** for large $n$, the **sample mean** is
+  approximately **Normal**, *whatever* the original distribution — with the same
+  mean $\\mu$ but a standard deviation of $\\sigma/\\sqrt{n}$.
+
+That $\\sqrt{n}$ is everything in statistics: to halve your error you need **four
+times** the data. Increase the sample size $n$ and watch the distribution of the
+sample mean tighten around the truth:
+
+```plot
+{"title": "CLT: the sample mean concentrates as n grows", "xLabel": "sample mean", "yLabel": "density", "xRange": [0, 6], "yRange": [0, 3], "controls": [{"name": "n", "range": [1, 50], "value": 1, "step": 1, "label": "sample size n"}], "functions": [{"expr": "exp(-(x-3)^2/(2/n))/sqrt(2*pi/n)", "label": "distribution of x̄", "color": "#2563eb"}], "points": [{"x": 3, "y": 0, "label": "true mean μ = 3", "color": "#dc2626", "size": 7}]}
+```
+
+## Confidence intervals
+
+A 95% confidence interval is roughly $\\bar x \\pm 1.96\\,\\sigma/\\sqrt{n}$ — the
+margin of error in every poll. Narrower bars need more samples, by that same
+$\\sqrt{n}$ law.
+
+Real uses: **A/B testing**, polling, quality control, Monte-Carlo error bars, and
+estimating model accuracy from a test set.
+
+**Next:** simulate it all in code.
+""",
+        ),
+        _code(
+            "Monte-Carlo lab: estimate π, mean/variance & Bayes",
+            "12 min",
+            """\
+# Monte Carlo & statistics from scratch — no libraries.
+
+# A tiny linear-congruential generator for repeatable 'random' numbers in [0, 1).
+seed = 12345
+rnd = []
+for i in range(40000):
+    seed = (1103515245 * seed + 12345) % 2147483648
+    rnd.append(seed / 2147483648.0)
+
+# 1) ESTIMATE pi: throw darts in a unit square; fraction inside the quarter circle * 4.
+inside = 0
+trials = 20000
+for i in range(trials):
+    xr = rnd[2 * i]
+    yr = rnd[2 * i + 1]
+    if xr * xr + yr * yr <= 1.0:
+        inside = inside + 1
+print("Monte-Carlo pi ~", round(4.0 * inside / trials, 4), "(true 3.1416)")
+
+# 2) MEAN and VARIANCE of the uniform draws (expect mean 0.5, variance 1/12 = 0.0833).
+total = 0.0
+for i in range(trials):
+    total = total + rnd[i]
+mean = total / trials
+sqsum = 0.0
+for i in range(trials):
+    d = rnd[i] - mean
+    sqsum = sqsum + d * d
+var = sqsum / trials
+print("sample mean ~", round(mean, 4), " variance ~", round(var, 4), "(uniform: 0.5, 0.0833)")
+
+# 3) BAYES update: prior Beta(1,1); after H heads and T tails the posterior mean is
+#    (1 + H) / (2 + H + T).
+heads = 7
+tails = 3
+postmean = (1.0 + heads) / (2.0 + heads + tails)
+print("after", heads, "heads,", tails, "tails -> P(heads) estimate =", round(postmean, 3))
+
+# Try it:
+#   - Raise trials: the pi error shrinks like 1/sqrt(trials) (the CLT in action).
+#   - Change heads/tails and watch the estimate move away from the 0.5 prior.
+""",
+        ),
+        _quiz(),
+    ),
+)
+
+# ── Mathematics — Fourier & Signals ──────────────────────────────────────────
+
+_FOURIER = SeedCourse(
+    slug="math-fourier",
+    title="Mathematics — Fourier & Signals",
+    description=(
+        "How signals are built, transformed and filtered: sinusoids and complex "
+        "exponentials, Fourier series, the Fourier transform and the frequency "
+        "domain, sampling and aliasing (Nyquist/DFT), and filtering by "
+        "convolution — the math behind audio, communications, control and image "
+        "processing, with a pure-Python signals lab."
+    ),
+    level="Advanced",
+    lessons=(
+        _t(
+            "Signals, sinusoids & complex exponentials",
+            "12 min",
+            """\
+# Signals, sinusoids & complex exponentials
+
+A **signal** is a value that varies over time (or space). The building block is
+the **sinusoid**:
+
+$$x(t) = A\\,\\cos(\\omega t + \\varphi),$$
+
+with **amplitude** $A$, **angular frequency** $\\omega = 2\\pi f$, and **phase**
+$\\varphi$. The deep idea — **Euler's formula** — packs cosine and sine into one
+rotating complex exponential:
+
+$$e^{i\\theta} = \\cos\\theta + i\\sin\\theta.$$
+
+So a sinusoid is the shadow (real part) of a vector — a **phasor** — spinning at
+rate $\\omega$. Press **Play**: the phasor rotates…
+
+```plot
+{"title": "A phasor e^{iωt} rotating", "equal": true, "xRange": [-1.3, 1.3], "yRange": [-1.3, 1.3], "animate": {"param": "t", "range": [0, 6.283], "label": "ωt"}, "controls": [{"name": "w", "range": [1, 4], "value": 1, "step": 1, "label": "cycles"}], "parametric": [{"x": "cos(s)", "y": "sin(s)", "param": "s", "range": [0, 6.283], "color": "#cbd5e1", "label": "unit circle"}], "vectors": [{"xExpr": "cos(w*t)", "yExpr": "sin(w*t)", "from": [0, 0], "label": "e^{iωt}", "color": "#dc2626"}]}
+```
+
+…and its horizontal shadow traces a cosine:
+
+```plot
+{"title": "Its real part is a cosine", "xLabel": "t", "yLabel": "cos(ωt)", "xRange": [0, 6.283], "yRange": [-1.2, 1.2], "animate": {"param": "t", "range": [0, 6.283], "label": "ωt"}, "controls": [{"name": "w", "range": [1, 4], "value": 1, "step": 1, "label": "cycles"}], "functions": [{"expr": "cos(w*x)", "label": "cos(ωt)", "color": "#2563eb"}], "points": [{"xExpr": "t", "yExpr": "cos(w*t)", "color": "#dc2626", "size": 6, "trail": true}]}
+```
+
+Phasors turn calculus on sinusoids into simple algebra — the reason all of AC
+circuits, audio and communications is written in complex exponentials.
+
+**Next:** building *any* periodic signal from sinusoids.
+""",
+        ),
+        _t(
+            "Fourier series: building waves from sinusoids",
+            "13 min",
+            """\
+# Fourier series: building waves from sinusoids
+
+**Fourier's idea:** *any* periodic signal is a sum of sinusoids — a fundamental
+plus its **harmonics** (integer multiples of the base frequency):
+
+$$x(t) = a_0 + \\sum_{k=1}^{\\infty} \\big(a_k\\cos k\\omega t + b_k\\sin k\\omega t\\big).$$
+
+A square wave, for instance, is built from the **odd** harmonics:
+
+$$\\text{square}(t) = \\frac{4}{\\pi}\\left(\\sin t + \\tfrac{1}{3}\\sin 3t + \\tfrac{1}{5}\\sin 5t + \\cdots\\right).$$
+
+Add harmonics one at a time and watch the corners sharpen into a square (the
+little overshoot at the edges that never quite goes away is the **Gibbs
+phenomenon**):
+
+```plot
+{"title": "A square wave from sine harmonics", "xLabel": "x", "yLabel": "sum", "xRange": [-3.14, 9.42], "yRange": [-1.5, 1.5], "controls": [{"name": "N", "range": [1, 6], "value": 1, "step": 1, "label": "number of harmonics"}], "functions": [{"expr": "1.273*(sin(x) + if(N>=2,1,0)*sin(3*x)/3 + if(N>=3,1,0)*sin(5*x)/5 + if(N>=4,1,0)*sin(7*x)/7 + if(N>=5,1,0)*sin(9*x)/9 + if(N>=6,1,0)*sin(11*x)/11)", "label": "partial sum", "color": "#2563eb"}]}
+```
+
+The coefficients $a_k, b_k$ say *how much* of each harmonic is present — that list
+of amounts is the signal's **spectrum**. This is exactly how a synthesizer builds
+timbres and how an instrument's tone is its mix of harmonics.
+
+**Next:** the spectrum as a transform — time ↔ frequency.
+""",
+        ),
+        _t(
+            "The Fourier transform & the frequency domain",
+            "13 min",
+            """\
+# The Fourier transform & the frequency domain
+
+The **Fourier transform** generalises the series to *any* signal: it rewrites a
+function of **time** as a function of **frequency**, revealing which frequencies
+it contains.
+
+$$X(f) = \\int_{-\\infty}^{\\infty} x(t)\\,e^{-i 2\\pi f t}\\,dt.$$
+
+A messy-looking signal in time can be a couple of clean spikes in frequency. Here
+a signal is the sum of two tones — change their frequencies in the time view…
+
+```plot
+{"title": "A signal = sum of two tones (time domain)", "xLabel": "time", "yLabel": "amplitude", "xRange": [0, 6.283], "yRange": [-2.2, 2.2], "controls": [{"name": "f1", "range": [1, 6], "value": 2, "step": 1, "label": "tone 1 frequency"}, {"name": "f2", "range": [1, 6], "value": 5, "step": 1, "label": "tone 2 frequency"}], "functions": [{"expr": "sin(f1*x) + 0.6*sin(f2*x)", "label": "signal", "color": "#2563eb"}]}
+```
+
+…and the **spectrum** shows exactly two spikes at those frequencies, with heights
+equal to the amplitudes:
+
+```plot
+{"title": "Its spectrum (frequency domain)", "xLabel": "frequency", "yLabel": "magnitude", "xRange": [0, 7], "yRange": [0, 1.3], "controls": [{"name": "f1", "range": [1, 6], "value": 2, "step": 1, "label": "tone 1 frequency"}, {"name": "f2", "range": [1, 6], "value": 5, "step": 1, "label": "tone 2 frequency"}], "vectors": [{"xExpr": "f1", "y": 1, "fromExpr": ["f1", "0"], "label": "tone 1", "color": "#dc2626"}, {"xExpr": "f2", "yExpr": "0.6", "fromExpr": ["f2", "0"], "label": "tone 2", "color": "#16a34a"}]}
+```
+
+The frequency domain is where you *see* what a signal is made of — which is why
+it powers audio EQ and spectrum analysers, MRI reconstruction, JPEG/MP3
+compression (drop the inaudible/invisible frequencies), and vibration analysis.
+
+**Next:** doing this on a computer — sampling, the DFT and aliasing.
+""",
+        ),
+        _t(
+            "Sampling, the DFT & aliasing",
+            "13 min",
+            """\
+# Sampling, the DFT & aliasing
+
+Computers store signals as **samples** taken every $T_s$ seconds (sample rate
+$f_s = 1/T_s$). The **Discrete Fourier Transform (DFT)** — computed fast by the
+**FFT** — gives the spectrum of those samples and is one of the most-used
+algorithms in all of engineering.
+
+## The Nyquist limit
+
+You can only faithfully capture frequencies **below half the sample rate**
+($f_s/2$, the **Nyquist frequency**). Sample too slowly and a high frequency
+masquerades as a low one — **aliasing**. Below, a fast wave (grey) and a slow
+wave (red) pass through the *exact same samples* (dots): once sampled, you can't
+tell them apart.
+
+```plot
+{"title": "Aliasing: too-slow sampling fakes a low frequency", "xLabel": "time (samples at integers)", "yLabel": "amplitude", "xRange": [0, 10], "yRange": [-1.3, 1.3], "functions": [{"expr": "cos(2*pi*0.9*x)", "label": "true: 0.9 cycles/sample", "color": "#94a3b8"}, {"expr": "cos(2*pi*0.1*x)", "label": "alias: 0.1 cycles/sample", "color": "#dc2626"}], "series": [{"points": [[0, 1], [1, 0.809], [2, 0.309], [3, -0.309], [4, -0.809], [5, -1], [6, -0.809], [7, -0.309], [8, 0.309], [9, 0.809], [10, 1]], "label": "samples", "color": "#2563eb"}]}
+```
+
+It's the wagon-wheels-spinning-backwards effect in film, and why every ADC has an
+**anti-aliasing low-pass filter** before it, and why CD audio samples at 44.1 kHz
+(just above twice the ~20 kHz of hearing).
+
+## The DFT
+
+For $N$ samples $x_n$, the DFT gives $N$ frequency bins:
+
+$$X_k = \\sum_{n=0}^{N-1} x_n\\,e^{-i 2\\pi k n / N}.$$
+
+The FFT computes this in $O(N\\log N)$ instead of $O(N^2)$ — the difference
+between real-time audio and not.
+
+**Next:** shaping signals — filtering & convolution.
+""",
+        ),
+        _t(
+            "Filtering & convolution",
+            "12 min",
+            """\
+# Filtering & convolution
+
+A **filter** keeps some frequencies and removes others. A **low-pass** filter
+smooths (removes high-frequency noise); a **high-pass** sharpens (removes slow
+drift); a **band-pass** isolates a range.
+
+In the time domain a (linear, time-invariant) filter is **convolution** with the
+filter's **impulse response** $h$:
+
+$$y(t) = (x * h)(t) = \\int x(\\tau)\\,h(t-\\tau)\\,d\\tau.$$
+
+A moving average is the simplest example. Here a clean signal carries
+high-frequency noise; turn the noise gain down to watch the low-pass filter
+recover the underlying wave:
+
+```plot
+{"title": "Low-pass filtering removes high-frequency noise", "xLabel": "time", "yLabel": "amplitude", "xRange": [0, 6.283], "yRange": [-1.8, 1.8], "controls": [{"name": "g", "range": [0, 1], "value": 1, "label": "noise let through"}], "functions": [{"expr": "sin(x) + g*0.5*sin(13*x)", "label": "signal + noise", "color": "#94a3b8"}, {"expr": "sin(x)", "label": "after low-pass", "color": "#2563eb"}]}
+```
+
+## The frequency response
+
+The clean way to describe a filter is its **gain at each frequency**,
+$|H(f)|$. A first-order low-pass passes low frequencies and rolls off past its
+**cutoff** $f_c$. Slide the cutoff — everything left of it passes, everything
+right is attenuated (this curve is a **Bode plot**):
+
+```plot
+{"title": "Low-pass frequency response |H(f)|", "xLabel": "frequency f", "yLabel": "gain", "xRange": [0, 10], "yRange": [0, 1.1], "controls": [{"name": "fc", "range": [0.5, 5], "value": 2, "label": "cutoff fc"}], "functions": [{"expr": "1/sqrt(1 + (x/fc)^2)", "label": "|H(f)|", "color": "#2563eb"}]}
+```
+
+**Convolution in time = multiplication in frequency** — the central theorem that
+ties this whole course together. Filtering is used everywhere: audio EQ and noise
+reduction, image blur/sharpen and edge detection, smoothing sensor data, and the
+convolutional layers of a CNN.
+
+**Next:** build a signal pipeline in code.
+""",
+        ),
+        _code(
+            "Signals lab: filter a signal & find its period",
+            "12 min",
+            """\
+# Signals in pure Python: build a noisy periodic signal, filter it, find its period.
+
+P = 8                 # true period (samples)
+N = 64
+sig = []
+for i in range(N):
+    phase = i % P
+    tri = phase if phase <= P / 2 else P - phase     # a triangle wave of period P
+    noise = ((i * 37 + 11) % 7 - 3) * 0.2            # small, repeatable wiggle
+    sig.append(tri + noise)
+
+# Center the signal (subtract its mean) for the period analysis below.
+total = 0.0
+for i in range(N):
+    total = total + sig[i]
+mean = total / N
+cen = []
+for i in range(N):
+    cen.append(sig[i] - mean)
+
+# 1) MOVING-AVERAGE low-pass filter (window 3): convolution with [1/3, 1/3, 1/3].
+smooth = []
+for i in range(N):
+    lo = i - 1 if i - 1 >= 0 else 0
+    hi = i + 1 if i + 1 < N else N - 1
+    smooth.append((sig[lo] + sig[i] + sig[hi]) / 3.0)
+
+roughraw = 0.0
+roughsmooth = 0.0
+for i in range(1, N):
+    roughraw = roughraw + abs(sig[i] - sig[i - 1])
+    roughsmooth = roughsmooth + abs(smooth[i] - smooth[i - 1])
+print("roughness   raw:", round(roughraw, 2), "  smoothed:", round(roughsmooth, 2))
+
+# 2) FIND THE PERIOD (a tiny pitch detector) via the average squared difference.
+#    The lag that best matches the signal to a shifted copy of itself IS the period.
+bestlag = 2
+bestd = 1.0e18
+for lag in range(2, 24):
+    d = 0.0
+    cnt = 0
+    for i in range(N - lag):
+        diff = cen[i] - cen[i + lag]
+        d = d + diff * diff
+        cnt = cnt + 1
+    d = d / cnt
+    if d < bestd:
+        bestd = d
+        bestlag = lag
+print("detected period (samples):", bestlag, " (true period =", P, ")")
+
+# Try it:
+#   - Change P and watch the detected period follow it.
+#   - Raise the noise scale; the moving average still recovers the trend.
+#   - Widen the filter window (i-2 .. i+2) for stronger smoothing.
+""",
+        ),
+        _quiz(),
+    ),
+)
+
+
+MATH_COURSES: tuple[SeedCourse, ...] = (
+    _BASICS,
+    _INTERMEDIATE,
+    _ADVANCED,
+    _OPTIMIZATION,
+    _PROBABILITY,
+    _FOURIER,
+)
 
 __all__ = ["MATH_COURSES"]
