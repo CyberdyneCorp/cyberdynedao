@@ -163,6 +163,7 @@
 		'Mathematics',
 		'Vector Calculus',
 		'Statistics',
+		'Robotics',
 		'Other'
 	];
 	function courseTopic(slug: string): string {
@@ -174,6 +175,7 @@
 		if (slug.startsWith('physics')) return 'Physics';
 		if (slug.startsWith('vectorcalc')) return 'Vector Calculus';
 		if (slug.startsWith('statinf')) return 'Statistics';
+		if (slug.startsWith('robotics')) return 'Robotics';
 		if (slug.startsWith('math')) return 'Mathematics';
 		if (slug === 'matlab-basics' || slug === 'python-course') return 'Foundations';
 		return 'Other';
