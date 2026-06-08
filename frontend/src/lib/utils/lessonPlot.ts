@@ -200,6 +200,24 @@ export function splitPlotSegments(body: string): LessonSegment[] {
 	return out;
 }
 
+/**
+ * Normalize `$$…$$` display-math blocks to the `$$\n…\n$$` form that
+ * `MarkdownPreview`'s block-math regex (`/\$\$\n…\$\$/`) requires.
+ *
+ * That regex only recognizes `$$` on its own line, so single-line blocks like
+ * `$$x = 1$$` aren't protected — and with two of them in one document it
+ * spuriously matches from the first block's closing `$$` to the second's
+ * opening `$$`, eating everything between. Rewriting each block onto its own
+ * lines (this regex makes the leading newline optional, so it matches each
+ * block correctly) makes the downstream renderer treat them as separate blocks.
+ */
+export function normalizeMathBlocks(md: string): string {
+	return md.replace(
+		/\$\$[ \t]*\n?([\s\S]*?)\n?[ \t]*\$\$/g,
+		(_m, tex: string) => `$$\n${tex.trim()}\n$$`
+	);
+}
+
 // ── Safe expression evaluator (shunting-yard → RPN; no eval) ─────────────────
 
 type FnDef = { a: number | 'var'; f: (args: number[]) => number };

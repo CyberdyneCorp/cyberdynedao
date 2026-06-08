@@ -5,8 +5,16 @@ import {
 	parsePlot,
 	resolvePlot,
 	plotIs3d,
-	plotControls
+	plotControls,
+	normalizeMathBlocks
 } from '../lessonPlot';
+
+// The downstream MarkdownPreview protects display math with this exact regex —
+// it only matches `$$` that is followed by a newline.
+const BLOCK_MATH = /\$\$\n([\s\S]*?)\n?\$\$/g;
+function countMathBlocks(md: string): number {
+	return [...md.matchAll(BLOCK_MATH)].length;
+}
 
 describe('splitPlotSegments', () => {
 	it('splits ```plot fences out of markdown, preserving order', () => {
@@ -60,6 +68,45 @@ describe('compileExpr (safe evaluator)', () => {
 		expect(() => compileExpr('foo(x)')({ x: 1 })).toThrow();
 		expect(() => compileExpr('2 +')()).toThrow();
 		expect(() => compileExpr('nope')()).toThrow();
+	});
+});
+
+describe('normalizeMathBlocks (display-math fix)', () => {
+	it('wraps a single inline $$…$$ block onto its own lines so it renders', () => {
+		const out = normalizeMathBlocks('intro\n\n$$x = 1$$\n\nmore');
+		expect(out).toContain('$$\nx = 1\n$$');
+		expect(countMathBlocks(out)).toBe(1);
+	});
+
+	it('regression: two single-line $$…$$ blocks no longer swallow the text between them', () => {
+		// Reproduces the Energy & momentum lesson: the renderer's regex would
+		// otherwise span from the first block's closing $$ to the second's opening
+		// $$, eating the "## Potential energy" heading and corrupting both blocks.
+		const md = [
+			'$$W_{net} = \\Delta K = \\tfrac{1}{2} m v_f^2.$$',
+			'',
+			'## Potential energy & conservation',
+			'',
+			'Near Earth $U = m g h$.',
+			'',
+			'$$\\tfrac{1}{2} m v^2 + m g h = C.$$'
+		].join('\n');
+
+		// Before: the renderer sees only ONE (bogus) block spanning the gap.
+		expect(countMathBlocks(md)).toBe(1);
+
+		const fixed = normalizeMathBlocks(md);
+		// After: two clean blocks, and the heading survives between them.
+		expect(countMathBlocks(fixed)).toBe(2);
+		expect(fixed).toContain('## Potential energy & conservation');
+		expect(fixed).toContain('$$\nW_{net} = \\Delta K = \\tfrac{1}{2} m v_f^2.\n$$');
+		expect(fixed).toContain('$$\n\\tfrac{1}{2} m v^2 + m g h = C.\n$$');
+	});
+
+	it('is idempotent on already-normalized blocks and leaves inline $…$ alone', () => {
+		const already = 'a $x$ b\n\n$$\ny = 2\n$$\n';
+		expect(normalizeMathBlocks(already)).toContain('$$\ny = 2\n$$');
+		expect(normalizeMathBlocks('only inline $a+b$ here')).toBe('only inline $a+b$ here');
 	});
 });
 

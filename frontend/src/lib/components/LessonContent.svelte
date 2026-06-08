@@ -9,7 +9,7 @@
 	import CodeEditor from './CodeEditor.svelte';
 	import Plot from './Plot.svelte';
 	import { highlightElement } from '$lib/utils/highlight';
-	import { splitPlotSegments, parsePlot } from '$lib/utils/lessonPlot';
+	import { splitPlotSegments, parsePlot, normalizeMathBlocks } from '$lib/utils/lessonPlot';
 
 	let { lesson, language = 'matlab' }: { lesson: CourseLesson; language?: CodeLanguage } =
 		$props();
@@ -87,7 +87,7 @@
 						<Plot spec={parsed} />
 					{/if}
 				{:else}
-					<MarkdownPreview content={seg.content} />
+					<MarkdownPreview content={normalizeMathBlocks(seg.content)} />
 				{/if}
 			{/each}
 		</div>
