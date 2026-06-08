@@ -85,6 +85,20 @@ Both reach $x = 8\\,\\text{m}$ at $t = 5\\,\\text{s}$, but the accelerating ball
 starts behind and overtakes — the area under *its* velocity line is the same,
 just shaped differently.
 
+## A real throw: projectile motion
+
+Now combine the two at once: a thrown ball moves at **constant velocity**
+sideways *and* **constant acceleration** ($-g$) downward. Drag the launch speed
+$v_0$ and the angle, then press **Play** — the dashed trail is the parabola of a
+basketball shot, a soccer free-kick, or a water fountain.
+
+```plot
+{"title": "Throwing a ball (projectile)", "xLabel": "x (m)", "yLabel": "height (m)", "xRange": [0, 40], "yRange": [0, 16], "animate": {"param": "t", "range": [0, 3], "label": "time (s)"}, "controls": [{"name": "v0", "range": [5, 25], "value": 18, "label": "launch speed v₀ (m/s)"}, {"name": "ang", "range": [10, 80], "value": 45, "label": "angle α (°)"}], "points": [{"xExpr": "v0*cos(rad(ang))*t", "yExpr": "max(0, v0*sin(rad(ang))*t - 0.5*9.81*t^2)", "label": "ball", "color": "#dc2626", "size": 7, "trail": true}]}
+```
+
+An angle near **45°** gives the longest range (ignoring air) — which is why
+long-jumpers and shot-putters launch at roughly that angle.
+
 ## Vectors
 
 In 2D/3D, position/velocity/acceleration are **vectors** — they have direction.
@@ -130,6 +144,25 @@ makes it climb — that's the whole idea behind the quadrotor course later.
 
 At hover the two arrows are equal and opposite, so the net force is zero.
 
+## On a slope: when does it slide?
+
+Park on a hill or drop a box on a ramp: gravity splits into a part **along** the
+slope (which tries to slide it) and a part **into** the slope (held by the
+normal force). Friction resists up to $\\mu N$, so it slides only when
+
+$$mg\\sin\\alpha > \\mu\\,mg\\cos\\alpha \\;\\Leftrightarrow\\; \\tan\\alpha > \\mu.$$
+
+Tilt the ramp and change the grip $\\mu$ — when the red *pull* arrow beats the
+blue *friction* arrow, it lets go. (Drawn in the slope's own frame: across = down
+the ramp, up = perpendicular.)
+
+```vectors
+{"title": "Will it slide? Block on a ramp (slope frame)", "equal": true, "xRange": [-1.4, 1.4], "yRange": [-1.4, 1.2], "controls": [{"name": "a", "range": [0, 60], "value": 25, "label": "ramp angle α (°)"}, {"name": "mu", "range": [0, 1], "value": 0.5, "label": "friction μ"}], "vectors": [{"xExpr": "-sin(rad(a))", "y": 0, "from": [0, 0], "label": "gravity ∥ (pull)", "color": "#dc2626"}, {"xExpr": "mu*cos(rad(a))", "y": 0, "from": [0, 0], "label": "max friction", "color": "#2563eb"}, {"x": 0, "yExpr": "cos(rad(a))", "from": [0, 0], "label": "normal N", "color": "#16a34a"}, {"xExpr": "-sin(rad(a))", "yExpr": "-cos(rad(a))", "from": [0, 0], "label": "weight mg", "color": "#6b7280"}]}
+```
+
+This is exactly why an icy road (small $\\mu$) is dangerous on even a gentle hill,
+and why tyres and climbing shoes chase high friction.
+
 **Next:** energy and momentum — two powerful shortcuts.
 """,
         ),
@@ -158,6 +191,24 @@ $$\\tfrac{1}{2} m v^2 + m g h = \\text{constant}.$$
 
 **Example.** Drop from height $h$: all $U$ becomes $K$, so
 $v = \\sqrt{2gh}$ — no need to track time.
+
+A **pendulum** shows the trade live. At the ends of the swing the bob is all
+potential; at the bottom it is all kinetic — the total stays fixed. Press
+**Play** and watch the arc:
+
+```plot
+{"title": "Pendulum: a swing trading energy", "equal": true, "xRange": [-2, 2], "yRange": [-2, 0.3], "animate": {"param": "t", "range": [0, 6.283], "label": "time"}, "vectors": [{"xExpr": "1.6*sin(0.6*cos(t))", "yExpr": "-1.6*cos(0.6*cos(t))", "from": [0, 0], "color": "#6b7280", "label": "rod"}], "points": [{"xExpr": "1.6*sin(0.6*cos(t))", "yExpr": "-1.6*cos(0.6*cos(t))", "label": "bob", "color": "#dc2626", "size": 8, "trail": true}]}
+```
+
+The same energies, plotted against time, cross like a seesaw — when one peaks
+the other vanishes, and they always sum to 1:
+
+```plot
+{"title": "Energy trade: KE ↔ PE (sums to a constant)", "xLabel": "time", "yLabel": "fraction of total E", "xRange": [0, 6.283], "yRange": [0, 1.05], "functions": [{"expr": "(1 - cos(0.6*cos(x))) / (1 - cos(0.6))", "label": "potential PE", "color": "#2563eb"}, {"expr": "1 - (1 - cos(0.6*cos(x))) / (1 - cos(0.6))", "label": "kinetic KE", "color": "#dc2626"}]}
+```
+
+A playground swing, a wrecking ball and a roller coaster all run on this trade:
+height becomes speed and back again.
 
 > This energy view (kinetic minus potential) is exactly what the **Lagrangian**
 > method generalises later — so this idea reappears at the top of the track.
@@ -212,6 +263,17 @@ Every linear idea has a rotational twin — just swap the symbols.
 force times lever arm. A rotor at distance $l$ from the centre producing thrust
 $T$ creates a torque $\\tau = l\\,T$ that rolls/pitches the craft.
 
+Its size is $\\tau = r\\,F\\sin\\varphi$: it grows with the **lever arm** and with
+how **perpendicular** the push is. Lengthen the wrench or push at $90°$ and the
+same hand force turns a much tighter bolt — try it:
+
+```plot
+{"title": "Torque = r × F: why a longer wrench helps", "equal": true, "xRange": [-0.5, 3], "yRange": [-1.8, 1.8], "controls": [{"name": "L", "range": [0.5, 2.5], "value": 1.5, "label": "lever arm L (m)"}, {"name": "ang", "range": [0, 180], "value": 90, "label": "force angle φ (°)"}], "vectors": [{"xExpr": "L", "y": 0, "from": [0, 0], "label": "lever r", "color": "#6b7280"}, {"fromExpr": ["L", "0"], "xExpr": "L + 0.9*cos(rad(ang))", "yExpr": "0.9*sin(rad(ang))", "label": "force F", "color": "#dc2626"}]}
+```
+
+A door handle sits far from the hinge for the same reason — push near the hinge
+($r$ small) and it barely opens.
+
 ## Moment of inertia
 
 $I$ is rotational "mass" — how hard it is to spin something. It depends on how
@@ -255,6 +317,18 @@ bigger $A$ a wider swing.
 
 ```plot
 {"title": "Mass on a spring", "xLabel": "t (s)", "yLabel": "x", "xRange": [0, 10], "yRange": [-3, 3], "animate": {"param": "t", "range": [0, 10], "label": "time t (s)"}, "controls": [{"name": "A", "range": [0.5, 3], "value": 2, "label": "amplitude A"}, {"name": "w", "range": [0.3, 3], "value": 1.2, "label": "ω (rad/s)"}], "functions": [{"expr": "A*cos(w*x)", "label": "x(t) = A cos(ω t)", "color": "#9ca3af"}], "points": [{"xExpr": "t", "yExpr": "A*cos(w*t)", "label": "mass", "color": "#dc2626", "size": 7}]}
+```
+
+## Damping: real oscillators lose energy
+
+A perfect spring would swing forever, but friction and dampers bleed energy, so
+the amplitude **decays**: $x(t) = e^{-\\zeta t}\\cos(\\omega t)$. Raise the damping
+$\\zeta$ and watch it settle faster. This is your **car's suspension**: too little
+damping and you bounce for ages after a bump; engineers tune it near *critical*
+so one pothole gives a single smooth dip and done.
+
+```plot
+{"title": "Damped oscillation: a car's suspension", "xLabel": "time (s)", "yLabel": "displacement", "xRange": [0, 10], "yRange": [-1.2, 1.2], "animate": {"param": "t", "range": [0, 10], "label": "time (s)"}, "controls": [{"name": "z", "range": [0, 1.5], "value": 0.3, "label": "damping ζ"}], "functions": [{"expr": "exp(-z*x)*cos(3*x)", "label": "x(t) = e^(−ζt) cos(ωt)", "color": "#9ca3af"}, {"expr": "exp(-z*x)", "label": "decay envelope", "color": "#cbd5e1"}], "points": [{"xExpr": "t", "yExpr": "exp(-z*t)*cos(3*t)", "label": "mass", "color": "#2563eb", "size": 7}]}
 ```
 
 ## The calculus toolkit
@@ -303,6 +377,15 @@ orthogonal ($\\mathbf{R}^{-1} = \\mathbf{R}^{T}$).
 Body angular velocity is $\\vec{\\omega} = (p, q, r)$. A subtlety that defines 3D
 dynamics: in a **rotating** frame, the rate of change of any vector picks up a
 $\\vec{\\omega} \\times (\\cdot)$ term.
+
+Here are the three body axes and an angular-velocity vector $\\vec\\omega=(p,q,r)$.
+**Rotate and tilt** the view to see the triad in 3D — this is exactly what a
+drone's gyroscope (or your phone's, when it flips the screen) measures: the spin
+rates $p, q, r$ about *its own* axes.
+
+```plot
+{"mode": "3d", "title": "Body axes & angular velocity ω", "xRange": [-1.5, 1.5], "yRange": [-1.5, 1.5], "zRange": [-1.5, 1.5], "azimuth": 40, "elevation": 25, "vectors": [{"x": 1.2, "y": 0, "z": 0, "label": "x_B (fwd)", "color": "#dc2626"}, {"x": 0, "y": 1.2, "z": 0, "label": "y_B (right)", "color": "#16a34a"}, {"x": 0, "y": 0, "z": 1.2, "label": "z_B (down)", "color": "#2563eb"}, {"x": 0.5, "y": 0.5, "z": 0.9, "label": "ω", "color": "#9333ea"}]}
+```
 
 ## Newton–Euler equations
 
@@ -400,6 +483,15 @@ frame**.
 
 The net of these two arrows is what accelerates the body — tilt the thrust and
 the horizontal component is exactly what moves the quadrotor sideways.
+
+See it for yourself (world frame): pitching by $\\theta$ tilts the thrust, and the
+leftover **net force** (purple) gains a horizontal part $T\\sin\\theta$. That
+sideways push is *how a quadrotor accelerates forward* — there is no separate
+"forward motor", it simply leans:
+
+```plot
+{"title": "Pitch to move: tilting thrust gives a sideways force", "equal": true, "xRange": [-0.6, 2], "yRange": [-1.3, 1.8], "controls": [{"name": "th", "range": [0, 40], "value": 20, "label": "pitch θ (°)"}], "vectors": [{"xExpr": "1.5*sin(rad(th))", "yExpr": "1.5*cos(rad(th))", "from": [0, 0], "label": "thrust T", "color": "#16a34a"}, {"x": 0, "y": -1, "from": [0, 0], "label": "gravity mg", "color": "#dc2626"}, {"xExpr": "1.5*sin(rad(th))", "yExpr": "1.5*cos(rad(th)) - 1", "from": [0, 0], "label": "net force", "color": "#9333ea"}]}
+```
 
 ## Translational dynamics (Newton, body frame)
 
@@ -539,6 +631,20 @@ $$\\dot z = \\frac{\\partial \\mathcal{H}}{\\partial p_z} = \\frac{p_z}{m}, \\qq
 \\dot p_z = -\\frac{\\partial \\mathcal{H}}{\\partial z} + F_z = mg - T.$$
 
 Together: $m\\ddot z = mg - T$ — **identical** to Newton and Lagrange.
+
+## The phase-space picture
+
+The Hamiltonian's natural view is **phase space** — position against momentum. A
+conservative system holds $\\mathcal{H}$ constant, so its state endlessly circles
+a **closed orbit** (add damping and the orbit spirals inward). Press **Play** to
+watch the state $(q, p)$ ride one constant-energy loop:
+
+```plot
+{"title": "Phase space: motion as a closed orbit", "xLabel": "position q", "yLabel": "momentum p", "xRange": [-2.3, 2.3], "yRange": [-2.3, 2.3], "equal": true, "animate": {"param": "t", "range": [0, 6.283], "label": "time"}, "parametric": [{"x": "2*cos(s)", "y": "2*sin(s)", "param": "s", "range": [0, 6.283], "color": "#cbd5e1", "label": "constant-energy orbit"}, {"x": "1.1*cos(s)", "y": "1.1*sin(s)", "param": "s", "range": [0, 6.283], "color": "#e2e8f0", "label": "lower energy"}], "points": [{"xExpr": "2*cos(t)", "yExpr": "-2*sin(t)", "label": "state (q,p)", "color": "#2563eb", "size": 7, "trail": true}]}
+```
+
+LC circuits, pendulums and mass–springs all trace these loops — with energy
+methods you read the motion straight off the geometry.
 
 ## Why three methods?
 
