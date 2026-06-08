@@ -160,6 +160,7 @@
 		'DevOps',
 		'Blockchain',
 		'Physics',
+		'Mathematics',
 		'Other'
 	];
 	function courseTopic(slug: string): string {
@@ -169,6 +170,7 @@
 		if (/^(docker|kubernetes|terraform|ansible)-/.test(slug)) return 'DevOps';
 		if (slug.startsWith('blockchain')) return 'Blockchain';
 		if (slug.startsWith('physics')) return 'Physics';
+		if (slug.startsWith('math')) return 'Mathematics';
 		if (slug === 'matlab-basics' || slug === 'python-course') return 'Foundations';
 		return 'Other';
 	}
