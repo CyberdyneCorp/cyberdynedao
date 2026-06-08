@@ -73,6 +73,18 @@ $t = 1\\,\\text{s}$ it has fallen $\\tfrac{1}{2}g t^2 \\approx 4.9\\,\\text{m}$.
 
 The curve steepens — that upward bend *is* the (constant) acceleration.
 
+Press **Play** below and watch two balls leave the same start. The blue one
+moves at *constant velocity* (equal steps), the red one *accelerates* (steps
+grow). Drag the slider to scrub time by hand; the dashed lines are the trails.
+
+```plot
+{"title": "Constant velocity vs constant acceleration", "xLabel": "x (m)", "yLabel": "lane", "xRange": [0, 10], "yRange": [0, 3], "grid": true, "animate": {"param": "t", "range": [0, 5], "label": "time t (s)"}, "points": [{"xExpr": "1.6*t", "y": 2, "label": "constant v", "color": "#2563eb", "size": 7, "trail": true}, {"xExpr": "0.32*t^2", "y": 1, "label": "constant a", "color": "#dc2626", "size": 7, "trail": true}]}
+```
+
+Both reach $x = 8\\,\\text{m}$ at $t = 5\\,\\text{s}$, but the accelerating ball
+starts behind and overtakes — the area under *its* velocity line is the same,
+just shaped differently.
+
 ## Vectors
 
 In 2D/3D, position/velocity/acceleration are **vectors** — they have direction.
@@ -236,6 +248,15 @@ or simulating them.
 {"title": "Simple harmonic motion", "xLabel": "ω t (rad)", "yLabel": "x(t)", "xRange": [0, 12.566], "functions": [{"expr": "cos(x)", "label": "x = A cos(ω t)"}]}
 ```
 
+Now make it move. The dot below is the mass on the spring; the curve is its
+trace. Use the sliders to change the amplitude $A$ and angular frequency
+$\\omega$ and press **Play** — bigger $\\omega$ means faster oscillation,
+bigger $A$ a wider swing.
+
+```plot
+{"title": "Mass on a spring", "xLabel": "t (s)", "yLabel": "x", "xRange": [0, 10], "yRange": [-3, 3], "animate": {"param": "t", "range": [0, 10], "label": "time t (s)"}, "controls": [{"name": "A", "range": [0.5, 3], "value": 2, "label": "amplitude A"}, {"name": "w", "range": [0.3, 3], "value": 1.2, "label": "ω (rad/s)"}], "functions": [{"expr": "A*cos(w*x)", "label": "x(t) = A cos(ω t)", "color": "#9ca3af"}], "points": [{"xExpr": "t", "yExpr": "A*cos(w*t)", "label": "mass", "color": "#dc2626", "size": 7}]}
+```
+
 ## The calculus toolkit
 
 You need three ideas for the rest of the track:
@@ -324,6 +345,15 @@ what we can control.
 
 - **Earth frame** (inertial), NED: $x$ north, $y$ east, $z$ **down**.
 - **Body frame**, riding the craft: $x_B$ forward, $y_B$ right, $z_B$ down.
+
+Here is the kind of motion we are after — a quadrotor climbing on a circular
+path. **Drag *rotate* and *tilt* to orbit the view**, and press **Play** to fly
+it along the grey reference path. The whole point of the next lessons is to find
+the equations that produce trajectories like this.
+
+```plot
+{"mode": "3d", "title": "A 3D trajectory: climbing spiral", "xRange": [-3, 3], "yRange": [-3, 3], "zRange": [0, 6], "azimuth": 40, "elevation": 22, "animate": {"param": "t", "range": [0, 12.566], "label": "time"}, "parametric": [{"x": "2*cos(s)", "y": "2*sin(s)", "z": "0.4*s", "param": "s", "range": [0, 12.566], "color": "#9ca3af", "label": "flight path"}], "points": [{"xExpr": "2*cos(t)", "yExpr": "2*sin(t)", "zExpr": "0.4*t", "label": "drone", "color": "#dc2626", "size": 7}]}
+```
 
 ## State (12 numbers)
 
@@ -437,6 +467,16 @@ here, thrust and rotor moments.
 Translational + rotational kinetic energy, gravitational potential ($z$ down):
 
 $$T_{\\text{kin}} = \\tfrac{1}{2} m\\,(\\dot x^2 + \\dot y^2 + \\dot z^2) + \\tfrac{1}{2}\\,\\vec\\omega^{T}\\mathbf{I}\\,\\vec\\omega, \\qquad V = -m g z.$$
+
+It helps to *see* a potential. Below is a 2D potential well
+$V(x,y) = x^2 + y^2$ as a 3D surface — **rotate and tilt it** with the sliders.
+A ball released anywhere rolls *downhill* (along $-\\nabla V$) toward the
+minimum at the bottom; that gradient is exactly the conservative force the
+Lagrangian bookkeeps for you.
+
+```plot
+{"mode": "3d", "title": "A potential well V(x,y) = x² + y²", "xRange": [-3, 3], "yRange": [-3, 3], "zRange": [0, 18], "azimuth": 35, "elevation": 28, "zLabel": "V", "surfaces": [{"expr": "x^2 + y^2", "color": "#2563eb"}]}
+```
 
 ## Translation
 
