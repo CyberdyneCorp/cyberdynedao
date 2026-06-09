@@ -92,7 +92,7 @@ export const serviceSections: ServiceSection[] = [
 		title: 'Security & Reliability',
 		intro: 'Trust is a feature — and we test it like one.',
 		bullets: [
-			{ title: 'Sandboxed user code', description: 'real subprocess + Linux netns + egress allowlist (the model in CyberdyneAuth).' },
+			{ title: 'Sandboxed user code', description: 'real subprocess + Linux netns + egress allowlist for untrusted user hooks.' },
 			{ title: 'Hardened parsers', description: 'XXE defenses, size caps, sanitization, fuzzing on untrusted input.' },
 			{ title: 'SLA-style support', description: 'incident response, patch windows, monthly ops reviews.' },
 			{ title: 'Least-privilege everywhere', description: 'secrets hygiene, threat modeling, audit trails.' }
@@ -113,7 +113,7 @@ export const workflowSteps: { title: string; description: string }[] = [
 export const whyCyberdynePoints: ServiceBullet[] = [
 	{
 		title: 'Production proof',
-		description: 'A dozen projects shipping. Coverage gates at 83–97%. Tests in the thousands.'
+		description: 'Eleven projects shipping. Coverage gates at 83–97%. Tests in the thousands.'
 	},
 	{
 		title: 'Open by default',

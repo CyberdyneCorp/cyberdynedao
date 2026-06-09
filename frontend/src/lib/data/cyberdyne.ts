@@ -37,7 +37,7 @@ export const introLead =
 	'Cyberdyne is an independent builder collective shipping production-grade open infrastructure across AI knowledge systems, identity, developer tooling, DeFi, and games. Every project is open by default, hexagonal at its core, and designed to outlive any single vendor.';
 
 export const introBullets: string[] = [
-	'A dozen projects · one stack · zero vendor lock-in',
+	'Eleven projects · one stack · zero vendor lock-in',
 	'Hexagonal architecture, strict typing, real coverage gates',
 	'A DAO underneath that turns DeFi yield into builder runway'
 ];
@@ -52,16 +52,6 @@ export const domains: Domain[] = [
 			'AI-native company operating system, REST + MCP knowledge backends, and an open collection of Claude skills — built so agents can act, not just answer.',
 		projects: ['OrgPilot', 'Obsidian MCP Server', 'Claude Skills'],
 		status: 'active'
-	},
-	{
-		id: 'identity',
-		name: 'Identity & Platform',
-		icon: '🔐',
-		palette: 'red',
-		tagline:
-			'The identity backbone every Cyberdyne service plugs into — OAuth, wallet sign-in, sandboxed user hooks, on-chain IAM. One JWT key, one admin surface.',
-		projects: ['CyberdyneAuth'],
-		status: 'live'
 	},
 	{
 		id: 'defi-games',
@@ -94,7 +84,7 @@ export const beliefs: { title: string; description: string }[] = [
 	{
 		title: 'Production-grade by default',
 		description:
-			'Real coverage gates, not vibes. CyberRAG ships at >95% coverage. MatForge IDE at 97%. CyberdyneAuth at >83%. The numbers are public.'
+			'Real coverage gates, not vibes. MatForge IDE ships at 97% coverage, OrgPilot at 2000+ backend tests, the Matlab Compiler against a 322-program regression corpus. The numbers are public.'
 	},
 	{
 		title: 'No vendor lock-in',
@@ -139,19 +129,8 @@ export const exampleEconomics: { label: string; value: string }[] = [
 
 export const roadmapPhases: RoadmapPhase[] = [
 	{
-		id: 'phase-1',
-		title: 'Phase 1 · Foundations',
-		subtitle: 'Identity and RAG backbone',
-		status: 'shipped',
-		color: 'green',
-		items: [
-			{ icon: '✓', text: 'CyberdyneAuth live on Coolify — OAuth, wallet sign-in, sandboxed hooks' },
-			{ icon: '✓', text: 'CyberRAG REST + MCP — 245+ tests, >95% coverage' }
-		]
-	},
-	{
 		id: 'phase-3',
-		title: 'Phase 2 · DAO + Dividends',
+		title: 'Phase 1 · DAO + Dividends',
 		subtitle: 'Yield meets shipping software',
 		status: 'active',
 		color: 'purple',
@@ -163,7 +142,7 @@ export const roadmapPhases: RoadmapPhase[] = [
 	},
 	{
 		id: 'phase-4',
-		title: 'Phase 3 · Apps & Games',
+		title: 'Phase 2 · Apps & Games',
 		subtitle: 'Where the stack meets users',
 		status: 'active',
 		color: 'orange',
@@ -177,4 +156,4 @@ export const roadmapPhases: RoadmapPhase[] = [
 
 export const closingHeadline = 'Infrastructure that doesn’t cost — it yields.';
 export const closingBody =
-	'A dozen projects. One open stack. Zero vendor lock-in. Build with us, earn with us, own with us.';
+	'Eleven projects. One open stack. Zero vendor lock-in. Build with us, earn with us, own with us.';

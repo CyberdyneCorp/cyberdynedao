@@ -117,7 +117,7 @@
 		<!-- Domains -->
 		<section class="card" style={sectionStyle('domains')}>
 			<h2 class="card__title">The Domains</h2>
-			<p class="card__lead">Four domains, a dozen projects, one open stack.</p>
+			<p class="card__lead">Three domains, eleven projects, one open stack.</p>
 			<div class="domain-grid">
 				{#each page.domains as d}
 					{@const p = paletteVars[d.palette]}

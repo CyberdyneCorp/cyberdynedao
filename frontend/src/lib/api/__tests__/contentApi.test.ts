@@ -30,14 +30,16 @@ afterEach(() => {
 });
 
 // A cyberdyne payload as the backend still serves it — including the
-// Amini-overlapping geospatial domain, Sovereign-AI audience, and the
-// Geospatial Cluster / Sovereign Scale roadmap phases.
+// Amini-overlapping geospatial and identity domains, the Sovereign-AI
+// audience, and the Foundations / Geospatial Cluster / Sovereign Scale
+// roadmap phases.
 const API_CYBERDYNE: CyberdynePagePayload = {
 	heroTagline: 'hero',
 	introLead: 'lead',
 	introBullets: ['a'],
 	domains: [
 		{ id: 'geospatial', name: 'Geospatial Intelligence', icon: '🌍', palette: 'green', tagline: 't', projects: ['CyberSTAC'], status: 'shipping' },
+		{ id: 'identity', name: 'Identity & Platform', icon: '🔐', palette: 'red', tagline: 't', projects: ['CyberdyneAuth'], status: 'live' },
 		{ id: 'ai-knowledge', name: 'AI Knowledge Systems', icon: '🧠', palette: 'purple', tagline: 't', projects: ['OrgPilot'], status: 'active' }
 	],
 	beliefs: [{ title: 'b', description: 'd' }],
@@ -61,11 +63,11 @@ const API_CYBERDYNE: CyberdynePagePayload = {
 };
 
 describe('contentApi — Amini-overlap sanitization', () => {
-	it('strips the geospatial domain from the API response', async () => {
+	it('strips the geospatial and identity domains from the API response', async () => {
 		mockJsonOnce(200, API_CYBERDYNE);
 		const page = await fetchCyberdynePage();
 		expect(page.domains.map((d) => d.id)).toEqual(['ai-knowledge']);
-		expect(page.domains.some((d) => d.id === 'geospatial')).toBe(false);
+		expect(page.domains.some((d) => d.id === 'geospatial' || d.id === 'identity')).toBe(false);
 	});
 
 	it('strips the Sovereign-AI audience from the API response', async () => {
@@ -74,22 +76,21 @@ describe('contentApi — Amini-overlap sanitization', () => {
 		expect(page.targetUsers.map((u) => u.name)).toEqual(['Builders', 'Token holders']);
 	});
 
-	it('drops the geospatial & sovereign roadmap phases and re-numbers the survivors', async () => {
+	it('drops the foundations/geospatial/sovereign roadmap phases and re-numbers the survivors', async () => {
 		mockJsonOnce(200, API_CYBERDYNE);
 		const page = await fetchCyberdynePage();
-		expect(page.roadmapPhases.map((p) => p.id)).toEqual(['phase-1', 'phase-3', 'phase-4']);
+		expect(page.roadmapPhases.map((p) => p.id)).toEqual(['phase-3', 'phase-4']);
 		// Titles must stay sequential despite the removed phases.
 		expect(page.roadmapPhases.map((p) => p.title)).toEqual([
-			'Phase 1 · Foundations',
-			'Phase 2 · DAO + Dividends',
-			'Phase 3 · Apps & Games'
+			'Phase 1 · DAO + Dividends',
+			'Phase 2 · Apps & Games'
 		]);
 	});
 
 	it('keeps the static fallback clean when the API is unreachable', async () => {
 		rejectOnce();
 		const page = await fetchCyberdynePage();
-		expect(page.domains.some((d) => d.id === 'geospatial')).toBe(false);
+		expect(page.domains.some((d) => d.id === 'geospatial' || d.id === 'identity')).toBe(false);
 		expect(page.targetUsers.some((u) => /sovereign/i.test(u.name))).toBe(false);
 		expect(page.roadmapPhases.some((p) => /geospatial|sovereign/i.test(p.title))).toBe(false);
 		// Surviving phases are still sequentially numbered.

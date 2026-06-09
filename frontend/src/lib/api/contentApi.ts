@@ -124,12 +124,15 @@ export async function fetchTeam(): Promise<TeamMember[]> {
 }
 
 // Content that overlaps Amini's space (geospatial intelligence, sovereign
-// AI, EUDR, parametric insurance) is stripped from the public site —
-// from both the static fallback and any payload the backend still returns.
-// Matched on stable ids so backend copy edits can't silently re-surface it.
-// Same defensive approach as HIDDEN_PRODUCT_KEYS below.
-const BLOCKED_DOMAIN_IDS = new Set(['geospatial']);
-const BLOCKED_ROADMAP_IDS = new Set(['phase-2', 'phase-5']);
+// AI, EUDR, parametric insurance, and the identity / RAG / document
+// products — CyberdyneAuth, CyberRAG, CyberDocExtractor) is stripped from
+// the public site — from both the static fallback and any payload the
+// backend still returns. Matched on stable ids so backend copy edits can't
+// silently re-surface it. Same defensive approach as HIDDEN_PRODUCT_KEYS.
+const BLOCKED_DOMAIN_IDS = new Set(['geospatial', 'identity']);
+// phase-1 (Identity / RAG foundations), phase-2 (Geospatial Cluster),
+// phase-5 (Sovereign Scale).
+const BLOCKED_ROADMAP_IDS = new Set(['phase-1', 'phase-2', 'phase-5']);
 const SOVEREIGN_AUDIENCE = /sovereign/i;
 
 /**
