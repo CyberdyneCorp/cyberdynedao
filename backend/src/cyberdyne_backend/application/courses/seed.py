@@ -27,6 +27,7 @@ from cyberdyne_backend.application.courses.seed_databases import DATABASE_COURSE
 from cyberdyne_backend.application.courses.seed_devops import DEVOPS_COURSES
 from cyberdyne_backend.application.courses.seed_iac import IAC_COURSES
 from cyberdyne_backend.application.courses.seed_languages import LANGUAGE_COURSES
+from cyberdyne_backend.application.courses.seed_linux import LINUX_COURSES
 from cyberdyne_backend.application.courses.seed_math import MATH_COURSES
 from cyberdyne_backend.application.courses.seed_physics import PHYSICS_COURSES
 from cyberdyne_backend.application.courses.seed_robotics import ROBOTICS_COURSES
@@ -1115,6 +1116,7 @@ ACADEMY_COURSES: tuple[SeedCourse, ...] = (
     *DATABASE_COURSES,
     *DEVOPS_COURSES,
     *IAC_COURSES,
+    *LINUX_COURSES,
     *PHYSICS_COURSES,
     *MATH_COURSES,
     *VECTORCALC_COURSES,

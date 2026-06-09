@@ -15,6 +15,7 @@ recursion is shown as reference and implemented with explicit stacks/queues).
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from typing import Any
 
 from cyberdyne_backend.application.courses.seed_types import SeedCourse, SeedLesson
@@ -46,7 +47,7 @@ def _piecewise(values: list[float], var: str = "t") -> str:
 
 def _graph_block(
     title: str,
-    nodes: dict[str, tuple[float, float]],
+    nodes: Mapping[str, tuple[float, float]],
     edges: list[tuple[str, str]],
     *,
     visit: list[str] | None = None,

@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 60
+        assert len(summary) == 63
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -164,6 +164,9 @@ class TestSeedCourses:
             "ansible-basics",
             "ansible-intermediate",
             "ansible-advanced",
+            "linux-basics",
+            "linux-intermediate",
+            "linux-advanced",
             "physics-basics",
             "physics-intermediate",
             "physics-quadrotor-dynamics",
@@ -250,6 +253,40 @@ class TestSeedCourses:
         levels = {c.slug: c.level for c in IAC_COURSES}
         assert levels["terraform-advanced"] == "Advanced"
         assert levels["ansible-advanced"] == "Advanced"
+
+    def test_linux_track_runs_basics_to_device_drivers(self) -> None:
+        from cyberdyne_backend.application.courses.seed_linux import LINUX_COURSES
+
+        slugs = {c.slug for c in LINUX_COURSES}
+        assert slugs == {"linux-basics", "linux-intermediate", "linux-advanced"}
+        levels = {c.slug: c.level for c in LINUX_COURSES}
+        assert levels["linux-basics"] == "Beginner"
+        assert levels["linux-intermediate"] == "Intermediate"
+        assert levels["linux-advanced"] == "Advanced"
+        for course in LINUX_COURSES:
+            # Linux lessons are text (no Linux runtime in the Academy) + a quiz.
+            kinds = {le.lesson_type for le in course.lessons}
+            assert kinds <= {"text", "quiz"}, f"{course.slug} has a non-text lesson"
+            assert any(le.lesson_type == "quiz" for le in course.lessons)
+
+        # Basics covers day-to-day use; advanced reaches real device drivers.
+        basics = next(c for c in LINUX_COURSES if c.slug == "linux-basics")
+        basics_titles = " | ".join(le.title for le in basics.lessons)
+        for needle in ("shell", "permissions", "Processes", "Pipes", "SSH"):
+            assert needle in basics_titles, f"basics missing {needle!r}"
+
+        inter = next(c for c in LINUX_COURSES if c.slug == "linux-intermediate")
+        inter_body = "\n".join(le.text_body or "" for le in inter.lessons)
+        for kw in ("module_init", "copy_to_user", "file_operations", "kmalloc"):
+            assert kw in inter_body, f"intermediate missing {kw!r}"
+
+        adv = next(c for c in LINUX_COURSES if c.slug == "linux-advanced")
+        adv_titles = " | ".join(le.title for le in adv.lessons)
+        for needle in ("device model", "Platform drivers", "Block", "Network", "PCI & USB"):
+            assert needle in adv_titles, f"advanced missing {needle!r}"
+        adv_body = "\n".join(le.text_body or "" for le in adv.lessons)
+        for kw in ("probe", "of_match_table", "dma_alloc_coherent", "net_device", "pci_driver"):
+            assert kw in adv_body, f"advanced missing {kw!r}"
 
     def test_physics_track_reaches_quadrotor_via_three_methods(self) -> None:
         from cyberdyne_backend.application.courses.seed_physics import PHYSICS_COURSES
