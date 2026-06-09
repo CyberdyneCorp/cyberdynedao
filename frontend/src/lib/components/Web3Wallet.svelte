@@ -177,7 +177,10 @@
 		color: #00ff00;
 		background: transparent;
 		position: relative;
-		z-index: 5;
+		/* No z-index here: a positive z-index turns .web3-wallet into a stacking
+		   context, which traps the connect modal's fixed overlay (z-index:1000)
+		   and the error banner below the desktop icons (z-index:10). Leaving it
+		   out keeps those overlays at the document root so they cover the shell. */
 		min-height: fit-content;
 	}
 	.wallet-connected { position: relative; }

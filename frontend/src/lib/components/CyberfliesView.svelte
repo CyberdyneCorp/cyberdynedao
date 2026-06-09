@@ -1160,7 +1160,7 @@
 		border-bottom: 2px solid #000;
 		color: #ffffff;
 	}
-	.hero__brand { display: flex; align-items: center; gap: 12px; }
+	.hero__brand { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 	.hero__mark { font-size: 1.4rem; }
 	.hero__title { font-size: 1.25rem; font-weight: 800; margin: 0; letter-spacing: 0.12em; }
 	.hero__chip {
@@ -1168,8 +1168,21 @@
 		background: rgba(0, 0, 0, 0.4); color: #ccfbf1; padding: 3px 8px; border: 1.5px solid #000;
 	}
 	.hero__tagline { margin: 6px 0 12px; font-size: 0.8125rem; line-height: 1.55; color: #d1faf4; }
-	.tabs { display: flex; gap: 4px; }
+	/* Scroll the tab row horizontally within its own width on narrow windows
+	   (phones/iPads) instead of letting 6 tabs push the window body wider than
+	   the viewport. On desktop all tabs fit, so no scrollbar appears. */
+	.tabs {
+		display: flex;
+		gap: 4px;
+		max-width: 100%;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+		scrollbar-width: none;
+	}
+	.tabs::-webkit-scrollbar { display: none; }
 	.tab {
+		flex: 0 0 auto;
+		white-space: nowrap;
 		font-family: inherit; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em;
 		background: rgba(0, 0, 0, 0.25); color: #ccfbf1; padding: 8px 14px;
 		border: 2px solid #000; border-bottom: none; cursor: pointer;

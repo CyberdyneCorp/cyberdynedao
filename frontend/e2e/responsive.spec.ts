@@ -3,6 +3,8 @@ import {
 	bootApp,
 	expectNoHorizontalOverflow,
 	expectFitsViewport,
+	expectNoInnerHorizontalOverflow,
+	topElementIsWithin,
 	attachScreenshot
 } from './helpers';
 
@@ -134,6 +136,12 @@ test.describe('app windows fit the viewport', () => {
 
 			await expectNoHorizontalOverflow(page);
 
+			// The window body's own content must fit — no inner horizontal overflow
+			// that would clip a column off-screen (regression: the global legacy
+			// `.sidebar { flex-direction: row }` rule forced content sidebars into an
+			// overflowing row on phones/iPads).
+			await expectNoInnerHorizontalOverflow(page, '.cy-rwin__body');
+
 			// Taskbar should surface the open window.
 			await expect(page.locator('.cy-taskbar')).toBeVisible();
 
@@ -155,6 +163,51 @@ test.describe('app windows fit the viewport', () => {
 			await expect(win).toBeVisible({ timeout: 1_000 });
 		}).toPass({ timeout: 10_000 });
 		await expectFitsViewport(page, '.cy-rwin');
+		await expectNoHorizontalOverflow(page);
+		await expectNoInnerHorizontalOverflow(page, '.cy-rwin__body');
+	});
+});
+
+test.describe('login modal', () => {
+	// Regression: the CONNECT modal's full-screen overlay (z-index:1000) was
+	// trapped inside .web3-wallet's z-index:5 stacking context, so it rendered
+	// BELOW the desktop icons (z-index:10) — the icons "fought" the login screen.
+	test('CONNECT modal renders above the desktop icons', async ({ page }, testInfo) => {
+		await bootApp(page);
+		await page.locator('button.connect-btn').click();
+
+		const overlay = page.locator('.cy-modal-overlay');
+		await expect(overlay).toBeVisible();
+
+		const vp = page.viewportSize();
+		expect(vp).not.toBeNull();
+		if (!vp) return;
+
+		// The element at the centre of the screen must belong to the modal.
+		expect(
+			await topElementIsWithin(page, Math.round(vp.width / 2), Math.round(vp.height / 2), '.cy-modal-overlay'),
+			'screen centre should hit the modal, not the desktop behind it'
+		).toBe(true);
+
+		// And where a desktop icon sits, the modal overlay must now be on top —
+		// i.e. the topmost element there is NOT the icon.
+		const iconBox = await page.locator('.cy-dgrid .cy-dicon').first().boundingBox();
+		if (iconBox) {
+			const cx = Math.round(iconBox.x + iconBox.width / 2);
+			const cy = Math.round(iconBox.y + iconBox.height / 2);
+			expect(
+				await topElementIsWithin(page, cx, cy, '.cy-dicon'),
+				'a desktop icon is bleeding through on top of the modal'
+			).toBe(false);
+			expect(
+				await topElementIsWithin(page, cx, cy, '.cy-modal-overlay'),
+				'modal overlay should cover the desktop icons'
+			).toBe(true);
+		}
+
+		await attachScreenshot(page, testInfo, `connect-modal-${test.info().project.name}.png`);
+
+		// No horizontal overflow introduced by the modal either.
 		await expectNoHorizontalOverflow(page);
 	});
 });

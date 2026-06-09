@@ -1037,19 +1037,13 @@ html::-webkit-scrollbar,
     display: none !important;
   }
   
-  /* Sidebar mobile improvements */
-  .sidebar {
-    width: 100% !important;
-    max-width: none !important;
-    height: auto !important;
-    min-height: 60px !important;
-    flex-direction: row !important;
-    justify-content: space-around !important;
-    padding: 8px !important;
-    border-right: none !important;
-    border-bottom: 1px solid #000 !important;
-  }
-  
+  /* NOTE: the legacy nav-rail `.sidebar` mobile rules were removed here.
+     They forced `flex-direction: row` on every element with class
+     "sidebar", which collided with the content views (Blog, DAO, Shop,
+     etc.) whose `.sidebar` is a vertical column of cards — breaking their
+     layout into an overflowing horizontal row on phones/iPads. The old nav
+     they targeted (`.sidebar-icon`/`.nav-label`) is no longer rendered. */
+
   .sidebar-icon {
     width: 48px !important;
     height: 48px !important;
@@ -1226,11 +1220,6 @@ html::-webkit-scrollbar,
     font-size: 10px !important;
   }
   
-  .sidebar {
-    min-height: 50px !important;
-    padding: 6px !important;
-  }
-  
   .sidebar-icon {
     width: 40px !important;
     height: 40px !important;
@@ -1359,12 +1348,6 @@ html::-webkit-scrollbar,
 
 /* Landscape mobile optimizations */
 @media (max-width: 768px) and (orientation: landscape) {
-  .sidebar {
-    flex-direction: row !important;
-    height: 50px !important;
-    min-height: 50px !important;
-  }
-  
   .main-content {
     margin-top: 50px !important;
   }

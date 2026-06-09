@@ -40,8 +40,19 @@ What each spec asserts (`responsive.spec.ts`):
   two columns (`--cy-dgrid-cols`).
 - **launcher menu** — opens, lists items, panel fits the viewport.
 - **every app window** — each launcher icon opens a window that fits within the
-  viewport (width/height/right-edge), surfaces in the taskbar, and closes.
+  viewport (width/height/right-edge), has no inner horizontal content overflow
+  (its body content fits — catches clipped columns), surfaces in the taskbar,
+  and closes.
 - **content-heavy window (Academy)** — the widest window still clamps to fit a phone.
+- **login modal** — the CONNECT modal's overlay renders *above* the desktop icons
+  (regression: it was trapped below them by a stacking context) and introduces no
+  horizontal overflow.
+
+## CI
+
+`.github/workflows/frontend-e2e.yml` runs this suite on every push to `main` and
+on PRs touching `frontend/**`. It installs WebKit + Chromium, runs `npm run test:e2e`
+(which builds + previews the app), and uploads the HTML report as an artifact.
 
 Backend calls are stubbed (`helpers.ts › stubBackend`) so the suite runs offline and
 deterministically — these tests assert layout/structure, not live data.
