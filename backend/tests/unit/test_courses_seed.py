@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 63
+        assert len(summary) == 66
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -167,6 +167,9 @@ class TestSeedCourses:
             "linux-basics",
             "linux-intermediate",
             "linux-advanced",
+            "csharp-basics",
+            "csharp-intermediate",
+            "csharp-advanced",
             "physics-basics",
             "physics-intermediate",
             "physics-quadrotor-dynamics",
@@ -286,6 +289,39 @@ class TestSeedCourses:
             assert needle in adv_titles, f"advanced missing {needle!r}"
         adv_body = "\n".join(le.text_body or "" for le in adv.lessons)
         for kw in ("probe", "of_match_table", "dma_alloc_coherent", "net_device", "pci_driver"):
+            assert kw in adv_body, f"advanced missing {kw!r}"
+
+    def test_csharp_track_runs_basics_to_aspnet(self) -> None:
+        from cyberdyne_backend.application.courses.seed_csharp import CSHARP_COURSES
+
+        slugs = {c.slug for c in CSHARP_COURSES}
+        assert slugs == {"csharp-basics", "csharp-intermediate", "csharp-advanced"}
+        levels = {c.slug: c.level for c in CSHARP_COURSES}
+        assert levels["csharp-basics"] == "Beginner"
+        assert levels["csharp-intermediate"] == "Intermediate"
+        assert levels["csharp-advanced"] == "Advanced"
+        for course in CSHARP_COURSES:
+            # C# lessons are text (no .NET runtime in the Academy) + a quiz.
+            kinds = {le.lesson_type for le in course.lessons}
+            assert kinds <= {"text", "quiz"}, f"{course.slug} has a non-text lesson"
+            assert any(le.lesson_type == "quiz" for le in course.lessons)
+
+        basics = next(c for c in CSHARP_COURSES if c.slug == "csharp-basics")
+        basics_body = "\n".join(le.text_body or "" for le in basics.lessons)
+        for kw in ("dotnet new", "Console.WriteLine", "var ", "switch"):
+            assert kw in basics_body, f"basics missing {kw!r}"
+
+        inter = next(c for c in CSHARP_COURSES if c.slug == "csharp-intermediate")
+        inter_body = "\n".join(le.text_body or "" for le in inter.lessons)
+        for kw in ("record", "async", "await", ".Where(", "interface"):
+            assert kw in inter_body, f"intermediate missing {kw!r}"
+
+        adv = next(c for c in CSHARP_COURSES if c.slug == "csharp-advanced")
+        adv_titles = " | ".join(le.title for le in adv.lessons)
+        for needle in ("Dependency injection", "REST API", "Entity Framework", "Testing"):
+            assert needle in adv_titles, f"advanced missing {needle!r}"
+        adv_body = "\n".join(le.text_body or "" for le in adv.lessons)
+        for kw in ("AddScoped", "WebApplication.CreateBuilder", "DbContext", "[Fact]"):
             assert kw in adv_body, f"advanced missing {kw!r}"
 
     def test_physics_track_reaches_quadrotor_via_three_methods(self) -> None:
