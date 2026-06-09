@@ -49,10 +49,13 @@ EXPOSE 8000
 
 # Coolify trap: `wget -qO-` and `localhost` (DNS) both fail silently inside
 # slim Alpine/Debian — use a Python one-liner against 127.0.0.1 instead.
-HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=5).status == 200 else 1)"
 
-# Run migrations on container start, then exec uvicorn so SIGTERM reaches
-# it for graceful shutdown. `start-period=20s` on the healthcheck gives
-# Alembic room to apply migrations before Traefik considers us unhealthy.
-CMD ["sh", "-c", "alembic upgrade head && exec uvicorn cyberdyne_backend.main:app --host 0.0.0.0 --port 8000"]
+# On container start: apply migrations, provision the version-controlled
+# Academy catalogue, then exec uvicorn so SIGTERM reaches it for graceful
+# shutdown. The seed (application.courses.seed) is idempotent and
+# non-destructive, so running it every boot just reconciles content; it's
+# wrapped so a seed failure logs and still lets the API come up. The wider
+# `start-period=40s` gives Alembic + the seed room before Traefik probes us.
+CMD ["sh", "-c", "alembic upgrade head && (python -m cyberdyne_backend.cli.seed_academy || echo 'academy seed failed; continuing boot') && exec uvicorn cyberdyne_backend.main:app --host 0.0.0.0 --port 8000"]
