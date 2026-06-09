@@ -71,6 +71,46 @@ export async function expectFitsViewport(page: Page, selector: string, tolerance
 	expect(box.x + box.width, `${selector} right edge past viewport`).toBeLessThanOrEqual(vp.width + tolerance);
 }
 
+/**
+ * Assert an element does not scroll horizontally — i.e. its own content fits
+ * within its box. Catches inner overflow that page-level checks miss (e.g. a
+ * window body whose content spills past the right edge and gets clipped).
+ */
+export async function expectNoInnerHorizontalOverflow(
+	page: Page,
+	selector: string,
+	tolerance = 2
+): Promise<void> {
+	const m = await page.locator(selector).first().evaluate((el) => ({
+		scrollWidth: el.scrollWidth,
+		clientWidth: el.clientWidth
+	}));
+	expect(
+		m.scrollWidth,
+		`${selector} content overflows horizontally: scrollWidth=${m.scrollWidth} > clientWidth=${m.clientWidth}`
+	).toBeLessThanOrEqual(m.clientWidth + tolerance);
+}
+
+/**
+ * Resolve the topmost element at a viewport point and report whether it lies
+ * within `ancestorSelector`. Used to prove stacking order (e.g. that a modal
+ * overlay actually sits above the desktop icons).
+ */
+export async function topElementIsWithin(
+	page: Page,
+	x: number,
+	y: number,
+	ancestorSelector: string
+): Promise<boolean> {
+	return page.evaluate(
+		({ x, y, ancestorSelector }) => {
+			const el = document.elementFromPoint(x, y);
+			return !!el && !!el.closest(ancestorSelector);
+		},
+		{ x, y, ancestorSelector }
+	);
+}
+
 /** Attach a desktop screenshot to the report as visual evidence of the layout. */
 export async function attachScreenshot(page: Page, testInfo: TestInfo, name: string): Promise<void> {
 	const buf = await page.screenshot({ fullPage: false });
