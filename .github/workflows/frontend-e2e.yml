@@ -15,6 +15,12 @@ concurrency:
   group: frontend-e2e-${{ github.ref }}
   cancel-in-progress: true
 
+# Read access to the org's GitHub Packages registry, where the
+# @cyberdynecorp/svelte-ui-* dependencies are published.
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   responsive:
     name: Responsive E2E (iOS phones & iPads)
@@ -32,8 +38,16 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
+      # frontend/.npmrc maps the @cyberdynecorp scope to GitHub Packages but
+      # carries no token (it's injected from the environment). Append the auth
+      # line so `npm ci` can pull the private UI packages in CI.
+      - name: Authenticate npm to GitHub Packages
+        run: echo "//npm.pkg.github.com/:_authToken=\${NODE_AUTH_TOKEN}" >> .npmrc
+
       - name: Install dependencies
         run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Cache Playwright browsers
         uses: actions/cache@v4
