@@ -123,16 +123,43 @@ export async function fetchTeam(): Promise<TeamMember[]> {
 	}
 }
 
+// Content that overlaps Amini's space (geospatial intelligence, sovereign
+// AI, EUDR, parametric insurance) is stripped from the public site —
+// from both the static fallback and any payload the backend still returns.
+// Matched on stable ids so backend copy edits can't silently re-surface it.
+// Same defensive approach as HIDDEN_PRODUCT_KEYS below.
+const BLOCKED_DOMAIN_IDS = new Set(['geospatial']);
+const BLOCKED_ROADMAP_IDS = new Set(['phase-2', 'phase-5']);
+const SOVEREIGN_AUDIENCE = /sovereign/i;
+
+/**
+ * Remove Amini-overlapping entries from a cyberdyne page payload and
+ * re-number the surviving roadmap phases so their "Phase N" titles stay
+ * sequential after the removed phases leave a gap.
+ */
+function sanitizeCyberdynePage(page: CyberdynePagePayload): CyberdynePagePayload {
+	const roadmapPhases = page.roadmapPhases
+		.filter((p) => !BLOCKED_ROADMAP_IDS.has(p.id))
+		.map((p, i) => ({ ...p, title: p.title.replace(/^Phase\s+\d+/i, `Phase ${i + 1}`) }));
+	return {
+		...page,
+		domains: page.domains.filter((d) => !BLOCKED_DOMAIN_IDS.has(d.id)),
+		targetUsers: page.targetUsers.filter((u) => !SOVEREIGN_AUDIENCE.test(u.name)),
+		roadmapPhases
+	};
+}
+
 /**
  * Fetch the cyberdyne page bundle. Same fallback behaviour as the team
- * fetcher.
+ * fetcher. Both the API and the static fallback are sanitized so the
+ * Amini-overlapping content never renders.
  */
 export async function fetchCyberdynePage(): Promise<CyberdynePagePayload> {
 	try {
-		return await fetchJson<CyberdynePagePayload>('/api/v1/content/cyberdyne');
+		return sanitizeCyberdynePage(await fetchJson<CyberdynePagePayload>('/api/v1/content/cyberdyne'));
 	} catch (err) {
 		console.warn('[contentApi] cyberdyne fetch failed, using static fallback:', err);
-		return STATIC_CYBERDYNE_PAGE;
+		return sanitizeCyberdynePage(STATIC_CYBERDYNE_PAGE);
 	}
 }
 
@@ -249,19 +276,25 @@ const STATIC_SERVICES_PAGE: ServicesPagePayload = {
 	ctaPills: [...staticServicesCtaPills]
 };
 
+// Service sections overlapping Amini's space, hidden regardless of what
+// the backend returns. Mirrors BLOCKED_DOMAIN_IDS above.
+const BLOCKED_SERVICE_IDS = new Set(['geospatial-sovereign']);
+
 export async function fetchServicesPage(): Promise<ServicesPagePayload> {
 	try {
 		const api = await fetchJson<ApiServicesPage>('/api/v1/content/services');
 		return {
-			sections: api.sections.map((s) => ({
-				id: s.id,
-				icon: s.icon,
-				title: s.title,
-				intro: s.intro,
-				bullets: s.bullets,
-				palette: s.palette,
-				fullWidth: s.fullWidth
-			})),
+			sections: api.sections
+				.filter((s) => !BLOCKED_SERVICE_IDS.has(s.id))
+				.map((s) => ({
+					id: s.id,
+					icon: s.icon,
+					title: s.title,
+					intro: s.intro,
+					bullets: s.bullets,
+					palette: s.palette,
+					fullWidth: s.fullWidth
+				})),
 			heroSubtitle: api.heroSubtitle,
 			workflowSteps: api.workflowSteps,
 			whyPoints: api.whyPoints,
@@ -271,7 +304,10 @@ export async function fetchServicesPage(): Promise<ServicesPagePayload> {
 		};
 	} catch (err) {
 		console.warn('[contentApi] services fetch failed, using static fallback:', err);
-		return STATIC_SERVICES_PAGE;
+		return {
+			...STATIC_SERVICES_PAGE,
+			sections: STATIC_SERVICES_PAGE.sections.filter((s) => !BLOCKED_SERVICE_IDS.has(s.id))
+		};
 	}
 }
 

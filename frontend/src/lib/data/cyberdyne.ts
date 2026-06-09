@@ -34,25 +34,15 @@ export const heroTagline =
 	'Open infrastructure for the next internet — built in the open, funded by yield, owned by the builders shipping it.';
 
 export const introLead =
-	'Cyberdyne is an independent builder collective shipping production-grade open infrastructure across geospatial intelligence, AI knowledge systems, identity, developer tooling, DeFi, and games. Every project is open by default, hexagonal at its core, and designed to outlive any single vendor.';
+	'Cyberdyne is an independent builder collective shipping production-grade open infrastructure across AI knowledge systems, identity, developer tooling, DeFi, and games. Every project is open by default, hexagonal at its core, and designed to outlive any single vendor.';
 
 export const introBullets: string[] = [
-	'Eighteen projects · one stack · zero vendor lock-in',
+	'A dozen projects · one stack · zero vendor lock-in',
 	'Hexagonal architecture, strict typing, real coverage gates',
 	'A DAO underneath that turns DeFi yield into builder runway'
 ];
 
 export const domains: Domain[] = [
-	{
-		id: 'geospatial',
-		name: 'Geospatial Intelligence',
-		icon: '🌍',
-		palette: 'green',
-		tagline:
-			'A 25-layer 3D dashboard, a STAC catalog with native MCP, parametric-insurance workbench, RF planning, OpenFOAM CFD, and a Python SDK that unifies ten satellite product managers.',
-		projects: ['CyberSpace', 'CyberSTAC', 'CyberGeoPy'],
-		status: 'shipping'
-	},
 	{
 		id: 'ai-knowledge',
 		name: 'AI Knowledge Systems',
@@ -104,12 +94,12 @@ export const beliefs: { title: string; description: string }[] = [
 	{
 		title: 'Production-grade by default',
 		description:
-			'Real coverage gates, not vibes. CyberRAG ships at >95% coverage. CyberDocExtractor at 97%. CyberdyneAuth at >83%. The numbers are public.'
+			'Real coverage gates, not vibes. CyberRAG ships at >95% coverage. MatForge IDE at 97%. CyberdyneAuth at >83%. The numbers are public.'
 	},
 	{
 		title: 'No vendor lock-in',
 		description:
-			'Hexagonal cores mean any adapter can be swapped. Pick MongoDB or pgstac. Pick OpenAI or local models. Pick AAVE or Uniswap. The seams are stable; the implementations are yours.'
+			'Hexagonal cores mean any adapter can be swapped. Pick MongoDB or Postgres. Pick OpenAI or local models. Pick AAVE or Uniswap. The seams are stable; the implementations are yours.'
 	},
 	{
 		title: 'Funded by yield, not speculation',
@@ -120,8 +110,7 @@ export const beliefs: { title: string; description: string }[] = [
 
 export const targetUsers: { name: string; description: string }[] = [
 	{ name: 'Builders', description: 'Open infra and SDKs to ship on, with no monthly bill at the bottom' },
-	{ name: 'Sovereign-AI buyers', description: 'DFIs, parametric insurers, ministries — domain-specific, data-sovereign software' },
-	{ name: 'Data & ML teams', description: 'Production geospatial, knowledge graphs, and document pipelines off the shelf' },
+	{ name: 'Data & ML teams', description: 'Production knowledge graphs and data pipelines off the shelf' },
 	{ name: 'Token holders', description: 'Governance + real yield tied to real software, not narratives' }
 ];
 
@@ -152,31 +141,17 @@ export const roadmapPhases: RoadmapPhase[] = [
 	{
 		id: 'phase-1',
 		title: 'Phase 1 · Foundations',
-		subtitle: 'Identity, doc pipeline, RAG backbone',
+		subtitle: 'Identity and RAG backbone',
 		status: 'shipped',
 		color: 'green',
 		items: [
 			{ icon: '✓', text: 'CyberdyneAuth live on Coolify — OAuth, wallet sign-in, sandboxed hooks' },
-			{ icon: '✓', text: 'CyberDocExtractor on PyPI — 9 adapters, 447 tests at 97%' },
 			{ icon: '✓', text: 'CyberRAG REST + MCP — 245+ tests, >95% coverage' }
 		]
 	},
 	{
-		id: 'phase-2',
-		title: 'Phase 2 · Geospatial Cluster',
-		subtitle: 'The flagship bet',
-		status: 'shipping',
-		color: 'blue',
-		items: [
-			{ icon: '◆', text: 'CyberSpace dashboard — 25 layers across 7 sections, multi-tenant RLS' },
-			{ icon: '◆', text: 'CyberSTAC v0.4.x — dual backend (MongoDB / pgstac), REST + MCP' },
-			{ icon: '◆', text: 'CyberGeoPy — ten product managers, EUDR pipeline, parametric payouts' },
-			{ icon: '◆', text: 'EUDR Compliance-as-a-Service productisation' }
-		]
-	},
-	{
 		id: 'phase-3',
-		title: 'Phase 3 · DAO + Dividends',
+		title: 'Phase 2 · DAO + Dividends',
 		subtitle: 'Yield meets shipping software',
 		status: 'active',
 		color: 'purple',
@@ -188,7 +163,7 @@ export const roadmapPhases: RoadmapPhase[] = [
 	},
 	{
 		id: 'phase-4',
-		title: 'Phase 4 · Apps & Games',
+		title: 'Phase 3 · Apps & Games',
 		subtitle: 'Where the stack meets users',
 		status: 'active',
 		color: 'orange',
@@ -197,21 +172,9 @@ export const roadmapPhases: RoadmapPhase[] = [
 			{ icon: '▸', text: 'YieldPath public launch — AI DeFi life planner' },
 			{ icon: '▸', text: 'Surf4Me marketplace expansion (iOS + Android live)' }
 		]
-	},
-	{
-		id: 'phase-5',
-		title: 'Phase 5 · Sovereign Scale',
-		subtitle: 'Global South & regulated buyers',
-		status: 'planned',
-		color: 'red',
-		items: [
-			{ icon: '○', text: 'Sovereign-AI deployments for DFIs, ministries, insurers' },
-			{ icon: '○', text: 'Marketplace for datasets, training modules, compute' },
-			{ icon: '○', text: 'Community programs & bounties at scale' }
-		]
 	}
 ];
 
 export const closingHeadline = 'Infrastructure that doesn’t cost — it yields.';
 export const closingBody =
-	'Eighteen projects. One open stack. Zero vendor lock-in. Build with us, earn with us, own with us.';
+	'A dozen projects. One open stack. Zero vendor lock-in. Build with us, earn with us, own with us.';

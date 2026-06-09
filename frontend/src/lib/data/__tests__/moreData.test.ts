@@ -49,7 +49,9 @@ describe('additional data fixtures', () => {
 		expect(tokenomicsRows.length).toBe(5);
 		expect(tokenUtilityPoints.length).toBeGreaterThan(0);
 		expect(exampleEconomics.length).toBe(4);
-		expect(roadmapPhases.length).toBe(5);
+		// Geospatial Cluster and Sovereign Scale phases were removed to avoid
+		// overlap with Amini's space, leaving three.
+		expect(roadmapPhases.length).toBe(3);
 		roadmapPhases.forEach(p => expect(p.items.length).toBeGreaterThan(0));
 	});
 

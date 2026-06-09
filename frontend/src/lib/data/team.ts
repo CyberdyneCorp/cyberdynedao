@@ -12,7 +12,7 @@ export interface TeamMember {
 
 export const teamHeroTitle = 'About Us';
 export const teamHeroBody =
-	'A small builder collective of engineers, researchers and artists. We ship production software across geospatial intelligence, AI knowledge systems, identity, DeFi, and games — open by default, and built to outlive any single vendor.';
+	'A small builder collective of engineers, researchers and artists. We ship production software across AI knowledge systems, identity, DeFi, and games — open by default, and built to outlive any single vendor.';
 
 export const teamMembers: TeamMember[] = [
 	{

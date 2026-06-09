@@ -16,26 +16,9 @@ export interface ServiceSection {
 }
 
 export const heroSubtitle =
-	'Production-grade software end-to-end — strategy, full-stack engineering, AI, geospatial intelligence, blockchain, and the open infrastructure to run it.';
+	'Production-grade software end-to-end — strategy, full-stack engineering, AI, blockchain, and the open infrastructure to run it.';
 
 export const serviceSections: ServiceSection[] = [
-	{
-		id: 'geospatial-sovereign',
-		icon: '🌍',
-		title: 'Geospatial & Sovereign AI',
-		intro:
-			'Domain-specific AI on real satellite data — built for regulated buyers: insurers, ministries, development finance, EUDR-affected exporters.',
-		bullets: [
-			{ title: '3D dashboards', description: '25 toggleable layers, multi-tenant RLS, agent-driven workflows.' },
-			{ title: 'STAC catalogs with native MCP', description: 'dual backend (MongoDB / pgstac), CQL2 filters, agent-first discovery.' },
-			{ title: 'Parametric insurance', description: 'climatology baseline + anomaly engine + step / linear / sigmoid payouts.' },
-			{ title: 'EUDR pipelines', description: 'polygon → JRC + Hansen + WDPA → TRACES-ready DDS payload.' },
-			{ title: 'SAR primitives', description: 'pure-Python coherence, interferogram, unwrap_phase — no SNAP / GAMMA dependency.' },
-			{ title: 'RF planning', description: 'ITM, ITU-R P.1812-7, sector plans, link budgets, GeoJSON / KML export.' }
-		],
-		palette: 'green',
-		fullWidth: true
-	},
 	{
 		id: 'strategy',
 		icon: '🎯',
@@ -70,7 +53,7 @@ export const serviceSections: ServiceSection[] = [
 		bullets: [
 			{ title: 'APIs', description: 'FastAPI, Go, Rust — import-linter contracts enforce architecture on every PR.' },
 			{ title: 'REST + MCP dual surfaces', description: 'the same use cases serve agents and apps.' },
-			{ title: 'PostgreSQL stack', description: 'pgvector + Apache AGE for knowledge graphs; pgstac for spatial.' },
+			{ title: 'PostgreSQL stack', description: 'pgvector + Apache AGE for knowledge graphs.' },
 			{ title: 'Ops', description: 'Coolify-first deploys, containers, structlog + Prometheus + Sentry.' }
 		],
 		palette: 'orange'
@@ -82,7 +65,7 @@ export const serviceSections: ServiceSection[] = [
 		intro: 'From RAG to agents — production, not demos.',
 		bullets: [
 			{ title: 'Knowledge graphs', description: 'LightRAG-backed, multi-tenant from day one.' },
-			{ title: 'Document ingestion', description: 'nine adapters, automatic fallback, LLM image enrichment, 97% coverage.' },
+			{ title: 'Agent orchestration', description: 'multi-step agents with tool use, streaming, and human-in-the-loop handoff.' },
 			{ title: 'LLM ops', description: 'hosted (OpenRouter, Anthropic, OpenAI) or self-hosted (Ollama, vLLM).' },
 			{ title: 'MCP servers', description: 'first-class agent access to your data — same use cases over HTTP.' }
 		],
@@ -130,7 +113,7 @@ export const workflowSteps: { title: string; description: string }[] = [
 export const whyCyberdynePoints: ServiceBullet[] = [
 	{
 		title: 'Production proof',
-		description: '18 projects shipping. Coverage gates at 83–97%. Tests in the thousands.'
+		description: 'A dozen projects shipping. Coverage gates at 83–97%. Tests in the thousands.'
 	},
 	{
 		title: 'Open by default',
@@ -138,7 +121,7 @@ export const whyCyberdynePoints: ServiceBullet[] = [
 	},
 	{
 		title: 'Full stack, one collective',
-		description: 'Strategy, mobile, backend, AI, geospatial, and Web3 — one team, one taste.'
+		description: 'Strategy, mobile, backend, AI, and Web3 — one team, one taste.'
 	},
 	{
 		title: 'Yield-powered economics',
@@ -148,5 +131,5 @@ export const whyCyberdynePoints: ServiceBullet[] = [
 
 export const ctaHeadline = 'Ready to Build?';
 export const ctaBody =
-	'Whether it’s a regulated geospatial system, an AI-native operating system, or a DeFi-funded platform — let’s scope the first valuable slice.';
-export const ctaPills: string[] = ['Strategy', 'Engineering', 'AI', 'Geospatial', 'Web3'];
+	'Whether it’s an AI-native operating system, a DeFi-funded platform, or developer tooling — let’s scope the first valuable slice.';
+export const ctaPills: string[] = ['Strategy', 'Engineering', 'AI', 'Web3'];

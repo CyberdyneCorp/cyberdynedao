@@ -220,7 +220,7 @@
 						<li>What does Cyberdyne actually do?</li>
 						<li>What training paths do you offer for DeFi?</li>
 						<li>How does the DAO model work?</li>
-						<li>I want to build a geospatial dashboard — can we talk?</li>
+						<li>I want to build an AI-native platform — can we talk?</li>
 					</ul>
 				</div>
 			{/if}

@@ -44,7 +44,7 @@
 	<div class="header-section">
 		<h1 class="products-title">CyberdyneCorp Product Suite</h1>
 		<p class="products-subtitle">
-			Explore the projects shaping the Cyberdyne ecosystem — geospatial intelligence, AI knowledge systems, DeFi, developer tooling, and more.
+			Explore the projects shaping the Cyberdyne ecosystem — AI knowledge systems, DeFi, developer tooling, and more.
 		</p>
 	</div>
 
