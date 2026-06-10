@@ -1268,7 +1268,125 @@ f_555 = 1.44/((Ra + 2*Rb)*C2)                        # 555 astable
 > cheap square-wave timing. And respect Barkhausen: too little loop gain and it
 > never starts; too much and it clips and distorts.
 
-**Next:** moving real power - power electronics.
+**Next:** turning the wall socket into clean DC - power supplies.
+""",
+        ),
+        _t(
+            "Power supplies: rectification, smoothing & regulation",
+            "13 min",
+            """\
+# Power supplies: rectification, smoothing & regulation
+
+Almost every circuit needs steady DC, but the wall gives you ~$230$ V (or $120$
+V) **AC**. A power supply is the chain that converts one to the other:
+
+```mermaid
+flowchart LR
+  MAINS["AC mains"] --> XFMR["transformer: step down + isolate"]
+  XFMR --> RECT["rectifier: AC -> bumpy DC"]
+  RECT --> CAP["reservoir cap: smooth"]
+  CAP --> REG["regulator: hold it steady"]
+  REG --> LOAD["clean regulated DC"]
+```
+
+## 1. Transformer - step down and isolate
+
+A transformer scales the mains voltage by its turns ratio and - just as
+important - **isolates** your low-voltage circuit from the lethal mains. (Modern
+supplies often rectify the mains directly and isolate later with a small
+high-frequency transformer, but the idea is the same.)
+
+## 2. Rectifier - AC to bumpy DC
+
+| Rectifier | Diodes | Ripple frequency | Notes |
+|-----------|--------|------------------|-------|
+| Half-wave | 1 | $f_{mains}$ | wastes half the cycle |
+| Full-wave (center-tap) | 2 | $2 f_{mains}$ | needs a tapped transformer |
+| **Bridge** | 4 | $2 f_{mains}$ | the standard - no center tap |
+
+Full-wave/bridge rectify **both** halves, so the ripple frequency doubles and
+the smoothing capacitor has half as long to sag - less ripple for the same cap.
+
+## 3. Smoothing - the reservoir capacitor
+
+The cap charges to the peak, then discharges into the load between peaks,
+leaving **ripple**:
+
+$$V_{ripple} \\approx \\frac{I_{load}}{f_{ripple}\\,C}.$$
+
+Bigger cap or higher ripple frequency = smaller ripple. Slide the load current
+and watch how big a cap you need:
+
+```plot
+{"title": "Ripple voltage vs reservoir capacitance (full-wave, 100 Hz)", "xLabel": "capacitance C (uF)", "yLabel": "ripple (V)", "xRange": [100, 2000], "yRange": [0, 5], "grid": true, "controls": [{"name": "I", "range": [0.05, 0.5], "value": 0.2, "label": "load current (A)"}], "functions": [{"expr": "I*10000/x", "label": "Vripple = I/(f C)"}]}
+```
+
+## 4. Regulation - holding it steady
+
+The smoothed DC still sags with load and drifts with the mains. A **regulator**
+fixes the output.
+
+### Zener shunt regulator (the simplest)
+
+A series resistor feeds a **Zener diode** that clamps the output at its
+breakdown voltage $V_Z$; the Zener "shunts" away excess current. Output stays
+flat once the input exceeds $V_Z$:
+
+```plot
+{"title": "Shunt (Zener) regulator clamps the output at Vz (slide Vz)", "xLabel": "input voltage (V)", "yLabel": "output voltage (V)", "xRange": [0, 15], "yRange": [0, 11], "grid": true, "controls": [{"name": "Vz", "range": [3, 9], "value": 5, "label": "Zener voltage Vz (V)"}], "functions": [{"expr": "min(x, Vz)", "label": "Vout"}]}
+```
+
+Size the series resistor for the worst case:
+$R = \\dfrac{V_{in} - V_Z}{I_Z + I_{load}}$. Simple and cheap, but it wastes
+current - fine for a reference, poor for powering a load.
+
+### Linear regulator (78xx / LM317 / LDO)
+
+A **series-pass** transistor controlled by feedback holds $V_{out}$ precisely
+(fixed like a 7805, or adjustable like an LM317). Clean and quiet - but it burns
+the voltage difference as **heat**:
+
+$$P_{loss} = (V_{in} - V_{out})\\,I_{load}, \\qquad \\eta = \\frac{V_{out}}{V_{in}}.$$
+
+So more input headroom = more heat. Slide the output and see the dissipation at
+$0.5$ A:
+
+```plot
+{"title": "Linear regulator heat = (Vin - Vout) x I, at 0.5 A (slide Vout)", "xLabel": "input voltage Vin (V)", "yLabel": "heat dissipated (W)", "xRange": [3, 15], "yRange": [0, 6], "grid": true, "controls": [{"name": "Vout", "range": [3, 9], "value": 5, "label": "output voltage Vout (V)"}], "functions": [{"expr": "max(0, (x - Vout))*0.5", "label": "P_loss"}]}
+```
+
+The regulator needs a minimum headroom - the **dropout voltage** - to keep
+regulating ($V_{in} \\ge V_{out} + V_{dropout}$). An **LDO** (low-dropout) needs
+only ~0.1-0.3 V, handy on batteries.
+
+Two specs grade a supply: **line regulation** (output change per input change)
+and **load regulation** (output change from no-load to full-load).
+
+## 5. Protection
+
+Real supplies guard themselves and the load: **over-current** (current limit /
+fold-back), **over-voltage** (crowbar), **thermal shutdown**, a **fuse**, and
+**reverse-polarity** protection. A bench supply's "CC/CV" knobs are exactly
+current-limit and voltage-regulation.
+
+```matlab
+Iload = 0.2; f = 100; C = 1000e-6;
+Vrip = Iload/(f*C);               % ripple voltage
+Ploss = (12 - 5)*Iload;           % linear regulator heat at 12->5 V
+```
+
+```python
+Iload, f, C = 0.2, 100, 1000e-6
+Vrip = Iload/(f*C)                # ripple voltage
+Ploss = (12 - 5)*Iload            # linear regulator heat (W)
+```
+
+> **Practical insight:** choose **linear** for low-noise, low-current, small
+> step-downs (and always budget the heat - it may need a heatsink); choose
+> **switching** (next lesson) for efficiency and big step-downs. And size the
+> reservoir cap from the ripple you can tolerate, not by guessing.
+
+**Next:** doing it efficiently - switching power electronics.
 """,
         ),
         _t(
