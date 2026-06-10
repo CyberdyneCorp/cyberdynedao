@@ -4,6 +4,82 @@ from cyberdyne_backend.application.courses.seed_types import CourseQuiz, opt, q
 
 QUIZ = CourseQuiz(
     per_lesson={
+        "Biasing transistors: linear & switching modes": (
+            q(
+                "What is special about a JFET compared with an enhancement MOSFET?",
+                (
+                    opt("It is current-controlled like a BJT"),
+                    opt(
+                        "It is a depletion-mode device that is normally ON and pinches off as Vgs goes negative",
+                        correct=True,
+                    ),
+                    opt("It has no gate terminal"),
+                    opt("It only works as a switch, never as an amplifier"),
+                ),
+                "A JFET is a depletion-mode, normally-on FET; making Vgs more negative pinches the channel off at Vp.",
+            ),
+            q(
+                "Why is BJT voltage-divider bias (with an emitter resistor) preferred over fixed-base bias?",
+                (
+                    opt("It uses fewer components"),
+                    opt(
+                        "The emitter resistor adds negative feedback, giving a stable beta-independent Q-point",
+                        correct=True,
+                    ),
+                    opt("It removes the need for a power supply"),
+                    opt("It makes the transistor switch faster"),
+                ),
+                "The emitter resistor provides negative feedback so the Q-point resists temperature and beta spread.",
+            ),
+            q(
+                "For a transistor used as a switch, why drive it hard between cut-off and saturation?",
+                (
+                    opt("To keep it in the linear region for maximum gain"),
+                    opt(
+                        "Power P=Vce*Ic is lowest fully off or fully on, and highest in the linear region between",
+                        correct=True,
+                    ),
+                    opt("To make it behave like a resistor"),
+                    opt("Because the Q-point must sit mid-load-line"),
+                ),
+                "A switch dissipates least power fully on (low V) or fully off (low I); the linear region in between builds heat.",
+            ),
+        ),
+        "Oscillators": (
+            q(
+                "What must the loop gain satisfy for sustained oscillation (Barkhausen criterion)?",
+                (
+                    opt("|A*beta| = 1 and total phase = 0 (or 360) degrees", correct=True),
+                    opt("|A*beta| = 0 and phase = 90 degrees"),
+                    opt("Infinite gain at all frequencies"),
+                    opt("Negative feedback with unity gain"),
+                ),
+                "Barkhausen: the signal must return the same size (|A*beta|=1) and in phase (0/360 degrees) once around the loop.",
+            ),
+            q(
+                "Which oscillator type is the right choice for a very precise, stable clock frequency?",
+                (
+                    opt("RC phase-shift oscillator"),
+                    opt("Relaxation (555) oscillator"),
+                    opt("Crystal oscillator", correct=True),
+                    opt("Wien-bridge oscillator"),
+                ),
+                "A quartz crystal's huge Q gives parts-per-million stability, which is why crystals clock digital systems.",
+            ),
+            q(
+                "How does a harmonic oscillator's output differ from a relaxation (555) oscillator's?",
+                (
+                    opt("Harmonic oscillators make square waves; relaxation makes sines"),
+                    opt(
+                        "Harmonic oscillators make clean sine waves; relaxation oscillators make square/triangle waves",
+                        correct=True,
+                    ),
+                    opt("Both produce identical pure sine waves"),
+                    opt("Relaxation oscillators cannot be built below 1 MHz"),
+                ),
+                "RC/LC/crystal oscillators produce sines at the 0-degree-phase frequency; relaxation oscillators charge/discharge a cap for square/triangle waves.",
+            ),
+        ),
         "Diodes & the PN junction": (
             q(
                 "What does a PN junction (a diode) do to current flow?",

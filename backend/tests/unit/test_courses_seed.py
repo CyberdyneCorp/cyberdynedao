@@ -520,7 +520,13 @@ class TestSeedCourses:
             "filter",
             "diode",
             "transistor",
+            "JFET",
+            "MOSFET",
+            "Q-point",
+            "load line",
             "operational amplifier",
+            "oscillator",
+            "Barkhausen",
             "buck",
         ):
             assert needle.lower() in all_body.lower(), f"electronics missing {needle!r}"
