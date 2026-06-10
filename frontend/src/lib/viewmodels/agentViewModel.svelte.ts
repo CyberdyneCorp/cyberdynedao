@@ -225,7 +225,12 @@ function bubblesFromMessages(messages: AgentMessage[]): AgentBubble[] {
 			for (const tc of m.toolCalls ?? []) {
 				const res = toolResultsById.get(tc.id);
 				if (res) {
-					const source = tc.name === 'python_exec' ? 'interpreter' : 'matlab';
+					// python_exec and render_manim figures live in the interpreter
+					// workspace (/api/interpreter); matlab_* figures in MATLAB's.
+					const source =
+						tc.name === 'python_exec' || tc.name === 'render_manim'
+							? 'interpreter'
+							: 'matlab';
 					pendingPlots.push(...extractPlots(res.content, source));
 					pendingArtifacts.push(...extractArtifacts(res.content));
 				}
