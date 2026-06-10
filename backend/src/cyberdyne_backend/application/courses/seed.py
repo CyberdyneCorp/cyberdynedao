@@ -24,6 +24,7 @@ from datetime import datetime
 from uuid import UUID
 
 from cyberdyne_backend.application.courses.seed_algorithms import ALGORITHMS_COURSES
+from cyberdyne_backend.application.courses.seed_control import CONTROL_COURSES
 from cyberdyne_backend.application.courses.seed_csharp import CSHARP_COURSES
 from cyberdyne_backend.application.courses.seed_databases import DATABASE_COURSES
 from cyberdyne_backend.application.courses.seed_devops import DEVOPS_COURSES
@@ -1140,6 +1141,7 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *ALGORITHMS_COURSES,
     *CSHARP_COURSES,
     *SIGNALS_COURSES,
+    *CONTROL_COURSES,
 )
 
 
