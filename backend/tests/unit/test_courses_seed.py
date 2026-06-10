@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 81
+        assert len(summary) == 93
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -211,6 +211,18 @@ class TestSeedCourses:
             "power-electronics-basics",
             "power-electronics-intermediate",
             "power-electronics-advanced",
+            "embedded-basics",
+            "embedded-intermediate",
+            "embedded-advanced",
+            "electromagnetics-basics",
+            "electromagnetics-intermediate",
+            "electromagnetics-advanced",
+            "rf-comms-basics",
+            "rf-comms-intermediate",
+            "rf-comms-advanced",
+            "sensors-basics",
+            "sensors-intermediate",
+            "sensors-advanced",
         }
         for course in ACADEMY_COURSES:
             assert course.lessons  # non-empty
@@ -590,6 +602,52 @@ class TestSeedCourses:
         ):
             assert needle.lower() in all_body.lower(), f"power electronics missing {needle!r}"
         assert plot_blocks >= 8
+
+    def test_tier1_ee_tracks_complete(self) -> None:
+        import json
+        import re
+
+        from cyberdyne_backend.application.courses.seed_electromagnetics import (
+            ELECTROMAGNETICS_COURSES,
+        )
+        from cyberdyne_backend.application.courses.seed_embedded import EMBEDDED_COURSES
+        from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
+        from cyberdyne_backend.application.courses.seed_rf_comms import RF_COMMS_COURSES
+        from cyberdyne_backend.application.courses.seed_sensors import SENSORS_COURSES
+
+        tracks = {
+            "embedded": (EMBEDDED_COURSES, ("```c", "```python")),
+            "electromagnetics": (ELECTROMAGNETICS_COURSES, ("```matlab", "```python")),
+            "rf-comms": (RF_COMMS_COURSES, ("```matlab", "```python")),
+            "sensors": (SENSORS_COURSES, ("```matlab", "```python")),
+        }
+        total_plots = 0
+        for prefix, (courses, lang_fences) in tracks.items():
+            assert len(courses) == 3
+            assert {c.level for c in courses} == {"Beginner", "Intermediate", "Advanced"}
+            for course in courses:
+                assert course.slug.startswith(prefix)
+                kinds = {le.lesson_type for le in course.lessons}
+                assert kinds <= {"text", "code"}
+                assert any(le.lesson_type == "code" for le in course.lessons)  # runnable lab
+                body = "\n".join(le.text_body or "" for le in course.lessons)
+                for fence in lang_fences:  # dual language
+                    assert fence in body, f"{course.slug} missing {fence}"
+                course_plots = 0
+                for raw in re.findall(r"```plot\n(.*?)\n```", body, re.S):
+                    json.loads(raw)  # valid interactive plot JSON
+                    course_plots += 1
+                assert course_plots >= 3, f"{course.slug} has <3 plots"
+                total_plots += course_plots
+                # every content lesson has a checkpoint quiz from the registry
+                assert course.slug in QUIZ_REGISTRY
+                spec = QUIZ_REGISTRY[course.slug]
+                assert spec.final
+                content_titles = {
+                    le.title for le in course.lessons if le.lesson_type in {"text", "code"}
+                }
+                assert set(spec.per_lesson) == content_titles
+        assert total_plots >= 60  # richly interactive across the 4 tracks
 
     def test_csharp_track_runs_basics_to_aspnet(self) -> None:
         from cyberdyne_backend.application.courses.seed_csharp import CSHARP_COURSES

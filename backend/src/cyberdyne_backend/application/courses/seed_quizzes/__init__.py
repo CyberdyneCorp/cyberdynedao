@@ -54,6 +54,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
     docker_intermediate as _docker_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    electromagnetics_advanced as _electromagnetics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    electromagnetics_basics as _electromagnetics_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    electromagnetics_intermediate as _electromagnetics_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     electronics_advanced as _electronics_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -61,6 +70,13 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     electronics_intermediate as _electronics_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    embedded_advanced as _embedded_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import embedded_basics as _embedded_basics
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    embedded_intermediate as _embedded_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import go_basics as _go_basics
 from cyberdyne_backend.application.courses.seed_quizzes import go_intermediate as _go_intermediate
@@ -115,6 +131,13 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 )
 from cyberdyne_backend.application.courses.seed_quizzes import python_course as _python_course
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    rf_comms_advanced as _rf_comms_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import rf_comms_basics as _rf_comms_basics
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    rf_comms_intermediate as _rf_comms_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     robotics_advanced as _robotics_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import robotics_basics as _robotics_basics
@@ -124,6 +147,11 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 from cyberdyne_backend.application.courses.seed_quizzes import rust_basics as _rust_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
     rust_intermediate as _rust_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import sensors_advanced as _sensors_advanced
+from cyberdyne_backend.application.courses.seed_quizzes import sensors_basics as _sensors_basics
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    sensors_intermediate as _sensors_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import signals_advanced as _signals_advanced
 from cyberdyne_backend.application.courses.seed_quizzes import signals_basics as _signals_basics
@@ -190,9 +218,15 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "docker-advanced": _docker_advanced.QUIZ,
     "docker-basics": _docker_basics.QUIZ,
     "docker-intermediate": _docker_intermediate.QUIZ,
+    "electromagnetics-advanced": _electromagnetics_advanced.QUIZ,
+    "electromagnetics-basics": _electromagnetics_basics.QUIZ,
+    "electromagnetics-intermediate": _electromagnetics_intermediate.QUIZ,
     "electronics-advanced": _electronics_advanced.QUIZ,
     "electronics-basics": _electronics_basics.QUIZ,
     "electronics-intermediate": _electronics_intermediate.QUIZ,
+    "embedded-advanced": _embedded_advanced.QUIZ,
+    "embedded-basics": _embedded_basics.QUIZ,
+    "embedded-intermediate": _embedded_intermediate.QUIZ,
     "go-basics": _go_basics.QUIZ,
     "go-intermediate": _go_intermediate.QUIZ,
     "javascript-basics": _javascript_basics.QUIZ,
@@ -221,11 +255,17 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "power-electronics-basics": _power_electronics_basics.QUIZ,
     "power-electronics-intermediate": _power_electronics_intermediate.QUIZ,
     "python-course": _python_course.QUIZ,
+    "rf-comms-advanced": _rf_comms_advanced.QUIZ,
+    "rf-comms-basics": _rf_comms_basics.QUIZ,
+    "rf-comms-intermediate": _rf_comms_intermediate.QUIZ,
     "robotics-advanced": _robotics_advanced.QUIZ,
     "robotics-basics": _robotics_basics.QUIZ,
     "robotics-intermediate": _robotics_intermediate.QUIZ,
     "rust-basics": _rust_basics.QUIZ,
     "rust-intermediate": _rust_intermediate.QUIZ,
+    "sensors-advanced": _sensors_advanced.QUIZ,
+    "sensors-basics": _sensors_basics.QUIZ,
+    "sensors-intermediate": _sensors_intermediate.QUIZ,
     "signals-advanced": _signals_advanced.QUIZ,
     "signals-basics": _signals_basics.QUIZ,
     "signals-intermediate": _signals_intermediate.QUIZ,
