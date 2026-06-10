@@ -806,6 +806,115 @@ Ic = beta * Ib                    # 2 mA
 > power. For amplifiers, a stable bias point that resists temperature drift is
 > everything.
 
+**Next:** setting the operating point - biasing in linear and switching modes.
+""",
+        ),
+        _t(
+            "Biasing transistors: linear & switching modes",
+            "13 min",
+            """\
+# Biasing transistors: linear & switching modes
+
+A transistor only does something useful once you set its DC **operating point**
+(the **Q-point**). *Where* you place that point decides whether the device is a
+**linear amplifier** or a **switch**.
+
+## Three families, two control styles
+
+| Family | Controlled by | Normally | Law (active / saturation) |
+|--------|---------------|----------|----------------------------|
+| **BJT** (bipolar) | base **current** $I_B$ | off | $I_C = \\beta I_B$ |
+| **JFET** | gate **voltage** (reverse) | **on** (depletion) | $I_D = I_{DSS}\\left(1 - \\dfrac{V_{GS}}{V_P}\\right)^2$ |
+| **MOSFET** | gate **voltage** | off (enhancement) | $I_D = k\\,(V_{GS} - V_{th})^2$ |
+
+The **JFET** is the family the transistor lesson skipped: a *depletion-mode*,
+normally-**on** device. Make $V_{GS}$ more negative and you pinch the channel
+until, at the **pinch-off voltage** $V_P$, it shuts off. Its square-law transfer
+curve (slide pinch-off):
+
+```plot
+{"title": "JFET transfer: Id = Idss(1 - Vgs/Vp)^2 (slide pinch-off Vp)", "xLabel": "Vgs (V)", "yLabel": "Id (mA)", "xRange": [-5, 0.2], "yRange": [0, 11], "grid": true, "controls": [{"name": "Vp", "range": [-5, -2], "value": -4, "label": "pinch-off Vp (V)"}], "functions": [{"expr": "(x>Vp)*10*(1 - x/Vp)^2", "label": "Id (depletion JFET)"}]}
+```
+
+MOSFETs follow the same square law but turn on **above** a positive threshold
+$V_{th}$ (enhancement type, normally off) - slide the threshold:
+
+```plot
+{"title": "MOSFET transfer: Id = k(Vgs - Vth)^2 in saturation (slide Vth)", "xLabel": "Vgs (V)", "yLabel": "Id (mA)", "xRange": [0, 5], "yRange": [0, 20], "grid": true, "controls": [{"name": "Vth", "range": [0.5, 3], "value": 1.5, "label": "threshold Vth (V)"}], "functions": [{"expr": "(x>Vth)*2*(x-Vth)^2", "label": "Id (enhancement NMOS)"}]}
+```
+
+## Linear mode: the Q-point and the load line
+
+For amplification you bias the device **mid-range** in its active (BJT) /
+saturation (FET) region so the signal can swing both ways without clipping. The
+**DC load line** is just KVL on the output loop - for a BJT common-emitter with
+collector resistor $R_C$ and supply $V_{CC}$:
+
+$$I_C = \\frac{V_{CC} - V_{CE}}{R_C}.$$
+
+The Q-point sits where this line crosses the device's curve. Slide $R_C$ and
+watch the load line tilt:
+
+```plot
+{"title": "BJT DC load line: Ic = (Vcc - Vce)/Rc, Vcc=12 (slide Rc)", "xLabel": "Vce (V)", "yLabel": "Ic (mA)", "xRange": [0, 12], "yRange": [0, 25], "grid": true, "controls": [{"name": "Rc", "range": [0.5, 5], "value": 1, "label": "collector resistor Rc (kohm)"}], "functions": [{"expr": "(12 - x)/Rc", "label": "load line"}]}
+```
+
+Put the Q-point in the **middle** of the load line for maximum symmetric swing.
+
+### Biasing methods (and why one wins)
+
+- **BJT fixed-base bias** - one base resistor. Simple, but $I_C = \\beta I_B$
+  drifts with temperature and the huge part-to-part $\\beta$ spread. Avoid.
+- **BJT voltage-divider bias** - a divider sets the base voltage and an emitter
+  resistor $R_E$ adds **negative feedback**: if $I_C$ rises, $V_E$ rises,
+  shrinking $V_{BE}$ and pushing $I_C$ back. Stable and $\\beta$-independent - the
+  standard.
+- **JFET self-bias** - a source resistor makes $V_{GS} = -I_D R_S$; the bias
+  line crosses the transfer curve at a stable point (no divider needed, since the
+  JFET is normally on).
+- **MOSFET bias** - gate voltage-divider plus source resistor (analog), or a
+  current mirror.
+
+```mermaid
+flowchart TB
+  VCC["Vcc"] --> R1["R1"] --> B(("base"))
+  B --> R2["R2"] --> GND["gnd"]
+  B --> Q["transistor"]
+  Q --> RE["Re (feedback)"] --> GND
+```
+
+## Switching mode: slam between off and fully-on
+
+For logic, power supplies, and motor drivers you don't sit in the middle - you
+drive the transistor hard between **cut-off** (off) and **saturation/triode**
+(fully on):
+
+- **BJT**: enough base current to saturate ($V_{CE} \\approx 0.2$ V).
+- **MOSFET**: $V_{GS}$ well above $V_{th}$, so it's a small resistance $R_{DS(on)}$.
+
+Spend as little time as possible *in between*, because the linear region is where
+a power device dissipates the most heat ($P = V_{CE} I_C$). A good switch is
+either fully on (low $V$) or fully off (low $I$) - low power in both.
+
+```matlab
+Vcc=12; Rc=1e3; Re=220; R1=47e3; R2=10e3; Vbe=0.7;
+Vb = Vcc*R2/(R1+R2);            % divider bias
+Ie = (Vb - Vbe)/Re;  Ic = Ie;  % ~equal
+Vce = Vcc - Ic*(Rc+Re);        % Q-point (aim mid-range)
+```
+
+```python
+Vcc, Rc, Re, R1, R2, Vbe = 12, 1e3, 220, 47e3, 10e3, 0.7
+Vb = Vcc*R2/(R1+R2)            # divider bias
+Ie = (Vb - Vbe)/Re; Ic = Ie
+Vce = Vcc - Ic*(Rc+Re)         # Q-point
+```
+
+> **Practical insight:** for **amplifiers**, use divider bias with an emitter/
+> source resistor so the Q-point resists temperature and $\\beta$ spread; for
+> **switches**, overdrive the input and care about saturation voltage /
+> $R_{DS(on)}$ and switching speed, not the Q-point.
+
 **Next:** the analog designer's Swiss-army knife - the op-amp.
 """,
         ),
@@ -920,6 +1029,88 @@ fc = 1/(2*np.pi*R*C)              # ~10 kHz, second order
 > filter's building block - the same op-amp circuit recurs across the Signals,
 > Control, and Electronics tracks. Analog computing was literally op-amp
 > integrators wired to solve differential equations.
+
+**Next:** generating waveforms from scratch - oscillators.
+""",
+        ),
+        _t(
+            "Oscillators",
+            "12 min",
+            """\
+# Oscillators
+
+An **oscillator** turns DC power into a periodic AC waveform with **no input
+signal** - the heartbeat of every radio, clock, and tone generator. The trick is
+**positive feedback**: route the output back *in phase* so the circuit reinforces
+its own signal.
+
+## The Barkhausen criterion
+
+For sustained oscillation the **loop gain** must satisfy, at the oscillation
+frequency:
+
+$$|A\\beta| = 1 \\quad\\text{and}\\quad \\angle A\\beta = 0^\\circ \\;(\\text{or } 360^\\circ).$$
+
+In words: a signal that goes once around the loop comes back **the same size**
+and **in phase**. To *start up*, you design $|A\\beta|$ slightly **> 1** so circuit
+noise grows; then a **nonlinearity** (a diode, a lamp, or the amplifier gently
+clipping) trims the gain back to exactly 1, settling the amplitude - the **limit
+cycle**. Press Play to watch it build:
+
+```plot
+{"title": "Oscillator startup: amplitude grows, then settles (limit cycle)", "xLabel": "time", "yLabel": "output", "xRange": [0, 12], "yRange": [-1.3, 1.3], "grid": true, "controls": [{"name": "w", "range": [2, 8], "value": 4, "label": "oscillation frequency"}], "animate": {"param": "t", "range": [0, 12], "label": "time"}, "functions": [{"expr": "(1 - exp(-0.4*x))*sin(w*x)", "label": "v(t)"}], "points": [{"xExpr": "t", "yExpr": "(1 - exp(-0.4*t))*sin(w*t)", "label": "now", "color": "#dc2626", "size": 6, "trail": true}]}
+```
+
+## The families
+
+| Type | Frequency-setting element | $f$ | Use |
+|------|---------------------------|-----|-----|
+| **RC phase-shift** | 3 RC sections (60 deg each) | audio | simple sine |
+| **Wien bridge** | RC bridge | $f = \\dfrac{1}{2\\pi R C}$ | low-distortion audio sine |
+| **LC (Colpitts / Hartley)** | LC tank | $f = \\dfrac{1}{2\\pi\\sqrt{LC}}$ | RF |
+| **Crystal** | quartz resonator (huge Q) | very precise | clocks, MCUs, radios |
+| **Relaxation (555)** | RC charge/discharge | $f \\approx \\dfrac{1.44}{(R_A + 2R_B)C}$ | square / timing |
+
+```mermaid
+flowchart LR
+  AMP["amplifier (gain A)"] --> OUT["output"]
+  OUT --> FB["frequency-selective feedback (beta)"]
+  FB --> AMP
+```
+
+## Sine vs. square
+
+**Harmonic** oscillators (RC, LC, crystal) make clean **sine** waves at the
+frequency where the feedback phase hits 0 degrees. **Relaxation** oscillators
+(the 555 timer, ring oscillators) charge and discharge a capacitor between two
+thresholds, making **square/triangle** waves - cheap timing, not spectrally pure.
+
+The **Wien bridge** has pedigree: it was the product in Hewlett-Packard's first
+instrument (the HP 200A audio oscillator, 1939), whose amplitude was stabilised
+by a light bulb's resistance rising as it warmed. **Crystal** oscillators, at the
+other extreme, reach parts-per-million stability and clock nearly every digital
+system you own.
+
+```matlab
+R=10e3; C=10e-9;  f_wien = 1/(2*pi*R*C);            % Wien bridge sine
+L=1e-6; Ct=100e-12; f_lc = 1/(2*pi*sqrt(L*Ct));     % LC (RF)
+Ra=10e3; Rb=47e3; C2=1e-6; f_555 = 1.44/((Ra+2*Rb)*C2);  % 555 square
+```
+
+```python
+import numpy as np
+R, C = 10e3, 10e-9
+f_wien = 1/(2*np.pi*R*C)                             # Wien bridge
+L, Ct = 1e-6, 100e-12
+f_lc = 1/(2*np.pi*np.sqrt(L*Ct))                     # LC
+Ra, Rb, C2 = 10e3, 47e3, 1e-6
+f_555 = 1.44/((Ra + 2*Rb)*C2)                        # 555 astable
+```
+
+> **Practical insight:** pick by frequency and purity - **RC/Wien** for audio
+> sines, **LC** for RF, **crystal** when accuracy matters, **555/relaxation** for
+> cheap square-wave timing. And respect Barkhausen: too little loop gain and it
+> never starts; too much and it clips and distorts.
 
 **Next:** moving real power - power electronics.
 """,
