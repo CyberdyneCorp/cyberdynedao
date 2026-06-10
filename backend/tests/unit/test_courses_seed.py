@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 78
+        assert len(summary) == 81
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -208,6 +208,9 @@ class TestSeedCourses:
             "electronics-basics",
             "electronics-intermediate",
             "electronics-advanced",
+            "power-electronics-basics",
+            "power-electronics-intermediate",
+            "power-electronics-advanced",
         }
         for course in ACADEMY_COURSES:
             assert course.lessons  # non-empty
@@ -531,6 +534,62 @@ class TestSeedCourses:
         ):
             assert needle.lower() in all_body.lower(), f"electronics missing {needle!r}"
         assert plot_blocks >= 8  # lots of interactive plots
+
+    def test_power_electronics_track_covers_converters_inverters_drives(self) -> None:
+        import json
+        import re
+
+        from cyberdyne_backend.application.courses.seed_power_electronics import (
+            POWER_ELECTRONICS_COURSES,
+        )
+        from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
+
+        slugs = {c.slug for c in POWER_ELECTRONICS_COURSES}
+        assert slugs == {
+            "power-electronics-basics",
+            "power-electronics-intermediate",
+            "power-electronics-advanced",
+        }
+        levels = {c.slug: c.level for c in POWER_ELECTRONICS_COURSES}
+        assert levels["power-electronics-basics"] == "Beginner"
+        assert levels["power-electronics-intermediate"] == "Intermediate"
+        assert levels["power-electronics-advanced"] == "Advanced"
+
+        all_body = ""
+        plot_blocks = 0
+        for course in POWER_ELECTRONICS_COURSES:
+            kinds = {le.lesson_type for le in course.lessons}
+            assert kinds <= {"text", "code"}
+            assert any(le.lesson_type == "code" for le in course.lessons)  # runnable lab
+            body = "\n".join(le.text_body or "" for le in course.lessons)
+            all_body += body
+            assert "```matlab" in body and "```python" in body  # dual language
+            for raw in re.findall(r"```plot\n(.*?)\n```", body, re.S):
+                json.loads(raw)
+                plot_blocks += 1
+            assert course.slug in QUIZ_REGISTRY
+            spec = QUIZ_REGISTRY[course.slug]
+            assert spec.final
+            content_titles = {
+                le.title for le in course.lessons if le.lesson_type in {"text", "code"}
+            }
+            assert set(spec.per_lesson) == content_titles  # a quiz for every lesson
+
+        for needle in (
+            "PWM",
+            "buck",
+            "boost",
+            "thyristor",
+            "synchronous rectification",
+            "flyback",
+            "resonant",
+            "inverter",
+            "field-oriented",
+            "SiC",
+            "GaN",
+        ):
+            assert needle.lower() in all_body.lower(), f"power electronics missing {needle!r}"
+        assert plot_blocks >= 8
 
     def test_csharp_track_runs_basics_to_aspnet(self) -> None:
         from cyberdyne_backend.application.courses.seed_csharp import CSHARP_COURSES
