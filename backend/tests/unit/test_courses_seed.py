@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 69
+        assert len(summary) == 72
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -199,6 +199,9 @@ class TestSeedCourses:
             "signals-basics",
             "signals-intermediate",
             "signals-advanced",
+            "control-basics",
+            "control-intermediate",
+            "control-advanced",
         }
         for course in ACADEMY_COURSES:
             assert course.lessons  # non-empty
@@ -358,6 +361,56 @@ class TestSeedCourses:
             assert set(spec.per_lesson).issubset(content_titles)
             assert len(spec.per_lesson) == len(content_titles)
         assert plot_blocks >= 10
+
+    def test_control_track_covers_classic_modern_pid_mpc_adrc(self) -> None:
+        import json
+        import re
+
+        from cyberdyne_backend.application.courses.seed_control import CONTROL_COURSES
+        from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
+
+        slugs = {c.slug for c in CONTROL_COURSES}
+        assert slugs == {"control-basics", "control-intermediate", "control-advanced"}
+        levels = {c.slug: c.level for c in CONTROL_COURSES}
+        assert levels["control-basics"] == "Beginner"
+        assert levels["control-intermediate"] == "Intermediate"
+        assert levels["control-advanced"] == "Advanced"
+
+        all_body = ""
+        plot_blocks = 0
+        for course in CONTROL_COURSES:
+            kinds = {le.lesson_type for le in course.lessons}
+            assert kinds <= {"text", "code"}  # quizzes come from the registry
+            assert any(le.lesson_type == "code" for le in course.lessons)  # a runnable lab
+            body = "\n".join(le.text_body or "" for le in course.lessons)
+            all_body += body
+            assert "```matlab" in body and "```python" in body  # dual language
+            for raw in re.findall(r"```plot\n(.*?)\n```", body, re.S):
+                json.loads(raw)  # valid interactive plot JSON
+                plot_blocks += 1
+            assert course.slug in QUIZ_REGISTRY
+            spec = QUIZ_REGISTRY[course.slug]
+            assert spec.final
+            content_titles = {
+                le.title for le in course.lessons if le.lesson_type in {"text", "code"}
+            }
+            assert set(spec.per_lesson) == content_titles  # a quiz for every lesson
+
+        # The requested topic coverage: classic + modern, PID/MPC/ADRC, history.
+        for needle in (
+            "PID",
+            "root locus",
+            "Bode",
+            "state-space",
+            "LQR",
+            "Kalman",
+            "Model Predictive Control",
+            "Active Disturbance Rejection",
+            "Extended State Observer",
+            "Watt",  # the history
+        ):
+            assert needle in all_body, f"control track missing {needle!r}"
+        assert plot_blocks >= 6
 
     def test_csharp_track_runs_basics_to_aspnet(self) -> None:
         from cyberdyne_backend.application.courses.seed_csharp import CSHARP_COURSES

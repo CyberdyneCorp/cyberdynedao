@@ -27,6 +27,11 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 )
 from cyberdyne_backend.application.courses.seed_quizzes import c_basics as _c_basics
 from cyberdyne_backend.application.courses.seed_quizzes import c_intermediate as _c_intermediate
+from cyberdyne_backend.application.courses.seed_quizzes import control_advanced as _control_advanced
+from cyberdyne_backend.application.courses.seed_quizzes import control_basics as _control_basics
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    control_intermediate as _control_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import cpp_basics as _cpp_basics
 from cyberdyne_backend.application.courses.seed_quizzes import cpp_intermediate as _cpp_intermediate
 from cyberdyne_backend.application.courses.seed_quizzes import csharp_advanced as _csharp_advanced
@@ -144,6 +149,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "blockchain-beyond-basics": _blockchain_beyond_basics.QUIZ,
     "c-basics": _c_basics.QUIZ,
     "c-intermediate": _c_intermediate.QUIZ,
+    "control-advanced": _control_advanced.QUIZ,
+    "control-basics": _control_basics.QUIZ,
+    "control-intermediate": _control_intermediate.QUIZ,
     "cpp-basics": _cpp_basics.QUIZ,
     "cpp-intermediate": _cpp_intermediate.QUIZ,
     "csharp-advanced": _csharp_advanced.QUIZ,
