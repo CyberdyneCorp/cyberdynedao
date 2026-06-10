@@ -21,6 +21,7 @@ Run it with ``python -m cyberdyne_backend.cli.seed_academy`` (see that module).
 from __future__ import annotations
 
 from datetime import datetime
+from uuid import UUID
 
 from cyberdyne_backend.application.courses.seed_algorithms import ALGORITHMS_COURSES
 from cyberdyne_backend.application.courses.seed_csharp import CSHARP_COURSES
@@ -35,10 +36,17 @@ from cyberdyne_backend.application.courses.seed_robotics import ROBOTICS_COURSES
 from cyberdyne_backend.application.courses.seed_statistics import STATISTICS_COURSES
 from cyberdyne_backend.application.courses.seed_types import SeedCourse, SeedLesson
 from cyberdyne_backend.application.courses.seed_vectorcalc import VECTORCALC_COURSES
+from cyberdyne_backend.application.quizzes.use_cases import (
+    OptionInput,
+    QuestionInput,
+    UpsertQuiz,
+    UpsertQuizCommand,
+)
 from cyberdyne_backend.domain.courses import (
     Course,
     CourseNotFoundError,
     CourseRepository,
+    Lesson,
     new_course,
     new_lesson,
 )
@@ -1136,9 +1144,15 @@ async def seed_courses(
     *,
     courses: tuple[SeedCourse, ...] = ACADEMY_COURSES,
     now: datetime | None = None,
+    quiz_author: UpsertQuiz | None = None,
 ) -> list[str]:
     """Upsert each curated course and return a human-readable summary per
-    course. Idempotent: a second run produces no further changes."""
+    course. Idempotent: a second run produces no further changes.
+
+    When ``quiz_author`` is supplied, curated quiz lessons that carry questions
+    (``SeedLesson.quiz``) are authored after the course is saved (lesson ids are
+    stable by then). Without it, lesson structure is reconciled but quizzes are
+    left alone — so the in-memory unit tests don't need a quiz repo."""
     summary: list[str] = []
     for spec in courses:
         course, created = await _get_or_create(repo, spec, now=now)
@@ -1146,12 +1160,46 @@ async def seed_courses(
         added, updated = _reconcile_lessons(course, spec, now=now)
         course.publish(now=now)
         await repo.save(course)
+        authored = 0
+        if quiz_author is not None:
+            authored = await _author_quizzes(quiz_author, course, spec)
         verb = "created" if created else "updated"
         summary.append(
             f"{spec.slug}: {verb} (+{added} lessons, {updated} updated, "
-            f"{len(course.lessons)} total)"
+            f"{len(course.lessons)} total, {authored} quizzes)"
         )
     return summary
+
+
+async def _author_quizzes(quiz_author: UpsertQuiz, course: Course, spec: SeedCourse) -> int:
+    """Author each curated quiz lesson's questions against the saved lesson id.
+    Idempotent: ``UpsertQuiz`` fully replaces the lesson's quiz each run."""
+    wanted = {
+        sl.title.casefold(): sl for sl in spec.lessons if sl.lesson_type == "quiz" and sl.quiz
+    }
+    authored = 0
+    for lesson in course.lessons:
+        if lesson.lesson_type.value != "quiz":
+            continue
+        sl = wanted.get(lesson.title.casefold())
+        if sl is None:
+            continue
+        cmd = UpsertQuizCommand(
+            passing_score=sl.passing_score,
+            questions=[
+                QuestionInput(
+                    prompt=question.prompt,
+                    explanation=question.explanation,
+                    options=[
+                        OptionInput(text=o.text, is_correct=o.is_correct) for o in question.options
+                    ],
+                )
+                for question in sl.quiz
+            ],
+        )
+        await quiz_author.execute(lesson.id, cmd)
+        authored += 1
+    return authored
 
 
 async def _get_or_create(
@@ -1181,26 +1229,44 @@ def _reconcile_lessons(
 ) -> tuple[int, int]:
     by_title = {lesson.title.casefold(): lesson for lesson in course.lessons}
     added = updated = 0
+    ordered: list[Lesson] = []
+    seen: set[UUID] = set()
     for sl in spec.lessons:
         existing = by_title.get(sl.title.casefold())
         if existing is not None and existing.lesson_type.value == sl.lesson_type:
-            existing.set_content(text_body=sl.text_body, duration=sl.duration, now=now)
+            # Quiz lessons carry no body; only refresh text/code content.
+            if sl.lesson_type in ("text", "code"):
+                existing.set_content(text_body=sl.text_body, duration=sl.duration, now=now)
             updated += 1
+            ordered.append(existing)
+            seen.add(existing.id)
         elif existing is None:
-            course.lessons.append(
-                new_lesson(
-                    course_id=course.id,
-                    title=sl.title,
-                    lesson_type=sl.lesson_type,
-                    text_body=sl.text_body,
-                    duration=sl.duration,
-                    sort_order=len(course.lessons),
-                    now=now,
-                )
+            lesson = new_lesson(
+                course_id=course.id,
+                title=sl.title,
+                lesson_type=sl.lesson_type,
+                text_body=sl.text_body,
+                duration=sl.duration,
+                sort_order=len(ordered),
+                now=now,
             )
+            ordered.append(lesson)
             added += 1
-        # else: a lesson with this title but a different type exists — leave
-        # it untouched rather than clobber hand-authored content.
+        else:
+            # A lesson with this title but a different type exists — leave it
+            # untouched rather than clobber hand-authored content, but keep it.
+            ordered.append(existing)
+            seen.add(existing.id)
+    # Preserve any existing lessons the seed doesn't mention (e.g. a
+    # hand-authored quiz), appended after the curated sequence.
+    for lesson in course.lessons:
+        if lesson.id not in seen and lesson not in ordered:
+            ordered.append(lesson)
+    # Honour the curated order so interleaved quiz lessons land in position —
+    # ids are preserved, so learner progress survives the reorder.
+    for index, lesson in enumerate(ordered):
+        lesson.sort_order = index
+    course.lessons[:] = ordered
     return added, updated
 
 
