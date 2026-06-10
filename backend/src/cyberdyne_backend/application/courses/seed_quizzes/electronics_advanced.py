@@ -4,6 +4,43 @@ from cyberdyne_backend.application.courses.seed_types import CourseQuiz, opt, q
 
 QUIZ = CourseQuiz(
     per_lesson={
+        "Power supplies: rectification, smoothing & regulation": (
+            q(
+                "What are the stages of a classic linear power supply, in order?",
+                (
+                    opt("regulator, rectifier, transformer, capacitor"),
+                    opt("transformer, rectifier, smoothing capacitor, regulator", correct=True),
+                    opt("rectifier, transformer, regulator, load"),
+                    opt("capacitor, transformer, regulator, rectifier"),
+                ),
+                "Mains is stepped down and isolated by the transformer, rectified to bumpy DC, smoothed by the reservoir cap, then held steady by the regulator.",
+            ),
+            q(
+                "Why does a full-wave (or bridge) rectifier give less ripple than a half-wave one for the same capacitor?",
+                (
+                    opt("It uses a bigger capacitor automatically"),
+                    opt(
+                        "It rectifies both half-cycles, doubling the ripple frequency so the cap sags for less time",
+                        correct=True,
+                    ),
+                    opt("It removes the need for a transformer"),
+                    opt("It increases the load current"),
+                ),
+                "Full-wave/bridge use both halves of the cycle, so the ripple frequency is 2*f_mains and the cap discharges over a shorter interval (Vripple = I/(f C)).",
+            ),
+            q(
+                "A linear regulator dropping 12 V to 5 V at 0.5 A dissipates how much heat, and why care?",
+                (
+                    opt("0 W - linear regulators are lossless"),
+                    opt(
+                        "3.5 W = (12-5)*0.5, lost as heat, so it may need a heatsink", correct=True
+                    ),
+                    opt("6 W, stored in the capacitor"),
+                    opt("2.5 W = 5*0.5, delivered to the load only"),
+                ),
+                "P_loss = (Vin - Vout)*Iload = 7*0.5 = 3.5 W; linear regulators burn the voltage difference as heat, so headroom and heatsinking matter.",
+            ),
+        ),
         "Comparators & the Schmitt trigger": (
             q(
                 "What happens to an op-amp's output with no negative feedback (open loop)?",
