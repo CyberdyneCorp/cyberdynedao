@@ -154,6 +154,24 @@ class PythonExecResult:
     session_id: str = ""
 
 
+@dataclass(frozen=True, slots=True)
+class ManimRenderResult:
+    """One Manim render. The rendered animation (a GIF or MP4) is referenced
+    by ``artifacts`` (filenames) + ``session_id``, not inlined — the frontend
+    downloads it through the authed /api/interpreter proxy, exactly like a
+    python_exec figure. ``status`` is the terminal job status
+    ('succeeded' / 'failed' / 'timeout')."""
+
+    ok: bool
+    scene: str
+    status: str
+    artifacts: tuple[str, ...] = ()
+    session_id: str = ""
+    error: str | None = None
+    stdout: str = ""
+    stderr: str = ""
+
+
 @runtime_checkable
 class PythonInterpreterPort(Protocol):
     """Thin client over the Python interpreter backend. The agent calls it
@@ -183,6 +201,22 @@ class PythonInterpreterPort(Protocol):
         """Write a file into the session workspace (no code execution).
         Returns the stored filename. Used by ``create_document`` to make a
         generated file downloadable via the same artifact path."""
+        ...
+
+    async def render_manim(
+        self,
+        *,
+        code: str,
+        scene: str,
+        session_id: str,
+        bearer: str | None,
+        quality: str = "medium",
+        output_format: str = "gif",
+    ) -> ManimRenderResult:
+        """Render a Manim ``Scene`` subclass to an animation. The backend
+        renders asynchronously (POST /manim/render → poll /manim/jobs/{id});
+        this method blocks until the job reaches a terminal state and returns
+        the produced artifact filenames in ``session_id``'s workspace."""
         ...
 
 

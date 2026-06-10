@@ -340,6 +340,47 @@ CYBERDYNE_TOOLS: list[ToolSchema] = [
         },
     ),
     ToolSchema(
+        name="render_manim",
+        description=(
+            "Render a mathematical animation with Manim (Community Edition) and show it "
+            "inline in the chat. Use this WHENEVER the user asks you to explain, visualize, "
+            "animate, or demonstrate a concept visually — math, physics, algorithms, "
+            "geometry, data structures, transformations. Write a complete Manim `Scene` "
+            "subclass in `code` (it MUST start with `from manim import *` and define one "
+            "`class <Name>(Scene): def construct(self): ...`), and pass that class name as "
+            "`scene`. Build the animation from `self.play(...)` calls (Create, Write, "
+            "Transform, FadeIn, FadeOut, .animate, etc.). Keep scenes short and focused "
+            "(a handful of plays) so they render quickly. The animation renders as a "
+            "looping GIF that displays automatically below your message — do NOT embed a "
+            "markdown image, a path, or a filename. ALWAYS also show the Manim source you "
+            "wrote in a fenced ```python block, then describe what the animation shows in "
+            "one or two sentences. Runs in the same stateful interpreter session as "
+            "python_exec."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "description": (
+                        "Full Manim scene source: `from manim import *` then a single "
+                        "`class <Name>(Scene)` with a `construct(self)` method."
+                    ),
+                },
+                "scene": {
+                    "type": "string",
+                    "description": "The Scene subclass name to render, e.g. 'PythagoreanProof'.",
+                },
+                "quality": {
+                    "type": "string",
+                    "enum": ["low", "medium", "high"],
+                    "description": "Render quality. Default 'medium'. Use 'low' for quick drafts.",
+                },
+            },
+            "required": ["code", "scene"],
+        },
+    ),
+    ToolSchema(
         name="ask_meetings",
         description=(
             "Answer a question about the signed-in user's recorded meetings (Cyberflies). "
@@ -706,6 +747,12 @@ class ToolDispatcher:
                 )
             if call.name == "python_exec":
                 return await self._python_exec(cast(str, args.get("code", "")), chat_session_id)
+            if call.name == "render_manim":
+                return await self._render_manim(
+                    cast(str, args.get("code", "")),
+                    cast(str, args.get("scene", "")),
+                    cast(str, args.get("quality", "medium") or "medium"),
+                )
             if call.name == "ask_meetings":
                 return await self._ask_meetings(cast(str, args.get("question", "")))
             if call.name == "list_meetings":
@@ -908,6 +955,46 @@ class ToolDispatcher:
                 "stderr": res.stderr,
                 "result": res.result,
                 "error": res.error,
+                "artifacts": list(res.artifacts),
+                "figures": figures,
+                "session_id": res.session_id,
+                "has_figure": len(figures) > 0,
+            }
+        )
+
+    async def _render_manim(self, code: str, scene: str, quality: str) -> str:
+        if not code.strip():
+            return json.dumps({"error": "empty_code"})
+        if not scene.strip():
+            return json.dumps({"error": "missing_scene"})
+        if self._ctx.python is None:
+            return json.dumps({"error": "python_unavailable"})
+        if quality not in {"low", "medium", "high"}:
+            quality = "medium"
+        session_id = await self._ensure_py_session()
+        # Render to GIF so it rides the same inline-image path as python_exec
+        # figures (the frontend renders a .gif as an animated <img>).
+        res = await self._ctx.python.render_manim(
+            code=code,
+            scene=scene,
+            session_id=session_id,
+            bearer=self._ctx.bearer,
+            quality=quality,
+            output_format="gif",
+        )
+        # Surface the animation under ``figures`` (same contract the frontend
+        # already uses for python_exec/matlab figures) so it displays inline.
+        anim_exts = (".gif", ".mp4", ".png", ".webm")
+        figures = [a for a in res.artifacts if a.lower().endswith(anim_exts)]
+        return json.dumps(
+            {
+                "ok": res.ok,
+                "status": res.status,
+                "scene": res.scene,
+                "error": res.error,
+                # Renderer logs can be long; the tail is enough for the LLM to
+                # debug a failed scene without bloating the next round.
+                "stderr": res.stderr[-1500:] if res.stderr else "",
                 "artifacts": list(res.artifacts),
                 "figures": figures,
                 "session_id": res.session_id,

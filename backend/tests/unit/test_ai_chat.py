@@ -418,11 +418,19 @@ class _FakeMatlab:
 class _FakePython:
     """Records create_session + execute calls; returns canned stdout."""
 
-    def __init__(self, artifacts: tuple[str, ...] = ()) -> None:
+    def __init__(
+        self,
+        artifacts: tuple[str, ...] = (),
+        manim_artifacts: tuple[str, ...] = ("Scene.gif",),
+        manim_status: str = "succeeded",
+    ) -> None:
         self.calls: list[dict[str, object]] = []
         self.uploads: list[dict[str, object]] = []
+        self.manim_calls: list[dict[str, object]] = []
         self.created = 0
         self._artifacts = artifacts
+        self._manim_artifacts = manim_artifacts
+        self._manim_status = manim_status
 
     async def create_session(self, *, bearer):
         self.created += 1
@@ -458,6 +466,32 @@ class _FakePython:
             result="45",
             artifacts=self._artifacts,
             session_id=session_id,
+        )
+
+    async def render_manim(
+        self, *, code, scene, session_id, bearer, quality="medium", output_format="gif"
+    ):
+        from cyberdyne_backend.domain.ai_chat import ManimRenderResult
+
+        self.manim_calls.append(
+            {
+                "code": code,
+                "scene": scene,
+                "session_id": session_id,
+                "bearer": bearer,
+                "quality": quality,
+                "output_format": output_format,
+            }
+        )
+        artifacts = self._manim_artifacts if self._manim_status == "succeeded" else ()
+        return ManimRenderResult(
+            ok=self._manim_status == "succeeded" and bool(artifacts),
+            scene=scene,
+            status=self._manim_status,
+            artifacts=artifacts,
+            session_id=session_id,
+            error=None if self._manim_status == "succeeded" else "boom",
+            stderr="" if self._manim_status == "succeeded" else "Traceback: NameError",
         )
 
 
@@ -1119,6 +1153,101 @@ class TestToolDispatcher:
         assert data["has_figure"] is True
         assert data["figures"] == ["plot.png"]
         assert data["artifacts"] == ["plot.png", "data.csv"]
+
+    async def test_render_manim_returns_animation_figure(self) -> None:
+        python = _FakePython(manim_artifacts=("Demo.gif",))
+        ctx = _build_ctx(python=python, bearer="tok-m")
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x",
+                name="render_manim",
+                arguments_json=json.dumps(
+                    {
+                        "code": "from manim import *\nclass Demo(Scene):\n    def construct(self):\n        self.play(Create(Circle()))",
+                        "scene": "Demo",
+                        "quality": "low",
+                    }
+                ),
+            ),
+            chat_session_id="s",
+        )
+        data = json.loads(result)
+        assert data["ok"] is True
+        assert data["status"] == "succeeded"
+        assert data["has_figure"] is True
+        assert data["figures"] == ["Demo.gif"]
+        # Rendered into a server-created session, as GIF, with the user's bearer.
+        call = python.manim_calls[0]
+        assert call["scene"] == "Demo"
+        assert call["quality"] == "low"
+        assert call["output_format"] == "gif"
+        assert call["bearer"] == "tok-m"
+        assert str(call["session_id"]).startswith("srv-session-")
+
+    async def test_render_manim_reuses_python_session_within_turn(self) -> None:
+        python = _FakePython()
+        dispatcher = ToolDispatcher(_build_ctx(python=python, bearer="t"))
+        await dispatcher.dispatch(
+            ToolCall(id="a", name="python_exec", arguments_json=json.dumps({"code": "1"})),
+            chat_session_id="s",
+        )
+        await dispatcher.dispatch(
+            ToolCall(
+                id="b",
+                name="render_manim",
+                arguments_json=json.dumps({"code": "from manim import *", "scene": "S"}),
+            ),
+            chat_session_id="s",
+        )
+        # One session for the whole turn — python_exec + render_manim share it.
+        assert python.created == 1
+        assert python.calls[0]["session_id"] == python.manim_calls[0]["session_id"]
+
+    async def test_render_manim_surfaces_failure_with_stderr(self) -> None:
+        python = _FakePython(manim_status="failed")
+        ctx = _build_ctx(python=python, bearer="tok")
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x",
+                name="render_manim",
+                arguments_json=json.dumps({"code": "from manim import *", "scene": "Bad"}),
+            ),
+            chat_session_id="s",
+        )
+        data = json.loads(result)
+        assert data["ok"] is False
+        assert data["status"] == "failed"
+        assert data["has_figure"] is False
+        assert "NameError" in data["stderr"]
+
+    async def test_render_manim_rejects_empty_code_and_scene(self) -> None:
+        ctx = _build_ctx(python=_FakePython(), bearer="t")
+        empty_code = await ToolDispatcher(ctx).dispatch(
+            ToolCall(id="x", name="render_manim", arguments_json=json.dumps({"scene": "S"})),
+            chat_session_id="s",
+        )
+        assert json.loads(empty_code)["error"] == "empty_code"
+        no_scene = await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="y",
+                name="render_manim",
+                arguments_json=json.dumps({"code": "from manim import *"}),
+            ),
+            chat_session_id="s",
+        )
+        assert json.loads(no_scene)["error"] == "missing_scene"
+
+    async def test_render_manim_unavailable_when_port_missing(self) -> None:
+        ctx = _build_ctx(python=None)
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x",
+                name="render_manim",
+                arguments_json=json.dumps({"code": "from manim import *", "scene": "S"}),
+            ),
+            chat_session_id="s",
+        )
+        assert json.loads(result)["error"] == "python_unavailable"
 
     async def test_python_exec_auto_captures_matplotlib_without_savefig(self) -> None:
         # Regression: plt.show() in the headless sandbox saves nothing, so the

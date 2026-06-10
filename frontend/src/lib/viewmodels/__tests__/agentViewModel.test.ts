@@ -152,6 +152,47 @@ describe('agentViewModel', () => {
 		expect(assistant.artifacts).toHaveLength(0);
 	});
 
+	it('attaches a render_manim animation as an interpreter-sourced plot', async () => {
+		// Manim renders a GIF into the interpreter workspace; it must be tagged
+		// 'interpreter' (same proxy as python_exec) and shown inline, not listed
+		// as a download.
+		sessionStorage.setItem(
+			'cyberdyne.agent.v1',
+			JSON.stringify({ sessionId: 's-manim', bubbles: [] })
+		);
+		vi.spyOn(agentApi, 'getHistory').mockResolvedValue({
+			sessionId: 's-manim',
+			messages: [
+				{
+					id: 'u1', sessionId: 's-manim', role: 'user', content: 'animate a circle',
+					toolCalls: [], toolCallId: null, tokensIn: 0, tokensOut: 0, model: null,
+					createdAt: '2026-06-06T09:00:00Z'
+				},
+				{
+					id: 'a1', sessionId: 's-manim', role: 'assistant', content: 'Here is the animation.',
+					toolCalls: [{ id: 'call_1', name: 'render_manim', argumentsJson: '{}' }],
+					toolCallId: null, tokensIn: 0, tokensOut: 0, model: 'gpt-4o-mini',
+					createdAt: '2026-06-06T09:00:01Z'
+				},
+				{
+					id: 't1', sessionId: 's-manim', role: 'tool',
+					content: JSON.stringify({ ok: true, status: 'succeeded', has_figure: true, figures: ['Demo.gif'], session_id: 'srv-m' }),
+					toolCalls: [], toolCallId: 'call_1', tokensIn: 0, tokensOut: 0, model: null,
+					createdAt: '2026-06-06T09:00:02Z'
+				}
+			]
+		});
+		const vm = createAgentVM();
+		await vm.bootstrap();
+		const assistant = vm.bubbles[1];
+		expect(assistant.plots).toHaveLength(1);
+		expect(assistant.plots[0].artifactPath).toBe('Demo.gif');
+		expect(assistant.plots[0].sessionId).toBe('srv-m');
+		expect(assistant.plots[0].source).toBe('interpreter');
+		// The GIF renders inline, not as a download link.
+		expect(assistant.artifacts).toHaveLength(0);
+	});
+
 	it('attaches python_exec file artifacts (download links) to the assistant bubble, skipping images', async () => {
 		sessionStorage.setItem(
 			'cyberdyne.agent.v1',

@@ -100,3 +100,86 @@ class TestPythonInterpreterClient:
         client = _client_with(lambda r: httpx.Response(500, json={"detail": "kaboom"}))
         with pytest.raises(RuntimeError, match="python_interpreter /execute 500"):
             await client.execute(code="x", session_id="s", bearer=None)
+
+
+class TestManimRender:
+    async def test_render_posts_then_polls_until_succeeded(self, monkeypatch) -> None:
+        # Don't actually sleep between polls.
+        import cyberdyne_backend.adapters.outbound.python_interpreter.client as mod
+
+        async def _no_sleep(_seconds: float) -> None:
+            return None
+
+        monkeypatch.setattr(mod.asyncio, "sleep", _no_sleep)
+
+        seen: dict[str, object] = {}
+        polls = {"n": 0}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.method == "POST" and request.url.path == "/manim/render":
+                import json
+
+                seen["body"] = json.loads(request.content)
+                seen["auth"] = request.headers.get("authorization")
+                return httpx.Response(
+                    200, json={"job_id": "job-1", "status": "queued", "session_id": "srv-7"}
+                )
+            if request.url.path == "/manim/jobs/job-1":
+                polls["n"] += 1
+                if polls["n"] < 2:
+                    return httpx.Response(200, json={"status": "running"})
+                return httpx.Response(
+                    200,
+                    json={
+                        "status": "succeeded",
+                        "artifacts": [{"name": "Demo.gif", "size_bytes": 9}],
+                        "error": None,
+                        "stdout": "ok",
+                        "stderr": "",
+                    },
+                )
+            raise AssertionError(f"unexpected {request.method} {request.url.path}")
+
+        client = _client_with(handler)
+        res = await client.render_manim(
+            code="from manim import *",
+            scene="Demo",
+            session_id="srv-7",
+            bearer="tok",
+            quality="low",
+        )
+        assert res.ok is True
+        assert res.status == "succeeded"
+        assert res.artifacts == ("Demo.gif",)
+        assert res.session_id == "srv-7"
+        assert seen["auth"] == "Bearer tok"
+        assert seen["body"] == {
+            "code": "from manim import *",
+            "scene": "Demo",
+            "quality": "low",
+            "output_format": "gif",
+            "session_id": "srv-7",
+        }
+        assert polls["n"] == 2  # polled until terminal
+
+    async def test_render_failed_job_is_not_ok(self, monkeypatch) -> None:
+        import cyberdyne_backend.adapters.outbound.python_interpreter.client as mod
+
+        async def _no_sleep(_seconds: float) -> None:
+            return None
+
+        monkeypatch.setattr(mod.asyncio, "sleep", _no_sleep)
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.url.path == "/manim/render":
+                return httpx.Response(200, json={"job_id": "j", "status": "queued"})
+            return httpx.Response(
+                200, json={"status": "failed", "error": "scene not found", "stderr": "boom"}
+            )
+
+        client = _client_with(handler)
+        res = await client.render_manim(code="x", scene="Nope", session_id="s", bearer=None)
+        assert res.ok is False
+        assert res.status == "failed"
+        assert res.error == "scene not found"
+        assert res.artifacts == ()
