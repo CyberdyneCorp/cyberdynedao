@@ -3,7 +3,7 @@ modules — ``seed`` and ``seed_languages`` — can import them without a cycle)
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 DEFAULT_PASSING_SCORE = 70
 
@@ -70,6 +70,42 @@ def opt(text: str, *, correct: bool = False) -> SeedQuizOption:
     return SeedQuizOption(text=text, is_correct=correct)
 
 
+@dataclass(frozen=True, slots=True)
+class CourseQuiz:
+    """The full quiz spec for one course: a checkpoint quiz after each named
+    content lesson (``per_lesson`` keyed by exact lesson title) plus a final
+    comprehensive quiz (``final``)."""
+
+    per_lesson: dict[str, tuple[SeedQuizQuestion, ...]] = field(default_factory=dict)
+    final: tuple[SeedQuizQuestion, ...] = ()
+
+
+def apply_quiz_spec(course: SeedCourse, spec: CourseQuiz) -> SeedCourse:
+    """Return a copy of ``course`` with a checkpoint quiz interleaved after each
+    content lesson named in ``spec.per_lesson``, and the final 'Check your
+    knowledge' quiz authored from ``spec.final`` (appended if the course has no
+    final quiz lesson yet). Used to attach the registry's quizzes at assembly
+    time without editing each track's course module."""
+    out: list[SeedLesson] = []
+    final_placed = False
+    for lesson in course.lessons:
+        is_final = (
+            lesson.lesson_type == "quiz" and lesson.title.casefold() == "check your knowledge"
+        )
+        if is_final and spec.final:
+            out.append(quiz_lesson(lesson.title, spec.final, duration=lesson.duration or "3 min"))
+            final_placed = True
+            continue
+        out.append(lesson)
+        if lesson.lesson_type in ("text", "code"):
+            questions = spec.per_lesson.get(lesson.title)
+            if questions:
+                out.append(quiz_lesson(f"Quiz: {lesson.title}", questions))
+    if spec.final and not final_placed:
+        out.append(quiz_lesson("Check your knowledge", spec.final))
+    return replace(course, lessons=tuple(out))
+
+
 def with_checkpoint_quizzes(
     lessons: tuple[SeedLesson, ...],
     quizzes: dict[str, tuple[SeedQuizQuestion, ...]],
@@ -92,10 +128,12 @@ def with_checkpoint_quizzes(
 
 __all__ = [
     "DEFAULT_PASSING_SCORE",
+    "CourseQuiz",
     "SeedCourse",
     "SeedLesson",
     "SeedQuizOption",
     "SeedQuizQuestion",
+    "apply_quiz_spec",
     "opt",
     "q",
     "quiz_lesson",

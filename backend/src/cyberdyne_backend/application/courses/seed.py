@@ -32,9 +32,14 @@ from cyberdyne_backend.application.courses.seed_languages import LANGUAGE_COURSE
 from cyberdyne_backend.application.courses.seed_linux import LINUX_COURSES
 from cyberdyne_backend.application.courses.seed_math import MATH_COURSES
 from cyberdyne_backend.application.courses.seed_physics import PHYSICS_COURSES
+from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
 from cyberdyne_backend.application.courses.seed_robotics import ROBOTICS_COURSES
 from cyberdyne_backend.application.courses.seed_statistics import STATISTICS_COURSES
-from cyberdyne_backend.application.courses.seed_types import SeedCourse, SeedLesson
+from cyberdyne_backend.application.courses.seed_types import (
+    SeedCourse,
+    SeedLesson,
+    apply_quiz_spec,
+)
 from cyberdyne_backend.application.courses.seed_vectorcalc import VECTORCALC_COURSES
 from cyberdyne_backend.application.quizzes.use_cases import (
     OptionInput,
@@ -1116,7 +1121,7 @@ exploits. The classic one is **reentrancy**: a contract calls out to another
     ),
 )
 
-ACADEMY_COURSES: tuple[SeedCourse, ...] = (
+_RAW_COURSES: tuple[SeedCourse, ...] = (
     _MATLAB,
     _PYTHON,
     _BLOCKCHAIN,
@@ -1134,6 +1139,21 @@ ACADEMY_COURSES: tuple[SeedCourse, ...] = (
     *ALGORITHMS_COURSES,
     *CSHARP_COURSES,
 )
+
+
+def _with_registry_quizzes(courses: tuple[SeedCourse, ...]) -> tuple[SeedCourse, ...]:
+    """Attach checkpoint + final quizzes from ``QUIZ_REGISTRY`` to each course
+    that has a spec. Courses already carrying interleaved quizzes inline (the
+    Linux track) aren't in the registry, so they pass through untouched."""
+    return tuple(
+        apply_quiz_spec(course, QUIZ_REGISTRY[course.slug])
+        if course.slug in QUIZ_REGISTRY
+        else course
+        for course in courses
+    )
+
+
+ACADEMY_COURSES: tuple[SeedCourse, ...] = _with_registry_quizzes(_RAW_COURSES)
 
 
 # ── Apply ────────────────────────────────────────────────────────────────
