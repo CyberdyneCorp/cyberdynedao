@@ -4,6 +4,85 @@ from cyberdyne_backend.application.courses.seed_types import CourseQuiz, opt, q
 
 QUIZ = CourseQuiz(
     per_lesson={
+        "Comparators & the Schmitt trigger": (
+            q(
+                "What happens to an op-amp's output with no negative feedback (open loop)?",
+                (
+                    opt("It stays at zero"),
+                    opt(
+                        "Its huge gain slams the output to a supply rail based on which input is larger",
+                        correct=True,
+                    ),
+                    opt("It oscillates at a fixed frequency"),
+                    opt("It acts as a linear amplifier with gain 1"),
+                ),
+                "Without negative feedback the open-loop gain saturates the output to +/-Vsat depending on which input is higher: a comparator.",
+            ),
+            q(
+                "Why does adding hysteresis (a Schmitt trigger) prevent chatter on a noisy input?",
+                (
+                    opt("It lowers the op-amp gain to zero"),
+                    opt(
+                        "It creates two trip points, so noise smaller than the gap cannot flip the output back",
+                        correct=True,
+                    ),
+                    opt("It adds a capacitor that filters all noise"),
+                    opt("It converts the comparator into a linear amplifier"),
+                ),
+                "Positive feedback gives two thresholds; once flipped, the input must reach the other threshold to flip back, so small noise cannot retrigger it.",
+            ),
+            q(
+                "A Schmitt trigger plus an RC network is the basis of which circuit?",
+                (
+                    opt("A precision rectifier"),
+                    opt("A relaxation (square-wave) oscillator", correct=True),
+                    opt("A low-pass filter"),
+                    opt("A voltage divider"),
+                ),
+                "Charging an RC between the two hysteresis thresholds produces a square wave: a relaxation oscillator (as in the 555).",
+            ),
+        ),
+        "Precision & nonlinear op-amp circuits": (
+            q(
+                "How does a precision (active) rectifier remove the diode's 0.7 V dead zone?",
+                (
+                    opt("It uses a Zener diode instead of a normal one"),
+                    opt(
+                        "The op-amp's feedback drives its output higher to compensate for the diode drop",
+                        correct=True,
+                    ),
+                    opt("It cools the diode to reduce its drop"),
+                    opt("It adds a large series resistor"),
+                ),
+                "Inside the feedback loop the op-amp raises its output by about the diode drop, so the rectified output has effectively no dead zone.",
+            ),
+            q(
+                "Putting a diode or BJT (with its exponential I-V) in the feedback path gives what function?",
+                (
+                    opt("A differentiator"),
+                    opt(
+                        "A logarithmic amplifier (output proportional to ln of the input)",
+                        correct=True,
+                    ),
+                    opt("A linear amplifier with high gain"),
+                    opt("A comparator"),
+                ),
+                "The exponential device in feedback makes Vout proportional to ln(Vin): a log amplifier (antilog if it is in the input path).",
+            ),
+            q(
+                "Why are log/antilog amplifiers useful for analog multiplication?",
+                (
+                    opt(
+                        "Logs turn multiplication into addition: log, add, then antilog",
+                        correct=True,
+                    ),
+                    opt("They double the supply voltage"),
+                    opt("They remove all noise from the signals"),
+                    opt("They convert AC to DC"),
+                ),
+                "Adding the logarithms of two signals and taking the antilog multiplies them, which is how analog multipliers and dB/companding circuits work.",
+            ),
+        ),
         "Biasing transistors: linear & switching modes": (
             q(
                 "What is special about a JFET compared with an enhancement MOSFET?",

@@ -1030,6 +1030,162 @@ fc = 1/(2*np.pi*R*C)              # ~10 kHz, second order
 > Control, and Electronics tracks. Analog computing was literally op-amp
 > integrators wired to solve differential equations.
 
+**Next:** when the op-amp leaves the linear region - comparators.
+""",
+        ),
+        _t(
+            "Comparators & the Schmitt trigger",
+            "12 min",
+            """\
+# Comparators & the Schmitt trigger
+
+So far the op-amp has lived in its **linear** region, held there by negative
+feedback. Remove that feedback (or add **positive** feedback) and the op-amp
+becomes **non-linear**: its huge gain slams the output to a supply rail. That's
+not a bug - it's the basis of a whole family of decision-making circuits.
+
+## The comparator: a 1-bit analog-to-digital decision
+
+With no feedback, the op-amp compares its two inputs and saturates:
+
+$$V_{out} = \\begin{cases} +V_{sat} & V_+ > V_- \\\\ -V_{sat} & V_+ < V_- \\end{cases}$$
+
+It answers one question - "is this voltage above that one?" - and is the front
+door of every ADC, zero-crossing detector, and threshold alarm.
+
+## The problem: chatter
+
+A real signal has noise. When it dawdles near the threshold, the comparator
+flips back and forth many times - **chatter** - because every noise wiggle
+crosses the single trip point.
+
+## The fix: hysteresis (the Schmitt trigger)
+
+Add a little **positive feedback** and you get **two** thresholds: an upper trip
+point $V_{TH+}$ and a lower one $V_{TH-}$. Once the output flips, the input must
+travel all the way to the *other* threshold to flip it back - so noise smaller
+than the gap $V_{TH+}-V_{TH-}$ can't cause a false transition. This is the
+**Schmitt trigger**, and its transfer characteristic is a **hysteresis loop**:
+
+```plot
+{"title": "Schmitt trigger hysteresis loop (slide the gap H)", "xLabel": "input Vin", "yLabel": "output", "xRange": [-2.2, 2.2], "yRange": [-1.4, 1.4], "grid": true, "controls": [{"name": "H", "range": [0.1, 1.5], "value": 0.6, "label": "hysteresis half-gap H"}], "parametric": [{"x": "2*sin(t)", "y": "(cos(t)>0)*sign(2*sin(t)-H) + (1-(cos(t)>0))*sign(2*sin(t)+H)", "range": [0, 6.2832], "label": "Vout vs Vin"}]}
+```
+
+The loop is the giveaway: going **right** (input rising) the output flips at
+$+H$; coming **back left** it doesn't flip until $-H$. For a non-inverting Schmitt
+trigger the thresholds are set by the feedback divider,
+$V_{TH\\pm} \\approx \\pm V_{sat}\\,\\dfrac{R_1}{R_2}$.
+
+```mermaid
+flowchart LR
+  VIN["Vin"] --> CMP["comparator"]
+  CMP --> VOUT["Vout (rail to rail)"]
+  VOUT --> R2["R2"] --> NPLUS(("V+"))
+  NPLUS --> R1["R1"] --> GND["ref"]
+  NPLUS --> CMP
+```
+
+## More patterns and a warning
+
+- **Window comparator** - two comparators flag "inside a voltage band" (under/over
+  detection).
+- **Relaxation oscillator** - a Schmitt trigger plus an RC makes a square-wave
+  oscillator (the link to the next lesson... and the 555).
+- **Use a real comparator** (e.g. LM393) for fast, clean switching. An op-amp run
+  open-loop as a comparator is slow to recover from saturation and sometimes
+  unsafe for its inputs.
+
+```matlab
+Vsat = 12; R1 = 10e3; R2 = 100e3;
+Vth = Vsat * R1/R2;            % +/- trip points -> +/-1.2 V (hysteresis gap 2.4 V)
+```
+
+```python
+Vsat, R1, R2 = 12, 10e3, 100e3
+Vth = Vsat * R1/R2             # +/- trip points
+```
+
+> **Practical insight:** any time you turn a noisy or slow analog signal into a
+> clean digital edge, reach for **hysteresis**. Size the gap larger than your
+> noise, smaller than your real signal swing.
+
+**Next:** nonlinearity *inside* the loop - precision and function circuits.
+""",
+        ),
+        _t(
+            "Precision & nonlinear op-amp circuits",
+            "12 min",
+            """\
+# Precision & nonlinear op-amp circuits
+
+Put a **nonlinear element** (a diode or transistor) *inside* the feedback loop
+and the op-amp's gain **corrects for its imperfections** - giving precise
+nonlinear functions you could never get from the device alone.
+
+## Precision (active) rectifier - the "superdiode"
+
+An ordinary diode rectifier has a dead zone: nothing happens until the input
+clears the ~0.7 V drop, useless for small signals. Wrap the diode in an op-amp's
+feedback and the loop drives the op-amp output ~0.7 V *higher* to compensate -
+so the **rectified output has no dead zone**:
+
+```plot
+{"title": "Precision rectifier removes the diode's 0.7 V dead zone", "xLabel": "input voltage (V)", "yLabel": "rectified output (V)", "xRange": [-2, 2], "yRange": [-0.2, 2], "grid": true, "functions": [{"expr": "max(0, x)", "label": "precision rectifier (ideal)", "color": "#16a34a"}, {"expr": "max(0, x - 0.7)", "label": "plain diode (dead zone)", "color": "#dc2626"}]}
+```
+
+It rectifies millivolt signals - essential in AC meters, peak/RMS detectors, and
+sensor front-ends.
+
+## Log & antilog amplifiers
+
+A diode or BJT's exponential $I$-$V$ in the feedback path makes the **output
+proportional to the logarithm of the input** (and antilog with it in the input
+path):
+
+$$V_{out} \\approx -V_T \\ln\\!\\left(\\frac{V_{in}}{I_s R}\\right).$$
+
+```plot
+{"title": "Log amplifier compresses a wide input range", "xLabel": "input voltage (V)", "yLabel": "output (V)", "xRange": [0.02, 5], "yRange": [-1.5, 2.2], "grid": true, "functions": [{"expr": "-0.5*ln(x/1)", "label": "Vout ~ -k ln(Vin)"}]}
+```
+
+Why care? **Logs turn multiplication into addition**: log both signals, add,
+antilog - that's an **analog multiplier/divider**, and the basis of dB meters,
+audio compressors (companding), and old analog computers.
+
+## The rest of the nonlinear toolkit
+
+| Circuit | Nonlinear element | Does |
+|---------|-------------------|------|
+| Precision rectifier | diode in feedback | rectify small signals |
+| Log / antilog amp | diode/BJT in feedback | compress / expand, multiply |
+| **Peak detector** | diode + hold capacitor | capture and hold the maximum |
+| **Sample-and-hold** | switch + capacitor + buffer | freeze a value (front of every ADC) |
+| **Clipper / limiter** | diodes (often Zener) | bound the output swing |
+
+```mermaid
+flowchart LR
+  VIN["Vin"] --> OA["op-amp"]
+  OA --> D["diode (in feedback)"]
+  D --> VOUT(("Vout"))
+  VOUT --> OA
+```
+
+```matlab
+Vt = 0.026; Is = 1e-12; R = 10e3;
+Vout = -Vt * log(Vin/(Is*R));     % log amplifier
+```
+
+```python
+import numpy as np
+Vt, Is, R = 0.026, 1e-12, 10e3
+Vout = -Vt * np.log(Vin/(Is*R))   # log amplifier
+```
+
+> **Practical insight:** feedback "hides" a diode's 0.7 V or a BJT's spread, but
+> it can't beat the op-amp's **slew rate and recovery time** - precision
+> nonlinear circuits are bandwidth-limited. Many modern designs sample early and
+> do the nonlinearity in DSP, but precision analog front-ends still rely on these.
+
 **Next:** generating waveforms from scratch - oscillators.
 """,
         ),
