@@ -93,6 +93,11 @@ from cyberdyne_backend.application.courses.seed_quizzes import rust_basics as _r
 from cyberdyne_backend.application.courses.seed_quizzes import (
     rust_intermediate as _rust_intermediate,
 )
+from cyberdyne_backend.application.courses.seed_quizzes import signals_advanced as _signals_advanced
+from cyberdyne_backend.application.courses.seed_quizzes import signals_basics as _signals_basics
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    signals_intermediate as _signals_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import sql_basics as _sql_basics
 from cyberdyne_backend.application.courses.seed_quizzes import sql_intermediate as _sql_intermediate
 from cyberdyne_backend.application.courses.seed_quizzes import statinf_advanced as _statinf_advanced
@@ -177,6 +182,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "robotics-intermediate": _robotics_intermediate.QUIZ,
     "rust-basics": _rust_basics.QUIZ,
     "rust-intermediate": _rust_intermediate.QUIZ,
+    "signals-advanced": _signals_advanced.QUIZ,
+    "signals-basics": _signals_basics.QUIZ,
+    "signals-intermediate": _signals_intermediate.QUIZ,
     "sql-basics": _sql_basics.QUIZ,
     "sql-intermediate": _sql_intermediate.QUIZ,
     "statinf-advanced": _statinf_advanced.QUIZ,
