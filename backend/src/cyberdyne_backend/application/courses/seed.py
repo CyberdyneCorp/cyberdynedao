@@ -28,6 +28,7 @@ from cyberdyne_backend.application.courses.seed_control import CONTROL_COURSES
 from cyberdyne_backend.application.courses.seed_csharp import CSHARP_COURSES
 from cyberdyne_backend.application.courses.seed_databases import DATABASE_COURSES
 from cyberdyne_backend.application.courses.seed_devops import DEVOPS_COURSES
+from cyberdyne_backend.application.courses.seed_digital_logic import DIGITAL_LOGIC_COURSES
 from cyberdyne_backend.application.courses.seed_iac import IAC_COURSES
 from cyberdyne_backend.application.courses.seed_languages import LANGUAGE_COURSES
 from cyberdyne_backend.application.courses.seed_linux import LINUX_COURSES
@@ -1142,6 +1143,7 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *CSHARP_COURSES,
     *SIGNALS_COURSES,
     *CONTROL_COURSES,
+    *DIGITAL_LOGIC_COURSES,
 )
 
 
