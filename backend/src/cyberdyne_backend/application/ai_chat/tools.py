@@ -355,7 +355,22 @@ CYBERDYNE_TOOLS: list[ToolSchema] = [
             "markdown image, a path, or a filename. ALWAYS also show the Manim source you "
             "wrote in a fenced ```python block, then describe what the animation shows in "
             "one or two sentences. Runs in the same stateful interpreter session as "
-            "python_exec."
+            "python_exec.\n"
+            "AUTHORING RULES (follow exactly — most render failures come from breaking "
+            "these):\n"
+            '• Use Text("...") for ALL words, labels, titles and sentences. Use '
+            'MathTex(...) ONLY for real mathematical formulas (e.g. MathTex(r"F = ma")). '
+            "NEVER put prose/sentences inside MathTex.\n"
+            "• Inside MathTex never use \\text{}, \\textbf{}, \\textquotesingle, or \\\\ line "
+            "breaks — those are the #1 cause of LaTeX render failures here. Keep formulas "
+            "short.\n"
+            '• ALWAYS write LaTeX as a raw string: MathTex(r"\\frac{1}{2} m v^2") — a plain '
+            '"\\frac" string corrupts the LaTeX (\\f, \\t etc. become control chars).\n'
+            "• Use Manim Community names: Create, Write, FadeIn, FadeOut, Transform, "
+            "GrowArrow, and obj.animate.<method>() for moves/scales. Position with "
+            ".shift(), .next_to(), .to_edge().\n"
+            "• Keep it to ~6-8 self.play calls. If a render comes back failed, simplify "
+            "(replace any MathTex prose with Text) and retry once."
         ),
         parameters={
             "type": "object",
@@ -374,7 +389,10 @@ CYBERDYNE_TOOLS: list[ToolSchema] = [
                 "quality": {
                     "type": "string",
                     "enum": ["low", "medium", "high"],
-                    "description": "Render quality. Default 'medium'. Use 'low' for quick drafts.",
+                    "description": (
+                        "Render quality. Default 'low' (fast and reliable for chat); pass "
+                        "'medium'/'high' only when the user wants a more polished clip."
+                    ),
                 },
             },
             "required": ["code", "scene"],
@@ -751,7 +769,7 @@ class ToolDispatcher:
                 return await self._render_manim(
                     cast(str, args.get("code", "")),
                     cast(str, args.get("scene", "")),
-                    cast(str, args.get("quality", "medium") or "medium"),
+                    cast(str, args.get("quality", "low") or "low"),
                 )
             if call.name == "ask_meetings":
                 return await self._ask_meetings(cast(str, args.get("question", "")))
@@ -970,7 +988,7 @@ class ToolDispatcher:
         if self._ctx.python is None:
             return json.dumps({"error": "python_unavailable"})
         if quality not in {"low", "medium", "high"}:
-            quality = "medium"
+            quality = "low"
         session_id = await self._ensure_py_session()
         # Render to GIF so it rides the same inline-image path as python_exec
         # figures (the frontend renders a .gif as an animated <img>).
