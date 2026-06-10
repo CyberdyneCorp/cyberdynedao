@@ -104,6 +104,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
     physics_quadrotor_dynamics as _physics_quadrotor_dynamics,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import postgresql as _postgresql
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    power_electronics_advanced as _power_electronics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    power_electronics_basics as _power_electronics_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    power_electronics_intermediate as _power_electronics_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import python_course as _python_course
 from cyberdyne_backend.application.courses.seed_quizzes import (
     robotics_advanced as _robotics_advanced,
@@ -208,6 +217,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "physics-intermediate": _physics_intermediate.QUIZ,
     "physics-quadrotor-dynamics": _physics_quadrotor_dynamics.QUIZ,
     "postgresql": _postgresql.QUIZ,
+    "power-electronics-advanced": _power_electronics_advanced.QUIZ,
+    "power-electronics-basics": _power_electronics_basics.QUIZ,
+    "power-electronics-intermediate": _power_electronics_intermediate.QUIZ,
     "python-course": _python_course.QUIZ,
     "robotics-advanced": _robotics_advanced.QUIZ,
     "robotics-basics": _robotics_basics.QUIZ,

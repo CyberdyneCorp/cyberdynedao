@@ -35,6 +35,7 @@ from cyberdyne_backend.application.courses.seed_languages import LANGUAGE_COURSE
 from cyberdyne_backend.application.courses.seed_linux import LINUX_COURSES
 from cyberdyne_backend.application.courses.seed_math import MATH_COURSES
 from cyberdyne_backend.application.courses.seed_physics import PHYSICS_COURSES
+from cyberdyne_backend.application.courses.seed_power_electronics import POWER_ELECTRONICS_COURSES
 from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
 from cyberdyne_backend.application.courses.seed_robotics import ROBOTICS_COURSES
 from cyberdyne_backend.application.courses.seed_signals import SIGNALS_COURSES
@@ -1146,6 +1147,7 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *CONTROL_COURSES,
     *DIGITAL_LOGIC_COURSES,
     *ELECTRONICS_COURSES,
+    *POWER_ELECTRONICS_COURSES,
 )
 
 
