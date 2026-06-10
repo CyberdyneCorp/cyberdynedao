@@ -53,6 +53,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import docker_basics as 
 from cyberdyne_backend.application.courses.seed_quizzes import (
     docker_intermediate as _docker_intermediate,
 )
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    electronics_advanced as _electronics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    electronics_basics as _electronics_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    electronics_intermediate as _electronics_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import go_basics as _go_basics
 from cyberdyne_backend.application.courses.seed_quizzes import go_intermediate as _go_intermediate
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -172,6 +181,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "docker-advanced": _docker_advanced.QUIZ,
     "docker-basics": _docker_basics.QUIZ,
     "docker-intermediate": _docker_intermediate.QUIZ,
+    "electronics-advanced": _electronics_advanced.QUIZ,
+    "electronics-basics": _electronics_basics.QUIZ,
+    "electronics-intermediate": _electronics_intermediate.QUIZ,
     "go-basics": _go_basics.QUIZ,
     "go-intermediate": _go_intermediate.QUIZ,
     "javascript-basics": _javascript_basics.QUIZ,
