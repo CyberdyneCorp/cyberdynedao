@@ -13,15 +13,24 @@ illustrative. Each course ends with a knowledge-check quiz.
 
 from __future__ import annotations
 
-from cyberdyne_backend.application.courses.seed_types import SeedCourse, SeedLesson
+from cyberdyne_backend.application.courses.seed_linux_quizzes import (
+    _LINUX_ADVANCED_FINAL,
+    _LINUX_ADVANCED_QUIZZES,
+    _LINUX_BASICS_FINAL,
+    _LINUX_BASICS_QUIZZES,
+    _LINUX_INTERMEDIATE_FINAL,
+    _LINUX_INTERMEDIATE_QUIZZES,
+)
+from cyberdyne_backend.application.courses.seed_types import (
+    SeedCourse,
+    SeedLesson,
+    quiz_lesson,
+    with_checkpoint_quizzes,
+)
 
 
 def _t(title: str, duration: str, body: str) -> SeedLesson:
     return SeedLesson(title=title, lesson_type="text", duration=duration, text_body=body)
-
-
-def _quiz() -> SeedLesson:
-    return SeedLesson(title="Check your knowledge", lesson_type="quiz", duration="3 min")
 
 
 # ── Linux — Basics ───────────────────────────────────────────────────────────
@@ -36,11 +45,12 @@ _LINUX_BASICS = SeedCourse(
         "day-to-day skills every developer and sysadmin needs."
     ),
     level="Beginner",
-    lessons=(
-        _t(
-            "What is Linux?",
-            "8 min",
-            """\
+    lessons=with_checkpoint_quizzes(
+        (
+            _t(
+                "What is Linux?",
+                "8 min",
+                """\
 # What is Linux?
 
 **Linux** is the open-source kernel Linus Torvalds released in 1991. The thing
@@ -78,11 +88,11 @@ environment your code will actually run in.
 
 **Next:** the shell — where you type commands — and moving around the filesystem.
 """,
-        ),
-        _t(
-            "The shell & the filesystem",
-            "10 min",
-            """\
+            ),
+            _t(
+                "The shell & the filesystem",
+                "10 min",
+                """\
 # The shell & the filesystem
 
 The **shell** (usually `bash` or `zsh`) is the program that reads the commands
@@ -136,11 +146,11 @@ type cd             # what kind of command is this?
 
 **Next:** creating, copying, moving and finding files.
 """,
-        ),
-        _t(
-            "Working with files & directories",
-            "11 min",
-            """\
+            ),
+            _t(
+                "Working with files & directories",
+                "11 min",
+                """\
 # Working with files & directories
 
 A handful of commands cover almost all file work.
@@ -193,11 +203,11 @@ Now running `app` follows the link to the real binary.
 
 **Next:** who can do what — users, ownership and permissions.
 """,
-        ),
-        _t(
-            "Users, ownership & permissions",
-            "11 min",
-            """\
+            ),
+            _t(
+                "Users, ownership & permissions",
+                "11 min",
+                """\
 # Users, ownership & permissions
 
 Linux is multi-user from the ground up. Every file has an **owner**, a **group**,
@@ -255,11 +265,11 @@ sudo systemctl restart ssh
 
 **Next:** the programs that are actually running — processes.
 """,
-        ),
-        _t(
-            "Processes & system monitoring",
-            "10 min",
-            """\
+            ),
+            _t(
+                "Processes & system monitoring",
+                "10 min",
+                """\
 # Processes & system monitoring
 
 A **process** is a running program. Each has a numeric **PID**, an owner, and a
@@ -310,11 +320,11 @@ journalctl -u nginx -f         # follow a service's logs
 
 **Next:** wiring tools together with pipes and redirection.
 """,
-        ),
-        _t(
-            "Pipes, redirection & text tools",
-            "11 min",
-            """\
+            ),
+            _t(
+                "Pipes, redirection & text tools",
+                "11 min",
+                """\
 # Pipes, redirection & text tools
 
 This is where the Unix philosophy pays off: small tools, joined together.
@@ -368,11 +378,11 @@ awk '{print $1}' access.log | sort | uniq -c | sort -rn | head -5
 
 **Next:** installing software, networking and connecting to remote machines.
 """,
-        ),
-        _t(
-            "Packages, networking & SSH",
-            "10 min",
-            """\
+            ),
+            _t(
+                "Packages, networking & SSH",
+                "10 min",
+                """\
 # Packages, networking & SSH
 
 ## Installing software
@@ -432,8 +442,10 @@ passwords. Keep the **private** key (`~/.ssh/id_ed25519`) secret; only the
 
 **Next:** check what you've learned.
 """,
+            ),
+            quiz_lesson("Check your knowledge", _LINUX_BASICS_FINAL),
         ),
-        _quiz(),
+        _LINUX_BASICS_QUIZZES,
     ),
 )
 
@@ -450,11 +462,12 @@ _LINUX_INTERMEDIATE = SeedCourse(
         "loadable kernel module and a character device driver."
     ),
     level="Intermediate",
-    lessons=(
-        _t(
-            "Kernel space vs. user space",
-            "9 min",
-            """\
+    lessons=with_checkpoint_quizzes(
+        (
+            _t(
+                "Kernel space vs. user space",
+                "9 min",
+                """\
 # Kernel space vs. user space
 
 Linux runs code in two privilege worlds. **User space** is where your programs
@@ -506,11 +519,11 @@ strace -c ls             # a summary count of each syscall
 
 **Next:** the file syscalls — open, read, write, close — from C.
 """,
-        ),
-        _t(
-            "System calls & file I/O in C",
-            "11 min",
-            """\
+            ),
+            _t(
+                "System calls & file I/O in C",
+                "11 min",
+                """\
 # System calls & file I/O in C
 
 Under every high-level "open a file" is a handful of system calls operating on
@@ -566,11 +579,11 @@ printf("size = %ld bytes\\n", (long) st.st_size);
 
 **Next:** creating processes with fork and exec.
 """,
-        ),
-        _t(
-            "Processes: fork, exec & signals",
-            "11 min",
-            """\
+            ),
+            _t(
+                "Processes: fork, exec & signals",
+                "11 min",
+                """\
 # Processes: fork, exec & signals
 
 ## fork() — clone the current process
@@ -636,11 +649,11 @@ always works.
 
 **Next:** handling many connections at once with I/O multiplexing.
 """,
-        ),
-        _t(
-            "Sockets & I/O multiplexing",
-            "11 min",
-            """\
+            ),
+            _t(
+                "Sockets & I/O multiplexing",
+                "11 min",
+                """\
 # Sockets & I/O multiplexing
 
 ## A TCP server, end to end
@@ -701,11 +714,11 @@ for (int i = 0; i < n; i++) {
 
 **Next:** crossing into the kernel — your first loadable module.
 """,
-        ),
-        _t(
-            "Your first kernel module",
-            "11 min",
-            """\
+            ),
+            _t(
+                "Your first kernel module",
+                "11 min",
+                """\
 # Your first kernel module
 
 A **loadable kernel module** (`.ko`) is kernel code you can insert and remove at
@@ -778,11 +791,11 @@ kfree(buf);
 
 **Next:** the kernel toolbox — lists, locks, timers and deferred work.
 """,
-        ),
-        _t(
-            "Kernel APIs: lists, locking & deferred work",
-            "11 min",
-            """\
+            ),
+            _t(
+                "Kernel APIs: lists, locking & deferred work",
+                "11 min",
+                """\
 # Kernel APIs: lists, locking & deferred work
 
 The kernel ships its own data structures and concurrency primitives. Four come
@@ -863,11 +876,11 @@ defer the rest — is the backbone of driver interrupt handling (Advanced course
 
 **Next:** put it together — a character device driver.
 """,
-        ),
-        _t(
-            "Writing a character device driver",
-            "12 min",
-            """\
+            ),
+            _t(
+                "Writing a character device driver",
+                "12 min",
+                """\
 # Writing a character device driver
 
 A **character device** moves a stream of bytes — a serial port, `/dev/null`,
@@ -978,8 +991,10 @@ Encode each command with the `_IO*` macros so the size and direction are checked
 
 **Next:** check your knowledge.
 """,
+            ),
+            quiz_lesson("Check your knowledge", _LINUX_INTERMEDIATE_FINAL),
         ),
-        _quiz(),
+        _LINUX_INTERMEDIATE_QUIZZES,
     ),
 )
 
@@ -996,11 +1011,12 @@ _LINUX_ADVANCED = SeedCourse(
         "and how to debug kernel code when it goes wrong."
     ),
     level="Advanced",
-    lessons=(
-        _t(
-            "The Linux device model",
-            "10 min",
-            """\
+    lessons=with_checkpoint_quizzes(
+        (
+            _t(
+                "The Linux device model",
+                "10 min",
+                """\
 # The Linux device model
 
 Hardware enumeration in Linux is built on three abstractions that snap together:
@@ -1056,11 +1072,11 @@ of cleanup bugs.
 
 **Next:** the most common driver type — platform drivers and the Device Tree.
 """,
-        ),
-        _t(
-            "Platform drivers & the Device Tree",
-            "11 min",
-            """\
+            ),
+            _t(
+                "Platform drivers & the Device Tree",
+                "11 min",
+                """\
 # Platform drivers & the Device Tree
 
 Devices on enumerable buses (PCI, USB) announce themselves. But the controllers
@@ -1127,11 +1143,11 @@ describes the device — only the Device Tree changes.
 
 **Next:** responding to hardware — interrupts and DMA.
 """,
-        ),
-        _t(
-            "Interrupts & DMA",
-            "12 min",
-            """\
+            ),
+            _t(
+                "Interrupts & DMA",
+                "12 min",
+                """\
 # Interrupts & DMA
 
 Two mechanisms let a driver work *with* hardware instead of busy-polling it.
@@ -1205,11 +1221,11 @@ dma_set_mask_and_coherent(dev, DMA_BIT_MASK(64));   // 64-bit capable
 
 **Next:** the block layer — disks and the request queue.
 """,
-        ),
-        _t(
-            "Block drivers",
-            "11 min",
-            """\
+            ),
+            _t(
+                "Block drivers",
+                "11 min",
+                """\
 # Block drivers
 
 A **block device** stores fixed-size blocks you can address randomly — disks,
@@ -1279,11 +1295,11 @@ disk and an NVMe SSD expose the *same* `queue_rq` interface.
 
 **Next:** the network stack and packet-pushing drivers.
 """,
-        ),
-        _t(
-            "Network drivers",
-            "11 min",
-            """\
+            ),
+            _t(
+                "Network drivers",
+                "11 min",
+                """\
 # Network drivers
 
 A NIC driver registers a **`net_device`** and implements `net_device_ops`. The
@@ -1356,11 +1372,11 @@ throughput.
 
 **Next:** discoverable buses — PCI and USB.
 """,
-        ),
-        _t(
-            "PCI & USB drivers",
-            "11 min",
-            """\
+            ),
+            _t(
+                "PCI & USB drivers",
+                "11 min",
+                """\
 # PCI & USB drivers
 
 PCI and USB are **enumerable** buses: devices announce a vendor/product id, the
@@ -1439,11 +1455,11 @@ driver must cancel in-flight URBs and stop touching the device immediately.
 
 **Next:** what to do when a driver misbehaves — kernel debugging.
 """,
-        ),
-        _t(
-            "Debugging kernel code",
-            "10 min",
-            """\
+            ),
+            _t(
+                "Debugging kernel code",
+                "10 min",
+                """\
 # Debugging kernel code
 
 In user space a crash is a core dump; in the kernel a bad pointer can take down
@@ -1512,8 +1528,10 @@ Build the kernel (or your module) with these and the bugs announce themselves:
 
 **Next:** check your knowledge.
 """,
+            ),
+            quiz_lesson("Check your knowledge", _LINUX_ADVANCED_FINAL),
         ),
-        _quiz(),
+        _LINUX_ADVANCED_QUIZZES,
     ),
 )
 

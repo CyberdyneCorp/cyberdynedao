@@ -291,6 +291,35 @@ class TestSeedCourses:
         for kw in ("probe", "of_match_table", "dma_alloc_coherent", "net_device", "pci_driver"):
             assert kw in adv_body, f"advanced missing {kw!r}"
 
+    async def test_seed_interleaves_and_authors_quizzes(self) -> None:
+        from cyberdyne_backend.application.courses.seed_linux import LINUX_COURSES
+
+        recorded: list[object] = []
+
+        class _FakeQuizAuthor:
+            async def execute(self, lesson_id: object, cmd: object) -> None:
+                recorded.append((lesson_id, cmd))
+
+        repo = FakeCourseRepo()
+        basics = next(c for c in LINUX_COURSES if c.slug == "linux-basics")
+        await seed_courses(repo, courses=(basics,), quiz_author=_FakeQuizAuthor())  # type: ignore[arg-type]
+        saved = await repo.get_by_slug("linux-basics", include_drafts=True)
+
+        types = [le.lesson_type.value for le in saved.lessons]
+        # Every content (text) lesson is immediately followed by a quiz.
+        for i, kind in enumerate(types[:-1]):
+            if kind == "text":
+                assert types[i + 1] == "quiz", f"no quiz after lesson index {i}"
+        quiz_count = sum(1 for k in types if k == "quiz")
+        assert quiz_count >= len([k for k in types if k == "text"])
+        # One UpsertQuiz call per curated quiz lesson, each with exactly one
+        # correct option per question.
+        assert len(recorded) == quiz_count
+        for _lesson_id, cmd in recorded:  # type: ignore[misc]
+            assert cmd.questions  # type: ignore[attr-defined]
+            for question in cmd.questions:  # type: ignore[attr-defined]
+                assert sum(1 for o in question.options if o.is_correct) == 1
+
     def test_csharp_track_runs_basics_to_aspnet(self) -> None:
         from cyberdyne_backend.application.courses.seed_csharp import CSHARP_COURSES
 

@@ -17,7 +17,11 @@ import logging
 from cyberdyne_backend.adapters.outbound.persistence.courses.repository import (
     SqlAlchemyCourseRepository,
 )
+from cyberdyne_backend.adapters.outbound.persistence.quizzes.repository import (
+    SqlAlchemyQuizRepository,
+)
 from cyberdyne_backend.application.courses.seed import seed_courses
+from cyberdyne_backend.application.quizzes.use_cases import UpsertQuiz
 from cyberdyne_backend.infrastructure.database.engine import dispose_engine, session_scope
 from cyberdyne_backend.infrastructure.logging import configure_logging
 from cyberdyne_backend.infrastructure.settings import get_settings
@@ -29,7 +33,10 @@ async def main() -> None:
     configure_logging(get_settings().log_level)
     try:
         async with session_scope() as session:
-            summary = await seed_courses(SqlAlchemyCourseRepository(session))
+            summary = await seed_courses(
+                SqlAlchemyCourseRepository(session),
+                quiz_author=UpsertQuiz(repo=SqlAlchemyQuizRepository(session)),
+            )
         for line in summary:
             logger.info("academy seed — %s", line)
         print("Academy seed applied:")
