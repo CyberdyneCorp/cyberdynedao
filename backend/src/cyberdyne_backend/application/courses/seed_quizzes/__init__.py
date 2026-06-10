@@ -39,6 +39,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import csharp_basics as 
 from cyberdyne_backend.application.courses.seed_quizzes import (
     csharp_intermediate as _csharp_intermediate,
 )
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    digital_logic_advanced as _digital_logic_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    digital_logic_basics as _digital_logic_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    digital_logic_intermediate as _digital_logic_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import docker_advanced as _docker_advanced
 from cyberdyne_backend.application.courses.seed_quizzes import docker_basics as _docker_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -157,6 +166,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "csharp-advanced": _csharp_advanced.QUIZ,
     "csharp-basics": _csharp_basics.QUIZ,
     "csharp-intermediate": _csharp_intermediate.QUIZ,
+    "digital-logic-advanced": _digital_logic_advanced.QUIZ,
+    "digital-logic-basics": _digital_logic_basics.QUIZ,
+    "digital-logic-intermediate": _digital_logic_intermediate.QUIZ,
     "docker-advanced": _docker_advanced.QUIZ,
     "docker-basics": _docker_basics.QUIZ,
     "docker-intermediate": _docker_intermediate.QUIZ,
