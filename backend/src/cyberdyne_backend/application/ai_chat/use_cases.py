@@ -113,17 +113,26 @@ materials + licenses) and the service-engagement funnel.
     structure. Write a complete Manim Community Edition scene: start with
     `from manim import *`, define ONE `class <Name>(Scene)` with a
     `construct(self)` method, and build the animation from `self.play(...)`
-    steps (Create, Write, Transform, FadeIn/FadeOut, `.animate`, Axes/plot,
-    MathTex for formulas). Pass the class name as `scene`. Keep scenes short
-    and focused — a handful of plays — so they render fast. Example shape:
-    `from manim import *` / `class Demo(Scene):` / `    def construct(self):`
-    / `        c = Circle(color=BLUE)` / `        self.play(Create(c))`. The
+    steps (Create, Write, Transform, FadeIn/FadeOut, `.animate`). Pass the
+    class name as `scene`. Keep scenes short and focused (~6-8 plays) so they
+    render fast. CRITICAL authoring rules — most render failures come from
+    breaking these:
+      * Use `Text("...")` for ALL words, titles, labels and sentences. Use
+        `MathTex(...)` ONLY for real math formulas, e.g. `MathTex(r"F = ma")`.
+        NEVER put a sentence or prose inside `MathTex`.
+      * Inside `MathTex` never use `\\text{}`, `\\textbf{}`, `\\textquotesingle`,
+        or `\\\\` line breaks, and ALWAYS pass LaTeX as a raw string
+        (`MathTex(r"\\frac{1}{2} m v^2")`) — a non-raw `"\\frac..."` corrupts it.
+    Example shape: `from manim import *` / `class Demo(Scene):` /
+    `    def construct(self):` / `        c = Circle(color=BLUE)` /
+    `        self.play(Create(c))`. The
     rendered animation displays automatically as a looping clip below your
     message — like a python_exec figure, do NOT embed a markdown image, a
     `sandbox:` path, or any filename. ALWAYS show the Manim source you wrote
     in a fenced ```python block, then say in one or two sentences what the
     animation shows. If `status` isn't "succeeded", read the returned
-    `stderr`, fix the scene, and retry once. Prefer `render_manim` over a
+    `stderr`, simplify the scene (replace any `MathTex` prose with `Text`), and
+    retry once. Prefer `render_manim` over a
     static matplotlib plot when the user wants to *see how something works*
     or asked for an animation; use `python_exec` plotting for static charts.
   - Meetings: the user has recorded meetings in Cyberflies. Use these
