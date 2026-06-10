@@ -1,7 +1,26 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createAgentVM } from '../agentViewModel.svelte';
+import { createAgentVM, stripWorkspaceMedia } from '../agentViewModel.svelte';
 import * as agentApi from '$lib/api/agentApi';
 import * as interpreterApi from '$lib/api/interpreterApi';
+
+describe('stripWorkspaceMedia', () => {
+	it('removes sandbox: image embeds (render_manim/python_exec artifacts)', () => {
+		const out = stripWorkspaceMedia(
+			'The animation is ready. Here it is:\n\n![Circle to Square](sandbox:/CircleToSquare.gif)'
+		);
+		expect(out).toBe('The animation is ready. Here it is:');
+		expect(out).not.toContain('sandbox:');
+	});
+
+	it('removes a bare workspace filename image embed', () => {
+		expect(stripWorkspaceMedia('see ![plot](figure_0_1.png) above')).toBe('see  above');
+	});
+
+	it('keeps genuine external image URLs', () => {
+		const md = '![logo](https://example.com/logo.png)';
+		expect(stripWorkspaceMedia(md)).toBe(md);
+	});
+});
 
 beforeEach(() => {
 	sessionStorage.clear();

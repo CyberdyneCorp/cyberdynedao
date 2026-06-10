@@ -130,11 +130,26 @@ function wipe(): void {
  * are filtered out at the call site; this only handles user +
  * assistant.
  */
+/** A markdown image embed pointing at a workspace file: either a `sandbox:`
+ *  path or a bare filename (no slashes → not an external/proxy URL) ending in a
+ *  media extension. */
+const WORKSPACE_MEDIA_IMG =
+	/!\[[^\]]*\]\(\s*(?:sandbox:\/*[^)\s]+|[^)\s/]+)\.(?:gif|png|jpe?g|svg|webp|mp4|webm)\s*\)/gi;
+
+/** The agent is told not to, but it sometimes embeds a markdown image at a
+ *  workspace artifact (e.g. `![](sandbox:/Scene.gif)` from render_manim, or a
+ *  figure filename from python_exec). Those artifacts already render via the
+ *  dedicated figures/artifacts UI, so strip the embeds to avoid a broken image
+ *  next to the real one. */
+export function stripWorkspaceMedia(content: string): string {
+	return content.replace(WORKSPACE_MEDIA_IMG, '').replace(/\n{3,}/g, '\n\n').trim();
+}
+
 function toBubble(m: AgentMessage): AgentBubble {
 	return {
 		id: m.id,
 		role: m.role === 'assistant' ? 'assistant' : 'user',
-		content: m.content,
+		content: m.role === 'assistant' ? stripWorkspaceMedia(m.content) : m.content,
 		toolCalls: m.toolCalls ?? [],
 		plots: [],
 		artifacts: [],
@@ -443,12 +458,12 @@ export function createAgentVM(): AgentViewModel {
 					onDelta: (text) => {
 						acc += text;
 						// First token means tool rounds are done — clear the status.
-						patchBubble(assistantBubble.id, { content: acc, status: '' });
+						patchBubble(assistantBubble.id, { content: stripWorkspaceMedia(acc), status: '' });
 					},
 					onDone: (reply) => {
 						patchBubble(assistantBubble.id, {
 							id: reply.id,
-							content: reply.content || acc || '(no response)',
+							content: stripWorkspaceMedia(reply.content || acc) || '(no response)',
 							toolCalls: reply.toolCalls ?? [],
 							model: reply.model,
 							createdAt: reply.createdAt,
