@@ -136,6 +136,80 @@
 		}
 	}
 
+	// Copy arbitrary text to the clipboard with transient per-key feedback so
+	// the button can flip to "✓ Copied" for a moment. Keyed so multiple copy
+	// buttons (answer, each code block) track their own state independently.
+	let copiedKey = $state<string | null>(null);
+	let copyTimer: ReturnType<typeof setTimeout> | null = null;
+	async function copyToClipboard(text: string, marker: string): Promise<void> {
+		try {
+			await navigator.clipboard.writeText(text);
+			copiedKey = marker;
+			if (copyTimer) clearTimeout(copyTimer);
+			copyTimer = setTimeout(() => (copiedKey = null), 2000);
+		} catch {
+			/* clipboard blocked (insecure context / permissions) — no-op */
+		}
+	}
+
+	// Map a fenced-code language to a sensible file extension so a downloaded
+	// snippet opens in the right tooling. Falls back to .txt for unknowns.
+	function codeExtension(lang: string): string {
+		const map: Record<string, string> = {
+			python: 'py',
+			py: 'py',
+			matlab: 'm',
+			octave: 'm',
+			javascript: 'js',
+			js: 'js',
+			typescript: 'ts',
+			ts: 'ts',
+			json: 'json',
+			bash: 'sh',
+			sh: 'sh',
+			shell: 'sh',
+			c: 'c',
+			cpp: 'cpp',
+			'c++': 'cpp',
+			java: 'java',
+			rust: 'rs',
+			go: 'go',
+			sql: 'sql',
+			html: 'html',
+			css: 'css',
+			yaml: 'yaml',
+			yml: 'yml',
+			markdown: 'md',
+			md: 'md'
+		};
+		return map[lang.trim().toLowerCase()] ?? 'txt';
+	}
+
+	// Save a code snippet the agent wrote to disk as a standalone file.
+	function downloadCode(code: string, lang: string): void {
+		const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
+		const url = URL.createObjectURL(blob);
+		const anchor = document.createElement('a');
+		anchor.href = url;
+		anchor.download = `agent-code.${codeExtension(lang)}`;
+		document.body.appendChild(anchor);
+		anchor.click();
+		document.body.removeChild(anchor);
+		setTimeout(() => URL.revokeObjectURL(url), 30_000);
+	}
+
+	// Save an already-rendered figure (e.g. a manim .gif / .png) to disk. The
+	// blob URL is the one `plotUrl` cached for the inline <img>, so we must NOT
+	// revoke it here — that would blank the figure still on screen.
+	function savePlot(url: string, artifactPath: string): void {
+		const anchor = document.createElement('a');
+		anchor.href = url;
+		anchor.download = artifactPath.split('/').pop() ?? artifactPath;
+		document.body.appendChild(anchor);
+		anchor.click();
+		document.body.removeChild(anchor);
+	}
+
 	onMount(async () => {
 		await vm.bootstrap();
 		await scrollToBottom();
@@ -256,6 +330,16 @@
 						{:else if bubble.error}
 							<Badge variant="danger" size="sm">ERROR</Badge>
 						{/if}
+						{#if bubble.role === 'assistant' && bubble.content && !bubble.pending}
+							<button
+								type="button"
+								class="bubble__copy"
+								onclick={() => copyToClipboard(bubble.content, bubble.id + '-answer')}
+								title="Copy this answer to the clipboard"
+							>
+								{copiedKey === bubble.id + '-answer' ? '✓ Copied' : '⧉ Copy'}
+							</button>
+						{/if}
 					</header>
 
 					{#if bubble.status}
@@ -269,25 +353,42 @@
 						<p class="bubble__error">{bubble.error}</p>
 					{:else if bubble.content}
 						<div class="bubble__content">
-							{#each parseSegments(bubble.content) as seg}
+							{#each parseSegments(bubble.content) as seg, i}
 								{#if seg.kind === 'code'}
 									{@const sandbox = sandboxTargetForLang(seg.lang)}
+									{@const codeKey = bubble.id + '-code-' + i}
 									<div class="code">
-										{#if seg.lang || sandbox}
-											<div class="code__head">
-												{#if seg.lang}<span class="code__lang">{seg.lang}</span>{/if}
+										<div class="code__head">
+											<span class="code__lang">{seg.lang || 'code'}</span>
+											<div class="code__actions">
 												{#if sandbox}
 													<button
 														type="button"
-														class="code__send"
+														class="code__btn"
 														onclick={() => sendToSandbox(sandbox, seg.code)}
 														title={`Open this code in the ${sandbox === 'interpreter' ? 'Python' : 'MATLAB'} sandbox`}
 													>
 														{sandbox === 'interpreter' ? '🐍 Send to Python' : 'Ⓜ Send to MATLAB'}
 													</button>
 												{/if}
+												<button
+													type="button"
+													class="code__btn"
+													onclick={() => copyToClipboard(seg.code, codeKey)}
+													title="Copy this code to the clipboard"
+												>
+													{copiedKey === codeKey ? '✓ Copied' : '⧉ Copy'}
+												</button>
+												<button
+													type="button"
+													class="code__btn"
+													onclick={() => downloadCode(seg.code, seg.lang)}
+													title="Download this code as a file"
+												>
+													⬇ Download
+												</button>
 											</div>
-										{/if}
+										</div>
 										<pre>{seg.code}</pre>
 									</div>
 								{:else if seg.kind === 'mermaid'}
@@ -318,7 +419,17 @@
 										>
 											<img src={url} alt={plot.caption} loading="lazy" />
 										</button>
-										<figcaption>{plot.caption} · click to {expanded ? 'collapse' : 'expand'}</figcaption>
+										<figcaption>
+											<span>{plot.caption} · click to {expanded ? 'collapse' : 'expand'}</span>
+											<button
+												type="button"
+												class="plot__dl"
+												onclick={() => savePlot(url, plot.artifactPath)}
+												title={`Download ${plot.artifactPath.split('/').pop() ?? 'figure'}`}
+											>
+												⬇ Download
+											</button>
+										</figcaption>
 									{:catch}
 										<div class="plot__loading">Figure unavailable.</div>
 									{/await}
@@ -616,6 +727,20 @@
 		color: var(--accent-dark);
 	}
 	.bubble--user .bubble__role { color: #1d4ed8; }
+	.bubble__copy {
+		margin-left: auto;
+		font-family: inherit;
+		font-size: 0.65rem;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		color: var(--accent-dark, #6d28d9);
+		background: transparent;
+		border: 1px solid var(--accent);
+		padding: 2px 8px;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+	.bubble__copy:hover { background: rgba(124, 58, 237, 0.1); }
 
 	.bubble__content {
 		display: flex;
@@ -657,7 +782,13 @@
 		letter-spacing: 0.08em;
 		color: #9fb4ff;
 	}
-	.code__send {
+	.code__actions {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		flex-wrap: wrap;
+	}
+	.code__btn {
 		font-family: inherit;
 		font-size: 0.625rem;
 		font-weight: 700;
@@ -669,7 +800,7 @@
 		cursor: pointer;
 		white-space: nowrap;
 	}
-	.code__send:hover {
+	.code__btn:hover {
 		background: #243456;
 		border-color: #7c3aed;
 		color: #ffffff;
@@ -927,10 +1058,28 @@
 		max-height: 70vh;
 	}
 	.plot figcaption {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
 		font-size: 0.7rem;
 		color: #6b7280;
 		margin-top: 4px;
 	}
+	.plot__dl {
+		font-family: inherit;
+		font-size: 0.65rem;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		color: var(--accent-dark, #6d28d9);
+		background: transparent;
+		border: 1px solid var(--accent);
+		padding: 2px 8px;
+		cursor: pointer;
+		white-space: nowrap;
+		flex-shrink: 0;
+	}
+	.plot__dl:hover { background: rgba(124, 58, 237, 0.1); }
 	.plot__loading {
 		font-size: 0.8125rem;
 		color: #6b7280;
