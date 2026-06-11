@@ -16,7 +16,8 @@ from __future__ import annotations
 import logging
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, Request, Response, status
+from fastapi import Depends, HTTPException, Request, Response, Security, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from cyberdyne_backend.domain.auth_identity import (
@@ -32,6 +33,16 @@ logger = logging.getLogger("cyberdyne_backend.auth.middleware")
 
 BEARER_PREFIX = "Bearer "
 EDITOR_SCOPE = "editor"
+
+# OpenAPI/Swagger contract only. Enforcement lives in the middleware (which
+# also accepts the ``access_token`` cookie) + the guards below; this scheme
+# exists purely so FastAPI declares an ``HTTPBearer`` security scheme and
+# renders the "Authorize" button plus per-route padlocks on every operation
+# that depends on a guard. ``auto_error=False`` keeps the middleware/guards as
+# the single source of the 401 — this dependency never raises on its own.
+bearer_scheme = HTTPBearer(auto_error=False)
+# A guard depends on this so the operation inherits the security requirement.
+BearerCredentials = Annotated[HTTPAuthorizationCredentials | None, Security(bearer_scheme)]
 
 
 def extract_token(request: Request) -> str | None:
@@ -95,8 +106,16 @@ class AuthMiddleware(BaseHTTPMiddleware):
 # ── Dependencies ─────────────────────────────────────────────────────
 
 
-def require_principal(request: Request) -> Principal:
-    """Asserts that the middleware resolved a principal; 401 otherwise."""
+def require_principal(
+    request: Request,
+    _credentials: BearerCredentials = None,
+) -> Principal:
+    """Asserts that the middleware resolved a principal; 401 otherwise.
+
+    ``_credentials`` is unused at runtime (the middleware already resolved
+    the token from the header *or* cookie); it's declared only so FastAPI
+    attaches the ``HTTPBearer`` scheme to every operation guarded here.
+    """
     principal: Principal | None = getattr(request.state, "principal", None)
     if principal is None:
         raise HTTPException(
@@ -119,6 +138,7 @@ def get_user_profile_port() -> UserProfilePort | None:
 async def require_editor(
     request: Request,
     profile_port: Annotated[UserProfilePort | None, Depends(get_user_profile_port)] = None,
+    _credentials: BearerCredentials = None,
 ) -> UserPrincipal:
     """Asserts the caller may author content.
 
