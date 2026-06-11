@@ -166,8 +166,13 @@
 		'Statistics',
 		'Robotics',
 		'Algorithms',
+		'Electronic Engineering',
 		'Other'
 	];
+	// The Tier-3 engineering curriculum: every electronics/EE family (each with
+	// basics/intermediate/advanced) collapses into one browsable category.
+	const electronicEngineeringSlug =
+		/^(electronics|analog-ic|power-electronics|pcb|semiconductor|embedded|signals|control|dsp|rf-comms|microwave|digital-comms|digital-logic|fpga|comparch|electromagnetics|vlsi|photonics|power-systems|battery|sensors|machines)-/;
 	function courseTopic(slug: string): string {
 		if (/^(c|cpp|swift|go|rust|javascript|typescript)-/.test(slug)) return 'Languages';
 		if (slug === 'sql-basics' || slug === 'sql-intermediate' || slug === 'mongodb' || slug === 'postgresql')
@@ -180,6 +185,7 @@
 		if (slug.startsWith('robotics')) return 'Robotics';
 		if (slug.startsWith('algorithms')) return 'Algorithms';
 		if (slug.startsWith('math')) return 'Mathematics';
+		if (electronicEngineeringSlug.test(slug)) return 'Electronic Engineering';
 		if (slug === 'matlab-basics' || slug === 'python-course') return 'Foundations';
 		return 'Other';
 	}
@@ -213,8 +219,92 @@
 			.map((t) => ({ topic: t, courses: groups.get(t)! }));
 	});
 
+	// ── Category left-menu (mirrors the Blog view's CATEGORIES sidebar) ──
+	// Icon + accent colour per topic so each category gets a coloured edge.
+	const topicMeta: Record<string, { icon: string; accent: string; accentDark: string }> = {
+		Foundations: { icon: '🎯', accent: '#22c55e', accentDark: '#15803d' },
+		Languages: { icon: '💻', accent: '#3b82f6', accentDark: '#1d4ed8' },
+		Databases: { icon: '🗄️', accent: '#a855f7', accentDark: '#7e22ce' },
+		DevOps: { icon: '⚙️', accent: '#f97316', accentDark: '#c2410c' },
+		Blockchain: { icon: '⛓️', accent: '#eab308', accentDark: '#a16207' },
+		Physics: { icon: '⚛️', accent: '#06b6d4', accentDark: '#0e7490' },
+		Mathematics: { icon: '➗', accent: '#ec4899', accentDark: '#be185d' },
+		'Vector Calculus': { icon: '📐', accent: '#8b5cf6', accentDark: '#6d28d9' },
+		Statistics: { icon: '📊', accent: '#f59e0b', accentDark: '#b45309' },
+		Robotics: { icon: '🤖', accent: '#ef4444', accentDark: '#b91c1c' },
+		Algorithms: { icon: '🧮', accent: '#14b8a6', accentDark: '#0f766e' },
+		'Electronic Engineering': { icon: '🔌', accent: '#6366f1', accentDark: '#4338ca' },
+		Other: { icon: '📦', accent: '#6b7280', accentDark: '#374151' }
+	};
+	const fallbackTopicMeta = { icon: '📦', accent: '#6b7280', accentDark: '#374151' };
+
+	// Selected category in the sidebar ('all' or a topic name).
+	let selectedTopic = $state<string>('all');
+
+	// Categories with live counts over the search/level-filtered set, so the
+	// numbers always match what a click reveals.
+	const topicCategories = $derived.by(() => {
+		const counts = new Map<string, number>();
+		for (const c of filteredCourses) {
+			const t = courseTopic(c.slug);
+			counts.set(t, (counts.get(t) ?? 0) + 1);
+		}
+		const all = {
+			id: 'all',
+			name: 'All Courses',
+			icon: '📚',
+			count: filteredCourses.length,
+			style: '--accent: #3b82f6; --accent-dark: #1d4ed8;'
+		};
+		const rest = topicOrder
+			.filter((t) => (counts.get(t) ?? 0) > 0)
+			.map((t) => {
+				const m = topicMeta[t] ?? fallbackTopicMeta;
+				return {
+					id: t,
+					name: t,
+					icon: m.icon,
+					count: counts.get(t)!,
+					style: `--accent: ${m.accent}; --accent-dark: ${m.accentDark};`
+				};
+			});
+		return [all, ...rest];
+	});
+
+	// Courses after the sidebar's category filter (on top of search/level).
+	const coursesInTopic = $derived(
+		selectedTopic === 'all'
+			? filteredCourses
+			: filteredCourses.filter((c) => courseTopic(c.slug) === selectedTopic)
+	);
+
+	// ── Lesson focus mode ──
+	// Opening a lesson (or starting a quiz) collapses the rest of the list so
+	// the learner focuses on that lesson's content. `takingQuiz` wins over
+	// `openLesson` if both somehow set; the View/Take-quiz handlers keep them
+	// mutually exclusive anyway.
+	const focusedLessonId = $derived(takingQuiz ?? openLesson);
+	const focusedIndex = $derived(
+		$selected ? $selected.lessons.findIndex((l) => l.id === focusedLessonId) : -1
+	);
+
+	function focusLesson(lesson: { id: string; lessonType: LessonType }): void {
+		if (lesson.lessonType === 'quiz') {
+			openLesson = null;
+			takingQuiz = lesson.id;
+		} else {
+			takingQuiz = null;
+			openLesson = lesson.id;
+		}
+	}
+	function exitFocus(): void {
+		openLesson = null;
+		takingQuiz = null;
+	}
+
 	function backToCatalogue(): void {
 		vm.close();
+		exitFocus();
 		if (authReady) void loadProgress(); // reflect any lessons just completed
 	}
 </script>
@@ -292,71 +382,89 @@
 				{/if}
 			{/if}
 
-			<ol class="lessons">
+			{#if focusedLessonId !== null}
+				<div class="lessons__focusbar">
+					<PixelButton variant="ghost" size="sm" onclick={exitFocus}>← Back to all lessons</PixelButton>
+					{#if focusedIndex >= 0}
+						<span class="lessons__pos">Lesson {focusedIndex + 1} of {course.lessons.length}</span>
+					{/if}
+				</div>
+			{/if}
+			<ol class="lessons" class:lessons--focus={focusedLessonId !== null}>
 				{#each course.lessons as lesson, i (lesson.id)}
-					{@const done = lessonCompleted(lesson.id)}
-					{@const isNext = authReady && lesson.id === nextLessonId}
-					{@const locked = !authReady && i > 0}
-					<li class="lesson-wrap">
-						<div
-							class="lesson"
-							class:lesson--done={done}
-							class:lesson--next={isNext}
-							class:lesson--locked={locked}
-						>
-							<span class="lesson__num" class:lesson__num--done={done}>
-								{#if done}✓{:else if locked}🔒{:else}{i + 1}{/if}
-							</span>
-							<span class="lesson__icon" aria-hidden="true">{lessonIcon[lesson.lessonType]}</span>
-							<span class="lesson__main">
-								<span class="lesson__title">{lesson.title}</span>
-								<span class="lesson__meta">
-									<span class="lesson__type">{lesson.lessonType}</span>
-									{#if lesson.duration}<span class="lesson__dur">· {lesson.duration}</span>{/if}
-									{#if isNext}<span class="lesson__next">· Next up</span>{/if}
+					{#if focusedLessonId === null || focusedLessonId === lesson.id}
+						{@const done = lessonCompleted(lesson.id)}
+						{@const isNext = authReady && lesson.id === nextLessonId}
+						{@const locked = !authReady && i > 0}
+						{@const nextLesson = course.lessons[i + 1]}
+						<li class="lesson-wrap">
+							<div
+								class="lesson"
+								class:lesson--done={done}
+								class:lesson--next={isNext}
+								class:lesson--locked={locked}
+							>
+								<span class="lesson__num" class:lesson__num--done={done}>
+									{#if done}✓{:else if locked}🔒{:else}{i + 1}{/if}
 								</span>
-							</span>
-							<span class="lesson__actions">
-								{#if locked}
-									<span class="lesson__lock" title="Sign in to view this lesson">
-										🔒 Sign in to continue
+								<span class="lesson__icon" aria-hidden="true">{lessonIcon[lesson.lessonType]}</span>
+								<span class="lesson__main">
+									<span class="lesson__title">{lesson.title}</span>
+									<span class="lesson__meta">
+										<span class="lesson__type">{lesson.lessonType}</span>
+										{#if lesson.duration}<span class="lesson__dur">· {lesson.duration}</span>{/if}
+										{#if isNext}<span class="lesson__next">· Next up</span>{/if}
 									</span>
-								{:else if lesson.lessonType !== 'quiz'}
-									<PixelButton
-										variant="outline"
-										size="sm"
-										onclick={() => (openLesson = openLesson === lesson.id ? null : lesson.id)}
-									>
-										{openLesson === lesson.id ? 'Hide' : 'View'}
-									</PixelButton>
-								{/if}
-								{#if authReady}
-									{#if lesson.lessonType === 'quiz'}
+								</span>
+								<span class="lesson__actions">
+									{#if locked}
+										<span class="lesson__lock" title="Sign in to view this lesson">
+											🔒 Sign in to continue
+										</span>
+									{:else if lesson.lessonType !== 'quiz'}
 										<PixelButton
 											variant="outline"
 											size="sm"
-											onclick={() => (takingQuiz = takingQuiz === lesson.id ? null : lesson.id)}
+											onclick={() => (openLesson === lesson.id ? exitFocus() : focusLesson(lesson))}
 										>
-											{takingQuiz === lesson.id ? 'Hide quiz' : 'Take quiz'}
+											{openLesson === lesson.id ? 'Hide' : 'View'}
 										</PixelButton>
 									{/if}
-									{#if done}
-										<span class="lesson__done">✓ done</span>
-									{:else if lesson.lessonType !== 'quiz'}
-										<PixelButton variant="ghost" size="sm" onclick={() => markComplete(lesson.id)}>
-											Mark complete
-										</PixelButton>
+									{#if authReady}
+										{#if lesson.lessonType === 'quiz'}
+											<PixelButton
+												variant="outline"
+												size="sm"
+												onclick={() => (takingQuiz === lesson.id ? exitFocus() : focusLesson(lesson))}
+											>
+												{takingQuiz === lesson.id ? 'Hide quiz' : 'Take quiz'}
+											</PixelButton>
+										{/if}
+										{#if done}
+											<span class="lesson__done">✓ done</span>
+										{:else if lesson.lessonType !== 'quiz'}
+											<PixelButton variant="ghost" size="sm" onclick={() => markComplete(lesson.id)}>
+												Mark complete
+											</PixelButton>
+										{/if}
 									{/if}
-								{/if}
-							</span>
-						</div>
-						{#if openLesson === lesson.id && !locked}
-							<LessonContent {lesson} language={codeLanguage} />
-						{/if}
-						{#if takingQuiz === lesson.id}
-							<QuizPlayer lessonId={lesson.id} onDone={onQuizDone} />
-						{/if}
-					</li>
+								</span>
+							</div>
+							{#if openLesson === lesson.id && !locked}
+								<LessonContent {lesson} language={codeLanguage} />
+							{/if}
+							{#if takingQuiz === lesson.id}
+								<QuizPlayer lessonId={lesson.id} onDone={onQuizDone} />
+							{/if}
+							{#if focusedLessonId === lesson.id && authReady && nextLesson}
+								<div class="lesson__nav">
+									<PixelButton variant="solid" size="sm" onclick={() => focusLesson(nextLesson)}>
+										Next lesson → {nextLesson.title}
+									</PixelButton>
+								</div>
+							{/if}
+						</li>
+					{/if}
 				{/each}
 			</ol>
 		</article>
@@ -393,11 +501,35 @@
 		{:else if $courses.length === 0}
 			<p class="hint">No published courses yet — check back soon.</p>
 		{:else}
+			<div class="catalogue-layout">
+			<!-- Category left menu (mirrors the Blog view's CATEGORIES sidebar) -->
+			<aside class="cat-sidebar">
+				<section class="cat-card">
+					<h2 class="cat-card__title">Categories</h2>
+					<div class="cat-list">
+						{#each topicCategories as cat (cat.id)}
+							<button
+								type="button"
+								class="cat-btn"
+								class:cat-btn--active={selectedTopic === cat.id}
+								style={cat.style}
+								onclick={() => (selectedTopic = cat.id)}
+							>
+								<span class="cat-btn__icon" aria-hidden="true">{cat.icon}</span>
+								<span class="cat-btn__name">{cat.name}</span>
+								<Badge variant="neutral" size="sm">{cat.count}</Badge>
+							</button>
+						{/each}
+					</div>
+				</section>
+			</aside>
+
+			<div class="catalogue-main">
 			<!-- Browse toolbar: search + level filter + sort + grouping -->
 			<section class="browse">
 				<div class="browse__head">
 					<h2>Browse all courses</h2>
-					<span class="browse__count">{filteredCourses.length} of {$courses.length}</span>
+					<span class="browse__count">{coursesInTopic.length} of {$courses.length}</span>
 				</div>
 				<div class="toolbar">
 					<div class="toolbar__search">
@@ -429,9 +561,11 @@
 								{#each sortOptions as o}<option value={o.value}>{o.label}</option>{/each}
 							</select>
 						</label>
-						<label class="toggle">
-							<input type="checkbox" bind:checked={groupByTopic} /> Group by topic
-						</label>
+						{#if selectedTopic === 'all'}
+							<label class="toggle">
+								<input type="checkbox" bind:checked={groupByTopic} /> Group by topic
+							</label>
+						{/if}
 					</div>
 				</div>
 			</section>
@@ -472,12 +606,12 @@
 				</li>
 			{/snippet}
 
-			{#if filteredCourses.length === 0}
+			{#if coursesInTopic.length === 0}
 				<p class="hint empty">
-					No courses match “{search}”{levelFilter !== 'all' ? ` at ${levelFilter} level` : ''}.
-					<button class="link" onclick={() => { search = ''; levelFilter = 'all'; }}>Clear filters</button>
+					No courses match “{search}”{levelFilter !== 'all' ? ` at ${levelFilter} level` : ''}{selectedTopic !== 'all' ? ` in ${selectedTopic}` : ''}.
+					<button class="link" onclick={() => { search = ''; levelFilter = 'all'; selectedTopic = 'all'; }}>Clear filters</button>
 				</p>
-			{:else if groupByTopic}
+			{:else if selectedTopic === 'all' && groupByTopic}
 				{#each groupedCourses as group (group.topic)}
 					<section class="topic">
 						<h3 class="topic__head">
@@ -490,9 +624,11 @@
 				{/each}
 			{:else}
 				<ul class="catalogue">
-					{#each filteredCourses as course (course.id)}{@render courseCard(course)}{/each}
+					{#each coursesInTopic as course (course.id)}{@render courseCard(course)}{/each}
 				</ul>
 			{/if}
+			</div>
+			</div>
 		{/if}
 
 		<!-- Public certificate verification -->
@@ -1081,5 +1217,118 @@
 		font-size: 0.82rem;
 		color: #374151;
 		margin: 0.6rem 0 0;
+	}
+
+	/* ── Catalogue layout: category sidebar + course list ── */
+	.catalogue-layout {
+		display: grid;
+		grid-template-columns: minmax(210px, 270px) minmax(0, 1fr);
+		gap: 1rem;
+		align-items: start;
+	}
+	@media (max-width: 760px) {
+		.catalogue-layout {
+			grid-template-columns: 1fr;
+		}
+	}
+	.catalogue-main {
+		min-width: 0;
+	}
+	.cat-sidebar {
+		position: sticky;
+		top: 0;
+	}
+	.cat-card {
+		background: #ffffff;
+		border: 2px solid #000000;
+		border-radius: 8px;
+		padding: 0.85rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+	}
+	.cat-card__title {
+		margin: 0;
+		font-size: 0.8rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: #111827;
+	}
+	.cat-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+	}
+	.cat-btn {
+		position: relative;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		width: 100%;
+		text-align: left;
+		padding: 0.5rem 0.6rem 0.5rem 0.85rem;
+		background: #ffffff;
+		border: 2px solid #000000;
+		border-radius: 6px;
+		font: inherit;
+		font-size: 0.82rem;
+		font-weight: 600;
+		color: #1f2937;
+		cursor: pointer;
+		transition:
+			transform 0.1s ease,
+			box-shadow 0.1s ease,
+			background 0.1s ease;
+	}
+	.cat-btn::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		width: 5px;
+		background: var(--accent, #3b82f6);
+		border-right: 2px solid #000000;
+		border-radius: 4px 0 0 4px;
+	}
+	.cat-btn:hover {
+		transform: translateY(-1px);
+		box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2);
+	}
+	.cat-btn--active {
+		background: color-mix(in srgb, var(--accent, #3b82f6) 14%, #ffffff);
+		color: var(--accent-dark, #1d4ed8);
+		border-color: var(--accent-dark, #1d4ed8);
+	}
+	.cat-btn__icon {
+		flex: 0 0 auto;
+		font-size: 0.95rem;
+		line-height: 1;
+	}
+	.cat-btn__name {
+		flex: 1 1 auto;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	/* ── Lesson focus mode ── */
+	.lessons__focusbar {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		margin: 0.75rem 0 0;
+	}
+	.lessons__pos {
+		font-size: 0.78rem;
+		font-weight: 600;
+		color: #6b7280;
+	}
+	.lesson__nav {
+		display: flex;
+		justify-content: flex-end;
+		margin-top: 0.6rem;
 	}
 </style>
