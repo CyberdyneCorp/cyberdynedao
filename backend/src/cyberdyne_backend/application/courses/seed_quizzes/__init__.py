@@ -14,10 +14,22 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 from cyberdyne_backend.application.courses.seed_quizzes import (
     algorithms_intermediate as _algorithms_intermediate,
 )
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    analog_ic_advanced as _analog_ic_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import analog_ic_basics as _analog_ic_basics
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    analog_ic_intermediate as _analog_ic_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import ansible_advanced as _ansible_advanced
 from cyberdyne_backend.application.courses.seed_quizzes import ansible_basics as _ansible_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
     ansible_intermediate as _ansible_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import battery_advanced as _battery_advanced
+from cyberdyne_backend.application.courses.seed_quizzes import battery_basics as _battery_basics
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    battery_intermediate as _battery_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     blockchain_basics as _blockchain_basics,
@@ -27,6 +39,13 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 )
 from cyberdyne_backend.application.courses.seed_quizzes import c_basics as _c_basics
 from cyberdyne_backend.application.courses.seed_quizzes import c_intermediate as _c_intermediate
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    comparch_advanced as _comparch_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import comparch_basics as _comparch_basics
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    comparch_intermediate as _comparch_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import control_advanced as _control_advanced
 from cyberdyne_backend.application.courses.seed_quizzes import control_basics as _control_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -38,6 +57,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import csharp_advanced a
 from cyberdyne_backend.application.courses.seed_quizzes import csharp_basics as _csharp_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
     csharp_intermediate as _csharp_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    digital_comms_advanced as _digital_comms_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    digital_comms_basics as _digital_comms_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    digital_comms_intermediate as _digital_comms_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     digital_logic_advanced as _digital_logic_advanced,
@@ -81,6 +109,11 @@ from cyberdyne_backend.application.courses.seed_quizzes import embedded_basics a
 from cyberdyne_backend.application.courses.seed_quizzes import (
     embedded_intermediate as _embedded_intermediate,
 )
+from cyberdyne_backend.application.courses.seed_quizzes import fpga_advanced as _fpga_advanced
+from cyberdyne_backend.application.courses.seed_quizzes import fpga_basics as _fpga_basics
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    fpga_intermediate as _fpga_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import go_basics as _go_basics
 from cyberdyne_backend.application.courses.seed_quizzes import go_intermediate as _go_intermediate
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -121,10 +154,24 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 )
 from cyberdyne_backend.application.courses.seed_quizzes import math_probability as _math_probability
 from cyberdyne_backend.application.courses.seed_quizzes import matlab_basics as _matlab_basics
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    microwave_advanced as _microwave_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import microwave_basics as _microwave_basics
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    microwave_intermediate as _microwave_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import mongodb as _mongodb
 from cyberdyne_backend.application.courses.seed_quizzes import pcb_advanced as _pcb_advanced
 from cyberdyne_backend.application.courses.seed_quizzes import pcb_basics as _pcb_basics
 from cyberdyne_backend.application.courses.seed_quizzes import pcb_intermediate as _pcb_intermediate
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    photonics_advanced as _photonics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import photonics_basics as _photonics_basics
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    photonics_intermediate as _photonics_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import physics_basics as _physics_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
     physics_intermediate as _physics_intermediate,
@@ -141,6 +188,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     power_electronics_intermediate as _power_electronics_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    power_systems_advanced as _power_systems_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    power_systems_basics as _power_systems_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    power_systems_intermediate as _power_systems_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import python_course as _python_course
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -224,13 +280,22 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "algorithms-advanced": _algorithms_advanced.QUIZ,
     "algorithms-basics": _algorithms_basics.QUIZ,
     "algorithms-intermediate": _algorithms_intermediate.QUIZ,
+    "analog-ic-advanced": _analog_ic_advanced.QUIZ,
+    "analog-ic-basics": _analog_ic_basics.QUIZ,
+    "analog-ic-intermediate": _analog_ic_intermediate.QUIZ,
     "ansible-advanced": _ansible_advanced.QUIZ,
     "ansible-basics": _ansible_basics.QUIZ,
     "ansible-intermediate": _ansible_intermediate.QUIZ,
+    "battery-advanced": _battery_advanced.QUIZ,
+    "battery-basics": _battery_basics.QUIZ,
+    "battery-intermediate": _battery_intermediate.QUIZ,
     "blockchain-basics": _blockchain_basics.QUIZ,
     "blockchain-beyond-basics": _blockchain_beyond_basics.QUIZ,
     "c-basics": _c_basics.QUIZ,
     "c-intermediate": _c_intermediate.QUIZ,
+    "comparch-advanced": _comparch_advanced.QUIZ,
+    "comparch-basics": _comparch_basics.QUIZ,
+    "comparch-intermediate": _comparch_intermediate.QUIZ,
     "control-advanced": _control_advanced.QUIZ,
     "control-basics": _control_basics.QUIZ,
     "control-intermediate": _control_intermediate.QUIZ,
@@ -239,6 +304,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "csharp-advanced": _csharp_advanced.QUIZ,
     "csharp-basics": _csharp_basics.QUIZ,
     "csharp-intermediate": _csharp_intermediate.QUIZ,
+    "digital-comms-advanced": _digital_comms_advanced.QUIZ,
+    "digital-comms-basics": _digital_comms_basics.QUIZ,
+    "digital-comms-intermediate": _digital_comms_intermediate.QUIZ,
     "digital-logic-advanced": _digital_logic_advanced.QUIZ,
     "digital-logic-basics": _digital_logic_basics.QUIZ,
     "digital-logic-intermediate": _digital_logic_intermediate.QUIZ,
@@ -257,6 +325,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "embedded-advanced": _embedded_advanced.QUIZ,
     "embedded-basics": _embedded_basics.QUIZ,
     "embedded-intermediate": _embedded_intermediate.QUIZ,
+    "fpga-advanced": _fpga_advanced.QUIZ,
+    "fpga-basics": _fpga_basics.QUIZ,
+    "fpga-intermediate": _fpga_intermediate.QUIZ,
     "go-basics": _go_basics.QUIZ,
     "go-intermediate": _go_intermediate.QUIZ,
     "javascript-basics": _javascript_basics.QUIZ,
@@ -279,10 +350,16 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "math-optimization": _math_optimization.QUIZ,
     "math-probability": _math_probability.QUIZ,
     "matlab-basics": _matlab_basics.QUIZ,
+    "microwave-advanced": _microwave_advanced.QUIZ,
+    "microwave-basics": _microwave_basics.QUIZ,
+    "microwave-intermediate": _microwave_intermediate.QUIZ,
     "mongodb": _mongodb.QUIZ,
     "pcb-advanced": _pcb_advanced.QUIZ,
     "pcb-basics": _pcb_basics.QUIZ,
     "pcb-intermediate": _pcb_intermediate.QUIZ,
+    "photonics-advanced": _photonics_advanced.QUIZ,
+    "photonics-basics": _photonics_basics.QUIZ,
+    "photonics-intermediate": _photonics_intermediate.QUIZ,
     "physics-basics": _physics_basics.QUIZ,
     "physics-intermediate": _physics_intermediate.QUIZ,
     "physics-quadrotor-dynamics": _physics_quadrotor_dynamics.QUIZ,
@@ -290,6 +367,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "power-electronics-advanced": _power_electronics_advanced.QUIZ,
     "power-electronics-basics": _power_electronics_basics.QUIZ,
     "power-electronics-intermediate": _power_electronics_intermediate.QUIZ,
+    "power-systems-advanced": _power_systems_advanced.QUIZ,
+    "power-systems-basics": _power_systems_basics.QUIZ,
+    "power-systems-intermediate": _power_systems_intermediate.QUIZ,
     "python-course": _python_course.QUIZ,
     "rf-comms-advanced": _rf_comms_advanced.QUIZ,
     "rf-comms-basics": _rf_comms_basics.QUIZ,
