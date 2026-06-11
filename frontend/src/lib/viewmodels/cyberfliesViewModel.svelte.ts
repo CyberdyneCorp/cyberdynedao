@@ -44,6 +44,7 @@ import {
 	joinMeeting as joinMeetingApi,
 	listMeetingSessions,
 	getMeetingSession,
+	deleteMeetingSession,
 	isTerminalStatus,
 	isTerminalMeetingStatus,
 	CyberfliesApiError,
@@ -126,6 +127,8 @@ export interface CyberfliesViewModel {
 	refreshChannels(): Promise<void>;
 	refreshMeetingSessions(): Promise<void>;
 	joinMeeting(req: JoinMeetingRequest): Promise<void>;
+	/** Delete a capture session and drop it from the Bot tab list. */
+	removeMeetingSession(sessionId: string): Promise<void>;
 	selectRecording(id: string | null): void;
 	uploadAudio(file: File): Promise<void>;
 	/** Stream the original audio/video through the API and save it. */
@@ -372,6 +375,17 @@ export function createCyberfliesVM(
 			botError = toMessage(err);
 		} finally {
 			sendingBot = false;
+		}
+	}
+
+	async function removeMeetingSession(sessionId: string): Promise<void> {
+		try {
+			await deleteMeetingSession(sessionId);
+			meetingSessions = meetingSessions.filter((s) => s.id !== sessionId);
+			meetingPolling.delete(sessionId);
+			botError = null;
+		} catch (err) {
+			botError = toMessage(err);
 		}
 	}
 
@@ -795,6 +809,7 @@ export function createCyberfliesVM(
 		refreshChannels,
 		refreshMeetingSessions,
 		joinMeeting,
+		removeMeetingSession,
 		selectRecording: (id) => {
 			selectedId = id;
 		},

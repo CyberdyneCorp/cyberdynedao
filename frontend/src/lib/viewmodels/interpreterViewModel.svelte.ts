@@ -20,14 +20,35 @@
 import {
 	execute as runExecute,
 	createSession,
+	createKernel,
+	executeInKernel,
+	getCapabilities,
 	listFiles,
 	uploadFile,
 	downloadFile,
+	isImageRichOutput,
 	InterpreterApiError,
-	type FileMeta
+	type FileMeta,
+	type RichOutputModel,
+	type CapabilitiesResponse
 } from '$lib/api/interpreterApi';
 
 export type CellStatus = 'running' | 'ok' | 'error';
+
+/** An inline image rendered from an auto-captured rich output. `url` is a
+ *  blob URL the VM owns and revokes when the cell is cleared. */
+export interface CellImage {
+	name: string;
+	mimeType: string;
+	url: string;
+}
+
+/** Non-image rich output (text/plain, text/html, application/json) shown
+ *  inline as text — never injected as HTML, to avoid XSS. */
+export interface CellText {
+	mimeType: string;
+	text: string;
+}
 
 export interface InterpreterCell {
 	id: number;
@@ -39,9 +60,19 @@ export interface InterpreterCell {
 	result: string | null;
 	error: string | null;
 	truncated: boolean;
+	/** Kernel execution counter (`In [n]`); null in stateless `/execute` mode. */
+	executionCount: number | null;
+	/** Auto-captured figures/images, resolved to blob URLs. */
+	images: CellImage[];
+	/** Auto-captured text/HTML/JSON outputs. */
+	texts: CellText[];
 	startedAt: number;
 	finishedAt: number | null;
 }
+
+/** How the REPL runs code. `kernel` keeps state across cells; `stateless`
+ *  is the per-call RestrictedPython sandbox (`/execute`). */
+export type ExecutionMode = 'kernel' | 'stateless' | 'unknown';
 
 export interface InterpreterViewModel {
 	readonly cells: InterpreterCell[];
@@ -57,6 +88,12 @@ export interface InterpreterViewModel {
 	readonly files: FileMeta[];
 	readonly filesLoading: boolean;
 	readonly error: string | null;
+	/** How the REPL executes code — resolved from server capabilities on the
+	 *  first run. `kernel` persists variables across cells. */
+	readonly executionMode: ExecutionMode;
+	/** Server capabilities (python version, libraries, limits), or null until
+	 *  the first run fetches them. Drives the info panel + feature gating. */
+	readonly capabilities: CapabilitiesResponse | null;
 
 	setInput(value: string): void;
 	runCode(): Promise<void>;
@@ -66,6 +103,8 @@ export interface InterpreterViewModel {
 	uploadWorkspaceFile(file: File): Promise<void>;
 	downloadWorkspaceFile(name: string): Promise<void>;
 	appendToInput(snippet: string): void;
+	/** Revoke any outstanding blob URLs — call from the view's onDestroy. */
+	destroy(): void;
 }
 
 export function createInterpreterVM(): InterpreterViewModel {
@@ -76,7 +115,25 @@ export function createInterpreterVM(): InterpreterViewModel {
 	let files = $state<FileMeta[]>([]);
 	let filesLoading = $state<boolean>(false);
 	let error = $state<string | null>(null);
+	let executionMode = $state<ExecutionMode>('unknown');
+	let capabilities = $state<CapabilitiesResponse | null>(null);
 	let nextCellId = 1;
+
+	// Live kernel id (kernel mode only); null until created or after the
+	// kernel is killed by an idle/hard timeout — the next run recreates it.
+	let kernelId: string | null = null;
+
+	// Every blob URL we mint for an inline image, so we can revoke them on
+	// clear/reset/destroy — long sessions otherwise leak megabytes of PNGs.
+	const objectUrls = new Set<string>();
+	function trackUrl(url: string): string {
+		objectUrls.add(url);
+		return url;
+	}
+	function revokeAllUrls(): void {
+		for (const url of objectUrls) URL.revokeObjectURL(url);
+		objectUrls.clear();
+	}
 
 	// Lazily create one server-issued session and reuse it. Coalesce
 	// concurrent callers so a burst of run/refresh/upload doesn't spawn
@@ -97,6 +154,47 @@ export function createInterpreterVM(): InterpreterViewModel {
 		return sessionInflight;
 	}
 
+	// Fetch server capabilities once. On any failure we leave them null and
+	// the REPL falls back to the stateless /execute path — the capabilities
+	// probe must never block running code.
+	let capsInflight: Promise<CapabilitiesResponse | null> | null = null;
+	async function ensureCapabilities(): Promise<CapabilitiesResponse | null> {
+		if (capabilities) return capabilities;
+		if (capsInflight) return capsInflight;
+		capsInflight = (async () => {
+			try {
+				capabilities = await getCapabilities();
+				return capabilities;
+			} catch {
+				return null;
+			} finally {
+				capsInflight = null;
+			}
+		})();
+		return capsInflight;
+	}
+
+	// Decide how to run code and make sure the backing resource (kernel or
+	// session) exists. Kernels persist variables across cells; we use one
+	// when the deployment enables them, falling back to stateless /execute
+	// otherwise. A kernel mounts the workspace session, so we adopt its
+	// session_id for file ops.
+	async function ensureExecutor(): Promise<ExecutionMode> {
+		const caps = await ensureCapabilities();
+		if (!caps?.kernels?.enabled) {
+			executionMode = 'stateless';
+			await ensureSession();
+			return 'stateless';
+		}
+		if (!kernelId) {
+			const kernel = await createKernel(sessionId ?? undefined);
+			kernelId = kernel.id;
+			sessionId = kernel.session_id;
+		}
+		executionMode = 'kernel';
+		return 'kernel';
+	}
+
 	function appendCell(source: string): InterpreterCell {
 		const cell: InterpreterCell = {
 			id: nextCellId++,
@@ -107,11 +205,39 @@ export function createInterpreterVM(): InterpreterViewModel {
 			result: null,
 			error: null,
 			truncated: false,
+			executionCount: null,
+			images: [],
+			texts: [],
 			startedAt: Date.now(),
 			finishedAt: null
 		};
 		cells = [...cells, cell];
 		return cell;
+	}
+
+	// Resolve auto-captured rich outputs into render-ready cell fields:
+	// image outputs become blob URLs (downloaded through the authed proxy),
+	// everything else (text/html/json) is kept as inline text. A failed
+	// image download is skipped rather than failing the whole cell.
+	async function resolveRichOutputs(
+		sid: string,
+		outputs: RichOutputModel[] | undefined
+	): Promise<{ images: CellImage[]; texts: CellText[] }> {
+		const images: CellImage[] = [];
+		const texts: CellText[] = [];
+		for (const out of outputs ?? []) {
+			if (isImageRichOutput(out) && out.artifact) {
+				try {
+					const { url } = await downloadFile(sid, out.artifact);
+					images.push({ name: out.artifact, mimeType: out.mime_type, url: trackUrl(url) });
+				} catch {
+					/* skip an image we couldn't fetch */
+				}
+			} else if (typeof out.text === 'string' && out.text !== '') {
+				texts.push({ mimeType: out.mime_type, text: out.text });
+			}
+		}
+		return { images, texts };
 	}
 
 	function patchCell(id: number, patch: Partial<InterpreterCell>): void {
@@ -132,20 +258,72 @@ export function createInterpreterVM(): InterpreterViewModel {
 		input = '';
 		const cell = appendCell(trimmed);
 		try {
-			const sid = await ensureSession();
-			const response = await runExecute({ code: trimmed, session_id: sid });
+			const mode = await ensureExecutor();
+			// Shared response shape across both paths.
+			let success: boolean;
+			let stdout: string;
+			let stderr: string;
+			let result: string | null;
+			let errorText: string | null;
+			let truncated: boolean;
+			let artifacts: FileMeta[];
+			let richOutputs: RichOutputModel[] | undefined;
+			let executionCount: number | null = null;
+			let noticeText: string | null = null;
+
+			if (mode === 'kernel' && kernelId) {
+				let resp = await executeInKernel(kernelId, trimmed);
+				// An idle/hard timeout kills the kernel — its state (variables,
+				// imports) is gone. Spin up a fresh one and retry once so a long
+				// pause between cells doesn't surface as a confusing error.
+				if (!resp.alive) {
+					kernelId = null;
+					const restartedMode = await ensureExecutor();
+					if (restartedMode === 'kernel' && kernelId) {
+						noticeText = 'Kernel had expired and was restarted — earlier variables were cleared.';
+						resp = await executeInKernel(kernelId, trimmed);
+					}
+				}
+				success = resp.success;
+				stdout = resp.stdout ?? '';
+				stderr = resp.stderr ?? '';
+				result = resp.result ?? null;
+				errorText = resp.error ?? null;
+				truncated = resp.truncated ?? false;
+				artifacts = resp.artifacts ?? [];
+				richOutputs = resp.rich_outputs;
+				executionCount = resp.execution_count ?? null;
+			} else {
+				const sid = sessionId ?? (await ensureSession());
+				const resp = await runExecute({ code: trimmed, session_id: sid });
+				success = resp.success;
+				stdout = resp.stdout ?? '';
+				stderr = resp.stderr ?? '';
+				result = resp.result ?? null;
+				errorText = resp.error ?? null;
+				truncated = resp.truncated ?? false;
+				artifacts = resp.artifacts ?? [];
+				richOutputs = resp.rich_outputs;
+			}
+
+			const sid = sessionId ?? '';
+			const { images, texts } = await resolveRichOutputs(sid, richOutputs);
 			patchCell(cell.id, {
-				status: response.success ? 'ok' : 'error',
-				stdout: response.stdout ?? '',
-				stderr: response.stderr ?? '',
-				result: response.result ?? null,
-				error: response.error ?? null,
-				truncated: response.truncated ?? false,
+				status: success ? 'ok' : 'error',
+				stdout,
+				stderr,
+				result,
+				error: errorText,
+				truncated,
+				executionCount,
+				images,
+				texts,
 				finishedAt: Date.now()
 			});
-			// /execute returns the post-run workspace listing — adopt it so
+			if (noticeText) error = noticeText;
+			// Both paths return the post-run workspace listing — adopt it so
 			// the Files panel reflects anything the code wrote.
-			if (Array.isArray(response.artifacts)) files = response.artifacts;
+			if (Array.isArray(artifacts)) files = artifacts;
 		} catch (err) {
 			patchCell(cell.id, {
 				status: 'error',
@@ -222,21 +400,32 @@ export function createInterpreterVM(): InterpreterViewModel {
 		get error() {
 			return error;
 		},
+		get executionMode() {
+			return executionMode;
+		},
+		get capabilities() {
+			return capabilities;
+		},
 		setInput: (value) => {
 			input = value;
 		},
 		runCode,
 		clearCells: () => {
+			revokeAllUrls();
 			cells = [];
 			nextCellId = 1;
 		},
 		resetSession: () => {
+			revokeAllUrls();
 			cells = [];
 			nextCellId = 1;
-			// Drop the session; the next run/refresh/upload creates a fresh
-			// server-issued one.
+			// Drop the session + kernel; the next run/refresh/upload creates a
+			// fresh server-issued one. Capabilities are deployment-wide, so we
+			// keep them cached.
 			sessionId = null;
 			sessionInflight = null;
+			kernelId = null;
+			executionMode = 'unknown';
 			files = [];
 			error = null;
 		},
@@ -246,6 +435,9 @@ export function createInterpreterVM(): InterpreterViewModel {
 		appendToInput: (snippet) => {
 			const sep = input.length > 0 && !input.endsWith('\n') ? '\n' : '';
 			input = `${input}${sep}${snippet}`;
+		},
+		destroy: () => {
+			revokeAllUrls();
 		}
 	};
 }

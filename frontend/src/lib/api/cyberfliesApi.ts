@@ -450,6 +450,12 @@ export function getMeetingSession(sessionId: string): Promise<MeetingSession> {
 	return getJson<MeetingSession>(`/api/v1/meetings/${encodeURIComponent(sessionId)}`);
 }
 
+/** Delete a meeting-capture session (clears it from the list; any produced
+ *  recording is kept). 204. */
+export function deleteMeetingSession(sessionId: string): Promise<void> {
+	return del(`/api/v1/meetings/${encodeURIComponent(sessionId)}`);
+}
+
 // ── Channel rename ──────────────────────────────────────────────────
 
 /** Rename / re-describe a channel. */

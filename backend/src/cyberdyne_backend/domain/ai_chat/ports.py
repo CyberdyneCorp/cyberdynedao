@@ -139,11 +139,29 @@ class MatlabPort(Protocol):
 
 
 @dataclass(frozen=True, slots=True)
+class RichOutput:
+    """An auto-captured renderable output from a Python execution — a
+    matplotlib figure, an HTML table, a JSON repr, etc. ``artifact`` names a
+    workspace file to download (set for binary outputs like ``image/png``);
+    ``text`` carries inline content for ``text/*`` / ``application/json``."""
+
+    mime_type: str
+    artifact: str | None = None
+    text: str | None = None
+
+    @property
+    def is_image(self) -> bool:
+        return self.mime_type.startswith("image/") and self.artifact is not None
+
+
+@dataclass(frozen=True, slots=True)
 class PythonExecResult:
     """One Python interpreter execution. Like MATLAB, files written to the
     workspace are referenced by ``artifacts`` (filenames) + ``session_id``,
     not inlined — the frontend downloads them through the authed
-    /api/interpreter proxy."""
+    /api/interpreter proxy. ``rich_outputs`` are the interpreter's
+    auto-captured renderables (figures/HTML/JSON), more reliable than
+    sniffing artifact extensions."""
 
     ok: bool
     stdout: str
@@ -152,6 +170,7 @@ class PythonExecResult:
     error: str | None = None
     artifacts: tuple[str, ...] = ()
     session_id: str = ""
+    rich_outputs: tuple[RichOutput, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

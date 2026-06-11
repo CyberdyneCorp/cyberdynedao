@@ -19,7 +19,7 @@ from typing import Any, cast
 
 import httpx
 
-from cyberdyne_backend.domain.ai_chat import ManimRenderResult, PythonExecResult
+from cyberdyne_backend.domain.ai_chat import ManimRenderResult, PythonExecResult, RichOutput
 
 logger = logging.getLogger("cyberdyne_backend.python_interpreter")
 
@@ -131,6 +131,29 @@ class PythonInterpreterClient:
         return filename
 
     @staticmethod
+    def _rich_outputs(raw: object) -> tuple[RichOutput, ...]:
+        # Upstream rich_outputs are {mime_type, artifact?, text?}. Keep only
+        # well-formed entries (a mime_type is mandatory); ignore the rest.
+        outs: list[RichOutput] = []
+        if isinstance(raw, list):
+            for o in raw:
+                if not isinstance(o, dict):
+                    continue
+                mime = o.get("mime_type")
+                if not isinstance(mime, str) or not mime:
+                    continue
+                artifact = o.get("artifact")
+                text = o.get("text")
+                outs.append(
+                    RichOutput(
+                        mime_type=mime,
+                        artifact=artifact if isinstance(artifact, str) else None,
+                        text=text if isinstance(text, str) else None,
+                    )
+                )
+        return tuple(outs)
+
+    @staticmethod
     def _artifact_names(raw_artifacts: object) -> list[str]:
         # Upstream artifacts are FileMeta objects ({name, size_bytes,
         # modified_at}); keep just the names, like the MATLAB client.
@@ -172,6 +195,7 @@ class PythonInterpreterClient:
             error=str(error) if error is not None else None,
             artifacts=tuple(names),
             session_id=session_id,
+            rich_outputs=self._rich_outputs(body.get("rich_outputs")),
         )
 
     async def _post(

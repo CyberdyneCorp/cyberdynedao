@@ -1,10 +1,66 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createInterpreterVM } from '../interpreterViewModel.svelte';
 import * as interpreterApi from '$lib/api/interpreterApi';
-import type { ExecuteResponse } from '$lib/api/interpreterApi';
+import type {
+	CapabilitiesResponse,
+	ExecuteResponse,
+	KernelResponse,
+	KernelExecuteResponse
+} from '$lib/api/interpreterApi';
 
 function execResponse(over: Partial<ExecuteResponse> = {}): ExecuteResponse {
 	return {
+		success: true,
+		result: null,
+		stdout: '',
+		stderr: '',
+		error: null,
+		truncated: false,
+		artifacts: [],
+		...over
+	};
+}
+
+function capsResponse(over: Partial<CapabilitiesResponse> = {}): CapabilitiesResponse {
+	return {
+		service_version: '1.0.0',
+		python_version: '3.12.1',
+		restricted_by_default: true,
+		allow_unrestricted: false,
+		libraries: [],
+		algorithms: [],
+		limits: {
+			timeout_seconds: 30,
+			max_memory_mb: 512,
+			max_output_length: 100_000,
+			max_code_size: 100_000
+		},
+		workspace: { enabled: true, max_file_mb: 10, max_session_mb: 100, max_files: 50 },
+		manim: { enabled: false, formats: [], qualities: [], timeout_seconds: 120, max_file_mb: 50 },
+		kernels: { enabled: false, idle_ttl_seconds: 600, max_ttl_seconds: 3600, max_sessions: 5 },
+		...over
+	};
+}
+
+function kernelResponse(over: Partial<KernelResponse> = {}): KernelResponse {
+	return {
+		id: 'k1',
+		session_id: 'srv-1',
+		created_at: 0,
+		last_active_at: 0,
+		execution_count: 0,
+		idle_expires_at: 0,
+		hard_expires_at: 0,
+		alive: true,
+		...over
+	};
+}
+
+function kernelExec(over: Partial<KernelExecuteResponse> = {}): KernelExecuteResponse {
+	return {
+		kernel_id: 'k1',
+		alive: true,
+		execution_count: 1,
 		success: true,
 		result: null,
 		stdout: '',
@@ -22,6 +78,9 @@ beforeEach(() => {
 	// The VM lazily creates a server-issued session before any execute /
 	// listFiles / upload; default it so each test doesn't have to.
 	vi.spyOn(interpreterApi, 'createSession').mockResolvedValue({ session_id: 'srv-1' });
+	// Default to a deployment WITHOUT kernels so the existing tests exercise
+	// the stateless /execute path; kernel tests override this.
+	vi.spyOn(interpreterApi, 'getCapabilities').mockResolvedValue(capsResponse());
 });
 
 afterEach(() => {
@@ -243,6 +302,126 @@ describe('interpreterViewModel', () => {
 		await vm.downloadWorkspaceFile('plot.png');
 		expect(clickSpy).toHaveBeenCalledTimes(1);
 		clickSpy.mockRestore();
+	});
+
+	describe('execution mode', () => {
+		it('falls back to stateless /execute when kernels are disabled', async () => {
+			const execSpy = vi.spyOn(interpreterApi, 'execute').mockResolvedValue(execResponse());
+			const kernelSpy = vi.spyOn(interpreterApi, 'createKernel');
+			const vm = createInterpreterVM();
+			vm.setInput('1');
+			await vm.runCode();
+			expect(vm.executionMode).toBe('stateless');
+			expect(execSpy).toHaveBeenCalledTimes(1);
+			expect(kernelSpy).not.toHaveBeenCalled();
+			expect(vm.capabilities?.python_version).toBe('3.12.1');
+		});
+
+		it('uses a persistent kernel when the deployment enables them', async () => {
+			vi.spyOn(interpreterApi, 'getCapabilities').mockResolvedValue(
+				capsResponse({ kernels: { enabled: true, idle_ttl_seconds: 600, max_ttl_seconds: 3600, max_sessions: 5 } })
+			);
+			const kernelSpy = vi.spyOn(interpreterApi, 'createKernel').mockResolvedValue(kernelResponse());
+			const execInKernel = vi
+				.spyOn(interpreterApi, 'executeInKernel')
+				.mockResolvedValueOnce(kernelExec({ stdout: 'one\n', execution_count: 1 }))
+				.mockResolvedValueOnce(kernelExec({ stdout: 'two\n', execution_count: 2 }));
+			const stateless = vi.spyOn(interpreterApi, 'execute');
+
+			const vm = createInterpreterVM();
+			vm.setInput('a = 1');
+			await vm.runCode();
+			vm.setInput('a + 1');
+			await vm.runCode();
+
+			expect(vm.executionMode).toBe('kernel');
+			// One kernel reused across both runs (state persists).
+			expect(kernelSpy).toHaveBeenCalledTimes(1);
+			expect(execInKernel).toHaveBeenCalledTimes(2);
+			expect(stateless).not.toHaveBeenCalled();
+			expect(vm.sessionId).toBe('srv-1');
+			expect(vm.cells[1].executionCount).toBe(2);
+			expect(vm.cells[1].stdout).toBe('two\n');
+		});
+
+		it('restarts a dead kernel and retries the run once', async () => {
+			vi.spyOn(interpreterApi, 'getCapabilities').mockResolvedValue(
+				capsResponse({ kernels: { enabled: true, idle_ttl_seconds: 600, max_ttl_seconds: 3600, max_sessions: 5 } })
+			);
+			const kernelSpy = vi
+				.spyOn(interpreterApi, 'createKernel')
+				.mockResolvedValueOnce(kernelResponse({ id: 'k1' }))
+				.mockResolvedValueOnce(kernelResponse({ id: 'k2' }));
+			const execInKernel = vi
+				.spyOn(interpreterApi, 'executeInKernel')
+				.mockResolvedValueOnce(kernelExec({ alive: false }))
+				.mockResolvedValueOnce(kernelExec({ alive: true, stdout: 'recovered\n' }));
+
+			const vm = createInterpreterVM();
+			vm.setInput('1');
+			await vm.runCode();
+
+			expect(kernelSpy).toHaveBeenCalledTimes(2); // dead kernel recreated
+			expect(execInKernel).toHaveBeenCalledTimes(2);
+			expect(vm.cells[0].status).toBe('ok');
+			expect(vm.cells[0].stdout).toBe('recovered\n');
+			expect(vm.error).toMatch(/restarted/i);
+		});
+	});
+
+	describe('rich outputs', () => {
+		it('resolves image outputs to blob URLs and keeps text outputs inline', async () => {
+			vi.spyOn(interpreterApi, 'execute').mockResolvedValue(
+				execResponse({
+					rich_outputs: [
+						{ mime_type: 'image/png', artifact: 'fig.png', text: null },
+						{ mime_type: 'application/json', artifact: null, text: '{"a": 1}' }
+					]
+				})
+			);
+			const dlSpy = vi.spyOn(interpreterApi, 'downloadFile').mockResolvedValue({
+				url: 'blob:img',
+				contentType: 'image/png',
+				bytes: 10
+			});
+			const vm = createInterpreterVM();
+			vm.setInput('plt.plot([1,2]); plt.show()');
+			await vm.runCode();
+
+			expect(dlSpy).toHaveBeenCalledWith('srv-1', 'fig.png');
+			expect(vm.cells[0].images).toHaveLength(1);
+			expect(vm.cells[0].images[0]).toMatchObject({ name: 'fig.png', url: 'blob:img' });
+			expect(vm.cells[0].texts).toHaveLength(1);
+			expect(vm.cells[0].texts[0]).toMatchObject({ mimeType: 'application/json', text: '{"a": 1}' });
+		});
+
+		it('skips an image it cannot download without failing the cell', async () => {
+			vi.spyOn(interpreterApi, 'execute').mockResolvedValue(
+				execResponse({ rich_outputs: [{ mime_type: 'image/png', artifact: 'gone.png' }] })
+			);
+			vi.spyOn(interpreterApi, 'downloadFile').mockRejectedValue(new Error('404'));
+			const vm = createInterpreterVM();
+			vm.setInput('1');
+			await vm.runCode();
+			expect(vm.cells[0].status).toBe('ok');
+			expect(vm.cells[0].images).toHaveLength(0);
+		});
+
+		it('destroy revokes the blob URLs it minted', async () => {
+			vi.spyOn(interpreterApi, 'execute').mockResolvedValue(
+				execResponse({ rich_outputs: [{ mime_type: 'image/png', artifact: 'fig.png' }] })
+			);
+			vi.spyOn(interpreterApi, 'downloadFile').mockResolvedValue({
+				url: 'blob:img',
+				contentType: 'image/png',
+				bytes: 10
+			});
+			const vm = createInterpreterVM();
+			vm.setInput('1');
+			await vm.runCode();
+			vm.destroy();
+			expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:img');
+		});
 	});
 
 	describe('appendToInput', () => {

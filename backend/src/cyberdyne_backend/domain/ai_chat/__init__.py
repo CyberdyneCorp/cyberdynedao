@@ -42,6 +42,7 @@ from cyberdyne_backend.domain.ai_chat.ports import (
     MeetingSummary,
     PythonExecResult,
     PythonInterpreterPort,
+    RichOutput,
     ToolSchema,
 )
 
@@ -68,6 +69,7 @@ __all__ = [
     "MeetingSummary",
     "PythonExecResult",
     "PythonInterpreterPort",
+    "RichOutput",
     "ToolCall",
     "ToolSchema",
     "new_assistant_message",

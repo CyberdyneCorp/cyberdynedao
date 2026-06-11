@@ -897,13 +897,21 @@
 								{#if s.error}
 									<div class="banner banner--err">{s.error}</div>
 								{/if}
-								{#if s.status.toLowerCase() === 'completed' && s.recording_id}
-									<div class="sess__actions">
+								<div class="sess__actions">
+									{#if s.status.toLowerCase() === 'completed' && s.recording_id}
 										<PixelButton variant="outline" size="sm" onclick={() => onViewRecording(s.recording_id!)}>
 											🎧 View recording
 										</PixelButton>
-									</div>
-								{/if}
+									{/if}
+									<PixelButton
+										variant="ghost"
+										size="sm"
+										onclick={() => meetings.removeMeetingSession(s.id)}
+										disabled={!authReady}
+									>
+										🗑 Remove
+									</PixelButton>
+								</div>
 							</li>
 						{/each}
 					</ul>

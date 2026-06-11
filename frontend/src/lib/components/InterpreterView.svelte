@@ -1,10 +1,13 @@
 <script lang="ts">
-	import { tick } from 'svelte';
+	import { tick, onDestroy } from 'svelte';
 	import { Badge, PixelButton, PixelScrollArea } from '@cyberdynecorp/svelte-ui-core';
 	import { authVM } from '$lib/auth/authViewModel.svelte';
 	import { createInterpreterVM } from '$lib/viewmodels/interpreterViewModel.svelte';
 
 	const vm = createInterpreterVM();
+
+	// Free every inline-image blob URL the VM minted when the window closes.
+	onDestroy(() => vm.destroy());
 
 	let textareaEl = $state<HTMLTextAreaElement | null>(null);
 	let uploadInputEl = $state<HTMLInputElement | null>(null);
@@ -75,11 +78,23 @@
 		<div class="hero__brand">
 			<span class="hero__mark" aria-hidden="true">🐍</span>
 			<h1 class="hero__title">PYTHON SANDBOX</h1>
+			{#if vm.executionMode === 'kernel'}
+				<span class="hero__chip" title="A live kernel keeps your variables across cells">⚡ kernel</span>
+			{:else if vm.executionMode === 'stateless'}
+				<span class="hero__chip" title="Each run is an isolated sandbox — variables do not persist">sandbox</span>
+			{/if}
 			<span class="hero__chip">session {vm.sessionId ? vm.sessionId.slice(-6) : 'new'}</span>
 		</div>
 		<p class="hero__tagline">
-			Sandboxed Python on a remote engine. Upload datasets, write files, crunch numbers.
+			{#if vm.executionMode === 'kernel'}
+				Live Python kernel — variables and imports persist across cells.
+			{:else}
+				Sandboxed Python on a remote engine. Upload datasets, write files, crunch numbers.
+			{/if}
 			<kbd>Shift + Enter</kbd> to run.
+			{#if vm.capabilities}
+				<span class="hero__caps">Python {vm.capabilities.python_version}</span>
+			{/if}
 		</p>
 	</header>
 
@@ -106,7 +121,7 @@ import statistics; print(statistics.mean([2, 4, 6]))</pre>
 				{#each vm.cells as cell (cell.id)}
 					<article class="cell">
 						<header class="cell__head">
-							<span class="cell__no">[{cell.id}]</span>
+							<span class="cell__no">[{cell.executionCount ?? cell.id}]</span>
 							<Badge variant={badgeVariant(cell.status)} size="sm">
 								{cell.status === 'running' ? 'RUNNING' : cell.status === 'ok' ? 'OK' : 'ERROR'}
 							</Badge>
@@ -116,6 +131,14 @@ import statistics; print(statistics.mean([2, 4, 6]))</pre>
 						<pre class="cell__source">{cell.source}</pre>
 						{#if cell.stdout}<pre class="cell__stdout">{cell.stdout}</pre>{/if}
 						{#if cell.result}<pre class="cell__result">{cell.result}</pre>{/if}
+						{#each cell.texts as t (t.mimeType + t.text.length)}
+							<pre class="cell__rich" title={t.mimeType}>{t.text}</pre>
+						{/each}
+						{#each cell.images as img (img.url)}
+							<figure class="cell__figure">
+								<img src={img.url} alt={img.name} loading="lazy" />
+							</figure>
+						{/each}
 						{#if cell.stderr}<pre class="cell__stderr">{cell.stderr}</pre>{/if}
 						{#if cell.error}<pre class="cell__error">{cell.error}</pre>{/if}
 					</article>
@@ -222,6 +245,7 @@ import statistics; print(statistics.mean([2, 4, 6]))</pre>
 		background: rgba(0, 0, 0, 0.4); color: #ffe873; padding: 3px 8px; border: 1.5px solid #000;
 	}
 	.hero__tagline { margin: 0; font-size: 0.8125rem; line-height: 1.55; color: #dbeafe; }
+	.hero__caps { color: #93c5fd; font-weight: 700; white-space: nowrap; }
 	.hero kbd { background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.4); padding: 1px 5px; font-size: 0.7rem; border-radius: 2px; }
 
 	.auth-banner {
@@ -242,14 +266,17 @@ import statistics; print(statistics.mean([2, 4, 6]))</pre>
 	.cell__head { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: #1e293b; border-bottom: 1px solid #334155; font-size: 0.7rem; flex-wrap: wrap; }
 	.cell__no { color: var(--accent); font-weight: 700; letter-spacing: 0.04em; }
 	.cell__elapsed { color: #64748b; margin-left: auto; font-variant-numeric: tabular-nums; }
-	.cell__source, .cell__stdout, .cell__stderr, .cell__error, .cell__result {
+	.cell__source, .cell__stdout, .cell__stderr, .cell__error, .cell__result, .cell__rich {
 		margin: 0; padding: 8px 12px; font-size: 0.8rem; line-height: 1.55; white-space: pre-wrap; overflow-x: auto; font-family: inherit;
 	}
 	.cell__source { background: #050913; color: #fde68a; border-bottom: 1px dashed #1e293b; }
 	.cell__stdout { color: #86efac; }
 	.cell__result { color: #7dd3fc; }
+	.cell__rich { color: #e2e8f0; background: rgba(15, 23, 42, 0.6); border-top: 1px dashed #1e293b; }
 	.cell__stderr { color: #fda4af; background: rgba(127, 29, 29, 0.2); }
 	.cell__error { color: #fecaca; background: rgba(127, 29, 29, 0.4); border-top: 1px solid #b91c1c; }
+	.cell__figure { margin: 0; padding: 10px 12px; background: #ffffff; border-top: 1px dashed #1e293b; }
+	.cell__figure img { display: block; max-width: 100%; height: auto; }
 
 	/* Prompt */
 	.prompt { padding: 10px 14px 14px; background: #0a0f1e; border-top: 2px solid #000; display: flex; flex-direction: column; gap: 8px; }

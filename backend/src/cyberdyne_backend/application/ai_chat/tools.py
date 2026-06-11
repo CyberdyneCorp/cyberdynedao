@@ -324,12 +324,14 @@ CYBERDYNE_TOOLS: list[ToolSchema] = [
         name="python_exec",
         description=(
             "Execute Python source on the live interpreter sandbox and return stdout/stderr. "
-            "The session is stateful across calls in this conversation — variables and files "
-            "persist to the next call. Use for computation, data analysis, generating and "
-            "running plots (matplotlib etc.), or any general Python the user asks for. Always "
-            "show the Python source you ran in a fenced ```python block in your reply. "
-            "Matplotlib figures are captured automatically and render inline — you do NOT need "
-            "to call plt.savefig, and plt.show() alone is fine."
+            "Each call is an isolated execution: FILES written to the workspace persist and are "
+            "visible to later calls, but VARIABLES, imports and definitions do NOT carry over — "
+            "redefine what you need in every call, or persist intermediate state to a file and "
+            "re-read it. Use for computation, data analysis, generating and running plots "
+            "(matplotlib etc.), or any general Python the user asks for. Always show the Python "
+            "source you ran in a fenced ```python block in your reply. Matplotlib figures are "
+            "captured automatically and render inline — you do NOT need to call plt.savefig, and "
+            "plt.show() alone is fine."
         ),
         parameters={
             "type": "object",
@@ -354,8 +356,9 @@ CYBERDYNE_TOOLS: list[ToolSchema] = [
             "looping GIF that displays automatically below your message — do NOT embed a "
             "markdown image, a path, or a filename. ALWAYS also show the Manim source you "
             "wrote in a fenced ```python block, then describe what the animation shows in "
-            "one or two sentences. Runs in the same stateful interpreter session as "
-            "python_exec.\n"
+            "one or two sentences. Shares the same workspace as python_exec (rendered files "
+            "persist between them), but like python_exec each call is an isolated execution — "
+            "Python variables do not carry over.\n"
             "AUTHORING RULES (follow exactly — most render failures come from breaking "
             "these):\n"
             '• Use Text("...") for ALL words, labels, titles and sentences. Use '
@@ -964,8 +967,17 @@ class ToolDispatcher:
         # Reference produced files by name + session id only — the frontend
         # downloads them through the authed /api/interpreter proxy. Image
         # artifacts surface ``has_figure`` like the MATLAB tool.
+        #
+        # Prefer the interpreter's auto-captured ``rich_outputs`` (explicit
+        # image mime types) and union them with extension-sniffed artifacts —
+        # rich_outputs catches figures the code never wrote to disk, while the
+        # extension scan keeps working if a deployment omits rich_outputs.
         image_exts = (".png", ".jpg", ".jpeg", ".svg", ".gif")
-        figures = [a for a in res.artifacts if a.lower().endswith(image_exts)]
+        rich_figures = [o.artifact for o in res.rich_outputs if o.is_image and o.artifact]
+        figures = list(rich_figures)
+        for a in res.artifacts:
+            if a.lower().endswith(image_exts) and a not in figures:
+                figures.append(a)
         return json.dumps(
             {
                 "ok": res.ok,

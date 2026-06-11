@@ -96,6 +96,45 @@ class TestPythonInterpreterClient:
         # String entries kept; malformed entries dropped.
         assert res.artifacts == ("legacy.txt",)
 
+    async def test_execute_parses_rich_outputs(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                200,
+                json={
+                    "success": True,
+                    "stdout": "",
+                    "stderr": "",
+                    "artifacts": [{"name": "fig.png", "size_bytes": 9, "modified_at": 1.0}],
+                    "rich_outputs": [
+                        {"mime_type": "image/png", "artifact": "fig.png", "text": None},
+                        {"mime_type": "application/json", "artifact": None, "text": '{"a": 1}'},
+                        {"artifact": "no-mime.png"},  # missing mime_type → dropped
+                        "not-an-object",  # malformed → dropped
+                    ],
+                },
+            )
+
+        client = _client_with(handler)
+        res = await client.execute(code="x", session_id="s", bearer=None)
+        assert len(res.rich_outputs) == 2
+        img, js = res.rich_outputs
+        assert img.mime_type == "image/png"
+        assert img.artifact == "fig.png"
+        assert img.is_image is True
+        assert js.mime_type == "application/json"
+        assert js.artifact is None
+        assert js.text == '{"a": 1}'
+        assert js.is_image is False
+
+    async def test_execute_defaults_rich_outputs_to_empty(self) -> None:
+        # A deployment that omits rich_outputs must not break the mapping.
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json={"success": True, "stdout": "", "stderr": ""})
+
+        client = _client_with(handler)
+        res = await client.execute(code="x", session_id="s", bearer=None)
+        assert res.rich_outputs == ()
+
     async def test_execute_raises_on_http_error(self) -> None:
         client = _client_with(lambda r: httpx.Response(500, json={"detail": "kaboom"}))
         with pytest.raises(RuntimeError, match="python_interpreter /execute 500"):

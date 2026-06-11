@@ -569,6 +569,36 @@ describe('cyberfliesViewModel', () => {
 			await flush(20);
 			expect(getSpy).not.toHaveBeenCalled();
 		});
+
+		it('removeMeetingSession deletes it and drops it from the list', async () => {
+			vi.spyOn(cyberfliesApi, 'listMeetingSessions').mockResolvedValue({
+				items: [session({ id: 'm1', status: 'completed' }), session({ id: 'm2', status: 'failed' })],
+				limit: 50,
+				offset: 0
+			});
+			const delSpy = vi.spyOn(cyberfliesApi, 'deleteMeetingSession').mockResolvedValue(undefined);
+			const vm = createCyberfliesVM(1);
+			await vm.refreshMeetingSessions();
+			expect(vm.meetingSessions).toHaveLength(2);
+			await vm.removeMeetingSession('m1');
+			expect(delSpy).toHaveBeenCalledWith('m1');
+			expect(vm.meetingSessions.map((s) => s.id)).toEqual(['m2']);
+			expect(vm.botError).toBeNull();
+		});
+
+		it('removeMeetingSession surfaces errors and keeps the session', async () => {
+			vi.spyOn(cyberfliesApi, 'listMeetingSessions').mockResolvedValue({
+				items: [session({ id: 'm1', status: 'completed' })],
+				limit: 50,
+				offset: 0
+			});
+			vi.spyOn(cyberfliesApi, 'deleteMeetingSession').mockRejectedValue(new Error('gone wrong'));
+			const vm = createCyberfliesVM(1);
+			await vm.refreshMeetingSessions();
+			await vm.removeMeetingSession('m1');
+			expect(vm.botError).toMatch(/gone wrong/);
+			expect(vm.meetingSessions).toHaveLength(1);
+		});
 	});
 
 	describe('organize remove (cont.)', () => {

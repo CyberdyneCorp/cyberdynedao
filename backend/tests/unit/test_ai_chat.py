@@ -10,6 +10,7 @@ from typing import cast
 import pytest
 
 from cyberdyne_backend.application.ai_chat import (
+    CYBERDYNE_TOOLS,
     GetChatHistory,
     RunChatTurn,
     StartChatSession,
@@ -423,6 +424,7 @@ class _FakePython:
         artifacts: tuple[str, ...] = (),
         manim_artifacts: tuple[str, ...] = ("Scene.gif",),
         manim_status: str = "succeeded",
+        rich_outputs=(),
     ) -> None:
         self.calls: list[dict[str, object]] = []
         self.uploads: list[dict[str, object]] = []
@@ -431,6 +433,7 @@ class _FakePython:
         self._artifacts = artifacts
         self._manim_artifacts = manim_artifacts
         self._manim_status = manim_status
+        self._rich_outputs = rich_outputs
 
     async def create_session(self, *, bearer):
         self.created += 1
@@ -466,6 +469,7 @@ class _FakePython:
             result="45",
             artifacts=self._artifacts,
             session_id=session_id,
+            rich_outputs=self._rich_outputs,
         )
 
     async def render_manim(
@@ -1153,6 +1157,45 @@ class TestToolDispatcher:
         assert data["has_figure"] is True
         assert data["figures"] == ["plot.png"]
         assert data["artifacts"] == ["plot.png", "data.csv"]
+
+    def test_python_tool_descriptions_do_not_promise_variable_persistence(self) -> None:
+        # Regression: the interpreter's /execute path is stateless per call —
+        # only workspace FILES persist, not the Python namespace. The tool
+        # descriptions must not tell the model variables carry over (they
+        # used to, which made the model write code that NameError'd).
+        tools = {t.name: t for t in CYBERDYNE_TOOLS}
+        py = tools["python_exec"].description.lower()
+        assert "variables" in py and "do not carry over" in py
+        assert "files" in py and "persist" in py
+        # The old misleading phrasing must be gone.
+        assert "variables and files persist" not in py
+
+        manim = tools["render_manim"].description.lower()
+        assert "variables do not carry over" in manim
+        assert "stateful interpreter session" not in manim
+
+    async def test_python_exec_detects_figure_from_rich_outputs(self) -> None:
+        # The interpreter auto-captures a figure into an extensionless artifact
+        # but flags it via rich_outputs (image/* mime type). The agent must
+        # surface it even though the filename wouldn't sniff as an image.
+        from cyberdyne_backend.domain.ai_chat import RichOutput
+
+        python = _FakePython(
+            artifacts=("fig-0",),
+            rich_outputs=(RichOutput(mime_type="image/png", artifact="fig-0"),),
+        )
+        ctx = _build_ctx(python=python, bearer="tok")
+        result = await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x",
+                name="python_exec",
+                arguments_json=json.dumps({"code": "plt.plot([1,2]); plt.show()"}),
+            ),
+            chat_session_id="s",
+        )
+        data = json.loads(result)
+        assert data["has_figure"] is True
+        assert data["figures"] == ["fig-0"]
 
     async def test_render_manim_returns_animation_figure(self) -> None:
         python = _FakePython(manim_artifacts=("Demo.gif",))
