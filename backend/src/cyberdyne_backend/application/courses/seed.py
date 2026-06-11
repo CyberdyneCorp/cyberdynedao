@@ -24,23 +24,31 @@ from datetime import datetime
 from uuid import UUID
 
 from cyberdyne_backend.application.courses.seed_algorithms import ALGORITHMS_COURSES
+from cyberdyne_backend.application.courses.seed_analog_ic import ANALOG_IC_COURSES
+from cyberdyne_backend.application.courses.seed_battery import BATTERY_COURSES
+from cyberdyne_backend.application.courses.seed_comparch import COMPARCH_COURSES
 from cyberdyne_backend.application.courses.seed_control import CONTROL_COURSES
 from cyberdyne_backend.application.courses.seed_csharp import CSHARP_COURSES
 from cyberdyne_backend.application.courses.seed_databases import DATABASE_COURSES
 from cyberdyne_backend.application.courses.seed_devops import DEVOPS_COURSES
+from cyberdyne_backend.application.courses.seed_digital_comms import DIGITAL_COMMS_COURSES
 from cyberdyne_backend.application.courses.seed_digital_logic import DIGITAL_LOGIC_COURSES
 from cyberdyne_backend.application.courses.seed_dsp import DSP_COURSES
 from cyberdyne_backend.application.courses.seed_electromagnetics import ELECTROMAGNETICS_COURSES
 from cyberdyne_backend.application.courses.seed_electronics import ELECTRONICS_COURSES
 from cyberdyne_backend.application.courses.seed_embedded import EMBEDDED_COURSES
+from cyberdyne_backend.application.courses.seed_fpga import FPGA_COURSES
 from cyberdyne_backend.application.courses.seed_iac import IAC_COURSES
 from cyberdyne_backend.application.courses.seed_languages import LANGUAGE_COURSES
 from cyberdyne_backend.application.courses.seed_linux import LINUX_COURSES
 from cyberdyne_backend.application.courses.seed_machines import MACHINES_COURSES
 from cyberdyne_backend.application.courses.seed_math import MATH_COURSES
+from cyberdyne_backend.application.courses.seed_microwave import MICROWAVE_COURSES
 from cyberdyne_backend.application.courses.seed_pcb import PCB_COURSES
+from cyberdyne_backend.application.courses.seed_photonics import PHOTONICS_COURSES
 from cyberdyne_backend.application.courses.seed_physics import PHYSICS_COURSES
 from cyberdyne_backend.application.courses.seed_power_electronics import POWER_ELECTRONICS_COURSES
+from cyberdyne_backend.application.courses.seed_power_systems import POWER_SYSTEMS_COURSES
 from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
 from cyberdyne_backend.application.courses.seed_rf_comms import RF_COMMS_COURSES
 from cyberdyne_backend.application.courses.seed_robotics import ROBOTICS_COURSES
@@ -1166,6 +1174,14 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *VLSI_COURSES,
     *DSP_COURSES,
     *MACHINES_COURSES,
+    *COMPARCH_COURSES,
+    *ANALOG_IC_COURSES,
+    *PHOTONICS_COURSES,
+    *BATTERY_COURSES,
+    *DIGITAL_COMMS_COURSES,
+    *MICROWAVE_COURSES,
+    *FPGA_COURSES,
+    *POWER_SYSTEMS_COURSES,
 )
 
 

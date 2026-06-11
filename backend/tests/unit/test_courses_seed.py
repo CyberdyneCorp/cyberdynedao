@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 108
+        assert len(summary) == 132
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -238,6 +238,30 @@ class TestSeedCourses:
             "machines-basics",
             "machines-intermediate",
             "machines-advanced",
+            "comparch-basics",
+            "comparch-intermediate",
+            "comparch-advanced",
+            "analog-ic-basics",
+            "analog-ic-intermediate",
+            "analog-ic-advanced",
+            "photonics-basics",
+            "photonics-intermediate",
+            "photonics-advanced",
+            "battery-basics",
+            "battery-intermediate",
+            "battery-advanced",
+            "digital-comms-basics",
+            "digital-comms-intermediate",
+            "digital-comms-advanced",
+            "microwave-basics",
+            "microwave-intermediate",
+            "microwave-advanced",
+            "fpga-basics",
+            "fpga-intermediate",
+            "fpga-advanced",
+            "power-systems-basics",
+            "power-systems-intermediate",
+            "power-systems-advanced",
         }
         for course in ACADEMY_COURSES:
             assert course.lessons  # non-empty
@@ -711,6 +735,62 @@ class TestSeedCourses:
                 }
                 assert set(spec.per_lesson) == content_titles
         assert total_plots >= 75  # richly interactive across the 5 tracks
+
+    def test_tier3_ee_tracks_complete(self) -> None:
+        import json
+        import re
+
+        from cyberdyne_backend.application.courses.seed_analog_ic import ANALOG_IC_COURSES
+        from cyberdyne_backend.application.courses.seed_battery import BATTERY_COURSES
+        from cyberdyne_backend.application.courses.seed_comparch import COMPARCH_COURSES
+        from cyberdyne_backend.application.courses.seed_digital_comms import (
+            DIGITAL_COMMS_COURSES,
+        )
+        from cyberdyne_backend.application.courses.seed_fpga import FPGA_COURSES
+        from cyberdyne_backend.application.courses.seed_microwave import MICROWAVE_COURSES
+        from cyberdyne_backend.application.courses.seed_photonics import PHOTONICS_COURSES
+        from cyberdyne_backend.application.courses.seed_power_systems import (
+            POWER_SYSTEMS_COURSES,
+        )
+        from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
+
+        tracks = {
+            "comparch": (COMPARCH_COURSES, ("```c", "```python")),
+            "analog-ic": (ANALOG_IC_COURSES, ("```spice", "```python")),
+            "photonics": (PHOTONICS_COURSES, ("```matlab", "```python")),
+            "battery": (BATTERY_COURSES, ("```matlab", "```python")),
+            "digital-comms": (DIGITAL_COMMS_COURSES, ("```matlab", "```python")),
+            "microwave": (MICROWAVE_COURSES, ("```matlab", "```python")),
+            "fpga": (FPGA_COURSES, ("```systemverilog", "```python")),
+            "power-systems": (POWER_SYSTEMS_COURSES, ("```matlab", "```python")),
+        }
+        total_plots = 0
+        for prefix, (courses, lang_fences) in tracks.items():
+            assert len(courses) == 3
+            assert {c.level for c in courses} == {"Beginner", "Intermediate", "Advanced"}
+            for course in courses:
+                assert course.slug.startswith(prefix)
+                kinds = {le.lesson_type for le in course.lessons}
+                assert kinds <= {"text", "code"}
+                assert any(le.lesson_type == "code" for le in course.lessons)  # runnable lab
+                body = "\n".join(le.text_body or "" for le in course.lessons)
+                for fence in lang_fences:  # dual language
+                    assert fence in body, f"{course.slug} missing {fence}"
+                course_plots = 0
+                for raw in re.findall(r"```plot\n(.*?)\n```", body, re.S):
+                    json.loads(raw)  # valid interactive plot JSON
+                    course_plots += 1
+                assert course_plots >= 3, f"{course.slug} has <3 plots"
+                total_plots += course_plots
+                # every content lesson has a checkpoint quiz from the registry
+                assert course.slug in QUIZ_REGISTRY
+                spec = QUIZ_REGISTRY[course.slug]
+                assert spec.final
+                content_titles = {
+                    le.title for le in course.lessons if le.lesson_type in {"text", "code"}
+                }
+                assert set(spec.per_lesson) == content_titles
+        assert total_plots >= 120  # richly interactive across the 8 tracks
 
     def test_csharp_track_runs_basics_to_aspnet(self) -> None:
         from cyberdyne_backend.application.courses.seed_csharp import CSHARP_COURSES
