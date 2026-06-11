@@ -1,13 +1,24 @@
 <script lang="ts">
-	import { tick, onDestroy } from 'svelte';
+	import { tick, onMount, onDestroy } from 'svelte';
 	import { Badge, PixelButton, PixelScrollArea } from '@cyberdynecorp/svelte-ui-core';
 	import { authVM } from '$lib/auth/authViewModel.svelte';
 	import { createInterpreterVM } from '$lib/viewmodels/interpreterViewModel.svelte';
+	import { registerSandbox } from '$lib/stores/sandboxBridge';
 
 	const vm = createInterpreterVM();
 
+	// Accept code pushed from other windows (e.g. the Agent's "Send to
+	// Python" button) — it lands in the prompt ready to run.
+	let unregister: (() => void) | null = null;
+	onMount(() => {
+		unregister = registerSandbox('interpreter', (code) => vm.appendToInput(code));
+	});
+
 	// Free every inline-image blob URL the VM minted when the window closes.
-	onDestroy(() => vm.destroy());
+	onDestroy(() => {
+		unregister?.();
+		vm.destroy();
+	});
 
 	let textareaEl = $state<HTMLTextAreaElement | null>(null);
 	let uploadInputEl = $state<HTMLInputElement | null>(null);

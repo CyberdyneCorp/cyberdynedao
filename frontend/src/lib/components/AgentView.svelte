@@ -9,6 +9,7 @@
 	import { downloadArtifact } from '$lib/api/matlabApi';
 	import { downloadFile } from '$lib/api/interpreterApi';
 	import { parseSegments } from '$lib/utils/chatSegments';
+	import { sendToSandbox, sandboxTargetForLang } from '$lib/stores/sandboxBridge';
 	import { authVM } from '$lib/auth/authViewModel.svelte';
 	import MermaidDiagram from './MermaidDiagram.svelte';
 	import KatexMath from './KatexMath.svelte';
@@ -270,8 +271,23 @@
 						<div class="bubble__content">
 							{#each parseSegments(bubble.content) as seg}
 								{#if seg.kind === 'code'}
+									{@const sandbox = sandboxTargetForLang(seg.lang)}
 									<div class="code">
-										{#if seg.lang}<span class="code__lang">{seg.lang}</span>{/if}
+										{#if seg.lang || sandbox}
+											<div class="code__head">
+												{#if seg.lang}<span class="code__lang">{seg.lang}</span>{/if}
+												{#if sandbox}
+													<button
+														type="button"
+														class="code__send"
+														onclick={() => sendToSandbox(sandbox, seg.code)}
+														title={`Open this code in the ${sandbox === 'interpreter' ? 'Python' : 'MATLAB'} sandbox`}
+													>
+														{sandbox === 'interpreter' ? '🐍 Send to Python' : 'Ⓜ Send to MATLAB'}
+													</button>
+												{/if}
+											</div>
+										{/if}
 										<pre>{seg.code}</pre>
 									</div>
 								{:else if seg.kind === 'mermaid'}
@@ -625,16 +641,38 @@
 		border: 2px solid #000;
 		box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.4);
 	}
+	.code__head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
+		background: #1a2440;
+		padding: 2px 8px;
+		border-bottom: 1px solid #2a3a66;
+	}
 	.code__lang {
-		display: block;
 		font-size: 0.625rem;
 		font-weight: 700;
 		text-transform: uppercase;
 		letter-spacing: 0.08em;
 		color: #9fb4ff;
-		background: #1a2440;
+	}
+	.code__send {
+		font-family: inherit;
+		font-size: 0.625rem;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		color: #c9ffd9;
+		background: #15233f;
+		border: 1px solid #2a3a66;
 		padding: 2px 8px;
-		border-bottom: 1px solid #2a3a66;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+	.code__send:hover {
+		background: #243456;
+		border-color: #7c3aed;
+		color: #ffffff;
 	}
 	.code pre {
 		margin: 0;

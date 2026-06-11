@@ -3,8 +3,13 @@
 	import { Badge, PixelButton, PixelScrollArea } from '@cyberdynecorp/svelte-ui-core';
 	import { createMatlabTerminalVM, type MatlabCell } from '$lib/viewmodels/matlabTerminalViewModel.svelte';
 	import { authVM } from '$lib/auth/authViewModel.svelte';
+	import { registerSandbox } from '$lib/stores/sandboxBridge';
 
 	const vm = createMatlabTerminalVM();
+
+	// Accept code pushed from other windows (e.g. the Agent's "Send to
+	// MATLAB" button) — it lands in the prompt ready to run.
+	let unregisterSandbox: (() => void) | null = null;
 
 	let scrollEl = $state<HTMLElement | null>(null);
 	let bottomSentinelEl = $state<HTMLElement | null>(null);
@@ -45,6 +50,7 @@
 	});
 
 	onMount(() => {
+		unregisterSandbox = registerSandbox('matlab', (code) => vm.appendToInput(code));
 		// Auth gating: don't fire workspace probes until we know the
 		// CyberdyneAuth session is restored. If it's already restored
 		// + signed in, kick a refresh so the panel has data on first
@@ -55,6 +61,7 @@
 	});
 
 	onDestroy(() => {
+		unregisterSandbox?.();
 		vm.clearCells();
 	});
 
