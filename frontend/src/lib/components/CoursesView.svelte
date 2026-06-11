@@ -296,10 +296,16 @@
 				{#each course.lessons as lesson, i (lesson.id)}
 					{@const done = lessonCompleted(lesson.id)}
 					{@const isNext = authReady && lesson.id === nextLessonId}
+					{@const locked = !authReady && i > 0}
 					<li class="lesson-wrap">
-						<div class="lesson" class:lesson--done={done} class:lesson--next={isNext}>
+						<div
+							class="lesson"
+							class:lesson--done={done}
+							class:lesson--next={isNext}
+							class:lesson--locked={locked}
+						>
 							<span class="lesson__num" class:lesson__num--done={done}>
-								{#if done}✓{:else}{i + 1}{/if}
+								{#if done}✓{:else if locked}🔒{:else}{i + 1}{/if}
 							</span>
 							<span class="lesson__icon" aria-hidden="true">{lessonIcon[lesson.lessonType]}</span>
 							<span class="lesson__main">
@@ -311,7 +317,11 @@
 								</span>
 							</span>
 							<span class="lesson__actions">
-								{#if lesson.lessonType !== 'quiz'}
+								{#if locked}
+									<span class="lesson__lock" title="Sign in to view this lesson">
+										🔒 Sign in to continue
+									</span>
+								{:else if lesson.lessonType !== 'quiz'}
 									<PixelButton
 										variant="outline"
 										size="sm"
@@ -340,7 +350,7 @@
 								{/if}
 							</span>
 						</div>
-						{#if openLesson === lesson.id}
+						{#if openLesson === lesson.id && !locked}
 							<LessonContent {lesson} language={codeLanguage} />
 						{/if}
 						{#if takingQuiz === lesson.id}
@@ -1031,6 +1041,15 @@
 		font-size: 0.75rem;
 		font-weight: 600;
 		color: #166534;
+	}
+	.lesson--locked {
+		opacity: 0.6;
+	}
+	.lesson__lock {
+		font-size: 0.75rem;
+		font-weight: 600;
+		color: #92400e;
+		white-space: nowrap;
 	}
 	.verify {
 		margin-top: 1.5rem;

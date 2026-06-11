@@ -157,6 +157,12 @@ async def get_certificate_pdf_uc() -> (
     raise NotImplementedError
 
 
+def _viewer_is_authenticated(request: Request) -> bool:
+    # Any signed-in CyberdyneAuth user, regardless of scope — used to decide
+    # whether a viewer may read past the first lesson of a course.
+    return isinstance(getattr(request.state, "principal", None), UserPrincipal)
+
+
 def _viewer_can_see_drafts(request: Request) -> bool:
     # Must mirror ``require_editor``: a caller who can author courses must
     # also be able to *see* the drafts they author. Honour both the
@@ -212,15 +218,18 @@ def _progress_response(progress: CourseProgress) -> CourseProgressResponse:
 # ── Response builders ────────────────────────────────────────────────
 
 
-def _lesson_response(lesson: Lesson) -> LessonResponse:
+def _lesson_response(lesson: Lesson, *, include_body: bool = True) -> LessonResponse:
+    # ``include_body`` is False for the lessons a guest may not read yet: we
+    # keep the metadata (title, type, duration) so the syllabus still renders,
+    # but withhold the actual content so it never reaches the client.
     return LessonResponse(
         id=lesson.id,
         course_id=lesson.course_id,
         title=lesson.title,
         lesson_type=lesson.lesson_type.value,
         sort_order=lesson.sort_order,
-        content_url=lesson.content_url,
-        text_body=lesson.text_body,
+        content_url=lesson.content_url if include_body else None,
+        text_body=lesson.text_body if include_body else None,
         duration=lesson.duration,
     )
 
@@ -245,10 +254,15 @@ def _summary(course: Course) -> CourseSummaryResponse:
     )
 
 
-def _detail(course: Course) -> CourseDetailResponse:
+def _detail(course: Course, *, full_content: bool = True) -> CourseDetailResponse:
+    # Guests (``full_content=False``) may only read the FIRST lesson; the rest
+    # come back with their bodies stripped. Authenticated viewers get the lot.
     return CourseDetailResponse(
         **_summary(course).model_dump(by_alias=False),
-        lessons=[_lesson_response(les) for les in course.lessons],
+        lessons=[
+            _lesson_response(les, include_body=full_content or idx == 0)
+            for idx, les in enumerate(course.lessons)
+        ],
     )
 
 
@@ -292,7 +306,7 @@ async def get_course(
         course = await use_case.execute(slug, include_drafts=_viewer_can_see_drafts(request))
     except CourseNotFoundError as exc:
         raise HTTPException(status_code=404, detail="course not found") from exc
-    return _detail(course)
+    return _detail(course, full_content=_viewer_is_authenticated(request))
 
 
 # ── Learner progress ─────────────────────────────────────────────────

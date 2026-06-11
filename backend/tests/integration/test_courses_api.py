@@ -74,6 +74,31 @@ def test_course_lifecycle(editor_client: TestClient) -> None:
 
 
 @pytest.mark.usefixtures("_prepared_schema")
+def test_guest_only_gets_first_lesson_body(editor_client: TestClient) -> None:
+    # Build a 2-lesson course and publish it.
+    editor_client.post(
+        "/api/v1/admin/courses",
+        json={"title": "Gated", "description": "d", "level": "Beginner"},
+    )
+    editor_client.post(
+        "/api/v1/admin/courses/gated/lessons",
+        json={"title": "Lesson 1", "lessonType": "text", "textBody": "# first"},
+    )
+    editor_client.post(
+        "/api/v1/admin/courses/gated/lessons",
+        json={"title": "Lesson 2", "lessonType": "text", "textBody": "# second"},
+    )
+    editor_client.post("/api/v1/admin/courses/gated/publish")
+
+    # Anonymous viewer: full syllabus, but only the first body is served.
+    anon = TestClient(editor_client.app)
+    lessons = anon.get("/api/v1/courses/gated").json()["lessons"]
+    assert [le["title"] for le in lessons] == ["Lesson 1", "Lesson 2"]
+    assert lessons[0]["textBody"] == "# first"
+    assert lessons[1]["textBody"] is None
+
+
+@pytest.mark.usefixtures("_prepared_schema")
 def test_course_deadline_set_status_and_clear(editor_client: TestClient) -> None:
     editor_client.post(
         "/api/v1/admin/courses",
