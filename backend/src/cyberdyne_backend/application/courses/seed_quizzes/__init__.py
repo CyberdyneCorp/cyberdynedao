@@ -53,6 +53,9 @@ from cyberdyne_backend.application.courses.seed_quizzes import docker_basics as 
 from cyberdyne_backend.application.courses.seed_quizzes import (
     docker_intermediate as _docker_intermediate,
 )
+from cyberdyne_backend.application.courses.seed_quizzes import dsp_advanced as _dsp_advanced
+from cyberdyne_backend.application.courses.seed_quizzes import dsp_basics as _dsp_basics
+from cyberdyne_backend.application.courses.seed_quizzes import dsp_intermediate as _dsp_intermediate
 from cyberdyne_backend.application.courses.seed_quizzes import (
     electromagnetics_advanced as _electromagnetics_advanced,
 )
@@ -95,6 +98,13 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 from cyberdyne_backend.application.courses.seed_quizzes import (
     kubernetes_intermediate as _kubernetes_intermediate,
 )
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    machines_advanced as _machines_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import machines_basics as _machines_basics
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    machines_intermediate as _machines_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import math_advanced as _math_advanced
 from cyberdyne_backend.application.courses.seed_quizzes import math_basics as _math_basics
 from cyberdyne_backend.application.courses.seed_quizzes import math_complex as _math_complex
@@ -112,6 +122,9 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 from cyberdyne_backend.application.courses.seed_quizzes import math_probability as _math_probability
 from cyberdyne_backend.application.courses.seed_quizzes import matlab_basics as _matlab_basics
 from cyberdyne_backend.application.courses.seed_quizzes import mongodb as _mongodb
+from cyberdyne_backend.application.courses.seed_quizzes import pcb_advanced as _pcb_advanced
+from cyberdyne_backend.application.courses.seed_quizzes import pcb_basics as _pcb_basics
+from cyberdyne_backend.application.courses.seed_quizzes import pcb_intermediate as _pcb_intermediate
 from cyberdyne_backend.application.courses.seed_quizzes import physics_basics as _physics_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
     physics_intermediate as _physics_intermediate,
@@ -147,6 +160,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 from cyberdyne_backend.application.courses.seed_quizzes import rust_basics as _rust_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
     rust_intermediate as _rust_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    semiconductor_advanced as _semiconductor_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    semiconductor_basics as _semiconductor_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    semiconductor_intermediate as _semiconductor_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import sensors_advanced as _sensors_advanced
 from cyberdyne_backend.application.courses.seed_quizzes import sensors_basics as _sensors_basics
@@ -191,6 +213,11 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 from cyberdyne_backend.application.courses.seed_quizzes import (
     vectorcalc_intermediate as _vectorcalc_intermediate,
 )
+from cyberdyne_backend.application.courses.seed_quizzes import vlsi_advanced as _vlsi_advanced
+from cyberdyne_backend.application.courses.seed_quizzes import vlsi_basics as _vlsi_basics
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    vlsi_intermediate as _vlsi_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_types import CourseQuiz
 
 QUIZ_REGISTRY: dict[str, CourseQuiz] = {
@@ -218,6 +245,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "docker-advanced": _docker_advanced.QUIZ,
     "docker-basics": _docker_basics.QUIZ,
     "docker-intermediate": _docker_intermediate.QUIZ,
+    "dsp-advanced": _dsp_advanced.QUIZ,
+    "dsp-basics": _dsp_basics.QUIZ,
+    "dsp-intermediate": _dsp_intermediate.QUIZ,
     "electromagnetics-advanced": _electromagnetics_advanced.QUIZ,
     "electromagnetics-basics": _electromagnetics_basics.QUIZ,
     "electromagnetics-intermediate": _electromagnetics_intermediate.QUIZ,
@@ -234,6 +264,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "kubernetes-advanced": _kubernetes_advanced.QUIZ,
     "kubernetes-basics": _kubernetes_basics.QUIZ,
     "kubernetes-intermediate": _kubernetes_intermediate.QUIZ,
+    "machines-advanced": _machines_advanced.QUIZ,
+    "machines-basics": _machines_basics.QUIZ,
+    "machines-intermediate": _machines_intermediate.QUIZ,
     "math-advanced": _math_advanced.QUIZ,
     "math-basics": _math_basics.QUIZ,
     "math-complex": _math_complex.QUIZ,
@@ -247,6 +280,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "math-probability": _math_probability.QUIZ,
     "matlab-basics": _matlab_basics.QUIZ,
     "mongodb": _mongodb.QUIZ,
+    "pcb-advanced": _pcb_advanced.QUIZ,
+    "pcb-basics": _pcb_basics.QUIZ,
+    "pcb-intermediate": _pcb_intermediate.QUIZ,
     "physics-basics": _physics_basics.QUIZ,
     "physics-intermediate": _physics_intermediate.QUIZ,
     "physics-quadrotor-dynamics": _physics_quadrotor_dynamics.QUIZ,
@@ -263,6 +299,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "robotics-intermediate": _robotics_intermediate.QUIZ,
     "rust-basics": _rust_basics.QUIZ,
     "rust-intermediate": _rust_intermediate.QUIZ,
+    "semiconductor-advanced": _semiconductor_advanced.QUIZ,
+    "semiconductor-basics": _semiconductor_basics.QUIZ,
+    "semiconductor-intermediate": _semiconductor_intermediate.QUIZ,
     "sensors-advanced": _sensors_advanced.QUIZ,
     "sensors-basics": _sensors_basics.QUIZ,
     "sensors-intermediate": _sensors_intermediate.QUIZ,
@@ -284,6 +323,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "vectorcalc-advanced": _vectorcalc_advanced.QUIZ,
     "vectorcalc-basics": _vectorcalc_basics.QUIZ,
     "vectorcalc-intermediate": _vectorcalc_intermediate.QUIZ,
+    "vlsi-advanced": _vlsi_advanced.QUIZ,
+    "vlsi-basics": _vlsi_basics.QUIZ,
+    "vlsi-intermediate": _vlsi_intermediate.QUIZ,
 }
 
 __all__ = ["QUIZ_REGISTRY"]

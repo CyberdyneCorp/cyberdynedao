@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 93
+        assert len(summary) == 108
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -223,6 +223,21 @@ class TestSeedCourses:
             "sensors-basics",
             "sensors-intermediate",
             "sensors-advanced",
+            "pcb-basics",
+            "pcb-intermediate",
+            "pcb-advanced",
+            "semiconductor-basics",
+            "semiconductor-intermediate",
+            "semiconductor-advanced",
+            "vlsi-basics",
+            "vlsi-intermediate",
+            "vlsi-advanced",
+            "dsp-basics",
+            "dsp-intermediate",
+            "dsp-advanced",
+            "machines-basics",
+            "machines-intermediate",
+            "machines-advanced",
         }
         for course in ACADEMY_COURSES:
             assert course.lessons  # non-empty
@@ -648,6 +663,54 @@ class TestSeedCourses:
                 }
                 assert set(spec.per_lesson) == content_titles
         assert total_plots >= 60  # richly interactive across the 4 tracks
+
+    def test_tier2_ee_tracks_complete(self) -> None:
+        import json
+        import re
+
+        from cyberdyne_backend.application.courses.seed_dsp import DSP_COURSES
+        from cyberdyne_backend.application.courses.seed_machines import MACHINES_COURSES
+        from cyberdyne_backend.application.courses.seed_pcb import PCB_COURSES
+        from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
+        from cyberdyne_backend.application.courses.seed_semiconductors import (
+            SEMICONDUCTOR_COURSES,
+        )
+        from cyberdyne_backend.application.courses.seed_vlsi import VLSI_COURSES
+
+        tracks = {
+            "pcb": (PCB_COURSES, ("```matlab", "```python")),
+            "semiconductor": (SEMICONDUCTOR_COURSES, ("```matlab", "```python")),
+            "vlsi": (VLSI_COURSES, ("```systemverilog", "```python")),
+            "dsp": (DSP_COURSES, ("```matlab", "```python")),
+            "machines": (MACHINES_COURSES, ("```matlab", "```python")),
+        }
+        total_plots = 0
+        for prefix, (courses, lang_fences) in tracks.items():
+            assert len(courses) == 3
+            assert {c.level for c in courses} == {"Beginner", "Intermediate", "Advanced"}
+            for course in courses:
+                assert course.slug.startswith(prefix)
+                kinds = {le.lesson_type for le in course.lessons}
+                assert kinds <= {"text", "code"}
+                assert any(le.lesson_type == "code" for le in course.lessons)  # runnable lab
+                body = "\n".join(le.text_body or "" for le in course.lessons)
+                for fence in lang_fences:  # dual language
+                    assert fence in body, f"{course.slug} missing {fence}"
+                course_plots = 0
+                for raw in re.findall(r"```plot\n(.*?)\n```", body, re.S):
+                    json.loads(raw)  # valid interactive plot JSON
+                    course_plots += 1
+                assert course_plots >= 3, f"{course.slug} has <3 plots"
+                total_plots += course_plots
+                # every content lesson has a checkpoint quiz from the registry
+                assert course.slug in QUIZ_REGISTRY
+                spec = QUIZ_REGISTRY[course.slug]
+                assert spec.final
+                content_titles = {
+                    le.title for le in course.lessons if le.lesson_type in {"text", "code"}
+                }
+                assert set(spec.per_lesson) == content_titles
+        assert total_plots >= 75  # richly interactive across the 5 tracks
 
     def test_csharp_track_runs_basics_to_aspnet(self) -> None:
         from cyberdyne_backend.application.courses.seed_csharp import CSHARP_COURSES

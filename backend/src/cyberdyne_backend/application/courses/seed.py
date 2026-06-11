@@ -29,18 +29,22 @@ from cyberdyne_backend.application.courses.seed_csharp import CSHARP_COURSES
 from cyberdyne_backend.application.courses.seed_databases import DATABASE_COURSES
 from cyberdyne_backend.application.courses.seed_devops import DEVOPS_COURSES
 from cyberdyne_backend.application.courses.seed_digital_logic import DIGITAL_LOGIC_COURSES
+from cyberdyne_backend.application.courses.seed_dsp import DSP_COURSES
 from cyberdyne_backend.application.courses.seed_electromagnetics import ELECTROMAGNETICS_COURSES
 from cyberdyne_backend.application.courses.seed_electronics import ELECTRONICS_COURSES
 from cyberdyne_backend.application.courses.seed_embedded import EMBEDDED_COURSES
 from cyberdyne_backend.application.courses.seed_iac import IAC_COURSES
 from cyberdyne_backend.application.courses.seed_languages import LANGUAGE_COURSES
 from cyberdyne_backend.application.courses.seed_linux import LINUX_COURSES
+from cyberdyne_backend.application.courses.seed_machines import MACHINES_COURSES
 from cyberdyne_backend.application.courses.seed_math import MATH_COURSES
+from cyberdyne_backend.application.courses.seed_pcb import PCB_COURSES
 from cyberdyne_backend.application.courses.seed_physics import PHYSICS_COURSES
 from cyberdyne_backend.application.courses.seed_power_electronics import POWER_ELECTRONICS_COURSES
 from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
 from cyberdyne_backend.application.courses.seed_rf_comms import RF_COMMS_COURSES
 from cyberdyne_backend.application.courses.seed_robotics import ROBOTICS_COURSES
+from cyberdyne_backend.application.courses.seed_semiconductors import SEMICONDUCTOR_COURSES
 from cyberdyne_backend.application.courses.seed_sensors import SENSORS_COURSES
 from cyberdyne_backend.application.courses.seed_signals import SIGNALS_COURSES
 from cyberdyne_backend.application.courses.seed_statistics import STATISTICS_COURSES
@@ -50,6 +54,7 @@ from cyberdyne_backend.application.courses.seed_types import (
     apply_quiz_spec,
 )
 from cyberdyne_backend.application.courses.seed_vectorcalc import VECTORCALC_COURSES
+from cyberdyne_backend.application.courses.seed_vlsi import VLSI_COURSES
 from cyberdyne_backend.application.quizzes.use_cases import (
     OptionInput,
     QuestionInput,
@@ -1156,6 +1161,11 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *ELECTROMAGNETICS_COURSES,
     *RF_COMMS_COURSES,
     *SENSORS_COURSES,
+    *PCB_COURSES,
+    *SEMICONDUCTOR_COURSES,
+    *VLSI_COURSES,
+    *DSP_COURSES,
+    *MACHINES_COURSES,
 )
 
 
