@@ -74,6 +74,7 @@
 	}
 
 	function markComplete(lessonId: string): void {
+		if (!authReady) return; // signed-in only — the button is hidden, this is defence-in-depth
 		const course = $selected;
 		if (course) void vm.completeLesson(course.slug, lessonId);
 	}
@@ -227,6 +228,13 @@
 			<p>Structured courses with lessons, quizzes, and completion certificates.</p>
 		</div>
 	</header>
+
+	{#if !authReady}
+		<div class="auth-banner">
+			<strong>Browsing as a guest.</strong>
+			<span>Sign in to enrol, take quizzes, track your progress and earn certificates. Courses and lessons are free to read.</span>
+		</div>
+	{/if}
 
 	{#if $error}
 		<p class="banner banner--error" role="alert">{$error}</p>
@@ -541,6 +549,16 @@
 		background: #fee2e2;
 		color: #991b1b;
 		padding: 0.5rem 0.75rem;
+		border-radius: 6px;
+		font-size: 0.85rem;
+	}
+	.auth-banner {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		background: #fef3c7;
+		color: #92400e;
+		padding: 0.6rem 0.85rem;
 		border-radius: 6px;
 		font-size: 0.85rem;
 	}

@@ -9,11 +9,17 @@
 	import { downloadArtifact } from '$lib/api/matlabApi';
 	import { downloadFile } from '$lib/api/interpreterApi';
 	import { parseSegments } from '$lib/utils/chatSegments';
+	import { authVM } from '$lib/auth/authViewModel.svelte';
 	import MermaidDiagram from './MermaidDiagram.svelte';
 	import KatexMath from './KatexMath.svelte';
 	import Markdown from './Markdown.svelte';
 
 	const vm = createAgentVM();
+
+	// Signed-in users only: anyone can read the conversation, but sending,
+	// attaching files and running the agent require a CyberdyneAuth session
+	// (the backend is bearer-gated anyway — this stops a confusing 401).
+	const authReady = $derived(authVM.isRestored && authVM.isAuthenticated);
 
 	let scrollEl = $state<HTMLElement | null>(null);
 	let bottomSentinelEl = $state<HTMLElement | null>(null);
@@ -28,13 +34,17 @@
 	// reset the input so the same file can be re-picked later.
 	async function onPickFiles(e: Event): Promise<void> {
 		const input = e.currentTarget as HTMLInputElement;
+		if (!authReady) {
+			input.value = '';
+			return;
+		}
 		const files = Array.from(input.files ?? []);
 		for (const f of files) await vm.attachFile(f);
 		input.value = '';
 	}
 
 	function onDragOver(e: DragEvent): void {
-		if (vm.running) return;
+		if (vm.running || !authReady) return;
 		e.preventDefault();
 		dragOver = true;
 	}
@@ -44,7 +54,7 @@
 	async function onDrop(e: DragEvent): Promise<void> {
 		e.preventDefault();
 		dragOver = false;
-		if (vm.running) return;
+		if (vm.running || !authReady) return;
 		const files = Array.from(e.dataTransfer?.files ?? []);
 		for (const f of files) await vm.attachFile(f);
 	}
@@ -155,6 +165,7 @@
 
 	async function onSubmit(e: SubmitEvent): Promise<void> {
 		e.preventDefault();
+		if (!authReady) return;
 		await vm.send();
 		textareaEl?.focus();
 	}
@@ -166,7 +177,7 @@
 		// turns are the norm.
 		if (e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
 			e.preventDefault();
-			void vm.send();
+			if (authReady) void vm.send();
 		}
 	}
 
@@ -201,6 +212,13 @@
 			Replies are LLM-backed and route to real backend tools. <kbd>Enter</kbd> to send, <kbd>Shift + Enter</kbd> for a new line.
 		</p>
 	</header>
+
+	{#if !authReady}
+		<div class="auth-banner">
+			<strong>Sign in required.</strong>
+			<span>The Cyberdyne agent uses your CyberdyneAuth session. Open the Connect menu and sign in to chat — you can read along below in the meantime.</span>
+		</div>
+	{/if}
 
 	{#if vm.error}
 		<div class="banner banner--error" role="alert">
@@ -383,8 +401,12 @@
 			onkeydown={onKeydown}
 			rows="2"
 			spellcheck="true"
-			placeholder={vm.running ? 'Agent is thinking…' : 'Ask the Cyberdyne agent…'}
-			disabled={vm.running}
+			placeholder={!authReady
+				? 'Sign in to chat with the agent'
+				: vm.running
+					? 'Agent is thinking…'
+					: 'Ask the Cyberdyne agent…'}
+			disabled={vm.running || !authReady}
 		></textarea>
 		<input
 			bind:this={fileInputEl}
@@ -403,7 +425,7 @@
 					type="button"
 					class="attach-btn"
 					onclick={() => fileInputEl?.click()}
-					disabled={vm.running || vm.uploading}
+					disabled={vm.running || vm.uploading || !authReady}
 					title="Attach a file for the agent to analyze (CSV, data, text, image…)"
 				>
 					📎 Attach
@@ -413,7 +435,10 @@
 				type="submit"
 				variant="solid"
 				size="md"
-				disabled={vm.running || vm.uploading || (!vm.input.trim() && vm.attachments.length === 0)}
+				disabled={!authReady ||
+					vm.running ||
+					vm.uploading ||
+					(!vm.input.trim() && vm.attachments.length === 0)}
 			>
 				{vm.running ? 'Sending…' : '→ Send'}
 			</PixelButton>
@@ -488,6 +513,16 @@
 		border-bottom: 2px solid #000;
 	}
 	.banner--error { background: #fef2f2; color: #b91c1c; }
+	.auth-banner {
+		padding: 10px 16px;
+		background: #fef3c7;
+		border-bottom: 2px solid #000;
+		display: flex;
+		gap: 8px;
+		flex-wrap: wrap;
+		font-size: 0.8125rem;
+		color: #92400e;
+	}
 	.banner button {
 		background: none;
 		border: 1px solid currentColor;
