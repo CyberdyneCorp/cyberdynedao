@@ -15,6 +15,8 @@ import {
 import { viewMap, type NavItem } from '$lib/constants/navigation';
 import { cart, marketplaceItemToCartItem } from '$lib/viewmodels/cartViewModel';
 import { authVM } from '$lib/auth/authViewModel.svelte';
+import { translate, locale, type TranslateFn } from '$lib/i18n';
+import { get } from 'svelte/store';
 import type { MarketplaceItem } from '$lib/types/components';
 import type { LauncherMenuSection } from '@cyberdynecorp/svelte-ui-core';
 type StartMenuSection = LauncherMenuSection;
@@ -159,6 +161,37 @@ function flatten(sections: StartMenuSection[]): StartMenuItemConfig[] {
 
 const DEFAULT_START_MENU: StartMenuItemConfig[] = flatten(DEFAULT_START_SECTIONS);
 
+/**
+ * Translate a section tree for display without mutating the static
+ * config. Section labels resolve via `startMenu.section.<id>`, items via
+ * `startMenu.item.<id>.label`/`.subtitle`, and nested children via
+ * `startMenu.item.<parentId>.child.<childId>.…`. Subtitles are only
+ * translated when the source item actually has one. The view calls this
+ * reactively with the current `$t`, so the menu re-labels on language
+ * change while ids (which drive routing) stay stable.
+ */
+export function localizeSections(sections: StartMenuSection[], t: TranslateFn): StartMenuSection[] {
+	type Item = StartMenuSection['items'][number];
+	const localizeItem = (item: Item, parentId?: string): Item => {
+		const base = parentId
+			? `startMenu.item.${parentId}.child.${item.id}`
+			: `startMenu.item.${item.id}`;
+		return {
+			...item,
+			label: t(`${base}.label`),
+			...(item.subtitle ? { subtitle: t(`${base}.subtitle`) } : {}),
+			...(item.children
+				? { children: item.children.map((c) => localizeItem(c, item.id)) }
+				: {})
+		};
+	};
+	return sections.map((s) => ({
+		...s,
+		label: t(`startMenu.section.${s.id}`),
+		items: s.items.map((i) => localizeItem(i))
+	}));
+}
+
 export function createShellViewModel(
 	startMenuItems: StartMenuItemConfig[] = DEFAULT_START_MENU,
 	startMenuSections: StartMenuSection[] = DEFAULT_START_SECTIONS
@@ -188,9 +221,9 @@ export function createShellViewModel(
 		else if (id === 'close-all') closeAllWindows();
 		else if (id === 'cart') openCart();
 		else if (id === 'disconnect') void authVM.logout();
-		else if (id === 'settings') {
-			/* settings window not built yet — no-op until then */
-		} else if (id in viewMap) openWindowFor(id);
+		else if (id === 'settings')
+			storeCreateWindow('settings', translate(get(locale), 'settings.title'));
+		else if (id in viewMap) openWindowFor(id);
 		// Unknown id → no-op.
 	}
 

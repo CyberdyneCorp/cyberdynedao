@@ -17,7 +17,9 @@
 	} from '$lib/stores/windowStore';
 	import { navItems } from '$lib/constants/navigation';
 	import { CYBERDYNE_ASCII_LOGO } from '$lib/constants/asciiLogo';
-	import { createShellViewModel, ADMIN_MENU_ITEM_IDS } from '$lib/viewmodels/shellViewModel';
+	import { createShellViewModel, ADMIN_MENU_ITEM_IDS, localizeSections } from '$lib/viewmodels/shellViewModel';
+	import { t } from '$lib/i18n';
+	import { reduceMotion } from '$lib/stores/settingsStore';
 	import ViewRouter from '$lib/components/ViewRouter.svelte';
 	import Web3Wallet from '$lib/components/Web3Wallet.svelte';
 	import { isMobileDevice } from '$lib/utils/mobileDetection';
@@ -31,13 +33,15 @@
 	let liveStartSections = $state(startMenuSections);
 	$effect(() => {
 		const canSeeAdmin = authVM.isAdmin || authVM.isEditor;
-		liveStartSections = startMenuSections.map((s) => {
+		// Localize first (reactive on locale change), then apply the
+		// admin-visibility filter and the live cart badge over stable ids.
+		liveStartSections = localizeSections(startMenuSections, $t).map((s) => {
 			let items = s.items;
 			if (!canSeeAdmin) items = items.filter((i) => !adminItemIds.has(i.id));
 			if (s.id === 'system') {
 				items = items.map((i) => (i.id === 'cart' ? { ...i, badge: cartCountValue } : i));
 			}
-			return items === s.items ? s : { ...s, items };
+			return { ...s, items };
 		});
 	});
 
@@ -87,7 +91,7 @@
 	<link rel="icon" href="/assets/favicon.svg" />
 </svelte:head>
 
-<div class="cyberdyne-retro-shell flex flex-col h-screen w-screen overflow-hidden">
+<div class="cyberdyne-retro-shell flex flex-col h-screen w-screen overflow-hidden" class:reduce-motion={$reduceMotion}>
 	<!-- Top taskbar: Start button + wallet -->
 	<header
 		class="retro-topbar flex items-center justify-between px-6 py-3 border-b-4 border-black gap-3"
@@ -96,8 +100,8 @@
 		<LauncherMenu
 			sections={liveStartSections}
 			bind:open={startOpen}
-			header="CYBERDYNE OS"
-			tagline="Open infrastructure for AI, Web3, DeFi and beyond."
+			header={$t('launcher.header')}
+			tagline={$t('launcher.tagline')}
 			connected={authVM.isAuthenticated}
 			identity={authVM.user
 				? shortAddr(authVM.user.wallet_address) || authVM.user.email
@@ -144,7 +148,7 @@
 			>
 				{#each navItems as item}
 					<DesktopIcon
-						label={isMobile && item.mobileLabel ? item.mobileLabel : item.name}
+						label={$t(item.i18nKey)}
 						iconSrc={item.icon}
 						onActivate={() => shell.openWindowByNavItem(item)}
 					/>
@@ -155,7 +159,7 @@
 		<!-- Cart icon top-right -->
 		<div style="position:absolute; top:16px; right:16px; z-index:10;">
 			<DesktopIcon
-				label={`Your Bag${cartCountValue > 0 ? ` (${cartCountValue})` : ''}`}
+				label={`${$t('nav.yourBag')}${cartCountValue > 0 ? ` (${cartCountValue})` : ''}`}
 				iconSrc="/assets/cart.svg"
 				badge={cartCountValue > 0 ? cartCountValue : undefined}
 				onActivate={() => shell.openCart()}

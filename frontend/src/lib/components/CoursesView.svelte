@@ -13,6 +13,7 @@
 		type MyCourseProgress
 	} from '$lib/api/coursesApi';
 	import { authVM } from '$lib/auth/authViewModel.svelte';
+	import { t, locale } from '$lib/i18n';
 	import QuizPlayer from './QuizPlayer.svelte';
 	import LessonContent from './LessonContent.svelte';
 
@@ -123,32 +124,29 @@
 		overdue: 'danger'
 	};
 
-	const deadlineLabel: Record<DeadlineStatus, string> = {
-		none: '',
-		upcoming: 'Due soon',
-		urgent: 'Due urgently',
-		overdue: 'Overdue'
-	};
+	// Deadline badge text is resolved in markup via `$t('deadline.<status>')`
+	// (the 'none' case is never rendered).
 
 	// ── Catalogue search + level filter (client-side over the loaded list) ──
 	let search = $state('');
 	type LevelFilter = 'all' | CourseLevel;
 	let levelFilter = $state<LevelFilter>('all');
-	const levelChips: { value: LevelFilter; label: string }[] = [
-		{ value: 'all', label: 'All' },
-		{ value: 'Beginner', label: 'Basic' },
-		{ value: 'Intermediate', label: 'Intermediate' },
-		{ value: 'Advanced', label: 'Advanced' }
+	// `labelKey` resolves through `$t` in markup so chips re-label on locale change.
+	const levelChips: { value: LevelFilter; labelKey: string }[] = [
+		{ value: 'all', labelKey: 'courses.chip.all' },
+		{ value: 'Beginner', labelKey: 'courses.chip.basic' },
+		{ value: 'Intermediate', labelKey: 'courses.chip.intermediate' },
+		{ value: 'Advanced', labelKey: 'courses.chip.advanced' }
 	];
 
 	// Sort options.
 	type SortKey = 'default' | 'title' | 'level' | 'lessons';
 	let sortBy = $state<SortKey>('default');
-	const sortOptions: { value: SortKey; label: string }[] = [
-		{ value: 'default', label: 'Recommended order' },
-		{ value: 'title', label: 'Title (A–Z)' },
-		{ value: 'level', label: 'Level (Basic → Advanced)' },
-		{ value: 'lessons', label: 'Most lessons' }
+	const sortOptions: { value: SortKey; labelKey: string }[] = [
+		{ value: 'default', labelKey: 'courses.sortOpt.default' },
+		{ value: 'title', labelKey: 'courses.sortOpt.title' },
+		{ value: 'level', labelKey: 'courses.sortOpt.level' },
+		{ value: 'lessons', labelKey: 'courses.sortOpt.lessons' }
 	];
 	const levelRank: Record<CourseLevel, number> = { Beginner: 0, Intermediate: 1, Advanced: 2 };
 
@@ -314,15 +312,15 @@
 	<header class="hero">
 		<span class="hero__mark" aria-hidden="true">📚</span>
 		<div>
-			<h1>Cyberdyne Academy — Courses</h1>
-			<p>Structured courses with lessons, quizzes, and completion certificates.</p>
+			<h1>{$t('courses.hero.title')}</h1>
+			<p>{$t('courses.hero.subtitle')}</p>
 		</div>
 	</header>
 
 	{#if !authReady}
 		<div class="auth-banner">
-			<strong>Browsing as a guest.</strong>
-			<span>Sign in to enrol, take quizzes, track your progress and earn certificates. Courses and lessons are free to read.</span>
+			<strong>{$t('courses.guest.title')}</strong>
+			<span>{$t('courses.guest.body')}</span>
 		</div>
 	{/if}
 
@@ -333,15 +331,15 @@
 	{#if $selected}
 		{@const course = $selected}
 		<!-- Course detail / player -->
-		<PixelButton variant="ghost" size="sm" onclick={backToCatalogue}>← All courses</PixelButton>
+		<PixelButton variant="ghost" size="sm" onclick={backToCatalogue}>{$t('courses.allCourses')}</PixelButton>
 
 		<article class="detail">
 			<div class="detail__head">
 				<h2>{course.title}</h2>
-				<Badge variant={levelVariant[course.level]} size="sm">{course.level}</Badge>
+				<Badge variant={levelVariant[course.level]} size="sm">{$t(`level.${course.level}`)}</Badge>
 				{#if course.deadlineStatus !== 'none'}
 					<Badge variant={deadlineVariant[course.deadlineStatus]} size="sm">
-						{deadlineLabel[course.deadlineStatus]}{#if course.daysRemaining !== null}&nbsp;({course.daysRemaining}d){/if}
+						{$t(`deadline.${course.deadlineStatus}`)}{#if course.daysRemaining !== null}&nbsp;({course.daysRemaining}d){/if}
 					</Badge>
 				{/if}
 			</div>
@@ -351,32 +349,36 @@
 				<div class="progress" aria-label="course progress">
 					<div class="progress__bar"><span style="width:{$progress.percent}%"></span></div>
 					<span class="progress__label">
-						{$progress.completedLessons}/{$progress.totalLessons} lessons · {$progress.percent}%
-						{#if $progress.completed} · ✓ complete{/if}
+						{$t('courses.progressLabel', {
+							completed: $progress.completedLessons,
+							total: $progress.totalLessons,
+							percent: $progress.percent
+						})}
+						{#if $progress.completed} · {$t('courses.complete')}{/if}
 					</span>
 				</div>
 			{:else if !authReady}
-				<p class="hint">Sign in to track your progress and earn a certificate.</p>
+				<p class="hint">{$t('courses.signInToTrack')}</p>
 			{/if}
 
 			{#if authReady}
 				{#if $certificate}
 					<div class="cert" aria-label="certificate earned">
 						<span class="cert__mark">🎓</span>
-						<span>Certificate earned</span>
+						<span>{$t('courses.certEarned')}</span>
 						<a
 							class="cert__link"
 							href={courseCertificatePdfUrl($certificate.id)}
 							target="_blank"
 							rel="noopener"
 						>
-							Download PDF
+							{$t('courses.downloadPdf')}
 						</a>
 					</div>
 				{:else if $progress?.completed}
 					<div class="cert__claim">
 						<PixelButton variant="solid" size="sm" onclick={() => vm.claimCertificate(course.slug)}>
-							🎓 Claim your certificate
+							{$t('courses.claimCert')}
 						</PixelButton>
 					</div>
 				{/if}
@@ -384,9 +386,9 @@
 
 			{#if focusedLessonId !== null}
 				<div class="lessons__focusbar">
-					<PixelButton variant="ghost" size="sm" onclick={exitFocus}>← Back to all lessons</PixelButton>
+					<PixelButton variant="ghost" size="sm" onclick={exitFocus}>{$t('courses.backToLessons')}</PixelButton>
 					{#if focusedIndex >= 0}
-						<span class="lessons__pos">Lesson {focusedIndex + 1} of {course.lessons.length}</span>
+						<span class="lessons__pos">{$t('courses.lessonPosition', { index: focusedIndex + 1, total: course.lessons.length })}</span>
 					{/if}
 				</div>
 			{/if}
@@ -411,15 +413,15 @@
 								<span class="lesson__main">
 									<span class="lesson__title">{lesson.title}</span>
 									<span class="lesson__meta">
-										<span class="lesson__type">{lesson.lessonType}</span>
+										<span class="lesson__type">{$t(`lessonType.${lesson.lessonType}`)}</span>
 										{#if lesson.duration}<span class="lesson__dur">· {lesson.duration}</span>{/if}
-										{#if isNext}<span class="lesson__next">· Next up</span>{/if}
+										{#if isNext}<span class="lesson__next">· {$t('courses.nextUp')}</span>{/if}
 									</span>
 								</span>
 								<span class="lesson__actions">
 									{#if locked}
-										<span class="lesson__lock" title="Sign in to view this lesson">
-											🔒 Sign in to continue
+										<span class="lesson__lock" title={$t('courses.signInToView')}>
+											{$t('courses.signInToContinue')}
 										</span>
 									{:else if lesson.lessonType !== 'quiz'}
 										<PixelButton
@@ -427,7 +429,7 @@
 											size="sm"
 											onclick={() => (openLesson === lesson.id ? exitFocus() : focusLesson(lesson))}
 										>
-											{openLesson === lesson.id ? 'Hide' : 'View'}
+											{openLesson === lesson.id ? $t('courses.hide') : $t('courses.view')}
 										</PixelButton>
 									{/if}
 									{#if authReady}
@@ -437,14 +439,14 @@
 												size="sm"
 												onclick={() => (takingQuiz === lesson.id ? exitFocus() : focusLesson(lesson))}
 											>
-												{takingQuiz === lesson.id ? 'Hide quiz' : 'Take quiz'}
+												{takingQuiz === lesson.id ? $t('courses.hideQuiz') : $t('courses.takeQuiz')}
 											</PixelButton>
 										{/if}
 										{#if done}
-											<span class="lesson__done">✓ done</span>
+											<span class="lesson__done">{$t('courses.done')}</span>
 										{:else if lesson.lessonType !== 'quiz'}
 											<PixelButton variant="ghost" size="sm" onclick={() => markComplete(lesson.id)}>
-												Mark complete
+												{$t('courses.markComplete')}
 											</PixelButton>
 										{/if}
 									{/if}
@@ -459,7 +461,7 @@
 							{#if focusedLessonId === lesson.id && authReady && nextLesson}
 								<div class="lesson__nav">
 									<PixelButton variant="solid" size="sm" onclick={() => focusLesson(nextLesson)}>
-										Next lesson → {nextLesson.title}
+										{$t('courses.nextLesson', { title: nextLesson.title })}
 									</PixelButton>
 								</div>
 							{/if}
@@ -473,21 +475,21 @@
 		{#if authReady && $dashboard}
 			{@const d = $dashboard}
 			<div class="dash" aria-label="my learning summary">
-				<div class="dash__stat"><strong>{d.completedCourses}</strong> courses done</div>
-				<div class="dash__stat"><strong>{d.inProgressCourses}</strong> in progress</div>
-				<div class="dash__stat"><strong>{d.quizzesPassed}/{d.quizzesAttempted}</strong> quizzes passed</div>
-				<div class="dash__stat"><strong>{d.certificates}</strong> certificates</div>
+				<div class="dash__stat"><strong>{d.completedCourses}</strong> {$t('courses.dash.coursesDone')}</div>
+				<div class="dash__stat"><strong>{d.inProgressCourses}</strong> {$t('courses.dash.inProgress')}</div>
+				<div class="dash__stat"><strong>{d.quizzesPassed}/{d.quizzesAttempted}</strong> {$t('courses.dash.quizzesPassed')}</div>
+				<div class="dash__stat"><strong>{d.certificates}</strong> {$t('courses.dash.certificates')}</div>
 			</div>
 		{/if}
 
 		{#if authReady && $recommendations && $recommendations.courses.length > 0}
 			<section class="recs">
-				<h2>Recommended for you</h2>
+				<h2>{$t('courses.recs.title')}</h2>
 				<p class="recs__summary">{$recommendations.summary}</p>
 				<div class="recs__row">
 					{#each $recommendations.courses as rec (rec.slug)}
 						<button class="rec" onclick={() => openCourse(rec.slug)}>
-							<Badge variant={levelVariant[rec.level]} size="sm">{rec.level}</Badge>
+							<Badge variant={levelVariant[rec.level]} size="sm">{$t(`level.${rec.level}`)}</Badge>
 							<span class="rec__title">{rec.title}</span>
 							<span class="rec__reason">{rec.reason}</span>
 						</button>
@@ -497,15 +499,15 @@
 		{/if}
 
 		{#if $loading && $courses.length === 0}
-			<p class="hint">Loading courses…</p>
+			<p class="hint">{$t('courses.loading')}</p>
 		{:else if $courses.length === 0}
-			<p class="hint">No published courses yet — check back soon.</p>
+			<p class="hint">{$t('courses.noneYet')}</p>
 		{:else}
 			<div class="catalogue-layout">
 			<!-- Category left menu (mirrors the Blog view's CATEGORIES sidebar) -->
 			<aside class="cat-sidebar">
 				<section class="cat-card">
-					<h2 class="cat-card__title">Categories</h2>
+					<h2 class="cat-card__title">{$t('courses.categories')}</h2>
 					<div class="cat-list">
 						{#each topicCategories as cat (cat.id)}
 							<button
@@ -516,7 +518,7 @@
 								onclick={() => (selectedTopic = cat.id)}
 							>
 								<span class="cat-btn__icon" aria-hidden="true">{cat.icon}</span>
-								<span class="cat-btn__name">{cat.name}</span>
+								<span class="cat-btn__name">{cat.id === 'all' ? $t('courses.allCoursesCat') : $t(`topic.${cat.id}`)}</span>
 								<Badge variant="neutral" size="sm">{cat.count}</Badge>
 							</button>
 						{/each}
@@ -528,8 +530,8 @@
 			<!-- Browse toolbar: search + level filter + sort + grouping -->
 			<section class="browse">
 				<div class="browse__head">
-					<h2>Browse all courses</h2>
-					<span class="browse__count">{coursesInTopic.length} of {$courses.length}</span>
+					<h2>{$t('courses.browseTitle')}</h2>
+					<span class="browse__count">{$t('courses.browseCount', { shown: coursesInTopic.length, total: $courses.length })}</span>
 				</div>
 				<div class="toolbar">
 					<div class="toolbar__search">
@@ -537,12 +539,12 @@
 						<input
 							class="toolbar__input"
 							type="search"
-							placeholder="Search courses…"
+							placeholder={$t('courses.searchPlaceholder')}
 							bind:value={search}
-							aria-label="Search courses"
+							aria-label={$t('courses.searchAria')}
 						/>
 					</div>
-					<div class="chips" role="group" aria-label="Filter by level">
+					<div class="chips" role="group" aria-label={$t('courses.filterByLevel')}>
 						{#each levelChips as chip}
 							<button
 								type="button"
@@ -550,20 +552,20 @@
 								class:chip--active={levelFilter === chip.value}
 								onclick={() => (levelFilter = chip.value)}
 							>
-								{chip.label}
+								{$t(chip.labelKey)}
 							</button>
 						{/each}
 					</div>
 					<div class="toolbar__opts">
 						<label class="sortsel">
-							<span class="sortsel__lbl">Sort</span>
-							<select bind:value={sortBy} aria-label="Sort courses">
-								{#each sortOptions as o}<option value={o.value}>{o.label}</option>{/each}
+							<span class="sortsel__lbl">{$t('courses.sort')}</span>
+							<select bind:value={sortBy} aria-label={$t('courses.sortAria')}>
+								{#each sortOptions as o}<option value={o.value}>{$t(o.labelKey)}</option>{/each}
 							</select>
 						</label>
 						{#if selectedTopic === 'all'}
 							<label class="toggle">
-								<input type="checkbox" bind:checked={groupByTopic} /> Group by topic
+								<input type="checkbox" bind:checked={groupByTopic} /> {$t('courses.groupByTopic')}
 							</label>
 						{/if}
 					</div>
@@ -579,27 +581,27 @@
 						onclick={() => openCourse(course.slug)}
 					>
 						<div class="card__top">
-							<Badge variant={levelVariant[course.level]} size="sm">{course.level}</Badge>
-							{#if course.mandatory}<Badge variant="neutral" size="sm">Required</Badge>{/if}
+							<Badge variant={levelVariant[course.level]} size="sm">{$t(`level.${course.level}`)}</Badge>
+							{#if course.mandatory}<Badge variant="neutral" size="sm">{$t('courses.required')}</Badge>{/if}
 							{#if course.deadlineStatus !== 'none'}
 								<Badge variant={deadlineVariant[course.deadlineStatus]} size="sm">
-									{deadlineLabel[course.deadlineStatus]}
+									{$t(`deadline.${course.deadlineStatus}`)}
 								</Badge>
 							{/if}
-							{#if prog?.completed}<span class="card__check">✓ Completed</span>{/if}
+							{#if prog?.completed}<span class="card__check">{$t('courses.completed')}</span>{/if}
 						</div>
 						<h3>{course.title}</h3>
 						<p>{course.description}</p>
 						{#if prog && !prog.completed}
 							<div class="cardprog" aria-label="course progress">
 								<div class="cardprog__bar"><span style="width:{prog.percent}%"></span></div>
-								<span class="cardprog__label">{prog.completedLessons}/{prog.totalLessons} · {prog.percent}%</span>
+								<span class="cardprog__label">{$t('courses.cardProgress', { completed: prog.completedLessons, total: prog.totalLessons, percent: prog.percent })}</span>
 							</div>
 						{/if}
 						<span class="card__foot">
-							<span class="card__meta">📘 {course.lessonCount} lessons</span>
+							<span class="card__meta">{$t('courses.lessonsCount', { count: course.lessonCount })}</span>
 							<span class="card__cta" class:card__cta--show={!!prog}>
-								{prog?.completed ? 'Review →' : prog ? 'Continue →' : 'Start →'}
+								{prog?.completed ? $t('courses.cta.review') : prog ? $t('courses.cta.continue') : $t('courses.cta.start')}
 							</span>
 						</span>
 					</button>
@@ -608,14 +610,18 @@
 
 			{#if coursesInTopic.length === 0}
 				<p class="hint empty">
-					No courses match “{search}”{levelFilter !== 'all' ? ` at ${levelFilter} level` : ''}{selectedTopic !== 'all' ? ` in ${selectedTopic}` : ''}.
-					<button class="link" onclick={() => { search = ''; levelFilter = 'all'; selectedTopic = 'all'; }}>Clear filters</button>
+					{$t('courses.noMatch', {
+						query: search,
+						level: levelFilter !== 'all' ? $t('courses.noMatch.atLevel', { level: $t(`level.${levelFilter}`) }) : '',
+						topic: selectedTopic !== 'all' ? $t('courses.noMatch.inTopic', { topic: $t(`topic.${selectedTopic}`) }) : ''
+					})}
+					<button class="link" onclick={() => { search = ''; levelFilter = 'all'; selectedTopic = 'all'; }}>{$t('courses.clearFilters')}</button>
 				</p>
 			{:else if selectedTopic === 'all' && groupByTopic}
 				{#each groupedCourses as group (group.topic)}
 					<section class="topic">
 						<h3 class="topic__head">
-							{group.topic} <span class="topic__count">{group.courses.length}</span>
+							{$t(`topic.${group.topic}`)} <span class="topic__count">{group.courses.length}</span>
 						</h3>
 						<ul class="catalogue">
 							{#each group.courses as course (course.id)}{@render courseCard(course)}{/each}
@@ -633,11 +639,11 @@
 
 		<!-- Public certificate verification -->
 		<section class="verify">
-			<h2>Verify a certificate</h2>
-			<p class="verify__hint">Paste a certificate ID to check it was genuinely issued.</p>
+			<h2>{$t('courses.verify.title')}</h2>
+			<p class="verify__hint">{$t('courses.verify.hint')}</p>
 			<div class="verify__row">
 				<div class="grow">
-					<PixelInput placeholder="Certificate ID" bind:value={verifyId} ariaLabel="Certificate ID" />
+					<PixelInput placeholder={$t('courses.verify.placeholder')} bind:value={verifyId} ariaLabel={$t('courses.verify.placeholder')} />
 				</div>
 				<PixelButton
 					variant="solid"
@@ -645,20 +651,19 @@
 					disabled={$verifying || !verifyId.trim()}
 					onclick={() => vm.verify(verifyId.trim())}
 				>
-					{$verifying ? 'Checking…' : 'Verify'}
+					{$verifying ? $t('courses.verify.checking') : $t('courses.verify.verify')}
 				</PixelButton>
 			</div>
 			{#if $verification}
 				{#if $verification.valid && $verification.certificate}
 					<p class="verify__result">
-						<Badge variant="success" size="sm">Valid</Badge>
-						Course <strong>{$verification.certificate.courseSlug}</strong>, issued
-						{new Date($verification.certificate.issuedAt).toLocaleDateString()}.
+						<Badge variant="success" size="sm">{$t('courses.verify.valid')}</Badge>
+						<strong>{$verification.certificate.courseSlug}</strong>, {$t('courses.verify.issued', { date: new Date($verification.certificate.issuedAt).toLocaleDateString($locale) })}.
 					</p>
 				{:else}
 					<p class="verify__result">
-						<Badge variant="danger" size="sm">Not valid</Badge>
-						No certificate matches that ID.
+						<Badge variant="danger" size="sm">{$t('courses.verify.notValid')}</Badge>
+						{$t('courses.verify.noMatch')}
 					</p>
 				{/if}
 			{/if}

@@ -8,6 +8,7 @@
 	} from '$lib/api/coursesApi';
 	import CodeEditor from './CodeEditor.svelte';
 	import Plot from './Plot.svelte';
+	import { t } from '$lib/i18n';
 	import { highlightElement } from '$lib/utils/highlight';
 	import { splitPlotSegments, parsePlot, normalizeMathBlocks } from '$lib/utils/lessonPlot';
 
@@ -73,16 +74,16 @@
 		<div class="frame frame--doc">
 			<iframe src={lesson.contentUrl} title={lesson.title} loading="lazy"></iframe>
 		</div>
-		<a class="ext" href={lesson.contentUrl} target="_blank" rel="noopener">Open PDF ↗</a>
+		<a class="ext" href={lesson.contentUrl} target="_blank" rel="noopener">{$t('lesson.openPdf')}</a>
 	{:else if lesson.lessonType === 'presentation' && lesson.contentUrl}
-		<a class="ext" href={lesson.contentUrl} target="_blank" rel="noopener">Open presentation ↗</a>
+		<a class="ext" href={lesson.contentUrl} target="_blank" rel="noopener">{$t('lesson.openPresentation')}</a>
 	{:else if lesson.lessonType === 'text'}
 		<div class="md" bind:this={mdWrap}>
-			{#each splitPlotSegments(lesson.textBody ?? 'No content.') as seg}
+			{#each splitPlotSegments(lesson.textBody ?? $t('lesson.noContent')) as seg}
 				{#if seg.kind === 'plot'}
 					{@const parsed = parsePlot(seg.content)}
 					{#if 'error' in parsed}
-						<p class="plot-err">⚠ Plot spec error: {parsed.error}</p>
+						<p class="plot-err">{$t('lesson.plotError', { error: parsed.error })}</p>
 					{:else}
 						<Plot spec={parsed} />
 					{/if}
@@ -92,16 +93,16 @@
 			{/each}
 		</div>
 	{:else if lesson.lessonType === 'code'}
-		<p class="hint">Edit and run against the {langLabel} engine:</p>
+		<p class="hint">{$t('lesson.editRun', { engine: langLabel })}</p>
 		<CodeEditor
 			bind:value={source}
 			{language}
-			ariaLabel="{langLabel} code"
+			ariaLabel={$t('lesson.codeAria', { engine: langLabel })}
 			minHeight="9rem"
 		/>
 		<div class="run">
 			<PixelButton variant="solid" size="sm" disabled={running || !source.trim()} onclick={run}>
-				{running ? 'Running…' : 'Run'}
+				{running ? $t('lesson.running') : $t('lesson.run')}
 			</PixelButton>
 		</div>
 		{#if runError}
@@ -109,10 +110,10 @@
 		{:else if result}
 			{#if result.stdout}<pre class="out">{result.stdout}</pre>{/if}
 			{#if result.stderr}<pre class="out out--err">{result.stderr}</pre>{/if}
-			{#if result.timedOut}<p class="hint">⏱ Execution timed out.</p>{/if}
+			{#if result.timedOut}<p class="hint">{$t('lesson.timedOut')}</p>{/if}
 		{/if}
 	{:else}
-		<p class="hint">No previewable content for this lesson.</p>
+		<p class="hint">{$t('lesson.noPreview')}</p>
 	{/if}
 </div>
 

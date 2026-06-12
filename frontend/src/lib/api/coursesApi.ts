@@ -15,6 +15,7 @@
  */
 
 import { withAuth } from '$lib/auth/authToken';
+import { withLocale } from '$lib/api/localeHeader';
 
 const API_BASE = (import.meta.env.VITE_BACKEND_API_URL ?? '').replace(/\/+$/, '');
 
@@ -209,7 +210,7 @@ async function getJson<T>(path: string): Promise<T> {
 	if (!API_BASE) throw new CoursesApiError(0, 'VITE_BACKEND_API_URL is not configured');
 	const res = await fetch(`${API_BASE}${path}`, {
 		method: 'GET',
-		headers: withAuth({ accept: 'application/json' })
+		headers: withLocale(withAuth({ accept: 'application/json' }))
 	});
 	if (!res.ok) throw new CoursesApiError(res.status, await readError(res));
 	return (await res.json()) as T;
@@ -219,7 +220,7 @@ async function sendJson<T>(method: 'POST' | 'PUT', path: string, body: unknown):
 	if (!API_BASE) throw new CoursesApiError(0, 'VITE_BACKEND_API_URL is not configured');
 	const res = await fetch(`${API_BASE}${path}`, {
 		method,
-		headers: withAuth({ 'content-type': 'application/json', accept: 'application/json' }),
+		headers: withLocale(withAuth({ 'content-type': 'application/json', accept: 'application/json' })),
 		body: JSON.stringify(body)
 	});
 	if (!res.ok) throw new CoursesApiError(res.status, await readError(res));

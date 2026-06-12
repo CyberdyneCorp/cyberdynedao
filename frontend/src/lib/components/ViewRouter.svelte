@@ -18,6 +18,7 @@
 	import AgentView from './AgentView.svelte';
 	import CyberfliesView from './CyberfliesView.svelte';
 	import InterpreterView from './InterpreterView.svelte';
+	import SettingsView from './SettingsView.svelte';
 	import type { MarketplaceItem } from '$lib/types/components';
 
 	export let content: string;
@@ -61,6 +62,8 @@
 	<CyberfliesView />
 {:else if content === 'interpreter'}
 	<InterpreterView />
+{:else if content === 'settings'}
+	<SettingsView />
 {:else}
 	<NewsView {isMobile} />
 {/if}
