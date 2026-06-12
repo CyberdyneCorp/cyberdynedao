@@ -5,16 +5,21 @@ A standalone, on-demand job — deliberately NOT part of the boot-time
 Translating the whole catalogue is thousands of LLM calls and can run for
 a long time, so it's run explicitly:
 
-    python -m cyberdyne_backend.cli.translate_academy
+    python -m cyberdyne_backend.cli.translate_academy            # whole catalogue
+    python -m cyberdyne_backend.cli.translate_academy --slug matlab-basics  # one course
+    python -m cyberdyne_backend.cli.translate_academy --limit 1            # first course only
 
-Requires ``OPENAI_API_KEY`` (otherwise there's nothing to translate with —
-it prints a notice and exits). Incremental: content whose English source
-is unchanged since the last run is skipped (``source_hash``), so the job is
-safely resumable — re-run it if it's interrupted.
+``--slug`` / ``--limit`` exist to smoke-test cost + quality on a small slice
+before committing to the full run. Requires ``OPENAI_API_KEY`` (otherwise
+there's nothing to translate with — it prints a notice and exits).
+Incremental: content whose English source is unchanged since the last run is
+skipped (``source_hash``), so the job is safely resumable — re-run if it's
+interrupted.
 """
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 import logging
 
@@ -32,6 +37,7 @@ from cyberdyne_backend.application.academy import (
     TranslateAcademy,
     TranslationStats,
 )
+from cyberdyne_backend.domain.courses import Course
 from cyberdyne_backend.domain.quizzes import QuizNotFoundError
 from cyberdyne_backend.infrastructure.container import Container
 from cyberdyne_backend.infrastructure.database.engine import dispose_engine, session_scope
@@ -44,8 +50,25 @@ logger = logging.getLogger("cyberdyne_backend.cli.translate_academy")
 TARGET_LANGUAGES = ["pt-BR", "es", "fr"]
 
 
-async def translate_content() -> TranslationStats:
-    """Translate every seeded course/lesson/quiz into the target languages.
+def select_courses(
+    courses: list[Course], *, slug: str | None = None, limit: int | None = None
+) -> list[Course]:
+    """Apply the ``--slug`` / ``--limit`` scope to the loaded catalogue.
+
+    ``slug`` wins over ``limit``; with neither, the whole catalogue is
+    returned. Ordering is preserved so ``--limit`` is deterministic.
+    """
+    if slug is not None:
+        return [c for c in courses if c.slug == slug]
+    if limit is not None:
+        return courses[: max(0, limit)]
+    return courses
+
+
+async def translate_content(
+    *, slug: str | None = None, limit: int | None = None
+) -> TranslationStats:
+    """Translate seeded course/lesson/quiz content into the target languages.
 
     Committed per course so a long run leaves partial progress and keeps
     transactions small. Skips content whose English source is unchanged.
@@ -57,7 +80,10 @@ async def translate_content() -> TranslationStats:
     try:
         # Read the catalogue + its quizzes once.
         async with session_scope() as session:
-            courses = await SqlAlchemyCourseRepository(session).list_courses(include_drafts=True)
+            all_courses = await SqlAlchemyCourseRepository(session).list_courses(
+                include_drafts=True
+            )
+            courses = select_courses(all_courses, slug=slug, limit=limit)
             quiz_repo = SqlAlchemyQuizRepository(session)
             quizzes_by_lesson = {}
             for course in courses:
@@ -91,7 +117,19 @@ async def translate_content() -> TranslationStats:
     return total
 
 
-async def main() -> None:
+def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="translate_academy",
+        description="AI-translate the Academy catalogue into pt-BR/es/fr.",
+    )
+    scope = parser.add_mutually_exclusive_group()
+    scope.add_argument("--slug", help="Translate only this course slug (smoke test).")
+    scope.add_argument("--limit", type=int, help="Translate only the first N courses (smoke test).")
+    return parser.parse_args(argv)
+
+
+async def main(argv: list[str] | None = None) -> None:
+    args = _parse_args(argv)
     settings = get_settings()
     configure_logging(settings.log_level)
     try:
@@ -99,8 +137,15 @@ async def main() -> None:
             print("No OPENAI_API_KEY configured — nothing to translate.")
             logger.warning("academy translate — skipped (no OpenAI key)")
             return
-        print(f"Translating Academy content into {', '.join(TARGET_LANGUAGES)} …")
-        stats = await translate_content()
+        scope = (
+            f"course '{args.slug}'"
+            if args.slug
+            else f"first {args.limit} course(s)"
+            if args.limit
+            else "the whole catalogue"
+        )
+        print(f"Translating {scope} into {', '.join(TARGET_LANGUAGES)} …")
+        stats = await translate_content(slug=args.slug, limit=args.limit)
         print(
             f"Translation done: {stats.translated} translated, "
             f"{stats.skipped} skipped, {stats.failed} failed."
