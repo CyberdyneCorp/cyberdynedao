@@ -7,7 +7,8 @@ without the hexagonal rules getting in its way.
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+import logging
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -72,6 +73,7 @@ from cyberdyne_backend.adapters.inbound.api.courses.router import (
 )
 from cyberdyne_backend.adapters.inbound.api.courses.router import (
     get_add_lesson_uc,
+    get_course_languages_uc,
     get_course_uc,
     get_create_course_uc,
     get_delete_course_uc,
@@ -84,8 +86,10 @@ from cyberdyne_backend.adapters.inbound.api.courses.router import (
     get_set_course_deadline_uc,
     get_set_lesson_progress_uc,
     get_set_published_uc,
+    get_translate_course_runner,
     get_update_course_uc,
     get_update_lesson_uc,
+    translation_available,
 )
 from cyberdyne_backend.adapters.inbound.api.courses.router import (
     get_certificate_pdf_uc as get_course_cert_pdf_uc,
@@ -197,6 +201,9 @@ from cyberdyne_backend.adapters.inbound.middleware.auth import (
     extract_token,
     get_user_profile_port,
 )
+from cyberdyne_backend.adapters.outbound.persistence.academy.translation_repository import (
+    SqlAlchemyTranslationRepository,
+)
 from cyberdyne_backend.adapters.outbound.persistence.ai_chat.repository import (
     SqlAlchemyChatRepository,
 )
@@ -234,6 +241,11 @@ from cyberdyne_backend.adapters.outbound.persistence.uploads.repository import (
     SqlAlchemyUploadRepository,
 )
 from cyberdyne_backend.adapters.outbound.storage.local import LocalFileStorage
+from cyberdyne_backend.application.academy import (
+    GetCourseLanguages,
+    MarkdownAwareTranslator,
+    TranslateCourse,
+)
 from cyberdyne_backend.application.ai_chat import (
     GetChatHistory,
     RunChatTurn,
@@ -338,6 +350,8 @@ from cyberdyne_backend.infrastructure.database.engine import (
 )
 from cyberdyne_backend.infrastructure.logging import configure_logging
 from cyberdyne_backend.infrastructure.settings import get_settings
+
+logger = logging.getLogger("cyberdyne_backend.main")
 
 
 def create_app() -> FastAPI:
@@ -524,6 +538,41 @@ def create_app() -> FastAPI:
     async def _delete_course_dep() -> AsyncIterator[DeleteCourse]:
         async with session_scope() as session:
             yield DeleteCourse(repo=SqlAlchemyCourseRepository(session))
+
+    async def _course_languages_dep() -> AsyncIterator[GetCourseLanguages]:
+        async with session_scope() as session:
+            yield GetCourseLanguages(
+                course_repo=SqlAlchemyCourseRepository(session),
+                translation_repo=SqlAlchemyTranslationRepository(session),
+            )
+
+    def _translation_available_dep() -> bool:
+        return settings.openai_api_key is not None
+
+    async def _translate_course_runner_dep() -> AsyncIterator[
+        Callable[[str, str], Awaitable[None]]
+    ]:
+        async def run(slug: str, language: str) -> None:
+            # Runs as a background task AFTER the request session closes, so it
+            # opens its own session + LLM client and disposes them when done.
+            async with session_scope() as session:
+                use_case = TranslateCourse(
+                    course_repo=SqlAlchemyCourseRepository(session),
+                    quiz_repo=SqlAlchemyQuizRepository(session),
+                    translation_repo=SqlAlchemyTranslationRepository(session),
+                    translator=MarkdownAwareTranslator(llm=container.chat_llm),
+                )
+                stats = await use_case.execute(slug, language)
+            logger.info(
+                "course translate — %s [%s]: +%d translated, %d skipped, %d failed",
+                slug,
+                language,
+                stats.translated,
+                stats.skipped,
+                stats.failed,
+            )
+
+        yield run
 
     async def _reorder_courses_dep() -> AsyncIterator[ReorderCourses]:
         async with session_scope() as session:
@@ -860,6 +909,9 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_course_cert_pdf_uc] = _course_cert_pdf_dep
     app.dependency_overrides[get_delete_course_uc] = _delete_course_dep
     app.dependency_overrides[get_reorder_courses_uc] = _reorder_courses_dep
+    app.dependency_overrides[get_course_languages_uc] = _course_languages_dep
+    app.dependency_overrides[get_translate_course_runner] = _translate_course_runner_dep
+    app.dependency_overrides[translation_available] = _translation_available_dep
     app.dependency_overrides[get_add_lesson_uc] = _add_lesson_dep
     app.dependency_overrides[get_update_lesson_uc] = _update_lesson_dep
     app.dependency_overrides[get_delete_lesson_uc] = _delete_lesson_dep

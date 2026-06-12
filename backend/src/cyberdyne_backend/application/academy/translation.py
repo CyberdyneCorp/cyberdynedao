@@ -32,6 +32,11 @@ from cyberdyne_backend.domain.ai_chat import ChatLLMPort, ChatMessage, ChatRole
 from cyberdyne_backend.domain.courses import Course, Lesson
 from cyberdyne_backend.domain.quizzes import Question, QuestionOption, Quiz
 
+# Languages the Academy content is offered in. ``en`` is the source of
+# truth (base rows); the rest live in the translation tables. Canonical
+# home for the supported set — the inbound API locale resolver imports it.
+SUPPORTED_LANGUAGES: tuple[str, ...] = ("en", "pt-BR", "es", "fr")
+
 # Human-readable language names for the translation prompt.
 LANGUAGE_NAMES: dict[str, str] = {
     "pt-BR": "Brazilian Portuguese",
@@ -143,6 +148,10 @@ class TranslationRepository(Protocol):
     Hash maps are returned per-language so the orchestrator can skip
     unchanged content in one round-trip per table.
     """
+
+    async def course_languages(self, course_id: UUID) -> list[str]:
+        """Non-English languages this course has a translation row for."""
+        ...
 
     async def course_hashes(self, language: str) -> dict[UUID, str]: ...
     async def lesson_hashes(self, language: str) -> dict[UUID, str]: ...

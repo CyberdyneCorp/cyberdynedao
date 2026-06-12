@@ -34,6 +34,23 @@ DeadlineStatusLiteral = Literal["none", "upcoming", "urgent", "overdue"]
 # ── Responses ─────────────────────────────────────────────────────────
 
 
+class CourseLanguagesResponse(_CamelModel):
+    """Which languages a course is available in, plus the full supported set
+    and whether translation can currently run (OpenAI configured)."""
+
+    available: list[str]
+    supported: list[str]
+    can_translate: bool
+
+
+class CourseTranslationStartedResponse(_CamelModel):
+    """Acknowledges a background translation job kicked off for a course."""
+
+    slug: str
+    language: str
+    status: Literal["started"] = "started"
+
+
 class LessonResponse(_CamelModel):
     id: UUID
     course_id: UUID

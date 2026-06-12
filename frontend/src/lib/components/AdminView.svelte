@@ -10,6 +10,8 @@
 	} from '@cyberdynecorp/svelte-ui-core';
 	import { createAdminViewModel, shouldAutoLoad } from '$lib/viewmodels/adminViewModel';
 	import type { CourseLevel, LessonType } from '$lib/api/coursesApi';
+	import { fetchCourseLanguages, translateCourse, type CourseLanguages } from '$lib/api/adminApi';
+	import { SUPPORTED_LOCALES } from '$lib/i18n';
 	import { authVM } from '$lib/auth/authViewModel.svelte';
 
 	const STATUS_VARIANT = { draft: 'warning', published: 'success' } as const;
@@ -110,6 +112,67 @@
 		if (!c) return;
 		eDueAt = '';
 		await vm.setDeadline(c.slug, null);
+	}
+
+	// ── Languages / translations ──────────────────────────────────────
+	let langInfo = $state<CourseLanguages | null>(null);
+	let langSlug = $state<string | null>(null);
+	let langLoading = $state(false);
+	let langError = $state<string | null>(null);
+	let translating = $state<string[]>([]); // languages with an in-flight job
+
+	function localeLabel(code: string): string {
+		return SUPPORTED_LOCALES.find((l) => l.code === code)?.nativeLabel ?? code;
+	}
+	function localeFlag(code: string): string {
+		return SUPPORTED_LOCALES.find((l) => l.code === code)?.flag ?? '🏳️';
+	}
+
+	async function loadLanguages(slug: string): Promise<void> {
+		langLoading = true;
+		langError = null;
+		try {
+			langInfo = await fetchCourseLanguages(slug);
+		} catch (e) {
+			langError = e instanceof Error ? e.message : String(e);
+		} finally {
+			langLoading = false;
+		}
+	}
+
+	// Load the available languages whenever the open course changes.
+	$effect(() => {
+		const c = $selected;
+		if (c && c.slug !== langSlug) {
+			langSlug = c.slug;
+			langInfo = null;
+			translating = [];
+			void loadLanguages(c.slug);
+		}
+	});
+
+	// Trigger a background translation, then poll until the language lands.
+	async function doTranslate(language: string): Promise<void> {
+		const c = $selected;
+		if (!c || translating.includes(language)) return;
+		translating = [...translating, language];
+		langError = null;
+		try {
+			await translateCourse(c.slug, language);
+			// The job runs server-side; the language appears in `available`
+			// once it finishes. Poll for a few minutes (big courses are slow).
+			for (let i = 0; i < 90; i++) {
+				await new Promise((r) => setTimeout(r, 4000));
+				if (langSlug !== c.slug) return; // user switched courses — stop
+				const info = await fetchCourseLanguages(c.slug);
+				langInfo = info;
+				if (info.available.includes(language)) break;
+			}
+		} catch (e) {
+			langError = e instanceof Error ? e.message : String(e);
+		} finally {
+			translating = translating.filter((l) => l !== language);
+		}
 	}
 
 	// Inline lesson editing.
@@ -412,6 +475,49 @@
 					{:else}
 						<p class="hint">No deadline set.</p>
 					{/if}
+				</div>
+
+				<!-- Languages / translations -->
+				<div class="new-course">
+					<h2>Languages</h2>
+					{#if langLoading && !langInfo}
+						<p class="hint">Loading languages…</p>
+					{:else if langInfo}
+						<div class="langs">
+							{#each langInfo.supported as code (code)}
+								{@const available = langInfo.available.includes(code)}
+								{@const inProgress = translating.includes(code)}
+								<div class="langrow" class:langrow--on={available}>
+									<span class="langrow__flag" aria-hidden="true">{localeFlag(code)}</span>
+									<span class="langrow__name">{localeLabel(code)}</span>
+									{#if code === 'en'}
+										<Badge variant="neutral" size="sm">source</Badge>
+									{:else if available}
+										<Badge variant="success" size="sm">✓ translated</Badge>
+									{:else}
+										<Badge variant="warning" size="sm">not translated</Badge>
+									{/if}
+									{#if code !== 'en' && langInfo.canTranslate}
+										<PixelButton
+											variant="outline"
+											size="sm"
+											disabled={inProgress}
+											onclick={() => doTranslate(code)}
+										>
+											{inProgress ? 'Translating…' : available ? 'Re-translate' : 'Translate'}
+										</PixelButton>
+									{/if}
+								</div>
+							{/each}
+						</div>
+						{#if translating.length > 0}
+							<p class="hint">Translating in the background — this can take a few minutes per course.</p>
+						{/if}
+						{#if !langInfo.canTranslate}
+							<p class="hint">Translation is unavailable (no AI key configured on the server).</p>
+						{/if}
+					{/if}
+					{#if langError}<p class="hint err">{langError}</p>{/if}
 				</div>
 
 				<h2>Lessons</h2>
@@ -738,6 +844,34 @@
 	.hint {
 		color: #374151;
 		font-size: 0.85rem;
+	}
+	.hint.err {
+		color: #991b1b;
+	}
+	.langs {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+	}
+	.langrow {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		padding: 0.45rem 0.6rem;
+		border: 2px solid #000000;
+		border-radius: 6px;
+		background: #f3f4f6;
+	}
+	.langrow--on {
+		background: #dcfce7;
+	}
+	.langrow__flag {
+		font-size: 1.1rem;
+	}
+	.langrow__name {
+		flex: 1;
+		font-weight: 600;
+		font-size: 0.9rem;
 	}
 	.detail-head {
 		display: flex;
