@@ -10,9 +10,10 @@ from cyberdyne_backend.domain.quizzes.entities import Quiz, QuizAttempt
 
 @runtime_checkable
 class QuizRepository(Protocol):
-    async def get_by_lesson(self, lesson_id: UUID) -> Quiz:
+    async def get_by_lesson(self, lesson_id: UUID, *, locale: str = "en") -> Quiz:
         """Load the quiz (questions + options) for a lesson. Raises
-        ``QuizNotFoundError``."""
+        ``QuizNotFoundError``. A non-English ``locale`` overlays localized
+        prompt/explanation/option text with per-field English fallback."""
         ...
 
     async def upsert(self, quiz: Quiz) -> None:

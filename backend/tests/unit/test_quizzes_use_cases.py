@@ -54,7 +54,7 @@ class FakeQuizRepo:
         self._by_lesson: dict[UUID, Quiz] = {}
         self._attempts: list[QuizAttempt] = []
 
-    async def get_by_lesson(self, lesson_id: UUID) -> Quiz:
+    async def get_by_lesson(self, lesson_id: UUID, *, locale: str = "en") -> Quiz:
         quiz = self._by_lesson.get(lesson_id)
         if quiz is None:
             raise QuizNotFoundError(str(lesson_id))

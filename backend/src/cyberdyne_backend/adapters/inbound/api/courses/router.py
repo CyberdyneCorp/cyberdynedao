@@ -26,6 +26,7 @@ from cyberdyne_backend.adapters.inbound.api.courses.schemas import (
     UpdateCourseRequest,
     UpdateLessonRequest,
 )
+from cyberdyne_backend.adapters.inbound.api.locale import resolve_locale
 from cyberdyne_backend.adapters.inbound.middleware.auth import (
     EDITOR_SCOPE,
     require_editor,
@@ -277,6 +278,7 @@ def _detail(course: Course, *, full_content: bool = True) -> CourseDetailRespons
 async def list_courses(
     request: Request,
     use_case: Annotated[ListCourses, Depends(get_list_courses_uc)],
+    locale: Annotated[str, Depends(resolve_locale)],
     level: str | None = None,
 ) -> list[CourseSummaryResponse]:
     parsed_level = None
@@ -288,6 +290,7 @@ async def list_courses(
     courses = await use_case.execute(
         level=parsed_level,
         include_drafts=_viewer_can_see_drafts(request),
+        locale=locale,
     )
     return [_summary(c) for c in courses]
 
@@ -301,9 +304,12 @@ async def get_course(
     slug: str,
     request: Request,
     use_case: Annotated[GetCourse, Depends(get_course_uc)],
+    locale: Annotated[str, Depends(resolve_locale)],
 ) -> CourseDetailResponse:
     try:
-        course = await use_case.execute(slug, include_drafts=_viewer_can_see_drafts(request))
+        course = await use_case.execute(
+            slug, include_drafts=_viewer_can_see_drafts(request), locale=locale
+        )
     except CourseNotFoundError as exc:
         raise HTTPException(status_code=404, detail="course not found") from exc
     return _detail(course, full_content=_viewer_is_authenticated(request))

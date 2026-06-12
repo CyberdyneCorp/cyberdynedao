@@ -187,13 +187,13 @@ class _FakeCourseRepo:
         )
         self._course = c
 
-    async def list_courses(self, *, level=None, include_drafts=False):
+    async def list_courses(self, *, level=None, include_drafts=False, locale="en"):
         items = [self._course]
         if level is not None:
             items = [x for x in items if x.level is level]
         return items
 
-    async def get_by_slug(self, slug: str, *, include_drafts: bool = False):
+    async def get_by_slug(self, slug: str, *, include_drafts: bool = False, locale: str = "en"):
         from cyberdyne_backend.domain.courses import CourseNotFoundError
 
         if slug == self._course.slug:
@@ -265,7 +265,7 @@ class _FakeQuizRepo:
             ],
         )
 
-    async def get_by_lesson(self, lesson_id):
+    async def get_by_lesson(self, lesson_id, *, locale="en"):
         from cyberdyne_backend.domain.quizzes import QuizNotFoundError
 
         if lesson_id == self.LESSON_ID:

@@ -12,7 +12,9 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    String,
     Text,
+    UniqueConstraint,
     Uuid,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -66,6 +68,49 @@ class QuizOptionRow(Base):
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     __table_args__ = (Index("ix_quiz_options_question_id", "question_id"),)
+
+
+class QuizQuestionTranslationRow(Base):
+    """Localized prompt/explanation for a quiz question (English fallback)."""
+
+    __tablename__ = "quiz_question_translations"
+
+    id: Mapped[UUID] = mapped_column(Uuid(), primary_key=True)
+    question_id: Mapped[UUID] = mapped_column(
+        Uuid(),
+        ForeignKey("quiz_questions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    language: Mapped[str] = mapped_column(String(8), nullable=False)
+    prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    explanation: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    source_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("question_id", "language", name="uq_quiz_question_tr_question_lang"),
+        Index("ix_quiz_question_tr_question_lang", "question_id", "language"),
+    )
+
+
+class QuizOptionTranslationRow(Base):
+    """Localized option text for a quiz option (English fallback)."""
+
+    __tablename__ = "quiz_option_translations"
+
+    id: Mapped[UUID] = mapped_column(Uuid(), primary_key=True)
+    option_id: Mapped[UUID] = mapped_column(
+        Uuid(),
+        ForeignKey("quiz_options.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    language: Mapped[str] = mapped_column(String(8), nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    source_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("option_id", "language", name="uq_quiz_option_tr_option_lang"),
+        Index("ix_quiz_option_tr_option_lang", "option_id", "language"),
+    )
 
 
 class QuizAttemptRow(Base):

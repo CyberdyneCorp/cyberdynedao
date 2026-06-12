@@ -10,7 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from cyberdyne_backend.adapters.outbound.persistence.quizzes.models import (
     QuizAttemptRow,
     QuizOptionRow,
+    QuizOptionTranslationRow,
     QuizQuestionRow,
+    QuizQuestionTranslationRow,
     QuizRow,
 )
 from cyberdyne_backend.domain.quizzes import (
@@ -26,7 +28,7 @@ class SqlAlchemyQuizRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def get_by_lesson(self, lesson_id: UUID) -> Quiz:
+    async def get_by_lesson(self, lesson_id: UUID, *, locale: str = "en") -> Quiz:
         row = (
             await self._session.execute(select(QuizRow).where(QuizRow.lesson_id == lesson_id))
         ).scalar_one_or_none()
@@ -44,15 +46,29 @@ class SqlAlchemyQuizRepository:
             .all()
         )
         options_by_question = await self._options_for([q.id for q in question_rows])
+        # Per-field English fallback overlay for a non-English locale.
+        localize = locale not in ("", "en")
+        q_tr = await self._question_translations([q.id for q in question_rows], locale) if localize else {}
+        all_option_ids = [
+            o.id for opts in options_by_question.values() for o in opts
+        ]
+        o_tr = await self._option_translations(all_option_ids, locale) if localize else {}
         questions = [
             Question(
                 id=q.id,
-                prompt=q.prompt,
-                explanation=q.explanation,
+                prompt=(q_tr[q.id].prompt if q.id in q_tr and q_tr[q.id].prompt else q.prompt),
+                explanation=(
+                    q_tr[q.id].explanation
+                    if q.id in q_tr and q_tr[q.id].explanation
+                    else q.explanation
+                ),
                 sort_order=q.sort_order,
                 options=[
                     QuestionOption(
-                        id=o.id, text=o.text, is_correct=o.is_correct, sort_order=o.sort_order
+                        id=o.id,
+                        text=(o_tr[o.id].text if o.id in o_tr and o_tr[o.id].text else o.text),
+                        is_correct=o.is_correct,
+                        sort_order=o.sort_order,
                     )
                     for o in sorted(options_by_question.get(q.id, []), key=lambda x: x.sort_order)
                 ],
@@ -193,6 +209,44 @@ class SqlAlchemyQuizRepository:
         for row in rows:
             out.setdefault(row.question_id, []).append(row)
         return out
+
+    async def _question_translations(
+        self, question_ids: list[UUID], locale: str
+    ) -> dict[UUID, QuizQuestionTranslationRow]:
+        if not question_ids:
+            return {}
+        rows = (
+            (
+                await self._session.execute(
+                    select(QuizQuestionTranslationRow).where(
+                        QuizQuestionTranslationRow.question_id.in_(question_ids),
+                        QuizQuestionTranslationRow.language == locale,
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        return {row.question_id: row for row in rows}
+
+    async def _option_translations(
+        self, option_ids: list[UUID], locale: str
+    ) -> dict[UUID, QuizOptionTranslationRow]:
+        if not option_ids:
+            return {}
+        rows = (
+            (
+                await self._session.execute(
+                    select(QuizOptionTranslationRow).where(
+                        QuizOptionTranslationRow.option_id.in_(option_ids),
+                        QuizOptionTranslationRow.language == locale,
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        return {row.option_id: row for row in rows}
 
     async def _delete_questions(self, quiz_id: UUID) -> None:
         question_ids = (
