@@ -37,6 +37,17 @@ class EchoLLM:
         return LLMResponse(content=f"[T] {content}")
 
 
+class PromptCaptureLLM:
+    """Records the system prompt passed for each call."""
+
+    def __init__(self) -> None:
+        self.system_prompts: list[str] = []
+
+    async def complete(self, *, messages, tools, system_prompt) -> LLMResponse:
+        self.system_prompts.append(system_prompt)
+        return LLMResponse(content=messages[-1].content)
+
+
 class DroppingLLM:
     """Strips every protected placeholder — simulates a model that mangles
     the sentinels, which must be caught rather than silently corrupt."""
@@ -84,6 +95,19 @@ async def test_blank_text_is_returned_unchanged() -> None:
     translator = MarkdownAwareTranslator(llm=EchoLLM())
     assert await translator.translate("", language="fr") == ""
     assert await translator.translate(None, language="fr") == ""
+
+
+async def test_plain_vs_rich_prompt_selection() -> None:
+    # Plain (rich=False) must NOT invite the model to add Markdown structure —
+    # that's what expanded a short title into a paragraph. Rich keeps it.
+    llm = PromptCaptureLLM()
+    translator = MarkdownAwareTranslator(llm=llm)
+    await translator.translate("DAC architectures", language="fr", rich=False)
+    await translator.translate("# Body\n\nprose", language="fr", rich=True)
+    plain, rich = llm.system_prompts
+    assert "do NOT add headings" in plain
+    assert "Keep all Markdown structure" not in plain
+    assert "Keep all Markdown structure" in rich
 
 
 async def test_dropped_placeholder_raises_rather_than_corrupt() -> None:

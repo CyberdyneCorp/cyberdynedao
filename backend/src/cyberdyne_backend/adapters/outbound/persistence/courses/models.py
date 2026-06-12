@@ -81,7 +81,8 @@ class CourseTranslationRow(Base):
         nullable=False,
     )
     language: Mapped[str] = mapped_column(String(8), nullable=False)
-    title: Mapped[str] = mapped_column(String(256), nullable=False)
+    # TEXT (not VARCHAR(256)): a translated title can exceed the English cap.
+    title: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
     source_hash: Mapped[str] = mapped_column(String(64), nullable=False)
 
@@ -103,7 +104,8 @@ class LessonTranslationRow(Base):
         nullable=False,
     )
     language: Mapped[str] = mapped_column(String(8), nullable=False)
-    title: Mapped[str] = mapped_column(String(256), nullable=False)
+    # TEXT (not VARCHAR(256)): a translated title can exceed the English cap.
+    title: Mapped[str] = mapped_column(Text, nullable=False)
     text_body: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_hash: Mapped[str] = mapped_column(String(64), nullable=False)
 

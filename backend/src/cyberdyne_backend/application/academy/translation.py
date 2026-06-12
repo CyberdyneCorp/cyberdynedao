@@ -95,7 +95,8 @@ def _restore(text: str, tokens: dict[str, str]) -> str:
     return restored
 
 
-_SYSTEM_PROMPT = (
+# Rich prompt for full Markdown bodies (lesson content): preserve structure.
+_SYSTEM_PROMPT_RICH = (
     "You are a professional translator localizing technical course material for "
     "Cyberdyne Academy into {language}. Translate ONLY the natural-language prose. "
     "Rules:\n"
@@ -107,6 +108,21 @@ _SYSTEM_PROMPT = (
     "- Return only the translated text, with no preamble or commentary."
 )
 
+# Plain prompt for short standalone fields (titles, descriptions, quiz text):
+# translate in place WITHOUT inventing headings or padding the length — the
+# rich prompt's "keep Markdown structure" line tempts the model to expand a
+# bare title into a paragraph.
+_SYSTEM_PROMPT_PLAIN = (
+    "You are a professional translator. Translate the text into {language}.\n"
+    "Rules:\n"
+    "- Return ONLY the translated text — no preamble, quotes, or commentary.\n"
+    "- Keep it roughly the same length and shape; do NOT add headings, lists, or "
+    "extra sentences that were not in the original.\n"
+    "- Preserve every placeholder of the form [[KEEPn]] EXACTLY.\n"
+    "- Do NOT translate code, mathematical notation, URLs, or product names "
+    "(MATLAB, Python, Cyberdyne, etc.)."
+)
+
 
 @dataclass(slots=True)
 class MarkdownAwareTranslator:
@@ -114,7 +130,13 @@ class MarkdownAwareTranslator:
 
     llm: ChatLLMPort
 
-    async def translate(self, text: str | None, *, language: str) -> str:
+    async def translate(self, text: str | None, *, language: str, rich: bool = True) -> str:
+        """Translate ``text`` into ``language``.
+
+        ``rich=True`` (default) is for full Markdown bodies; ``rich=False`` for
+        short standalone fields (titles, descriptions, quiz prompts/options)
+        where the model must not invent structure or pad the length.
+        """
         if not text or not text.strip():
             return text or ""
         masked, tokens = _protect(text)
@@ -125,10 +147,13 @@ class MarkdownAwareTranslator:
             content=masked,
         )
         language_name = LANGUAGE_NAMES.get(language, language)
+        system_prompt = (_SYSTEM_PROMPT_RICH if rich else _SYSTEM_PROMPT_PLAIN).format(
+            language=language_name
+        )
         response = await self.llm.complete(
             messages=[message],
             tools=[],
-            system_prompt=_SYSTEM_PROMPT.format(language=language_name),
+            system_prompt=system_prompt,
         )
         out = response.content
         # Guard against placeholder corruption — better to retry than to
@@ -276,8 +301,10 @@ class TranslateAcademy:
             stats.failed += 1
 
     async def _translate_course(self, course: Course, language: str, src: str) -> None:
-        title = await self.translator.translate(course.title, language=language)
-        description = await self.translator.translate(course.description, language=language)
+        title = await self.translator.translate(course.title, language=language, rich=False)
+        description = await self.translator.translate(
+            course.description, language=language, rich=False
+        )
         await self.repo.upsert_course_translation(
             course_id=course.id,
             language=language,
@@ -287,9 +314,9 @@ class TranslateAcademy:
         )
 
     async def _translate_lesson(self, lesson: Lesson, language: str, src: str) -> None:
-        title = await self.translator.translate(lesson.title, language=language)
+        title = await self.translator.translate(lesson.title, language=language, rich=False)
         text_body = (
-            await self.translator.translate(lesson.text_body, language=language)
+            await self.translator.translate(lesson.text_body, language=language, rich=True)
             if lesson.text_body
             else lesson.text_body
         )
@@ -302,8 +329,10 @@ class TranslateAcademy:
         )
 
     async def _translate_question(self, question: Question, language: str, src: str) -> None:
-        prompt = await self.translator.translate(question.prompt, language=language)
-        explanation = await self.translator.translate(question.explanation, language=language)
+        prompt = await self.translator.translate(question.prompt, language=language, rich=False)
+        explanation = await self.translator.translate(
+            question.explanation, language=language, rich=False
+        )
         await self.repo.upsert_question_translation(
             question_id=question.id,
             language=language,
@@ -313,7 +342,7 @@ class TranslateAcademy:
         )
 
     async def _translate_option(self, option: QuestionOption, language: str, src: str) -> None:
-        text = await self.translator.translate(option.text, language=language)
+        text = await self.translator.translate(option.text, language=language, rich=False)
         await self.repo.upsert_option_translation(
             option_id=option.id,
             language=language,
