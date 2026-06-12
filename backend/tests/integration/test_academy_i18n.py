@@ -73,6 +73,30 @@ async def test_course_repo_overlay_and_per_field_fallback(db_session: AsyncSessi
 
 
 @pytest.mark.usefixtures("_prepared_schema")
+async def test_lesson_translation_title_accepts_long_values(db_session: AsyncSession) -> None:
+    # Regression: translated titles are TEXT, not VARCHAR(256) — a longer
+    # translation (or an over-eager model) must not crash the job.
+    course = new_course(title="C", description="d", level="Beginner", slug="long")
+    lesson = new_lesson(course_id=course.id, title="Intro", lesson_type="text", text_body="x")
+    course.lessons.append(lesson)
+    await SqlAlchemyCourseRepository(db_session).save(course)
+
+    long_title = "Título " * 80  # ~560 chars, well past the old 256 cap
+    tr = SqlAlchemyTranslationRepository(db_session)
+    await tr.upsert_lesson_translation(
+        lesson_id=lesson.id, language="pt-BR", title=long_title, text_body="y", source_hash="h"
+    )
+    await tr.upsert_course_translation(
+        course_id=course.id, language="pt-BR", title=long_title, description="d", source_hash="h"
+    )
+    pt = await SqlAlchemyCourseRepository(db_session).get_by_slug(
+        "long", include_drafts=True, locale="pt-BR"
+    )
+    assert pt.title == long_title
+    assert pt.lessons[0].title == long_title
+
+
+@pytest.mark.usefixtures("_prepared_schema")
 async def test_quiz_repo_overlay_and_fallback(db_session: AsyncSession) -> None:
     lesson_id = uuid.uuid4()
     quiz = new_quiz(
