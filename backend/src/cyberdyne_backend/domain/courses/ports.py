@@ -20,10 +20,14 @@ class CourseRepository(Protocol):
         """
         ...
 
-    async def get_by_slug(self, slug: str, *, include_drafts: bool = False) -> Course:
+    async def get_by_slug(
+        self, slug: str, *, include_drafts: bool = False, locale: str = "en"
+    ) -> Course:
         """Load a course (with its ordered lessons) by slug. Raises
         ``CourseNotFoundError``. Drafts resolve only when
-        ``include_drafts`` is true (editor scope)."""
+        ``include_drafts`` is true (editor scope). When ``locale`` is a
+        non-English language, localized title/description/lesson bodies are
+        overlaid with per-field English fallback."""
         ...
 
     async def get_by_id(self, course_id: UUID) -> Course | None:
@@ -37,10 +41,12 @@ class CourseRepository(Protocol):
         *,
         level: CourseLevel | None = None,
         include_drafts: bool = False,
+        locale: str = "en",
     ) -> list[Course]:
         """All courses ordered by (level, sort_order). Drafts are
         filtered out unless ``include_drafts`` is true. Lessons are
-        included so a catalogue render needs a single round-trip."""
+        included so a catalogue render needs a single round-trip. A
+        non-English ``locale`` overlays localized fields (English fallback)."""
         ...
 
     async def delete(self, course_id: UUID) -> None:

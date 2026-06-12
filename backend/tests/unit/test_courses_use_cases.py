@@ -46,7 +46,9 @@ class FakeCourseRepo:
         # use cases, so this is just defensive).
         self._by_slug[course.slug] = course
 
-    async def get_by_slug(self, slug: str, *, include_drafts: bool = False) -> Course:
+    async def get_by_slug(
+        self, slug: str, *, include_drafts: bool = False, locale: str = "en"
+    ) -> Course:
         course = self._by_slug.get(slug)
         if course is None:
             raise CourseNotFoundError(slug)
@@ -59,6 +61,7 @@ class FakeCourseRepo:
         *,
         level: CourseLevel | None = None,
         include_drafts: bool = False,
+        locale: str = "en",
     ) -> list[Course]:
         items = list(self._by_slug.values())
         if not include_drafts:

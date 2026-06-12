@@ -37,6 +37,22 @@ _TUTOR_SYSTEM_PROMPT = (
     "mention that you are an AI."
 )
 
+# Human-readable language names so the tutor can reply in the learner's
+# language. Unknown / English locales add no instruction (English default).
+_LANGUAGE_NAMES = {
+    "pt-BR": "Brazilian Portuguese",
+    "es": "Spanish",
+    "fr": "French",
+}
+
+
+def _tutor_prompt_for(locale: str) -> str:
+    name = _LANGUAGE_NAMES.get(locale)
+    if name is None:
+        return _TUTOR_SYSTEM_PROMPT
+    return f"{_TUTOR_SYSTEM_PROMPT} Respond in {name}."
+
+
 # ── Reads ─────────────────────────────────────────────────────────────
 
 
@@ -47,8 +63,8 @@ class GetQuiz:
 
     repo: QuizRepository
 
-    async def execute(self, lesson_id: UUID) -> Quiz:
-        return await self.repo.get_by_lesson(lesson_id)
+    async def execute(self, lesson_id: UUID, *, locale: str = "en") -> Quiz:
+        return await self.repo.get_by_lesson(lesson_id, locale=locale)
 
 
 @dataclass(slots=True)
@@ -147,8 +163,9 @@ class SubmitQuizAttempt:
         user_id: UUID,
         lesson_id: UUID,
         answers: dict[UUID, UUID],
+        locale: str = "en",
     ) -> SubmittedAttempt:
-        quiz = await self.repo.get_by_lesson(lesson_id)
+        quiz = await self.repo.get_by_lesson(lesson_id, locale=locale)
         graded = grade(quiz, answers)
         prior = await self.repo.count_attempts(user_id=user_id, quiz_id=quiz.id)
         attempt = new_attempt(
@@ -185,8 +202,10 @@ class ExplainQuizAnswers:
     repo: QuizRepository
     llm: ChatLLMPort
 
-    async def execute(self, *, lesson_id: UUID, answers: dict[UUID, UUID]) -> list[AnswerFeedback]:
-        quiz = await self.repo.get_by_lesson(lesson_id)
+    async def execute(
+        self, *, lesson_id: UUID, answers: dict[UUID, UUID], locale: str = "en"
+    ) -> list[AnswerFeedback]:
+        quiz = await self.repo.get_by_lesson(lesson_id, locale=locale)
         graded = grade(quiz, answers, strict=False)
         questions = {q.id: q for q in quiz.questions}
         feedback: list[AnswerFeedback] = []
@@ -194,7 +213,7 @@ class ExplainQuizAnswers:
             question = questions[result.question_id]
             ai_explanation: str | None = None
             if not result.is_correct:
-                ai_explanation = await self._explain(question, result)
+                ai_explanation = await self._explain(question, result, locale=locale)
             feedback.append(
                 AnswerFeedback(
                     question_id=question.id,
@@ -208,7 +227,9 @@ class ExplainQuizAnswers:
             )
         return feedback
 
-    async def _explain(self, question: Question, result: QuestionResult) -> str:
+    async def _explain(
+        self, question: Question, result: QuestionResult, *, locale: str = "en"
+    ) -> str:
         option_text = {o.id: o.text for o in question.options}
         chosen = (
             option_text.get(result.selected_option_id, "(no answer)")
@@ -230,7 +251,7 @@ class ExplainQuizAnswers:
             content=prompt,
         )
         response = await self.llm.complete(
-            messages=[message], tools=[], system_prompt=_TUTOR_SYSTEM_PROMPT
+            messages=[message], tools=[], system_prompt=_tutor_prompt_for(locale)
         )
         return response.content
 

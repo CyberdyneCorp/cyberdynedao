@@ -64,6 +64,55 @@ class LessonRow(Base):
     __table_args__ = (Index("ix_lessons_course_id", "course_id"),)
 
 
+class CourseTranslationRow(Base):
+    """Localized title/description for a course in one language.
+
+    The base ``CourseRow`` is the English source of truth; a row here exists
+    only for non-English languages. ``source_hash`` records the English source
+    at translation time so the seeder can skip unchanged content.
+    """
+
+    __tablename__ = "course_translations"
+
+    id: Mapped[UUID] = mapped_column(Uuid(), primary_key=True)
+    course_id: Mapped[UUID] = mapped_column(
+        Uuid(),
+        ForeignKey("courses.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    language: Mapped[str] = mapped_column(String(8), nullable=False)
+    title: Mapped[str] = mapped_column(String(256), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    source_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("course_id", "language", name="uq_course_tr_course_lang"),
+        Index("ix_course_translations_course_lang", "course_id", "language"),
+    )
+
+
+class LessonTranslationRow(Base):
+    """Localized title/body for a lesson in one language (English fallback)."""
+
+    __tablename__ = "lesson_translations"
+
+    id: Mapped[UUID] = mapped_column(Uuid(), primary_key=True)
+    lesson_id: Mapped[UUID] = mapped_column(
+        Uuid(),
+        ForeignKey("lessons.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    language: Mapped[str] = mapped_column(String(8), nullable=False)
+    title: Mapped[str] = mapped_column(String(256), nullable=False)
+    text_body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("lesson_id", "language", name="uq_lesson_tr_lesson_lang"),
+        Index("ix_lesson_translations_lesson_lang", "lesson_id", "language"),
+    )
+
+
 class LessonProgressRow(Base):
     """A learner's progress through one lesson (courses context)."""
 

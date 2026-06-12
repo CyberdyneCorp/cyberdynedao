@@ -12,6 +12,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from cyberdyne_backend.adapters.inbound.api.locale import resolve_locale
 from cyberdyne_backend.adapters.inbound.api.quizzes.schemas import (
     AnswerFeedbackResponse,
     AttemptResultResponse,
@@ -165,10 +166,11 @@ def _require_user(principal: UserPrincipal) -> UserPrincipal:
 async def get_quiz_for_player(
     lesson_id: UUID,
     use_case: Annotated[GetQuiz, Depends(get_quiz_uc)],
+    locale: Annotated[str, Depends(resolve_locale)],
     _principal: Annotated[UserPrincipal, Depends(require_principal)],
 ) -> PlayerQuizResponse:
     try:
-        quiz = await use_case.execute(lesson_id)
+        quiz = await use_case.execute(lesson_id, locale=locale)
     except QuizNotFoundError as exc:
         raise HTTPException(status_code=404, detail="quiz not found") from exc
     return _player_response(quiz)
@@ -184,6 +186,7 @@ async def submit_attempt(
     lesson_id: UUID,
     body: SubmitAttemptRequest,
     use_case: Annotated[SubmitQuizAttempt, Depends(get_submit_attempt_uc)],
+    locale: Annotated[str, Depends(resolve_locale)],
     principal: Annotated[UserPrincipal, Depends(require_principal)],
 ) -> AttemptResultResponse:
     user = _require_user(principal)
@@ -192,6 +195,7 @@ async def submit_attempt(
             user_id=user.user_id,
             lesson_id=lesson_id,
             answers=body.answers,
+            locale=locale,
         )
     except QuizNotFoundError as exc:
         raise HTTPException(status_code=404, detail="quiz not found") from exc
@@ -227,13 +231,14 @@ async def explain_quiz_answers(
     lesson_id: UUID,
     body: SubmitAttemptRequest,
     use_case: Annotated[ExplainQuizAnswers, Depends(get_explain_answers_uc)],
+    locale: Annotated[str, Depends(resolve_locale)],
     _principal: Annotated[UserPrincipal, Depends(require_principal)],
 ) -> list[AnswerFeedbackResponse]:
     """AI contextual feedback: grade the submitted answers and return a
     personalized 'why it's wrong' for each incorrect question. Read-only
     (records no attempt) so a learner can ask for help freely."""
     try:
-        feedback = await use_case.execute(lesson_id=lesson_id, answers=body.answers)
+        feedback = await use_case.execute(lesson_id=lesson_id, answers=body.answers, locale=locale)
     except QuizNotFoundError as exc:
         raise HTTPException(status_code=404, detail="quiz not found") from exc
     return [

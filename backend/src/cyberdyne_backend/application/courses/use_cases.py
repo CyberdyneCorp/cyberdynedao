@@ -34,16 +34,21 @@ class ListCourses:
         *,
         level: CourseLevel | None = None,
         include_drafts: bool = False,
+        locale: str = "en",
     ) -> list[Course]:
-        return await self.repo.list_courses(level=level, include_drafts=include_drafts)
+        return await self.repo.list_courses(
+            level=level, include_drafts=include_drafts, locale=locale
+        )
 
 
 @dataclass(slots=True)
 class GetCourse:
     repo: CourseRepository
 
-    async def execute(self, slug: str, *, include_drafts: bool = False) -> Course:
-        return await self.repo.get_by_slug(slug, include_drafts=include_drafts)
+    async def execute(
+        self, slug: str, *, include_drafts: bool = False, locale: str = "en"
+    ) -> Course:
+        return await self.repo.get_by_slug(slug, include_drafts=include_drafts, locale=locale)
 
 
 # ── Course authoring ──────────────────────────────────────────────────
