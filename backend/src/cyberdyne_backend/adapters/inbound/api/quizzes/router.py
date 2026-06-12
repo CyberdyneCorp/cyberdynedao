@@ -238,9 +238,7 @@ async def explain_quiz_answers(
     personalized 'why it's wrong' for each incorrect question. Read-only
     (records no attempt) so a learner can ask for help freely."""
     try:
-        feedback = await use_case.execute(
-            lesson_id=lesson_id, answers=body.answers, locale=locale
-        )
+        feedback = await use_case.execute(lesson_id=lesson_id, answers=body.answers, locale=locale)
     except QuizNotFoundError as exc:
         raise HTTPException(status_code=404, detail="quiz not found") from exc
     return [

@@ -144,7 +144,9 @@ async def test_run_translates_every_field_and_persists() -> None:
     course = _course_with_lesson()
     quiz = new_quiz(
         lesson_id=uuid.uuid4(),
-        questions=[build_question(prompt="Q?", explanation="because", options=[("a", True), ("b", False)])],
+        questions=[
+            build_question(prompt="Q?", explanation="because", options=[("a", True), ("b", False)])
+        ],
         passing_score=70,
     )
     repo = FakeTranslationRepo()

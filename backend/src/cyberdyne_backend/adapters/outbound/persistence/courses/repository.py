@@ -65,9 +65,7 @@ def _row_to_course(
     lesson_tr: dict[UUID, LessonTranslationRow] | None = None,
 ) -> Course:
     title = course_tr.title if course_tr and course_tr.title else row.title
-    description = (
-        course_tr.description if course_tr and course_tr.description else row.description
-    )
+    description = course_tr.description if course_tr and course_tr.description else row.description
     tr_by_lesson = lesson_tr or {}
     return Course(
         id=row.id,

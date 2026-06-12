@@ -52,6 +52,7 @@ def _tutor_prompt_for(locale: str) -> str:
         return _TUTOR_SYSTEM_PROMPT
     return f"{_TUTOR_SYSTEM_PROMPT} Respond in {name}."
 
+
 # ── Reads ─────────────────────────────────────────────────────────────
 
 

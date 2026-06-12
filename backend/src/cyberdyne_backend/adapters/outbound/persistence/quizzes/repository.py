@@ -48,10 +48,12 @@ class SqlAlchemyQuizRepository:
         options_by_question = await self._options_for([q.id for q in question_rows])
         # Per-field English fallback overlay for a non-English locale.
         localize = locale not in ("", "en")
-        q_tr = await self._question_translations([q.id for q in question_rows], locale) if localize else {}
-        all_option_ids = [
-            o.id for opts in options_by_question.values() for o in opts
-        ]
+        q_tr = (
+            await self._question_translations([q.id for q in question_rows], locale)
+            if localize
+            else {}
+        )
+        all_option_ids = [o.id for opts in options_by_question.values() for o in opts]
         o_tr = await self._option_translations(all_option_ids, locale) if localize else {}
         questions = [
             Question(

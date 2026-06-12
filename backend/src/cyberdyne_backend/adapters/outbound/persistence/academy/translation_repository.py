@@ -32,9 +32,9 @@ class SqlAlchemyTranslationRepository:
     async def course_hashes(self, language: str) -> dict[UUID, str]:
         rows = (
             await self._session.execute(
-                select(
-                    CourseTranslationRow.course_id, CourseTranslationRow.source_hash
-                ).where(CourseTranslationRow.language == language)
+                select(CourseTranslationRow.course_id, CourseTranslationRow.source_hash).where(
+                    CourseTranslationRow.language == language
+                )
             )
         ).all()
         return {cid: h for cid, h in rows}
@@ -42,9 +42,9 @@ class SqlAlchemyTranslationRepository:
     async def lesson_hashes(self, language: str) -> dict[UUID, str]:
         rows = (
             await self._session.execute(
-                select(
-                    LessonTranslationRow.lesson_id, LessonTranslationRow.source_hash
-                ).where(LessonTranslationRow.language == language)
+                select(LessonTranslationRow.lesson_id, LessonTranslationRow.source_hash).where(
+                    LessonTranslationRow.language == language
+                )
             )
         ).all()
         return {lid: h for lid, h in rows}

@@ -39,8 +39,12 @@ pytestmark = pytest.mark.integration
 async def test_course_repo_overlay_and_per_field_fallback(db_session: AsyncSession) -> None:
     course = new_course(title="Algebra", description="Learn algebra", level="Beginner", slug="alg")
     course.status = CourseStatus.PUBLISHED
-    l1 = new_lesson(course_id=course.id, title="Intro", lesson_type="text", text_body="Hello", sort_order=0)
-    l2 = new_lesson(course_id=course.id, title="Vectors", lesson_type="text", text_body="World", sort_order=1)
+    l1 = new_lesson(
+        course_id=course.id, title="Intro", lesson_type="text", text_body="Hello", sort_order=0
+    )
+    l2 = new_lesson(
+        course_id=course.id, title="Vectors", lesson_type="text", text_body="World", sort_order=1
+    )
     course.lessons.extend([l1, l2])
     repo = SqlAlchemyCourseRepository(db_session)
     await repo.save(course)
@@ -90,7 +94,11 @@ async def test_quiz_repo_overlay_and_fallback(db_session: AsyncSession) -> None:
     tr = SqlAlchemyTranslationRepository(db_session)
     # Prompt translated, explanation left empty → English fallback.
     await tr.upsert_question_translation(
-        question_id=question.id, language="pt-BR", prompt="Quanto é 2+2?", explanation="", source_hash="h"
+        question_id=question.id,
+        language="pt-BR",
+        prompt="Quanto é 2+2?",
+        explanation="",
+        source_hash="h",
     )
     await tr.upsert_option_translation(
         option_id=opt_correct.id, language="pt-BR", text="quatro", source_hash="h"
