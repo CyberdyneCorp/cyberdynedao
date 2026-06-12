@@ -23,13 +23,14 @@ from __future__ import annotations
 import hashlib
 import re
 import uuid
+from collections.abc import Awaitable
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 from uuid import UUID
 
 from cyberdyne_backend.domain.ai_chat import ChatLLMPort, ChatMessage, ChatRole
-from cyberdyne_backend.domain.courses import Course
-from cyberdyne_backend.domain.quizzes import Quiz
+from cyberdyne_backend.domain.courses import Course, Lesson
+from cyberdyne_backend.domain.quizzes import Question, QuestionOption, Quiz
 
 # Human-readable language names for the translation prompt.
 LANGUAGE_NAMES: dict[str, str] = {
@@ -258,7 +259,7 @@ class TranslateAcademy:
                         stats.skipped += 1
         return stats
 
-    async def _guard(self, stats: TranslationStats, coro) -> None:
+    async def _guard(self, stats: TranslationStats, coro: Awaitable[None]) -> None:
         try:
             await coro
             stats.translated += 1
@@ -276,7 +277,7 @@ class TranslateAcademy:
             source_hash=src,
         )
 
-    async def _translate_lesson(self, lesson, language: str, src: str) -> None:
+    async def _translate_lesson(self, lesson: Lesson, language: str, src: str) -> None:
         title = await self.translator.translate(lesson.title, language=language)
         text_body = (
             await self.translator.translate(lesson.text_body, language=language)
@@ -291,7 +292,7 @@ class TranslateAcademy:
             source_hash=src,
         )
 
-    async def _translate_question(self, question, language: str, src: str) -> None:
+    async def _translate_question(self, question: Question, language: str, src: str) -> None:
         prompt = await self.translator.translate(question.prompt, language=language)
         explanation = await self.translator.translate(question.explanation, language=language)
         await self.repo.upsert_question_translation(
@@ -302,7 +303,7 @@ class TranslateAcademy:
             source_hash=src,
         )
 
-    async def _translate_option(self, option, language: str, src: str) -> None:
+    async def _translate_option(self, option: QuestionOption, language: str, src: str) -> None:
         text = await self.translator.translate(option.text, language=language)
         await self.repo.upsert_option_translation(
             option_id=option.id,
