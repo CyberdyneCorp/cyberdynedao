@@ -185,6 +185,41 @@ export function reorderCourses(order: Record<string, number>): Promise<CourseSum
 	return sendJson<CourseSummary[]>('POST', '/api/v1/admin/courses/reorder', { order });
 }
 
+// ── Translations ──────────────────────────────────────────────────────
+
+export interface CourseLanguages {
+	/** Languages the course is available in (always includes "en"). */
+	available: string[];
+	/** Every language the platform supports. */
+	supported: string[];
+	/** Whether a translation can be triggered now (OpenAI configured). */
+	canTranslate: boolean;
+}
+
+export interface CourseTranslationStarted {
+	slug: string;
+	language: string;
+	status: string;
+}
+
+/** Which languages a course currently has content for. */
+export function fetchCourseLanguages(slug: string): Promise<CourseLanguages> {
+	return getJson<CourseLanguages>(`/api/v1/admin/courses/${enc(slug)}/translations`);
+}
+
+/**
+ * Kick off a background translation of the course into `language`. Resolves
+ * once the job is accepted (202) — the language appears in
+ * `fetchCourseLanguages().available` once it finishes, so callers poll.
+ */
+export function translateCourse(slug: string, language: string): Promise<CourseTranslationStarted> {
+	return sendJson<CourseTranslationStarted>(
+		'POST',
+		`/api/v1/admin/courses/${enc(slug)}/translations/${enc(language)}`,
+		{}
+	);
+}
+
 // ── Lessons ───────────────────────────────────────────────────────────
 
 export function addLesson(slug: string, input: AddLessonInput): Promise<CourseLesson> {

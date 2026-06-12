@@ -180,3 +180,93 @@ async def test_course_api_serves_accept_language(app: FastAPI, db_session: Async
     en = anon.get("/api/v1/courses/calculus").json()
     assert en["title"] == "Calculus"
     assert en["lessons"][0]["title"] == "Limits"
+
+
+# ── Admin: course languages + translate endpoints ────────────────────
+
+
+@pytest.mark.usefixtures("_prepared_schema")
+async def test_repo_course_languages_lists_distinct(db_session: AsyncSession) -> None:
+    course = new_course(title="X", description="d", level="Beginner", slug="x")
+    course.status = CourseStatus.PUBLISHED
+    await SqlAlchemyCourseRepository(db_session).save(course)
+    tr = SqlAlchemyTranslationRepository(db_session)
+    assert await tr.course_languages(course.id) == []
+    await tr.upsert_course_translation(
+        course_id=course.id, language="pt-BR", title="X", description="d", source_hash="h"
+    )
+    await tr.upsert_course_translation(
+        course_id=course.id, language="es", title="X", description="d", source_hash="h"
+    )
+    langs = await tr.course_languages(course.id)
+    assert sorted(langs) == ["es", "pt-BR"]
+
+
+@pytest.mark.usefixtures("_prepared_schema")
+def test_get_course_languages_endpoint(app: FastAPI) -> None:
+    from cyberdyne_backend.adapters.inbound.api.courses.router import translation_available
+
+    app.dependency_overrides[require_editor] = _editor
+    # Pin translation availability so the test doesn't depend on ambient env.
+    app.dependency_overrides[translation_available] = lambda: True
+    client = TestClient(app)
+    client.post(
+        "/api/v1/admin/courses",
+        json={"title": "Logic", "description": "d", "level": "Beginner"},
+    )
+    body = client.get("/api/v1/admin/courses/logic/translations").json()
+    assert body["available"] == ["en"]
+    assert set(body["supported"]) == {"en", "pt-BR", "es", "fr"}
+    assert body["canTranslate"] is True
+
+
+@pytest.mark.usefixtures("_prepared_schema")
+def test_translate_endpoint_schedules_background_job(app: FastAPI) -> None:
+    from cyberdyne_backend.adapters.inbound.api.courses.router import (
+        get_translate_course_runner,
+        translation_available,
+    )
+
+    calls: list[tuple[str, str]] = []
+
+    async def _spy_runner_dep():
+        async def run(slug: str, language: str) -> None:
+            calls.append((slug, language))
+
+        yield run
+
+    app.dependency_overrides[require_editor] = _editor
+    app.dependency_overrides[translation_available] = lambda: True
+    app.dependency_overrides[get_translate_course_runner] = _spy_runner_dep
+    client = TestClient(app)
+    client.post(
+        "/api/v1/admin/courses",
+        json={"title": "Topology", "description": "d", "level": "Beginner"},
+    )
+
+    resp = client.post("/api/v1/admin/courses/topology/translations/pt-BR")
+    assert resp.status_code == 202, resp.text
+    assert resp.json() == {"slug": "topology", "language": "pt-BR", "status": "started"}
+    # TestClient runs the BackgroundTask synchronously after the response.
+    assert calls == [("topology", "pt-BR")]
+
+    # Unsupported language → 422; English is rejected (it's the base).
+    assert client.post("/api/v1/admin/courses/topology/translations/de").status_code == 422
+    assert client.post("/api/v1/admin/courses/topology/translations/en").status_code == 422
+    # Unknown course → 404.
+    assert client.post("/api/v1/admin/courses/nope/translations/es").status_code == 404
+
+
+@pytest.mark.usefixtures("_prepared_schema")
+def test_translate_endpoint_503_when_unavailable(app: FastAPI) -> None:
+    from cyberdyne_backend.adapters.inbound.api.courses.router import translation_available
+
+    app.dependency_overrides[require_editor] = _editor
+    app.dependency_overrides[translation_available] = lambda: False
+    client = TestClient(app)
+    client.post(
+        "/api/v1/admin/courses",
+        json={"title": "Graphs", "description": "d", "level": "Beginner"},
+    )
+    resp = client.post("/api/v1/admin/courses/graphs/translations/pt-BR")
+    assert resp.status_code == 503

@@ -27,6 +27,20 @@ class SqlAlchemyTranslationRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
+    async def course_languages(self, course_id: UUID) -> list[str]:
+        rows = (
+            (
+                await self._session.execute(
+                    select(CourseTranslationRow.language)
+                    .where(CourseTranslationRow.course_id == course_id)
+                    .distinct()
+                )
+            )
+            .scalars()
+            .all()
+        )
+        return list(rows)
+
     # ── hashes (skip-unchanged lookups) ──────────────────────────────
 
     async def course_hashes(self, language: str) -> dict[UUID, str]:

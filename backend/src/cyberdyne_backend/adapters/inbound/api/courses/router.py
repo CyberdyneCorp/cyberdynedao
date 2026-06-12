@@ -2,18 +2,21 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
 
 from cyberdyne_backend.adapters.inbound.api.courses.schemas import (
     CourseCertificateResponse,
     CourseCertificateVerificationResponse,
     CourseDetailResponse,
+    CourseLanguagesResponse,
     CourseProgressResponse,
     CourseSummaryResponse,
+    CourseTranslationStartedResponse,
     CreateCourseRequest,
     CreateLessonRequest,
     LessonProgressResponse,
@@ -31,6 +34,10 @@ from cyberdyne_backend.adapters.inbound.middleware.auth import (
     EDITOR_SCOPE,
     require_editor,
     require_principal,
+)
+from cyberdyne_backend.application.academy import (
+    SUPPORTED_LANGUAGES,
+    GetCourseLanguages,
 )
 from cyberdyne_backend.application.courses import (
     AddLesson,
@@ -155,6 +162,24 @@ async def get_verify_certificate_uc() -> (
 async def get_certificate_pdf_uc() -> (
     RenderCourseCertificatePdf
 ):  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_course_languages_uc() -> GetCourseLanguages:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+# Returns an async callable ``(slug, language) -> None`` that translates one
+# course in its OWN session + LLM client — safe to run as a background task
+# after the request's session has closed. Overridden in main.py.
+async def get_translate_course_runner() -> Callable[
+    [str, str], Awaitable[None]
+]:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+def translation_available() -> bool:  # pragma: no cover - override target
+    # Overridden in main.py from settings (OpenAI key present?).
     raise NotImplementedError
 
 
@@ -610,6 +635,66 @@ async def reorder_courses(
     except CourseNotFoundError as exc:
         raise HTTPException(status_code=404, detail=f"course not found: {exc}") from exc
     return [_summary(c) for c in courses]
+
+
+# ── Admin — translations ─────────────────────────────────────────────
+
+
+@admin_router.get(
+    "/{slug}/translations",
+    response_model=CourseLanguagesResponse,
+    response_model_by_alias=True,
+)
+async def get_course_languages(
+    slug: str,
+    use_case: Annotated[GetCourseLanguages, Depends(get_course_languages_uc)],
+    can_translate: Annotated[bool, Depends(translation_available)],
+    _principal: Annotated[UserPrincipal, Depends(require_editor)],
+) -> CourseLanguagesResponse:
+    """Languages this course is available in + whether translation can run."""
+    try:
+        available = await use_case.execute(slug)
+    except CourseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="course not found") from exc
+    return CourseLanguagesResponse(
+        available=available,
+        supported=list(SUPPORTED_LANGUAGES),
+        can_translate=can_translate,
+    )
+
+
+@admin_router.post(
+    "/{slug}/translations/{language}",
+    response_model=CourseTranslationStartedResponse,
+    response_model_by_alias=True,
+    status_code=202,
+)
+async def translate_course(
+    slug: str,
+    language: str,
+    background_tasks: BackgroundTasks,
+    languages_uc: Annotated[GetCourseLanguages, Depends(get_course_languages_uc)],
+    runner: Annotated[Callable[[str, str], Awaitable[None]], Depends(get_translate_course_runner)],
+    can_translate: Annotated[bool, Depends(translation_available)],
+    _principal: Annotated[UserPrincipal, Depends(require_editor)],
+) -> CourseTranslationStartedResponse:
+    """Kick off a background translation of the course into ``language``.
+
+    Returns 202 immediately — a single course is many LLM calls and would
+    exceed proxy timeouts. The client polls ``GET …/translations`` until the
+    language appears in ``available``. Idempotent: re-running only fills gaps.
+    """
+    if language not in SUPPORTED_LANGUAGES or language == "en":
+        raise HTTPException(status_code=422, detail=f"unsupported language: {language}")
+    if not can_translate:
+        raise HTTPException(status_code=503, detail="translation unavailable (no OpenAI key)")
+    # 404 before scheduling work if the slug is unknown.
+    try:
+        await languages_uc.execute(slug)
+    except CourseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="course not found") from exc
+    background_tasks.add_task(runner, slug, language)
+    return CourseTranslationStartedResponse(slug=slug, language=language)
 
 
 # ── Admin — lesson authoring ─────────────────────────────────────────

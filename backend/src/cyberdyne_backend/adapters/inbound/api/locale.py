@@ -11,9 +11,11 @@ from __future__ import annotations
 
 from fastapi import Query, Request
 
-#: Languages the Academy content is translated into. ``en`` is the source
-#: of truth (base rows); the rest live in the translation tables.
-SUPPORTED_LANGUAGES: tuple[str, ...] = ("en", "pt-BR", "es", "fr")
+from cyberdyne_backend.application.academy import SUPPORTED_LANGUAGES
+
+#: Languages the Academy content is translated into — canonical set lives in
+#: the academy application layer; re-exported here for the API surface.
+__all__ = ["DEFAULT_LANGUAGE", "SUPPORTED_LANGUAGES", "match_language", "resolve_locale"]
 DEFAULT_LANGUAGE = "en"
 
 # Lower-cased lookup so matching is case-insensitive (browsers send
