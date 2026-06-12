@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { PixelButton, Badge } from '@cyberdynecorp/svelte-ui-core';
+	import { t } from '$lib/i18n';
 	import { createQuizPlayerViewModel } from '$lib/viewmodels/quizPlayerViewModel';
 
 	let { lessonId, onDone }: { lessonId: string; onDone?: () => void } = $props();
@@ -23,8 +24,8 @@
 
 <div class="quiz">
 	<div class="quiz__head">
-		<h3>Quiz</h3>
-		<PixelButton variant="ghost" size="sm" onclick={() => onDone?.()}>Close</PixelButton>
+		<h3>{$t('quiz.title')}</h3>
+		<PixelButton variant="ghost" size="sm" onclick={() => onDone?.()}>{$t('quiz.close')}</PixelButton>
 	</div>
 
 	{#if $error}
@@ -32,14 +33,14 @@
 	{/if}
 
 	{#if $loading}
-		<p class="hint">Loading quiz…</p>
+		<p class="hint">{$t('quiz.loading')}</p>
 	{:else if !$quiz}
-		<p class="hint">No quiz available.</p>
+		<p class="hint">{$t('quiz.none')}</p>
 	{:else if $result}
 		{@const res = $result}
 		<!-- Graded result -->
 		<div class="score" class:score--pass={res.passed}>
-			{res.passed ? '✓ Passed' : '✗ Not passed'} — {res.score}% (attempt {res.attemptNumber})
+			{res.passed ? $t('quiz.passed') : $t('quiz.notPassed')} — {res.score}% ({$t('quiz.attempt', { n: res.attemptNumber })})
 		</div>
 		<ol class="qlist">
 			{#each $quiz.questions as q (q.id)}
@@ -53,8 +54,8 @@
 							class:opt--chosen={r && opt.id === r.selectedOptionId}
 						>
 							{opt.text}
-							{#if r && opt.id === r.correctOptionId}<Badge variant="success" size="sm">correct</Badge>{/if}
-							{#if r && opt.id === r.selectedOptionId && !r.isCorrect}<Badge variant="danger" size="sm">your answer</Badge>{/if}
+							{#if r && opt.id === r.correctOptionId}<Badge variant="success" size="sm">{$t('quiz.correct')}</Badge>{/if}
+							{#if r && opt.id === r.selectedOptionId && !r.isCorrect}<Badge variant="danger" size="sm">{$t('quiz.yourAnswer')}</Badge>{/if}
 						</div>
 					{/each}
 					{#if r?.explanation}<p class="explain">{r.explanation}</p>{/if}
@@ -67,15 +68,15 @@
 			<!-- AI feedback only explains *wrong* answers; offer it only then. -->
 			{#if hasIncorrect && !$feedback}
 				<PixelButton variant="outline" size="sm" disabled={$busy} onclick={() => vm.explain(lessonId)}>
-					{$busy ? 'Thinking…' : 'Explain my mistakes (AI)'}
+					{$busy ? $t('quiz.thinking') : $t('quiz.explainMistakes')}
 				</PixelButton>
 			{:else if !hasIncorrect}
-				<span class="hint">All correct — see the explanations above. 🎉</span>
+				<span class="hint">{$t('quiz.allCorrect')}</span>
 			{/if}
 			<PixelButton variant="outline" size="sm" disabled={$busy} onclick={() => vm.load(lessonId)}>
-				Try again
+				{$t('quiz.tryAgain')}
 			</PixelButton>
-			<PixelButton variant="solid" size="sm" onclick={() => onDone?.()}>Done</PixelButton>
+			<PixelButton variant="solid" size="sm" onclick={() => onDone?.()}>{$t('quiz.done')}</PixelButton>
 		</div>
 	{:else}
 		<!-- Taking the quiz -->
@@ -99,7 +100,7 @@
 			{/each}
 		</ol>
 		<PixelButton variant="solid" size="sm" disabled={$busy || !allAnswered} onclick={() => vm.submit(lessonId)}>
-			{$busy ? 'Submitting…' : 'Submit answers'}
+			{$busy ? $t('quiz.submitting') : $t('quiz.submit')}
 		</PixelButton>
 	{/if}
 </div>

@@ -189,3 +189,19 @@
 @media (max-width: 768px) {
 	.ascii-logo { display: none !important; }
 }
+/* ── Reduce-motion preference (Settings → Appearance) ──
+   When the shell carries `.reduce-motion`, freeze every animated layer
+   and drop the purely-decorative moving particles / rain. The static
+   grid + ASCII logo remain so the backdrop still reads as "Cyberdyne",
+   just without motion. */
+.reduce-motion .cyber-grid,
+.reduce-motion .glow-particle,
+.reduce-motion .digital-rain,
+.reduce-motion .ascii-logo,
+.reduce-motion .logo-text {
+	animation: none !important;
+}
+.reduce-motion .glow-particle,
+.reduce-motion .digital-rain {
+	display: none !important;
+}

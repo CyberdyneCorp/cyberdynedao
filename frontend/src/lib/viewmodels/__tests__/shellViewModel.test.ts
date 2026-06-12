@@ -1,8 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { get } from 'svelte/store';
 import { windows } from '$lib/stores/windowStore';
-import { createShellViewModel, NON_SLIDE_CLICK_TARGETS } from '../shellViewModel';
+import {
+	createShellViewModel,
+	NON_SLIDE_CLICK_TARGETS,
+	localizeSections,
+	_internals
+} from '../shellViewModel';
 import { cart } from '../cartViewModel';
+import { translate } from '$lib/i18n';
 
 describe('shellViewModel', () => {
 	beforeEach(() => {
@@ -81,10 +87,12 @@ describe('shellViewModel', () => {
 		expect(get(windows)[0].content).toBe('cart');
 	});
 
-	it('handleStartSelect("settings") is a no-op (window not built yet)', () => {
+	it('handleStartSelect("settings") opens the settings window', () => {
 		const shell = createShellViewModel();
 		shell.handleStartSelect('settings');
-		expect(get(windows)).toHaveLength(0);
+		const open = get(windows);
+		expect(open).toHaveLength(1);
+		expect(open[0].content).toBe('settings');
 	});
 
 	it('handleStartSelect("close-all") clears all windows', () => {
@@ -100,6 +108,37 @@ describe('shellViewModel', () => {
 		const shell = createShellViewModel();
 		shell.handleStartSelect('nonsense');
 		expect(get(windows)).toHaveLength(0);
+	});
+
+	describe('localizeSections', () => {
+		const fr = (key: string) => translate('fr', key);
+
+		it('localizes section + item labels while keeping ids stable', () => {
+			const sections = localizeSections(_internals.DEFAULT_START_SECTIONS, fr);
+			const system = sections.find((s) => s.id === 'system')!;
+			expect(system.label).toBe(translate('fr', 'startMenu.section.system'));
+			const settings = system.items.find((i) => i.id === 'settings')!;
+			expect(settings.id).toBe('settings'); // routing id unchanged
+			expect(settings.label).toBe(translate('fr', 'startMenu.item.settings.label'));
+		});
+
+		it('only sets a subtitle when the source item has one', () => {
+			const sections = localizeSections(_internals.DEFAULT_START_SECTIONS, fr);
+			const core = sections.find((s) => s.id === 'core')!;
+			const cyberdyne = core.items.find((i) => i.id === 'Cyberdyne')!;
+			const python = core.items.find((i) => i.id === 'Python')!;
+			expect(cyberdyne.subtitle).toBeUndefined();
+			expect(python.subtitle).toBe(translate('fr', 'startMenu.item.Python.subtitle'));
+		});
+
+		it('localizes nested children under their parent id', () => {
+			const sections = localizeSections(_internals.DEFAULT_START_SECTIONS, fr);
+			const products = sections
+				.flatMap((s) => s.items)
+				.find((i) => i.id === 'Products' && i.children)!;
+			const child = products.children!.find((c) => c.id === 'Agent')!;
+			expect(child.label).toBe(translate('fr', 'startMenu.item.Products.child.Agent.label'));
+		});
 	});
 
 	it('shouldSlideOnClick returns false for clicks inside protected targets', () => {

@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
+	import { get } from 'svelte/store';
+	import { t } from '$lib/i18n';
 	import { walletInfo, getNetworkName } from '../stores/appKitStore';
 	import { userTraits, hasAnyAccess, isLoadingTraits, getActiveTraits } from '../stores/accessNFTStore';
 	import {
@@ -48,7 +50,7 @@
 	$: walletConnectInfoSnap = vm.snapshot().walletConnectInfo;
 
 	function shortAddress(addr: string | null | undefined): string {
-		if (!addr) return 'Not available';
+		if (!addr) return get(t)('wallet.notAvailable');
 		return addr.length > 14 ? `${addr.slice(0, 8)}…${addr.slice(-6)}` : addr;
 	}
 </script>
@@ -75,7 +77,7 @@
 
 	{#if !$walletConnected}
 		<button on:click={() => vm.openConnectionModal()} disabled={$isLoading} class="connect-btn">
-			{$isLoading ? '> CONNECTING...' : '> CONNECT'}
+			{$isLoading ? $t('wallet.connecting') : $t('wallet.connect')}
 		</button>
 	{:else}
 		<div class="wallet-connected">
@@ -84,7 +86,9 @@
 					<div class="wallet-status">
 						<div class="status-indicator">
 							<div class="status-text">
-								{$connectionType === 'walletconnect' ? 'WALLET' : 'ACCOUNT'} · CONNECTED
+								{$connectionType === 'walletconnect'
+									? $t('wallet.walletConnected')
+									: $t('wallet.accountConnected')}
 							</div>
 						</div>
 						<div class="wallet-balance">
@@ -97,41 +101,41 @@
 					<div class="wallet-details">
 						<div class="detail-grid">
 							<div class="detail-row">
-								<span class="detail-label">METHOD:</span>
+								<span class="detail-label">{$t('wallet.method')}</span>
 								<span class="detail-value">
 									{$connectionType === 'walletconnect'
-										? 'WalletConnect + SIWE'
+										? $t('wallet.methodWalletConnect')
 										: $connectionType === 'cyberdyne'
-											? 'CyberdyneAuth'
-											: 'Unknown'}
+											? $t('wallet.methodCyberdyne')
+											: $t('wallet.methodUnknown')}
 								</span>
 							</div>
 							{#if $currentUser?.email}
 								<div class="detail-row">
-									<span class="detail-label">EMAIL:</span>
+									<span class="detail-label">{$t('wallet.email')}</span>
 									<span class="detail-value">{$currentUser.email}</span>
 								</div>
 							{/if}
 							{#if $connectionType === 'walletconnect'}
 								<div class="detail-row">
-									<span class="detail-label">ADDRESS:</span>
+									<span class="detail-label">{$t('wallet.address')}</span>
 									<span class="detail-value address-full">
 										{shortAddress(walletConnectInfoSnap?.address || $currentUser?.walletAddress)}
 									</span>
 								</div>
 								<div class="detail-row">
-									<span class="detail-label">NETWORK:</span>
+									<span class="detail-label">{$t('wallet.network')}</span>
 									<span class="detail-value">{getNetworkName(walletConnectInfoSnap?.chainId)}</span>
 								</div>
 							{/if}
 							{#if $isLoadingTraits}
 								<div class="detail-row">
-									<span class="detail-label">ACCESS:</span>
-									<span class="detail-value loading">Loading traits…</span>
+									<span class="detail-label">{$t('wallet.access')}</span>
+									<span class="detail-value loading">{$t('wallet.loadingTraits')}</span>
 								</div>
 							{:else if $hasAnyAccess && $userTraits}
 								<div class="detail-row traits-section">
-									<span class="detail-label">ACCESS TRAITS NFT:</span>
+									<span class="detail-label">{$t('wallet.accessTraitsNft')}</span>
 									<div class="traits-container">
 										{#each getActiveTraits($userTraits) as trait}
 											<span class="trait-badge">{trait}</span>
@@ -139,22 +143,22 @@
 										<button
 											class="nft-view-btn"
 											on:click={() => vm.openNFTTerminal()}
-											title="View NFT Certificate"
+											title={$t('wallet.viewNftTitle')}
 										>
-											📜 VIEW NFT
+											{$t('wallet.viewNft')}
 										</button>
 									</div>
 								</div>
 							{:else if $connectionType === 'walletconnect' && $userTraits === null}
 								<div class="detail-row">
-									<span class="detail-label">ACCESS:</span>
-									<span class="detail-value no-access">No Access NFT</span>
+									<span class="detail-label">{$t('wallet.access')}</span>
+									<span class="detail-value no-access">{$t('wallet.noAccessNft')}</span>
 								</div>
 							{/if}
 						</div>
 						<div class="wallet-actions">
 							<button on:click={() => vm.handleDisconnect()} class="disconnect-btn">
-								> DISCONNECT
+								{$t('wallet.disconnect')}
 							</button>
 						</div>
 					</div>
