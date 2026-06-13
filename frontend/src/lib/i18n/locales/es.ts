@@ -173,6 +173,7 @@ export const es: Messages = {
 	'topic.Blockchain': 'Blockchain',
 	'topic.Physics': 'Física',
 	'topic.Mathematics': 'Matemáticas',
+	'topic.AI / Machine Learning': 'IA / Aprendizaje Automático',
 	'topic.Vector Calculus': 'Cálculo Vectorial',
 	'topic.Statistics': 'Estadística',
 	'topic.Robotics': 'Robótica',

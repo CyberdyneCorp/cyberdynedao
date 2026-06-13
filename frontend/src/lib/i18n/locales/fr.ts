@@ -173,6 +173,7 @@ export const fr: Messages = {
 	'topic.Blockchain': 'Blockchain',
 	'topic.Physics': 'Physique',
 	'topic.Mathematics': 'Mathématiques',
+	'topic.AI / Machine Learning': 'IA / Apprentissage Automatique',
 	'topic.Vector Calculus': 'Calcul Vectoriel',
 	'topic.Statistics': 'Statistiques',
 	'topic.Robotics': 'Robotique',

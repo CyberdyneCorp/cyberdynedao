@@ -173,6 +173,7 @@ export const ptBR: Messages = {
 	'topic.Blockchain': 'Blockchain',
 	'topic.Physics': 'Física',
 	'topic.Mathematics': 'Matemática',
+	'topic.AI / Machine Learning': 'IA / Aprendizado de Máquina',
 	'topic.Vector Calculus': 'Cálculo Vetorial',
 	'topic.Statistics': 'Estatística',
 	'topic.Robotics': 'Robótica',
