@@ -167,6 +167,7 @@
 		'Algorithms',
 		'Software Engineering',
 		'Operating Systems',
+		'Networking',
 		'Cybersecurity',
 		'Electronic Engineering',
 		'Other'
@@ -179,6 +180,7 @@
 		if (slug.startsWith('ml-') || slug.startsWith('transformers')) return 'AI / Machine Learning';
 		if (slug.startsWith('security-')) return 'Cybersecurity';
 		if (slug.startsWith('os-')) return 'Operating Systems';
+		if (slug.startsWith('networking-')) return 'Networking';
 		if (slug.startsWith('git-') || slug.startsWith('testing-')) return 'Software Engineering';
 		if (/^(c|cpp|swift|go|rust|javascript|typescript)-/.test(slug)) return 'Languages';
 		if (slug === 'sql-basics' || slug === 'sql-intermediate' || slug === 'mongodb' || slug === 'postgresql')
@@ -242,6 +244,7 @@
 		Algorithms: { icon: '🧮', accent: '#14b8a6', accentDark: '#0f766e' },
 		'Software Engineering': { icon: '🧰', accent: '#0ea5e9', accentDark: '#0369a1' },
 		'Operating Systems': { icon: '🖥️', accent: '#64748b', accentDark: '#334155' },
+		Networking: { icon: '🌐', accent: '#2563eb', accentDark: '#1e40af' },
 		Cybersecurity: { icon: '🔒', accent: '#e11d48', accentDark: '#9f1239' },
 		'Electronic Engineering': { icon: '🔌', accent: '#6366f1', accentDark: '#4338ca' },
 		Other: { icon: '📦', accent: '#6b7280', accentDark: '#374151' }

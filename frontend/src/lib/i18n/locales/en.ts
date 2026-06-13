@@ -186,6 +186,7 @@ export const en = {
 	'topic.AI / Machine Learning': 'AI / Machine Learning',
 	'topic.Cybersecurity': 'Cybersecurity',
 	'topic.Operating Systems': 'Operating Systems',
+	'topic.Networking': 'Networking',
 	'topic.Software Engineering': 'Software Engineering',
 	'topic.Vector Calculus': 'Vector Calculus',
 	'topic.Statistics': 'Statistics',
