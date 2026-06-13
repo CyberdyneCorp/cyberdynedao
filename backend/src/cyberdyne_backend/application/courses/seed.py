@@ -38,6 +38,7 @@ from cyberdyne_backend.application.courses.seed_electromagnetics import ELECTROM
 from cyberdyne_backend.application.courses.seed_electronics import ELECTRONICS_COURSES
 from cyberdyne_backend.application.courses.seed_embedded import EMBEDDED_COURSES
 from cyberdyne_backend.application.courses.seed_fpga import FPGA_COURSES
+from cyberdyne_backend.application.courses.seed_git import GIT_COURSES
 from cyberdyne_backend.application.courses.seed_iac import IAC_COURSES
 from cyberdyne_backend.application.courses.seed_languages import LANGUAGE_COURSES
 from cyberdyne_backend.application.courses.seed_linux import LINUX_COURSES
@@ -45,6 +46,7 @@ from cyberdyne_backend.application.courses.seed_machines import MACHINES_COURSES
 from cyberdyne_backend.application.courses.seed_math import MATH_COURSES
 from cyberdyne_backend.application.courses.seed_microwave import MICROWAVE_COURSES
 from cyberdyne_backend.application.courses.seed_ml import ML_COURSES
+from cyberdyne_backend.application.courses.seed_os import OS_COURSES
 from cyberdyne_backend.application.courses.seed_pcb import PCB_COURSES
 from cyberdyne_backend.application.courses.seed_photonics import PHOTONICS_COURSES
 from cyberdyne_backend.application.courses.seed_physics import PHYSICS_COURSES
@@ -53,10 +55,12 @@ from cyberdyne_backend.application.courses.seed_power_systems import POWER_SYSTE
 from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
 from cyberdyne_backend.application.courses.seed_rf_comms import RF_COMMS_COURSES
 from cyberdyne_backend.application.courses.seed_robotics import ROBOTICS_COURSES
+from cyberdyne_backend.application.courses.seed_security import SECURITY_COURSES
 from cyberdyne_backend.application.courses.seed_semiconductors import SEMICONDUCTOR_COURSES
 from cyberdyne_backend.application.courses.seed_sensors import SENSORS_COURSES
 from cyberdyne_backend.application.courses.seed_signals import SIGNALS_COURSES
 from cyberdyne_backend.application.courses.seed_statistics import STATISTICS_COURSES
+from cyberdyne_backend.application.courses.seed_testing import TESTING_COURSES
 from cyberdyne_backend.application.courses.seed_types import (
     SeedCourse,
     SeedLesson,
@@ -1182,6 +1186,10 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *DIGITAL_COMMS_COURSES,
     *MICROWAVE_COURSES,
     *ML_COURSES,
+    *SECURITY_COURSES,
+    *GIT_COURSES,
+    *OS_COURSES,
+    *TESTING_COURSES,
     *FPGA_COURSES,
     *POWER_SYSTEMS_COURSES,
 )
