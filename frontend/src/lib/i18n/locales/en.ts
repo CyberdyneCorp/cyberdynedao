@@ -187,6 +187,7 @@ export const en = {
 	'topic.Cybersecurity': 'Cybersecurity',
 	'topic.Operating Systems': 'Operating Systems',
 	'topic.Networking': 'Networking',
+	'topic.System Design': 'System Design',
 	'topic.Software Engineering': 'Software Engineering',
 	'topic.Vector Calculus': 'Vector Calculus',
 	'topic.Statistics': 'Statistics',
