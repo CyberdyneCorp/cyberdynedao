@@ -176,6 +176,7 @@ export const fr: Messages = {
 	'topic.AI / Machine Learning': 'IA / Apprentissage Automatique',
 	'topic.Cybersecurity': 'Cybersécurité',
 	'topic.Operating Systems': 'Systèmes d’Exploitation',
+	'topic.Networking': 'Réseaux',
 	'topic.Software Engineering': 'Génie Logiciel',
 	'topic.Vector Calculus': 'Calcul Vectoriel',
 	'topic.Statistics': 'Statistiques',

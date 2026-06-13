@@ -176,6 +176,7 @@ export const ptBR: Messages = {
 	'topic.AI / Machine Learning': 'IA / Aprendizado de Máquina',
 	'topic.Cybersecurity': 'Cibersegurança',
 	'topic.Operating Systems': 'Sistemas Operacionais',
+	'topic.Networking': 'Redes',
 	'topic.Software Engineering': 'Engenharia de Software',
 	'topic.Vector Calculus': 'Cálculo Vetorial',
 	'topic.Statistics': 'Estatística',
