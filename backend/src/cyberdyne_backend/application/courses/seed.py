@@ -61,6 +61,7 @@ from cyberdyne_backend.application.courses.seed_semiconductors import SEMICONDUC
 from cyberdyne_backend.application.courses.seed_sensors import SENSORS_COURSES
 from cyberdyne_backend.application.courses.seed_signals import SIGNALS_COURSES
 from cyberdyne_backend.application.courses.seed_statistics import STATISTICS_COURSES
+from cyberdyne_backend.application.courses.seed_systemdesign import SYSTEM_DESIGN_COURSES
 from cyberdyne_backend.application.courses.seed_testing import TESTING_COURSES
 from cyberdyne_backend.application.courses.seed_types import (
     SeedCourse,
@@ -1192,6 +1193,7 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *OS_COURSES,
     *TESTING_COURSES,
     *NETWORKING_COURSES,
+    *SYSTEM_DESIGN_COURSES,
     *FPGA_COURSES,
     *POWER_SYSTEMS_COURSES,
 )

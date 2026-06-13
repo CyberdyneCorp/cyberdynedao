@@ -177,6 +177,7 @@ export const fr: Messages = {
 	'topic.Cybersecurity': 'Cybersécurité',
 	'topic.Operating Systems': 'Systèmes d’Exploitation',
 	'topic.Networking': 'Réseaux',
+	'topic.System Design': 'Conception de Systèmes',
 	'topic.Software Engineering': 'Génie Logiciel',
 	'topic.Vector Calculus': 'Calcul Vectoriel',
 	'topic.Statistics': 'Statistiques',
