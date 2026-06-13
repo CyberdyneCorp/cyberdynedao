@@ -485,22 +485,6 @@
 			</div>
 		{/if}
 
-		{#if authReady && $recommendations && $recommendations.courses.length > 0}
-			<section class="recs">
-				<h2>{$t('courses.recs.title')}</h2>
-				<p class="recs__summary">{$recommendations.summary}</p>
-				<div class="recs__row">
-					{#each $recommendations.courses as rec (rec.slug)}
-						<button class="rec" onclick={() => openCourse(rec.slug)}>
-							<Badge variant={levelVariant[rec.level]} size="sm">{$t(`level.${rec.level}`)}</Badge>
-							<span class="rec__title">{rec.title}</span>
-							<span class="rec__reason">{rec.reason}</span>
-						</button>
-					{/each}
-				</div>
-			</section>
-		{/if}
-
 		{#if $loading && $courses.length === 0}
 			<p class="hint">{$t('courses.loading')}</p>
 		{:else if $courses.length === 0}
@@ -638,6 +622,23 @@
 			{/if}
 			</div>
 			</div>
+		{/if}
+
+		<!-- Recommended for you — shown after the full catalogue. -->
+		{#if authReady && $recommendations && $recommendations.courses.length > 0}
+			<section class="recs">
+				<h2>{$t('courses.recs.title')}</h2>
+				<p class="recs__summary">{$recommendations.summary}</p>
+				<div class="recs__row">
+					{#each $recommendations.courses as rec (rec.slug)}
+						<button class="rec" onclick={() => openCourse(rec.slug)}>
+							<Badge variant={levelVariant[rec.level]} size="sm">{$t(`level.${rec.level}`)}</Badge>
+							<span class="rec__title">{rec.title}</span>
+							<span class="rec__reason">{rec.reason}</span>
+						</button>
+					{/each}
+				</div>
+			</section>
 		{/if}
 
 		<!-- Public certificate verification -->
