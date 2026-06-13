@@ -44,6 +44,7 @@ from cyberdyne_backend.application.courses.seed_linux import LINUX_COURSES
 from cyberdyne_backend.application.courses.seed_machines import MACHINES_COURSES
 from cyberdyne_backend.application.courses.seed_math import MATH_COURSES
 from cyberdyne_backend.application.courses.seed_microwave import MICROWAVE_COURSES
+from cyberdyne_backend.application.courses.seed_ml import ML_COURSES
 from cyberdyne_backend.application.courses.seed_pcb import PCB_COURSES
 from cyberdyne_backend.application.courses.seed_photonics import PHOTONICS_COURSES
 from cyberdyne_backend.application.courses.seed_physics import PHYSICS_COURSES
@@ -1180,6 +1181,7 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *BATTERY_COURSES,
     *DIGITAL_COMMS_COURSES,
     *MICROWAVE_COURSES,
+    *ML_COURSES,
     *FPGA_COURSES,
     *POWER_SYSTEMS_COURSES,
 )

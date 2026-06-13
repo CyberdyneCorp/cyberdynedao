@@ -160,6 +160,7 @@
 		'Blockchain',
 		'Physics',
 		'Mathematics',
+		'AI / Machine Learning',
 		'Vector Calculus',
 		'Statistics',
 		'Robotics',
@@ -172,6 +173,7 @@
 	const electronicEngineeringSlug =
 		/^(electronics|analog-ic|power-electronics|pcb|semiconductor|embedded|signals|control|dsp|rf-comms|microwave|digital-comms|digital-logic|fpga|comparch|electromagnetics|vlsi|photonics|power-systems|battery|sensors|machines)-/;
 	function courseTopic(slug: string): string {
+		if (slug.startsWith('ml-') || slug.startsWith('transformers')) return 'AI / Machine Learning';
 		if (/^(c|cpp|swift|go|rust|javascript|typescript)-/.test(slug)) return 'Languages';
 		if (slug === 'sql-basics' || slug === 'sql-intermediate' || slug === 'mongodb' || slug === 'postgresql')
 			return 'Databases';
@@ -227,6 +229,7 @@
 		Blockchain: { icon: '⛓️', accent: '#eab308', accentDark: '#a16207' },
 		Physics: { icon: '⚛️', accent: '#06b6d4', accentDark: '#0e7490' },
 		Mathematics: { icon: '➗', accent: '#ec4899', accentDark: '#be185d' },
+		'AI / Machine Learning': { icon: '🧠', accent: '#7c3aed', accentDark: '#5b21b6' },
 		'Vector Calculus': { icon: '📐', accent: '#8b5cf6', accentDark: '#6d28d9' },
 		Statistics: { icon: '📊', accent: '#f59e0b', accentDark: '#b45309' },
 		Robotics: { icon: '🤖', accent: '#ef4444', accentDark: '#b91c1c' },

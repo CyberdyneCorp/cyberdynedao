@@ -183,6 +183,7 @@ export const en = {
 	'topic.Blockchain': 'Blockchain',
 	'topic.Physics': 'Physics',
 	'topic.Mathematics': 'Mathematics',
+	'topic.AI / Machine Learning': 'AI / Machine Learning',
 	'topic.Vector Calculus': 'Vector Calculus',
 	'topic.Statistics': 'Statistics',
 	'topic.Robotics': 'Robotics',
