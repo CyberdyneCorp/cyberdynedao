@@ -25,6 +25,7 @@ from uuid import UUID
 
 from cyberdyne_backend.application.courses.seed_algorithms import ALGORITHMS_COURSES
 from cyberdyne_backend.application.courses.seed_analog_ic import ANALOG_IC_COURSES
+from cyberdyne_backend.application.courses.seed_antennas import ANTENNAS_COURSES
 from cyberdyne_backend.application.courses.seed_battery import BATTERY_COURSES
 from cyberdyne_backend.application.courses.seed_comparch import COMPARCH_COURSES
 from cyberdyne_backend.application.courses.seed_concurrency import CONCURRENCY_COURSES
@@ -1210,6 +1211,7 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *EMC_COURSES,
     *TEST_MEASUREMENT_COURSES,
     *HW_VERIFICATION_COURSES,
+    *ANTENNAS_COURSES,
     *FPGA_COURSES,
     *POWER_SYSTEMS_COURSES,
 )
