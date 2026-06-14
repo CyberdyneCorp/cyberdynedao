@@ -384,3 +384,36 @@ async def test_job_store_requeue_running_and_failure_retry(db_session: AsyncSess
     # Under the retry cap → back to pending and reclaimable.
     retried = await store.claim_next()
     assert retried is not None and retried.id == job.id
+
+
+@pytest.mark.usefixtures("_prepared_schema")
+async def test_reseed_preserves_lesson_translations(db_session: AsyncSession) -> None:
+    """Regression: re-saving a course (as ``seed_academy`` does on every boot)
+    must NOT wipe lesson translations. ``save()`` previously delete+reinserted
+    the lesson rows, and ``lesson_translations`` cascades on ``lessons.id`` —
+    so every reseed silently destroyed all lesson (and quiz) translations while
+    leaving the course-level translation intact."""
+    course = new_course(title="Robotics", description="Robots", level="Beginner", slug="rob")
+    course.status = CourseStatus.PUBLISHED
+    lesson = new_lesson(
+        course_id=course.id, title="Joints", lesson_type="text", text_body="Body", sort_order=0
+    )
+    course.lessons.append(lesson)
+    repo = SqlAlchemyCourseRepository(db_session)
+    await repo.save(course)
+
+    tr = SqlAlchemyTranslationRepository(db_session)
+    await tr.upsert_lesson_translation(
+        lesson_id=lesson.id, language="pt-BR", title="Juntas", text_body="Corpo", source_hash="h"
+    )
+    await db_session.flush()
+
+    # Re-save the same course aggregate — exactly what a boot-time reseed does.
+    reloaded = await repo.get_by_slug("rob", include_drafts=True)
+    await repo.save(reloaded)
+    await db_session.flush()
+
+    # The lesson translation must survive the reseed (was wiped before the fix).
+    localized = await repo.get_by_slug("rob", include_drafts=True, locale="pt-BR")
+    assert localized.lessons[0].title == "Juntas"
+    assert localized.lessons[0].text_body == "Corpo"
