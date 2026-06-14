@@ -115,6 +115,7 @@ export const en = {
 	'courses.noneYet': 'No published courses yet — check back soon.',
 	'courses.categories': 'Categories',
 	'courses.allCoursesCat': 'All Courses',
+	'courses.toggleGroup': 'Toggle category group',
 	'courses.browseTitle': 'Browse all courses',
 	'courses.browseCount': '{shown} of {total}',
 	'courses.searchPlaceholder': 'Search courses…',
@@ -199,6 +200,14 @@ export const en = {
 	'topic.Algorithms': 'Algorithms',
 	'topic.Electronic Engineering': 'Electronic Engineering',
 	'topic.Other': 'Other',
+
+	// Course topic groups (collapsible sidebar parents).
+	'topic.group.Programming': 'Programming',
+	'topic.group.Software & Systems': 'Software & Systems',
+	'topic.group.AI & Data': 'AI & Data',
+	'topic.group.Mathematics': 'Mathematics',
+	'topic.group.Engineering & Robotics': 'Engineering & Robotics',
+	'topic.group.Web3': 'Web3',
 
 	// ── Quiz player ──
 	'quiz.title': 'Quiz',

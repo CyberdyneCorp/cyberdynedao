@@ -105,6 +105,7 @@ export const ptBR: Messages = {
 	'courses.noneYet': 'Ainda não há cursos publicados — volte em breve.',
 	'courses.categories': 'Categorias',
 	'courses.allCoursesCat': 'Todos os Cursos',
+	'courses.toggleGroup': 'Alternar grupo de categorias',
 	'courses.browseTitle': 'Explorar todos os cursos',
 	'courses.browseCount': '{shown} de {total}',
 	'courses.searchPlaceholder': 'Buscar cursos…',
@@ -189,6 +190,14 @@ export const ptBR: Messages = {
 	'topic.Algorithms': 'Algoritmos',
 	'topic.Electronic Engineering': 'Engenharia Eletrônica',
 	'topic.Other': 'Outros',
+
+	// Course topic groups (collapsible sidebar parents).
+	'topic.group.Programming': 'Programação',
+	'topic.group.Software & Systems': 'Software e Sistemas',
+	'topic.group.AI & Data': 'IA e Dados',
+	'topic.group.Mathematics': 'Matemática',
+	'topic.group.Engineering & Robotics': 'Engenharia e Robótica',
+	'topic.group.Web3': 'Web3',
 
 	// ── Quiz player ──
 	'quiz.title': 'Questionário',
