@@ -191,6 +191,7 @@ export const en = {
 	'topic.Distributed Systems': 'Distributed Systems',
 	'topic.Web Development': 'Web Development',
 	'topic.Data Engineering': 'Data Engineering',
+	'topic.Concurrency & Parallelism': 'Concurrency & Parallelism',
 	'topic.Software Engineering': 'Software Engineering',
 	'topic.Vector Calculus': 'Vector Calculus',
 	'topic.Statistics': 'Statistics',

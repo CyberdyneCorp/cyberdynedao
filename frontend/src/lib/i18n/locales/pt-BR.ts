@@ -181,6 +181,7 @@ export const ptBR: Messages = {
 	'topic.Distributed Systems': 'Sistemas Distribuídos',
 	'topic.Web Development': 'Desenvolvimento Web',
 	'topic.Data Engineering': 'Engenharia de Dados',
+	'topic.Concurrency & Parallelism': 'Concorrência e Paralelismo',
 	'topic.Software Engineering': 'Engenharia de Software',
 	'topic.Vector Calculus': 'Cálculo Vetorial',
 	'topic.Statistics': 'Estatística',

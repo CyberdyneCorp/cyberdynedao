@@ -181,6 +181,7 @@ export const fr: Messages = {
 	'topic.Distributed Systems': 'Systèmes Distribués',
 	'topic.Web Development': 'Développement Web',
 	'topic.Data Engineering': 'Ingénierie des Données',
+	'topic.Concurrency & Parallelism': 'Concurrence et Parallélisme',
 	'topic.Software Engineering': 'Génie Logiciel',
 	'topic.Vector Calculus': 'Calcul Vectoriel',
 	'topic.Statistics': 'Statistiques',

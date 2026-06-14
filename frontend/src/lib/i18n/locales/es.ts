@@ -181,6 +181,7 @@ export const es: Messages = {
 	'topic.Distributed Systems': 'Sistemas Distribuidos',
 	'topic.Web Development': 'Desarrollo Web',
 	'topic.Data Engineering': 'Ingeniería de Datos',
+	'topic.Concurrency & Parallelism': 'Concurrencia y Paralelismo',
 	'topic.Software Engineering': 'Ingeniería de Software',
 	'topic.Vector Calculus': 'Cálculo Vectorial',
 	'topic.Statistics': 'Estadística',
