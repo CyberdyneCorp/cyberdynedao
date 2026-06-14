@@ -170,6 +170,7 @@
 		'System Design',
 		'Distributed Systems',
 		'Data Engineering',
+		'Concurrency & Parallelism',
 		'Operating Systems',
 		'Networking',
 		'Cybersecurity',
@@ -189,6 +190,7 @@
 		if (slug.startsWith('distributed-')) return 'Distributed Systems';
 		if (slug.startsWith('webdev-')) return 'Web Development';
 		if (slug.startsWith('dataeng-')) return 'Data Engineering';
+		if (slug.startsWith('concurrency-')) return 'Concurrency & Parallelism';
 		if (slug.startsWith('git-') || slug.startsWith('testing-')) return 'Software Engineering';
 		if (/^(c|cpp|swift|go|rust|javascript|typescript)-/.test(slug)) return 'Languages';
 		if (slug === 'sql-basics' || slug === 'sql-intermediate' || slug === 'mongodb' || slug === 'postgresql')
@@ -257,6 +259,7 @@
 		'Distributed Systems': { icon: '🕸️', accent: '#0d9488', accentDark: '#115e59' },
 		'Web Development': { icon: '🌍', accent: '#0ea5e9', accentDark: '#0369a1' },
 		'Data Engineering': { icon: '🏭', accent: '#d97706', accentDark: '#92400e' },
+		'Concurrency & Parallelism': { icon: '⚡', accent: '#ca8a04', accentDark: '#854d0e' },
 		Cybersecurity: { icon: '🔒', accent: '#e11d48', accentDark: '#9f1239' },
 		'Electronic Engineering': { icon: '🔌', accent: '#6366f1', accentDark: '#4338ca' },
 		Other: { icon: '📦', accent: '#6b7280', accentDark: '#374151' }

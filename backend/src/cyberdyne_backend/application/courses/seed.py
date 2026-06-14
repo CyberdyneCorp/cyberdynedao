@@ -27,6 +27,7 @@ from cyberdyne_backend.application.courses.seed_algorithms import ALGORITHMS_COU
 from cyberdyne_backend.application.courses.seed_analog_ic import ANALOG_IC_COURSES
 from cyberdyne_backend.application.courses.seed_battery import BATTERY_COURSES
 from cyberdyne_backend.application.courses.seed_comparch import COMPARCH_COURSES
+from cyberdyne_backend.application.courses.seed_concurrency import CONCURRENCY_COURSES
 from cyberdyne_backend.application.courses.seed_control import CONTROL_COURSES
 from cyberdyne_backend.application.courses.seed_csharp import CSHARP_COURSES
 from cyberdyne_backend.application.courses.seed_databases import DATABASE_COURSES
@@ -1200,6 +1201,7 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *DISTRIBUTED_COURSES,
     *WEBDEV_COURSES,
     *DATAENG_COURSES,
+    *CONCURRENCY_COURSES,
     *FPGA_COURSES,
     *POWER_SYSTEMS_COURSES,
 )
