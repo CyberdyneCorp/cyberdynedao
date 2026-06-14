@@ -353,10 +353,11 @@
 		.map((g) => g.id);
 	let expandedGroups = $state<Set<string>>(new Set(defaultExpanded));
 
-	function isGroupExpanded(id: string, topics: string[]): boolean {
-		// Always auto-expand the group that owns the current selection.
-		if (selectedTopic === id) return true;
-		if (topics.includes(selectedTopic)) return true;
+	// Expansion is driven solely by the toggle (the chevron), so a group can
+	// always be collapsed — even while it's the selected filter. Selecting a
+	// group header opens it as a convenience (see selectGroup) but never locks
+	// it open.
+	function isGroupExpanded(id: string): boolean {
 		return expandedGroups.has(id);
 	}
 	function toggleGroup(id: string): void {
@@ -364,6 +365,12 @@
 		if (next.has(id)) next.delete(id);
 		else next.add(id);
 		expandedGroups = next;
+	}
+	// Select a group as the active filter and ensure it's expanded (so its
+	// sub-categories show) — while leaving it collapsible via the chevron.
+	function selectGroup(id: string): void {
+		selectedTopic = id;
+		if (!expandedGroups.has(id)) expandedGroups = new Set(expandedGroups).add(id);
 	}
 
 	// Per-topic counts over the search/level-filtered set, so the numbers always
@@ -694,14 +701,14 @@
 						<!-- Topic groups -->
 						{#each sidebarGroups as group (group.id)}
 							{#if group.multi}
-								{@const expanded = isGroupExpanded(group.id, group.topics)}
+								{@const expanded = isGroupExpanded(group.id)}
 								<button
 									type="button"
 									class="cat-btn cat-btn--group"
 									class:cat-btn--active={selectedTopic === group.id}
 									style={group.style}
 									aria-expanded={expanded}
-									onclick={() => (selectedTopic = group.id)}
+									onclick={() => selectGroup(group.id)}
 								>
 									<span
 										class="cat-btn__chev"
