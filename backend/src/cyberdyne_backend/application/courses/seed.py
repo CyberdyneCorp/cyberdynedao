@@ -40,8 +40,10 @@ from cyberdyne_backend.application.courses.seed_dsp import DSP_COURSES
 from cyberdyne_backend.application.courses.seed_electromagnetics import ELECTROMAGNETICS_COURSES
 from cyberdyne_backend.application.courses.seed_electronics import ELECTRONICS_COURSES
 from cyberdyne_backend.application.courses.seed_embedded import EMBEDDED_COURSES
+from cyberdyne_backend.application.courses.seed_emc import EMC_COURSES
 from cyberdyne_backend.application.courses.seed_fpga import FPGA_COURSES
 from cyberdyne_backend.application.courses.seed_git import GIT_COURSES
+from cyberdyne_backend.application.courses.seed_hwverification import HW_VERIFICATION_COURSES
 from cyberdyne_backend.application.courses.seed_iac import IAC_COURSES
 from cyberdyne_backend.application.courses.seed_languages import LANGUAGE_COURSES
 from cyberdyne_backend.application.courses.seed_linux import LINUX_COURSES
@@ -62,9 +64,11 @@ from cyberdyne_backend.application.courses.seed_robotics import ROBOTICS_COURSES
 from cyberdyne_backend.application.courses.seed_security import SECURITY_COURSES
 from cyberdyne_backend.application.courses.seed_semiconductors import SEMICONDUCTOR_COURSES
 from cyberdyne_backend.application.courses.seed_sensors import SENSORS_COURSES
+from cyberdyne_backend.application.courses.seed_signal_integrity import SIGNAL_INTEGRITY_COURSES
 from cyberdyne_backend.application.courses.seed_signals import SIGNALS_COURSES
 from cyberdyne_backend.application.courses.seed_statistics import STATISTICS_COURSES
 from cyberdyne_backend.application.courses.seed_systemdesign import SYSTEM_DESIGN_COURSES
+from cyberdyne_backend.application.courses.seed_test_measurement import TEST_MEASUREMENT_COURSES
 from cyberdyne_backend.application.courses.seed_testing import TESTING_COURSES
 from cyberdyne_backend.application.courses.seed_types import (
     SeedCourse,
@@ -1202,6 +1206,10 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *WEBDEV_COURSES,
     *DATAENG_COURSES,
     *CONCURRENCY_COURSES,
+    *SIGNAL_INTEGRITY_COURSES,
+    *EMC_COURSES,
+    *TEST_MEASUREMENT_COURSES,
+    *HW_VERIFICATION_COURSES,
     *FPGA_COURSES,
     *POWER_SYSTEMS_COURSES,
 )
