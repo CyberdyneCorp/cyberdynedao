@@ -167,6 +167,7 @@
 		'Algorithms',
 		'Software Engineering',
 		'System Design',
+		'Distributed Systems',
 		'Operating Systems',
 		'Networking',
 		'Cybersecurity',
@@ -183,6 +184,7 @@
 		if (slug.startsWith('os-')) return 'Operating Systems';
 		if (slug.startsWith('networking-')) return 'Networking';
 		if (slug.startsWith('system-design-')) return 'System Design';
+		if (slug.startsWith('distributed-')) return 'Distributed Systems';
 		if (slug.startsWith('git-') || slug.startsWith('testing-')) return 'Software Engineering';
 		if (/^(c|cpp|swift|go|rust|javascript|typescript)-/.test(slug)) return 'Languages';
 		if (slug === 'sql-basics' || slug === 'sql-intermediate' || slug === 'mongodb' || slug === 'postgresql')
@@ -248,6 +250,7 @@
 		'Operating Systems': { icon: '🖥️', accent: '#64748b', accentDark: '#334155' },
 		Networking: { icon: '🌐', accent: '#2563eb', accentDark: '#1e40af' },
 		'System Design': { icon: '🏗️', accent: '#7c3aed', accentDark: '#5b21b6' },
+		'Distributed Systems': { icon: '🕸️', accent: '#0d9488', accentDark: '#115e59' },
 		Cybersecurity: { icon: '🔒', accent: '#e11d48', accentDark: '#9f1239' },
 		'Electronic Engineering': { icon: '🔌', accent: '#6366f1', accentDark: '#4338ca' },
 		Other: { icon: '📦', accent: '#6b7280', accentDark: '#374151' }

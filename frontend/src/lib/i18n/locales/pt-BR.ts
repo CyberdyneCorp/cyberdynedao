@@ -178,6 +178,7 @@ export const ptBR: Messages = {
 	'topic.Operating Systems': 'Sistemas Operacionais',
 	'topic.Networking': 'Redes',
 	'topic.System Design': 'Design de Sistemas',
+	'topic.Distributed Systems': 'Sistemas Distribuídos',
 	'topic.Software Engineering': 'Engenharia de Software',
 	'topic.Vector Calculus': 'Cálculo Vetorial',
 	'topic.Statistics': 'Estatística',

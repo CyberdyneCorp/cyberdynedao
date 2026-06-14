@@ -178,6 +178,7 @@ export const fr: Messages = {
 	'topic.Operating Systems': 'Systèmes d’Exploitation',
 	'topic.Networking': 'Réseaux',
 	'topic.System Design': 'Conception de Systèmes',
+	'topic.Distributed Systems': 'Systèmes Distribués',
 	'topic.Software Engineering': 'Génie Logiciel',
 	'topic.Vector Calculus': 'Calcul Vectoriel',
 	'topic.Statistics': 'Statistiques',

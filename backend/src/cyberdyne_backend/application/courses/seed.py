@@ -33,6 +33,7 @@ from cyberdyne_backend.application.courses.seed_databases import DATABASE_COURSE
 from cyberdyne_backend.application.courses.seed_devops import DEVOPS_COURSES
 from cyberdyne_backend.application.courses.seed_digital_comms import DIGITAL_COMMS_COURSES
 from cyberdyne_backend.application.courses.seed_digital_logic import DIGITAL_LOGIC_COURSES
+from cyberdyne_backend.application.courses.seed_distributed import DISTRIBUTED_COURSES
 from cyberdyne_backend.application.courses.seed_dsp import DSP_COURSES
 from cyberdyne_backend.application.courses.seed_electromagnetics import ELECTROMAGNETICS_COURSES
 from cyberdyne_backend.application.courses.seed_electronics import ELECTRONICS_COURSES
@@ -1194,6 +1195,7 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *TESTING_COURSES,
     *NETWORKING_COURSES,
     *SYSTEM_DESIGN_COURSES,
+    *DISTRIBUTED_COURSES,
     *FPGA_COURSES,
     *POWER_SYSTEMS_COURSES,
 )
