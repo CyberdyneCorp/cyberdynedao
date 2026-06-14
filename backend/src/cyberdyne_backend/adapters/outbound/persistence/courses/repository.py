@@ -111,12 +111,31 @@ class SqlAlchemyCourseRepository:
             existing.published_at = course.published_at
             existing.updated_at = course.updated_at
             existing.due_at = course.due_at
-        # Replace the lesson set wholesale — the aggregate root owns its
-        # lessons, so a full rewrite keeps ordering + deletions correct
-        # without diffing. Lesson counts per course are small.
-        await self._session.execute(delete(LessonRow).where(LessonRow.course_id == course.id))
+        # Upsert the lesson set IN PLACE — never wholesale-delete.
+        # ``lesson_translations`` (and quiz translations) cascade on
+        # ``lessons.id``, so the previous delete-then-reinsert silently wiped
+        # every translation on each reseed (``seed_academy`` runs on every
+        # boot). Instead: update matched rows in place — preserving the row and
+        # its cascaded translations — insert genuinely new lessons, and delete
+        # only lessons the aggregate dropped. Lesson counts per course are small.
+        existing_rows = {row.id: row for row in await self._lessons_for(course.id)}
+        incoming_ids = {lesson.id for lesson in course.lessons}
+        for lesson_id, stale in existing_rows.items():
+            if lesson_id not in incoming_ids:
+                await self._session.delete(stale)
         for lesson in course.lessons:
-            self._session.add(_lesson_to_row(lesson))
+            match = existing_rows.get(lesson.id)
+            if match is None:
+                self._session.add(_lesson_to_row(lesson))
+                continue
+            match.course_id = lesson.course_id
+            match.title = lesson.title
+            match.lesson_type = lesson.lesson_type.value
+            match.content_url = lesson.content_url
+            match.text_body = lesson.text_body
+            match.duration = lesson.duration
+            match.sort_order = lesson.sort_order
+            match.updated_at = lesson.updated_at
         try:
             await self._session.flush()
         except IntegrityError as exc:
