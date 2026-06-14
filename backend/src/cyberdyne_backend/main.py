@@ -360,6 +360,12 @@ from cyberdyne_backend.infrastructure.settings import get_settings
 
 logger = logging.getLogger("cyberdyne_backend.main")
 
+# Size of the translation-worker pool. Each worker drains the job queue
+# independently (claims lock their row), so a backlog (e.g. a catalogue-wide
+# re-translation) drains roughly N times faster. Kept modest to bound concurrent
+# LLM calls and load on the web process.
+_TRANSLATION_WORKERS = 4
+
 
 def create_app() -> FastAPI:
     settings = get_settings()
@@ -414,23 +420,27 @@ def create_app() -> FastAPI:
         # Phase 1's public endpoints don't make outbound CyberdyneAuth-
         # authed calls, so we don't start the service-token provider
         # here. Phase 6 will: ``await container.service_token_provider.start()``.
-        worker_task: asyncio.Task[None] | None = None
+        worker_tasks: list[asyncio.Task[None]] = []
         if settings.openai_api_key is not None:
-            # Only run the worker when translation is actually available
-            # (mirrors the translation_available() gate). It requeues any
-            # job stranded ``running`` by the last restart, then drains.
-            worker = TranslationWorker(
-                store=_WorkerJobStore(),
-                translate_course_factory=_translate_course_scope,
-            )
-            worker_task = asyncio.create_task(worker.run_forever())
+            # Only run workers when translation is actually available (mirrors
+            # the translation_available() gate). They requeue any job stranded
+            # ``running`` by the last restart, then drain in parallel — each
+            # claim_next() locks its row (FOR UPDATE SKIP LOCKED), so a small
+            # pool never claims the same job and a backlog drains N times faster.
+            for _ in range(_TRANSLATION_WORKERS):
+                worker = TranslationWorker(
+                    store=_WorkerJobStore(),
+                    translate_course_factory=_translate_course_scope,
+                )
+                worker_tasks.append(asyncio.create_task(worker.run_forever()))
         try:
             yield
         finally:
-            if worker_task is not None:
-                worker_task.cancel()
+            for task in worker_tasks:
+                task.cancel()
+            for task in worker_tasks:
                 with suppress(asyncio.CancelledError):
-                    await worker_task
+                    await task
             await container.aclose()
             await dispose_engine()
 
