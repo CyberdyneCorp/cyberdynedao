@@ -180,7 +180,7 @@
 	// The Tier-3 engineering curriculum: every electronics/EE family (each with
 	// basics/intermediate/advanced) collapses into one browsable category.
 	const electronicEngineeringSlug =
-		/^(electronics|analog-ic|power-electronics|pcb|semiconductor|embedded|signals|signal-integrity|control|dsp|rf-comms|microwave|digital-comms|digital-logic|fpga|comparch|electromagnetics|emc|test-measurement|hw-verification|vlsi|photonics|power-systems|battery|sensors|machines)-/;
+		/^(electronics|analog-ic|antennas|power-electronics|pcb|semiconductor|embedded|signals|signal-integrity|control|dsp|rf-comms|microwave|digital-comms|digital-logic|fpga|comparch|electromagnetics|emc|test-measurement|hw-verification|vlsi|photonics|power-systems|battery|sensors|machines)-/;
 	function courseTopic(slug: string): string {
 		if (slug.startsWith('ml-') || slug.startsWith('transformers')) return 'AI / Machine Learning';
 		if (slug.startsWith('security-')) return 'Cybersecurity';
