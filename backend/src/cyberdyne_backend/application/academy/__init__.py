@@ -1,5 +1,13 @@
 """Academy cross-context application services (course + quiz i18n)."""
 
+from cyberdyne_backend.application.academy.jobs import (
+    MAX_ATTEMPTS,
+    TranslateCourseFactory,
+    TranslateCourseScope,
+    TranslationJob,
+    TranslationJobStore,
+    TranslationWorker,
+)
 from cyberdyne_backend.application.academy.translation import (
     SUPPORTED_LANGUAGES,
     MarkdownAwareTranslator,
@@ -14,12 +22,18 @@ from cyberdyne_backend.application.academy.use_cases import (
 )
 
 __all__ = [
+    "MAX_ATTEMPTS",
     "SUPPORTED_LANGUAGES",
     "GetCourseLanguages",
     "MarkdownAwareTranslator",
     "TranslateAcademy",
     "TranslateCourse",
+    "TranslateCourseFactory",
+    "TranslateCourseScope",
+    "TranslationJob",
+    "TranslationJobStore",
     "TranslationRepository",
     "TranslationStats",
+    "TranslationWorker",
     "content_hash",
 ]

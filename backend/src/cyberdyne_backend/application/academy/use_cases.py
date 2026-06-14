@@ -21,8 +21,14 @@ from cyberdyne_backend.domain.quizzes import QuizNotFoundError, QuizRepository
 
 @dataclass(slots=True)
 class GetCourseLanguages:
-    """Languages a course is available in — always ``en`` (the base) plus any
-    non-English language that has a course translation row."""
+    """Languages a course is *fully* available in — always ``en`` (the base)
+    plus any non-English language whose course translation row exists AND
+    which has a translation row for every lesson in the course.
+
+    Reporting a language as available off the course-level row alone is
+    misleading: a translation job that was interrupted mid-run leaves the
+    course title translated but lessons missing. A language counts only when
+    the whole course (title/description + every lesson) is translated."""
 
     course_repo: CourseRepository
     translation_repo: TranslationRepository
@@ -30,8 +36,13 @@ class GetCourseLanguages:
     async def execute(self, slug: str) -> list[str]:
         # Raises CourseNotFoundError if the slug is unknown (router → 404).
         course = await self.course_repo.get_by_slug(slug, include_drafts=True)
-        extra = await self.translation_repo.course_languages(course.id)
-        return ["en", *sorted(lang for lang in extra if lang != "en")]
+        course_langs = {
+            lang for lang in await self.translation_repo.course_languages(course.id) if lang != "en"
+        }
+        lesson_counts = await self.translation_repo.translated_lesson_counts(course.id)
+        total_lessons = len(course.lessons)
+        available = [lang for lang in course_langs if lesson_counts.get(lang, 0) >= total_lessons]
+        return ["en", *sorted(available)]
 
 
 @dataclass(slots=True)

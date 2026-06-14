@@ -10,11 +10,12 @@ from __future__ import annotations
 import uuid
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cyberdyne_backend.adapters.outbound.persistence.courses.models import (
     CourseTranslationRow,
+    LessonRow,
     LessonTranslationRow,
 )
 from cyberdyne_backend.adapters.outbound.persistence.quizzes.models import (
@@ -40,6 +41,20 @@ class SqlAlchemyTranslationRepository:
             .all()
         )
         return list(rows)
+
+    async def translated_lesson_counts(self, course_id: UUID) -> dict[str, int]:
+        rows = (
+            await self._session.execute(
+                select(
+                    LessonTranslationRow.language,
+                    func.count(LessonTranslationRow.id),
+                )
+                .join(LessonRow, LessonRow.id == LessonTranslationRow.lesson_id)
+                .where(LessonRow.course_id == course_id)
+                .group_by(LessonTranslationRow.language)
+            )
+        ).all()
+        return {language: count for language, count in rows}
 
     # ── hashes (skip-unchanged lookups) ──────────────────────────────
 

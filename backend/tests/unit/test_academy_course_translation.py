@@ -37,13 +37,17 @@ class FakeQuizRepo:
 
 
 class FakeTranslationRepo:
-    def __init__(self, languages=None) -> None:
+    def __init__(self, languages=None, lesson_counts=None) -> None:
         self._languages = languages or []
+        self._lesson_counts = lesson_counts or {}
         self.courses: list = []
         self.lessons: list = []
 
     async def course_languages(self, course_id):
         return list(self._languages)
+
+    async def translated_lesson_counts(self, course_id):
+        return dict(self._lesson_counts)
 
     async def course_hashes(self, language):
         return {}
@@ -77,10 +81,13 @@ def _course():
 
 
 async def test_get_course_languages_prepends_en_and_sorts() -> None:
+    # Both languages have all lessons (1) translated → both available.
     course = _course()
     uc = GetCourseLanguages(
         course_repo=FakeCourseRepo(course),
-        translation_repo=FakeTranslationRepo(languages=["pt-BR", "es"]),
+        translation_repo=FakeTranslationRepo(
+            languages=["pt-BR", "es"], lesson_counts={"pt-BR": 1, "es": 1}
+        ),
     )
     assert await uc.execute("alg") == ["en", "es", "pt-BR"]
 
@@ -89,6 +96,40 @@ async def test_get_course_languages_en_only_when_no_translations() -> None:
     course = _course()
     uc = GetCourseLanguages(
         course_repo=FakeCourseRepo(course), translation_repo=FakeTranslationRepo()
+    )
+    assert await uc.execute("alg") == ["en"]
+
+
+async def test_get_course_languages_course_only_translation_not_available() -> None:
+    # Regression: a course-level translation row WITHOUT lesson rows must NOT
+    # report the language available (the old bug). 1 lesson, 0 translated.
+    course = _course()
+    uc = GetCourseLanguages(
+        course_repo=FakeCourseRepo(course),
+        translation_repo=FakeTranslationRepo(languages=["pt-BR"], lesson_counts={}),
+    )
+    assert await uc.execute("alg") == ["en"]
+
+
+async def test_get_course_languages_all_lessons_translated_available() -> None:
+    # Course row + every lesson translated → available.
+    course = _course()  # one lesson
+    uc = GetCourseLanguages(
+        course_repo=FakeCourseRepo(course),
+        translation_repo=FakeTranslationRepo(languages=["pt-BR"], lesson_counts={"pt-BR": 1}),
+    )
+    assert await uc.execute("alg") == ["en", "pt-BR"]
+
+
+async def test_get_course_languages_partial_lessons_not_available() -> None:
+    # Two-lesson course with only one lesson translated → NOT available.
+    course = _course()
+    course.lessons.append(
+        new_lesson(course_id=course.id, title="More", lesson_type="text", text_body="x")
+    )
+    uc = GetCourseLanguages(
+        course_repo=FakeCourseRepo(course),
+        translation_repo=FakeTranslationRepo(languages=["pt-BR"], lesson_counts={"pt-BR": 1}),
     )
     assert await uc.execute("alg") == ["en"]
 

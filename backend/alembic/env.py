@@ -43,6 +43,9 @@ from cyberdyne_backend.adapters.outbound.persistence.marketplace import (  # noq
 from cyberdyne_backend.adapters.outbound.persistence.ai_chat import (  # noqa: F401
     models as _ai_chat_models,
 )
+from cyberdyne_backend.adapters.outbound.persistence.academy import (  # noqa: F401
+    models as _academy_models,
+)
 
 config = context.config
 
