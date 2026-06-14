@@ -161,8 +161,6 @@
 		'Physics',
 		'Mathematics',
 		'AI / Machine Learning',
-		'Vector Calculus',
-		'Statistics',
 		'Robotics',
 		'Algorithms',
 		'Software Engineering',
@@ -198,8 +196,8 @@
 		if (/^(docker|kubernetes|terraform|ansible)-/.test(slug)) return 'DevOps';
 		if (slug.startsWith('blockchain')) return 'Blockchain';
 		if (slug.startsWith('physics')) return 'Physics';
-		if (slug.startsWith('vectorcalc')) return 'Vector Calculus';
-		if (slug.startsWith('statinf')) return 'Statistics';
+		if (slug.startsWith('vectorcalc')) return 'Mathematics';
+		if (slug.startsWith('statinf')) return 'Mathematics';
 		if (slug.startsWith('robotics') || slug.startsWith('aerial-') || slug.startsWith('mobile-robotics-') || slug.startsWith('estimation-'))
 			return 'Robotics';
 		if (slug.startsWith('algorithms')) return 'Algorithms';
@@ -226,10 +224,12 @@
 		return sorted;
 	});
 
-	// Group the filtered+sorted list by topic, in a stable topic order.
+	// Group the current (topic-filtered) list by topic, in a stable topic order.
+	// Used for the "All Courses" group-by-topic view and for a group selection,
+	// which shows the union of its topics still sub-grouped by topic headers.
 	const groupedCourses = $derived.by(() => {
-		const groups = new Map<string, typeof filteredCourses>();
-		for (const c of filteredCourses) {
+		const groups = new Map<string, typeof coursesInTopic>();
+		for (const c of coursesInTopic) {
 			const t = courseTopic(c.slug);
 			(groups.get(t) ?? groups.set(t, []).get(t)!).push(c);
 		}
@@ -249,8 +249,6 @@
 		Physics: { icon: '⚛️', accent: '#06b6d4', accentDark: '#0e7490' },
 		Mathematics: { icon: '➗', accent: '#ec4899', accentDark: '#be185d' },
 		'AI / Machine Learning': { icon: '🧠', accent: '#7c3aed', accentDark: '#5b21b6' },
-		'Vector Calculus': { icon: '📐', accent: '#8b5cf6', accentDark: '#6d28d9' },
-		Statistics: { icon: '📊', accent: '#f59e0b', accentDark: '#b45309' },
 		Robotics: { icon: '🤖', accent: '#ef4444', accentDark: '#b91c1c' },
 		Algorithms: { icon: '🧮', accent: '#14b8a6', accentDark: '#0f766e' },
 		'Software Engineering': { icon: '🧰', accent: '#0ea5e9', accentDark: '#0369a1' },
@@ -267,45 +265,201 @@
 	};
 	const fallbackTopicMeta = { icon: '📦', accent: '#6b7280', accentDark: '#374151' };
 
-	// Selected category in the sidebar ('all' or a topic name).
+	// ── Two-level category model ──
+	// Ordered parent groups; each maps to its member topics (in display order).
+	// Single-topic groups render as a plain row; multi-topic groups render as a
+	// collapsible header with indented sub-categories.
+	type TopicGroup = {
+		id: string; // sidebar selection id, e.g. 'group:software'
+		key: string; // i18n key suffix, e.g. 'group.Programming'
+		icon: string;
+		accent: string;
+		accentDark: string;
+		topics: string[];
+	};
+	const topicGroups: TopicGroup[] = [
+		{
+			id: 'group:programming',
+			key: 'group.Programming',
+			icon: '🧑‍💻',
+			accent: '#3b82f6',
+			accentDark: '#1d4ed8',
+			topics: ['Foundations', 'Languages', 'Web Development', 'Algorithms']
+		},
+		{
+			id: 'group:software',
+			key: 'group.Software & Systems',
+			icon: '🧰',
+			accent: '#0ea5e9',
+			accentDark: '#0369a1',
+			topics: [
+				'Software Engineering',
+				'DevOps',
+				'Databases',
+				'Operating Systems',
+				'Networking',
+				'System Design',
+				'Distributed Systems',
+				'Concurrency & Parallelism',
+				'Cybersecurity'
+			]
+		},
+		{
+			id: 'group:aidata',
+			key: 'group.AI & Data',
+			icon: '🧠',
+			accent: '#7c3aed',
+			accentDark: '#5b21b6',
+			topics: ['AI / Machine Learning', 'Data Engineering']
+		},
+		{
+			id: 'group:math',
+			key: 'group.Mathematics',
+			icon: '➗',
+			accent: '#ec4899',
+			accentDark: '#be185d',
+			topics: ['Mathematics']
+		},
+		{
+			id: 'group:engineering',
+			key: 'group.Engineering & Robotics',
+			icon: '🔬',
+			accent: '#6366f1',
+			accentDark: '#4338ca',
+			topics: ['Physics', 'Electronic Engineering', 'Robotics']
+		},
+		{
+			id: 'group:web3',
+			key: 'group.Web3',
+			icon: '⛓️',
+			accent: '#eab308',
+			accentDark: '#a16207',
+			topics: ['Blockchain']
+		}
+	];
+	// Topics covered by a group — anything else (e.g. 'Other') falls through to a
+	// flat fallback row rendered after the groups.
+	const groupedTopicSet = new Set(topicGroups.flatMap((g) => g.topics));
+	const ungroupedTopics = topicOrder.filter((t) => !groupedTopicSet.has(t));
+
+	// Selected category in the sidebar: 'all', a topic name, or a group id.
 	let selectedTopic = $state<string>('all');
 
-	// Categories with live counts over the search/level-filtered set, so the
-	// numbers always match what a click reveals.
-	const topicCategories = $derived.by(() => {
+	// Which multi-topic groups are expanded. Default-expand the first two
+	// multi-topic groups (Programming, Software & Systems).
+	const defaultExpanded = topicGroups
+		.filter((g) => g.topics.length > 1)
+		.slice(0, 2)
+		.map((g) => g.id);
+	let expandedGroups = $state<Set<string>>(new Set(defaultExpanded));
+
+	function isGroupExpanded(id: string, topics: string[]): boolean {
+		// Always auto-expand the group that owns the current selection.
+		if (selectedTopic === id) return true;
+		if (topics.includes(selectedTopic)) return true;
+		return expandedGroups.has(id);
+	}
+	function toggleGroup(id: string): void {
+		const next = new Set(expandedGroups);
+		if (next.has(id)) next.delete(id);
+		else next.add(id);
+		expandedGroups = next;
+	}
+
+	// Per-topic counts over the search/level-filtered set, so the numbers always
+	// match what a click reveals.
+	const topicCounts = $derived.by(() => {
 		const counts = new Map<string, number>();
 		for (const c of filteredCourses) {
 			const t = courseTopic(c.slug);
 			counts.set(t, (counts.get(t) ?? 0) + 1);
 		}
-		const all = {
-			id: 'all',
-			name: 'All Courses',
-			icon: '📚',
-			count: filteredCourses.length,
-			style: '--accent: #3b82f6; --accent-dark: #1d4ed8;'
-		};
-		const rest = topicOrder
-			.filter((t) => (counts.get(t) ?? 0) > 0)
+		return counts;
+	});
+
+	// The "All Courses" row.
+	const allCategory = $derived({
+		id: 'all',
+		count: filteredCourses.length,
+		style: '--accent: #3b82f6; --accent-dark: #1d4ed8;'
+	});
+
+	// Ordered sidebar groups with live counts. A group is shown only if its
+	// member topics have ≥1 course; sub-topics likewise.
+	const sidebarGroups = $derived.by(() => {
+		const out = [];
+		for (const g of topicGroups) {
+			const subs = g.topics
+				.filter((t) => (topicCounts.get(t) ?? 0) > 0)
+				.map((t) => {
+					const m = topicMeta[t] ?? fallbackTopicMeta;
+					return {
+						topic: t,
+						icon: m.icon,
+						count: topicCounts.get(t)!,
+						style: `--accent: ${m.accent}; --accent-dark: ${m.accentDark};`
+					};
+				});
+			const count = subs.reduce((n, s) => n + s.count, 0);
+			if (count === 0) continue;
+			out.push({
+				id: g.id,
+				key: g.key,
+				icon: g.icon,
+				count,
+				multi: g.topics.length > 1,
+				topics: g.topics,
+				style: `--accent: ${g.accent}; --accent-dark: ${g.accentDark};`,
+				subs
+			});
+		}
+		return out;
+	});
+
+	// Ungrouped fallback topics (e.g. 'Other') rendered after the groups.
+	const fallbackCategories = $derived(
+		ungroupedTopics
+			.filter((t) => (topicCounts.get(t) ?? 0) > 0)
 			.map((t) => {
 				const m = topicMeta[t] ?? fallbackTopicMeta;
 				return {
 					id: t,
-					name: t,
 					icon: m.icon,
-					count: counts.get(t)!,
+					count: topicCounts.get(t)!,
 					style: `--accent: ${m.accent}; --accent-dark: ${m.accentDark};`
 				};
-			});
-		return [all, ...rest];
+			})
+	);
+
+	// Topics selected by the current sidebar selection (a group id expands to its
+	// member topics; a topic name resolves to itself).
+	const selectedTopicsSet = $derived.by(() => {
+		if (selectedTopic === 'all') return null; // null = no topic filter
+		const grp = topicGroups.find((g) => g.id === selectedTopic);
+		return new Set(grp ? grp.topics : [selectedTopic]);
 	});
 
 	// Courses after the sidebar's category filter (on top of search/level).
-	const coursesInTopic = $derived(
-		selectedTopic === 'all'
-			? filteredCourses
-			: filteredCourses.filter((c) => courseTopic(c.slug) === selectedTopic)
+	const coursesInTopic = $derived.by(() => {
+		const sel = selectedTopicsSet;
+		if (!sel) return filteredCourses;
+		return filteredCourses.filter((c) => sel.has(courseTopic(c.slug)));
+	});
+
+	// Is the current selection a multi-topic group? (drives sub-grouped grid)
+	const selectedGroup = $derived(topicGroups.find((g) => g.id === selectedTopic) ?? null);
+	const selectionIsMultiGroup = $derived((selectedGroup?.topics.length ?? 0) > 1);
+	// Show topic sub-headers when browsing everything with group-by on, or when a
+	// multi-topic group is selected (so its union stays organised by topic).
+	const showGroupedGrid = $derived(
+		(selectedTopic === 'all' && groupByTopic) || selectionIsMultiGroup
 	);
+	// Human label for the current selection (for the empty-state message).
+	const selectedTopicLabel = $derived.by(() => {
+		if (selectedTopic === 'all') return '';
+		if (selectedGroup) return $t(`topic.${selectedGroup.key}`);
+		return $t(`topic.${selectedTopic}`);
+	});
 
 	// ── Lesson focus mode ──
 	// Opening a lesson (or starting a quiz) collapses the rest of the list so
@@ -524,7 +678,88 @@
 				<section class="cat-card">
 					<h2 class="cat-card__title">{$t('courses.categories')}</h2>
 					<div class="cat-list">
-						{#each topicCategories as cat (cat.id)}
+						<!-- All Courses -->
+						<button
+							type="button"
+							class="cat-btn"
+							class:cat-btn--active={selectedTopic === 'all'}
+							style={allCategory.style}
+							onclick={() => (selectedTopic = 'all')}
+						>
+							<span class="cat-btn__icon" aria-hidden="true">📚</span>
+							<span class="cat-btn__name">{$t('courses.allCoursesCat')}</span>
+							<Badge variant="neutral" size="sm">{allCategory.count}</Badge>
+						</button>
+
+						<!-- Topic groups -->
+						{#each sidebarGroups as group (group.id)}
+							{#if group.multi}
+								{@const expanded = isGroupExpanded(group.id, group.topics)}
+								<button
+									type="button"
+									class="cat-btn cat-btn--group"
+									class:cat-btn--active={selectedTopic === group.id}
+									style={group.style}
+									aria-expanded={expanded}
+									onclick={() => (selectedTopic = group.id)}
+								>
+									<span
+										class="cat-btn__chev"
+										class:cat-btn__chev--open={expanded}
+										role="button"
+										tabindex="0"
+										aria-label={$t('courses.toggleGroup')}
+										aria-expanded={expanded}
+										onclick={(e) => {
+											e.stopPropagation();
+											toggleGroup(group.id);
+										}}
+										onkeydown={(e) => {
+											if (e.key === 'Enter' || e.key === ' ') {
+												e.preventDefault();
+												e.stopPropagation();
+												toggleGroup(group.id);
+											}
+										}}
+									>▸</span>
+									<span class="cat-btn__icon" aria-hidden="true">{group.icon}</span>
+									<span class="cat-btn__name">{$t(`topic.${group.key}`)}</span>
+									<Badge variant="neutral" size="sm">{group.count}</Badge>
+								</button>
+								{#if expanded}
+									{#each group.subs as sub (sub.topic)}
+										<button
+											type="button"
+											class="cat-btn cat-btn--sub"
+											class:cat-btn--active={selectedTopic === sub.topic}
+											style={sub.style}
+											onclick={() => (selectedTopic = sub.topic)}
+										>
+											<span class="cat-btn__icon" aria-hidden="true">{sub.icon}</span>
+											<span class="cat-btn__name">{$t(`topic.${sub.topic}`)}</span>
+											<Badge variant="neutral" size="sm">{sub.count}</Badge>
+										</button>
+									{/each}
+								{/if}
+							{:else}
+								<!-- Single-topic group: plain row filtering to its one topic -->
+								{@const sub = group.subs[0]}
+								<button
+									type="button"
+									class="cat-btn"
+									class:cat-btn--active={selectedTopic === sub.topic}
+									style={group.style}
+									onclick={() => (selectedTopic = sub.topic)}
+								>
+									<span class="cat-btn__icon" aria-hidden="true">{group.icon}</span>
+									<span class="cat-btn__name">{$t(`topic.${group.key}`)}</span>
+									<Badge variant="neutral" size="sm">{group.count}</Badge>
+								</button>
+							{/if}
+						{/each}
+
+						<!-- Ungrouped fallback topics (e.g. Other) -->
+						{#each fallbackCategories as cat (cat.id)}
 							<button
 								type="button"
 								class="cat-btn"
@@ -533,7 +768,7 @@
 								onclick={() => (selectedTopic = cat.id)}
 							>
 								<span class="cat-btn__icon" aria-hidden="true">{cat.icon}</span>
-								<span class="cat-btn__name">{cat.id === 'all' ? $t('courses.allCoursesCat') : $t(`topic.${cat.id}`)}</span>
+								<span class="cat-btn__name">{$t(`topic.${cat.id}`)}</span>
 								<Badge variant="neutral" size="sm">{cat.count}</Badge>
 							</button>
 						{/each}
@@ -628,11 +863,11 @@
 					{$t('courses.noMatch', {
 						query: search,
 						level: levelFilter !== 'all' ? $t('courses.noMatch.atLevel', { level: $t(`level.${levelFilter}`) }) : '',
-						topic: selectedTopic !== 'all' ? $t('courses.noMatch.inTopic', { topic: $t(`topic.${selectedTopic}`) }) : ''
+						topic: selectedTopic !== 'all' ? $t('courses.noMatch.inTopic', { topic: selectedTopicLabel }) : ''
 					})}
 					<button class="link" onclick={() => { search = ''; levelFilter = 'all'; selectedTopic = 'all'; }}>{$t('courses.clearFilters')}</button>
 				</p>
-			{:else if selectedTopic === 'all' && groupByTopic}
+			{:else if showGroupedGrid}
 				{#each groupedCourses as group (group.topic)}
 					<section class="topic">
 						<h3 class="topic__head">
@@ -955,7 +1190,7 @@
 		margin: 0;
 		padding: 0;
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
 		gap: 0.9rem;
 	}
 	.card {
@@ -1274,6 +1509,9 @@
 	.cat-sidebar {
 		position: sticky;
 		top: 0;
+		/* Scroll the category list independently when it outgrows the viewport. */
+		max-height: calc(100vh - 1.5rem);
+		overflow-y: auto;
 	}
 	.cat-card {
 		background: #ffffff;
@@ -1349,6 +1587,50 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+
+	/* Group header: collapsible parent row with a chevron toggle. */
+	.cat-btn--group {
+		font-weight: 700;
+	}
+	.cat-btn__chev {
+		flex: 0 0 auto;
+		display: inline-grid;
+		place-items: center;
+		width: 1.1rem;
+		height: 1.1rem;
+		font-size: 0.7rem;
+		color: var(--accent-dark, #1d4ed8);
+		border-radius: 4px;
+		transition: transform 0.12s ease;
+		cursor: pointer;
+	}
+	.cat-btn__chev:hover {
+		background: color-mix(in srgb, var(--accent, #3b82f6) 18%, #ffffff);
+	}
+	.cat-btn__chev:focus-visible {
+		outline: 2px solid var(--accent-dark, #1d4ed8);
+		outline-offset: 1px;
+	}
+	.cat-btn__chev--open {
+		transform: rotate(90deg);
+	}
+
+	/* Sub-category: indented, smaller, visually secondary. */
+	.cat-btn--sub {
+		margin-left: 0.9rem;
+		padding-top: 0.4rem;
+		padding-bottom: 0.4rem;
+		font-size: 0.76rem;
+		font-weight: 500;
+		color: #4b5563;
+	}
+	.cat-btn--sub::before {
+		width: 4px;
+	}
+	.cat-btn--sub .cat-btn__icon {
+		font-size: 0.85rem;
+		opacity: 0.85;
 	}
 
 	/* ── Lesson focus mode ── */

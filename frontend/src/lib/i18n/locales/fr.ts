@@ -105,6 +105,7 @@ export const fr: Messages = {
 	'courses.noneYet': 'Aucun cours publié pour l’instant — revenez bientôt.',
 	'courses.categories': 'Catégories',
 	'courses.allCoursesCat': 'Tous les Cours',
+	'courses.toggleGroup': 'Basculer le groupe de catégories',
 	'courses.browseTitle': 'Parcourir tous les cours',
 	'courses.browseCount': '{shown} sur {total}',
 	'courses.searchPlaceholder': 'Rechercher des cours…',
@@ -189,6 +190,14 @@ export const fr: Messages = {
 	'topic.Algorithms': 'Algorithmes',
 	'topic.Electronic Engineering': 'Génie Électronique',
 	'topic.Other': 'Autres',
+
+	// Course topic groups (collapsible sidebar parents).
+	'topic.group.Programming': 'Programmation',
+	'topic.group.Software & Systems': 'Logiciels & Systèmes',
+	'topic.group.AI & Data': 'IA & Données',
+	'topic.group.Mathematics': 'Mathématiques',
+	'topic.group.Engineering & Robotics': 'Ingénierie & Robotique',
+	'topic.group.Web3': 'Web3',
 
 	// ── Quiz player ──
 	'quiz.title': 'Quiz',

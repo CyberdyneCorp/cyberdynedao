@@ -105,6 +105,7 @@ export const es: Messages = {
 	'courses.noneYet': 'Aún no hay cursos publicados — vuelve pronto.',
 	'courses.categories': 'Categorías',
 	'courses.allCoursesCat': 'Todos los Cursos',
+	'courses.toggleGroup': 'Alternar grupo de categorías',
 	'courses.browseTitle': 'Explorar todos los cursos',
 	'courses.browseCount': '{shown} de {total}',
 	'courses.searchPlaceholder': 'Buscar cursos…',
@@ -189,6 +190,14 @@ export const es: Messages = {
 	'topic.Algorithms': 'Algoritmos',
 	'topic.Electronic Engineering': 'Ingeniería Electrónica',
 	'topic.Other': 'Otros',
+
+	// Course topic groups (collapsible sidebar parents).
+	'topic.group.Programming': 'Programación',
+	'topic.group.Software & Systems': 'Software y Sistemas',
+	'topic.group.AI & Data': 'IA y Datos',
+	'topic.group.Mathematics': 'Matemáticas',
+	'topic.group.Engineering & Robotics': 'Ingeniería y Robótica',
+	'topic.group.Web3': 'Web3',
 
 	// ── Quiz player ──
 	'quiz.title': 'Cuestionario',
