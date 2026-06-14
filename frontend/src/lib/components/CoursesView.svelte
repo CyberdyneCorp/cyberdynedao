@@ -200,7 +200,8 @@
 		if (slug.startsWith('physics')) return 'Physics';
 		if (slug.startsWith('vectorcalc')) return 'Vector Calculus';
 		if (slug.startsWith('statinf')) return 'Statistics';
-		if (slug.startsWith('robotics')) return 'Robotics';
+		if (slug.startsWith('robotics') || slug.startsWith('aerial-') || slug.startsWith('mobile-robotics-') || slug.startsWith('estimation-'))
+			return 'Robotics';
 		if (slug.startsWith('algorithms')) return 'Algorithms';
 		if (slug.startsWith('math')) return 'Mathematics';
 		if (electronicEngineeringSlug.test(slug)) return 'Electronic Engineering';

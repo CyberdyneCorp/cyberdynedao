@@ -23,6 +23,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
+from cyberdyne_backend.application.courses.seed_aerial import AERIAL_COURSES
 from cyberdyne_backend.application.courses.seed_algorithms import ALGORITHMS_COURSES
 from cyberdyne_backend.application.courses.seed_analog_ic import ANALOG_IC_COURSES
 from cyberdyne_backend.application.courses.seed_antennas import ANTENNAS_COURSES
@@ -42,6 +43,7 @@ from cyberdyne_backend.application.courses.seed_electromagnetics import ELECTROM
 from cyberdyne_backend.application.courses.seed_electronics import ELECTRONICS_COURSES
 from cyberdyne_backend.application.courses.seed_embedded import EMBEDDED_COURSES
 from cyberdyne_backend.application.courses.seed_emc import EMC_COURSES
+from cyberdyne_backend.application.courses.seed_estimation import ESTIMATION_COURSES
 from cyberdyne_backend.application.courses.seed_fpga import FPGA_COURSES
 from cyberdyne_backend.application.courses.seed_git import GIT_COURSES
 from cyberdyne_backend.application.courses.seed_hwverification import HW_VERIFICATION_COURSES
@@ -52,6 +54,7 @@ from cyberdyne_backend.application.courses.seed_machines import MACHINES_COURSES
 from cyberdyne_backend.application.courses.seed_math import MATH_COURSES
 from cyberdyne_backend.application.courses.seed_microwave import MICROWAVE_COURSES
 from cyberdyne_backend.application.courses.seed_ml import ML_COURSES
+from cyberdyne_backend.application.courses.seed_mobilerobotics import MOBILE_ROBOTICS_COURSES
 from cyberdyne_backend.application.courses.seed_networking import NETWORKING_COURSES
 from cyberdyne_backend.application.courses.seed_os import OS_COURSES
 from cyberdyne_backend.application.courses.seed_pcb import PCB_COURSES
@@ -1212,6 +1215,9 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *TEST_MEASUREMENT_COURSES,
     *HW_VERIFICATION_COURSES,
     *ANTENNAS_COURSES,
+    *AERIAL_COURSES,
+    *MOBILE_ROBOTICS_COURSES,
+    *ESTIMATION_COURSES,
     *FPGA_COURSES,
     *POWER_SYSTEMS_COURSES,
 )
