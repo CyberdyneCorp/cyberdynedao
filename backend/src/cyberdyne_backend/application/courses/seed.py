@@ -30,6 +30,7 @@ from cyberdyne_backend.application.courses.seed_comparch import COMPARCH_COURSES
 from cyberdyne_backend.application.courses.seed_control import CONTROL_COURSES
 from cyberdyne_backend.application.courses.seed_csharp import CSHARP_COURSES
 from cyberdyne_backend.application.courses.seed_databases import DATABASE_COURSES
+from cyberdyne_backend.application.courses.seed_dataeng import DATAENG_COURSES
 from cyberdyne_backend.application.courses.seed_devops import DEVOPS_COURSES
 from cyberdyne_backend.application.courses.seed_digital_comms import DIGITAL_COMMS_COURSES
 from cyberdyne_backend.application.courses.seed_digital_logic import DIGITAL_LOGIC_COURSES
@@ -71,6 +72,7 @@ from cyberdyne_backend.application.courses.seed_types import (
 )
 from cyberdyne_backend.application.courses.seed_vectorcalc import VECTORCALC_COURSES
 from cyberdyne_backend.application.courses.seed_vlsi import VLSI_COURSES
+from cyberdyne_backend.application.courses.seed_webdev import WEBDEV_COURSES
 from cyberdyne_backend.application.quizzes.use_cases import (
     OptionInput,
     QuestionInput,
@@ -1196,6 +1198,8 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *NETWORKING_COURSES,
     *SYSTEM_DESIGN_COURSES,
     *DISTRIBUTED_COURSES,
+    *WEBDEV_COURSES,
+    *DATAENG_COURSES,
     *FPGA_COURSES,
     *POWER_SYSTEMS_COURSES,
 )

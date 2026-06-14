@@ -179,6 +179,8 @@ export const es: Messages = {
 	'topic.Networking': 'Redes',
 	'topic.System Design': 'Diseño de Sistemas',
 	'topic.Distributed Systems': 'Sistemas Distribuidos',
+	'topic.Web Development': 'Desarrollo Web',
+	'topic.Data Engineering': 'Ingeniería de Datos',
 	'topic.Software Engineering': 'Ingeniería de Software',
 	'topic.Vector Calculus': 'Cálculo Vectorial',
 	'topic.Statistics': 'Estadística',
