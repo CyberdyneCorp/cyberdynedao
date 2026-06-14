@@ -188,6 +188,7 @@ export const en = {
 	'topic.Operating Systems': 'Operating Systems',
 	'topic.Networking': 'Networking',
 	'topic.System Design': 'System Design',
+	'topic.Distributed Systems': 'Distributed Systems',
 	'topic.Software Engineering': 'Software Engineering',
 	'topic.Vector Calculus': 'Vector Calculus',
 	'topic.Statistics': 'Statistics',
