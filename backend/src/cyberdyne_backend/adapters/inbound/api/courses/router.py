@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from cyberdyne_backend.adapters.inbound.api.courses.schemas import (
     CourseCertificateResponse,
@@ -38,6 +37,7 @@ from cyberdyne_backend.adapters.inbound.middleware.auth import (
 from cyberdyne_backend.application.academy import (
     SUPPORTED_LANGUAGES,
     GetCourseLanguages,
+    TranslationJobStore,
 )
 from cyberdyne_backend.application.courses import (
     AddLesson,
@@ -169,12 +169,10 @@ async def get_course_languages_uc() -> GetCourseLanguages:  # pragma: no cover -
     raise NotImplementedError
 
 
-# Returns an async callable ``(slug, language) -> None`` that translates one
-# course in its OWN session + LLM client — safe to run as a background task
-# after the request's session has closed. Overridden in main.py.
-async def get_translate_course_runner() -> Callable[
-    [str, str], Awaitable[None]
-]:  # pragma: no cover - override target
+# The durable translation-job queue. The translate endpoint only enqueues a
+# job here; a restart-safe worker (wired in main.py) drains it. Overridden in
+# main.py.
+async def get_translation_job_store() -> TranslationJobStore:  # pragma: no cover - override target
     raise NotImplementedError
 
 
@@ -672,17 +670,19 @@ async def get_course_languages(
 async def translate_course(
     slug: str,
     language: str,
-    background_tasks: BackgroundTasks,
     languages_uc: Annotated[GetCourseLanguages, Depends(get_course_languages_uc)],
-    runner: Annotated[Callable[[str, str], Awaitable[None]], Depends(get_translate_course_runner)],
+    job_store: Annotated[TranslationJobStore, Depends(get_translation_job_store)],
     can_translate: Annotated[bool, Depends(translation_available)],
     _principal: Annotated[UserPrincipal, Depends(require_editor)],
 ) -> CourseTranslationStartedResponse:
-    """Kick off a background translation of the course into ``language``.
+    """Enqueue a durable translation of the course into ``language``.
 
     Returns 202 immediately — a single course is many LLM calls and would
-    exceed proxy timeouts. The client polls ``GET …/translations`` until the
-    language appears in ``available``. Idempotent: re-running only fills gaps.
+    exceed proxy timeouts. The work is recorded in the ``translation_jobs``
+    queue and drained by a restart-safe worker, so a redeploy mid-run no
+    longer truncates lesson translations (the job resumes on startup). The
+    client polls ``GET …/translations`` until the language appears in
+    ``available``. Idempotent: re-running only fills gaps.
     """
     if language not in SUPPORTED_LANGUAGES or language == "en":
         raise HTTPException(status_code=422, detail=f"unsupported language: {language}")
@@ -693,7 +693,7 @@ async def translate_course(
         await languages_uc.execute(slug)
     except CourseNotFoundError as exc:
         raise HTTPException(status_code=404, detail="course not found") from exc
-    background_tasks.add_task(runner, slug, language)
+    await job_store.enqueue(slug, language)
     return CourseTranslationStartedResponse(slug=slug, language=language)
 
 

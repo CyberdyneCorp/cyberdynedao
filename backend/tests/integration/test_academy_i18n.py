@@ -245,23 +245,24 @@ def test_get_course_languages_endpoint(app: FastAPI) -> None:
 
 
 @pytest.mark.usefixtures("_prepared_schema")
-def test_translate_endpoint_schedules_background_job(app: FastAPI) -> None:
+def test_translate_endpoint_enqueues_durable_job(app: FastAPI) -> None:
     from cyberdyne_backend.adapters.inbound.api.courses.router import (
-        get_translate_course_runner,
+        get_translation_job_store,
         translation_available,
     )
 
     calls: list[tuple[str, str]] = []
 
-    async def _spy_runner_dep():
-        async def run(slug: str, language: str) -> None:
-            calls.append((slug, language))
+    class _SpyJobStore:
+        async def enqueue(self, course_slug: str, language: str) -> None:
+            calls.append((course_slug, language))
 
-        yield run
+    async def _spy_store_dep():
+        yield _SpyJobStore()
 
     app.dependency_overrides[require_editor] = _editor
     app.dependency_overrides[translation_available] = lambda: True
-    app.dependency_overrides[get_translate_course_runner] = _spy_runner_dep
+    app.dependency_overrides[get_translation_job_store] = _spy_store_dep
     client = TestClient(app)
     client.post(
         "/api/v1/admin/courses",
@@ -271,7 +272,7 @@ def test_translate_endpoint_schedules_background_job(app: FastAPI) -> None:
     resp = client.post("/api/v1/admin/courses/topology/translations/pt-BR")
     assert resp.status_code == 202, resp.text
     assert resp.json() == {"slug": "topology", "language": "pt-BR", "status": "started"}
-    # TestClient runs the BackgroundTask synchronously after the response.
+    # The endpoint enqueues a durable job instead of running it in-process.
     assert calls == [("topology", "pt-BR")]
 
     # Unsupported language → 422; English is rejected (it's the base).
@@ -294,3 +295,92 @@ def test_translate_endpoint_503_when_unavailable(app: FastAPI) -> None:
     )
     resp = client.post("/api/v1/admin/courses/graphs/translations/pt-BR")
     assert resp.status_code == 503
+
+
+# ── Lesson-aware "available" flag (durable-translation fix) ──────────
+
+
+@pytest.mark.usefixtures("_prepared_schema")
+async def test_translated_lesson_counts_per_language(db_session: AsyncSession) -> None:
+    course = new_course(title="X", description="d", level="Beginner", slug="x")
+    course.status = CourseStatus.PUBLISHED
+    l1 = new_lesson(course_id=course.id, title="A", lesson_type="text", text_body="a", sort_order=0)
+    l2 = new_lesson(course_id=course.id, title="B", lesson_type="text", text_body="b", sort_order=1)
+    course.lessons.extend([l1, l2])
+    await SqlAlchemyCourseRepository(db_session).save(course)
+    tr = SqlAlchemyTranslationRepository(db_session)
+    assert await tr.translated_lesson_counts(course.id) == {}
+    await tr.upsert_lesson_translation(
+        lesson_id=l1.id, language="pt-BR", title="A", text_body="a", source_hash="h"
+    )
+    assert await tr.translated_lesson_counts(course.id) == {"pt-BR": 1}
+    await tr.upsert_lesson_translation(
+        lesson_id=l2.id, language="pt-BR", title="B", text_body="b", source_hash="h"
+    )
+    assert await tr.translated_lesson_counts(course.id) == {"pt-BR": 2}
+
+
+@pytest.mark.usefixtures("_prepared_schema")
+def test_languages_endpoint_requires_all_lessons_translated(app: FastAPI) -> None:
+    """Regression: a course-level translation row alone must NOT report the
+    language available — every lesson must be translated too."""
+    from cyberdyne_backend.adapters.inbound.api.courses.router import translation_available
+
+    app.dependency_overrides[require_editor] = _editor
+    app.dependency_overrides[translation_available] = lambda: True
+    client = TestClient(app)
+    client.post(
+        "/api/v1/admin/courses",
+        json={"title": "Sets", "description": "d", "level": "Beginner"},
+    )
+    client.post(
+        "/api/v1/admin/courses/sets/lessons",
+        json={"title": "Intro", "lessonType": "text", "textBody": "hi"},
+    )
+    # No translations yet → English only.
+    assert client.get("/api/v1/admin/courses/sets/translations").json()["available"] == ["en"]
+
+
+# ── Durable translation job store (SQLAlchemy adapter) ───────────────
+
+
+@pytest.mark.usefixtures("_prepared_schema")
+async def test_job_store_enqueue_claim_done(db_session: AsyncSession) -> None:
+    from cyberdyne_backend.adapters.outbound.persistence.academy.job_store import (
+        SqlAlchemyTranslationJobStore,
+    )
+
+    store = SqlAlchemyTranslationJobStore(db_session)
+    await store.enqueue("alg", "pt-BR")
+    await store.enqueue("alg", "pt-BR")  # idempotent upsert
+
+    job = await store.claim_next()
+    assert job is not None
+    assert (job.course_slug, job.language) == ("alg", "pt-BR")
+    # Now running → nothing else to claim.
+    assert await store.claim_next() is None
+
+    await store.mark_done(job.id)
+    # Requeue only resets running jobs; a done job stays done.
+    assert await store.requeue_running() == 0
+
+
+@pytest.mark.usefixtures("_prepared_schema")
+async def test_job_store_requeue_running_and_failure_retry(db_session: AsyncSession) -> None:
+    from cyberdyne_backend.adapters.outbound.persistence.academy.job_store import (
+        SqlAlchemyTranslationJobStore,
+    )
+
+    store = SqlAlchemyTranslationJobStore(db_session)
+    await store.enqueue("alg", "es")
+    job = await store.claim_next()
+    assert job is not None
+    # Simulate a restart stranding the job in 'running'.
+    assert await store.requeue_running() == 1
+    again = await store.claim_next()
+    assert again is not None and again.id == job.id
+
+    await store.mark_failed(again.id, "boom")
+    # Under the retry cap → back to pending and reclaimable.
+    retried = await store.claim_next()
+    assert retried is not None and retried.id == job.id

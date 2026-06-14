@@ -7,9 +7,11 @@ without the hexagonal rules getting in its way.
 
 from __future__ import annotations
 
+import asyncio
 import logging
-from collections.abc import AsyncIterator, Awaitable, Callable
-from contextlib import asynccontextmanager
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager, suppress
+from uuid import UUID
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -86,7 +88,7 @@ from cyberdyne_backend.adapters.inbound.api.courses.router import (
     get_set_course_deadline_uc,
     get_set_lesson_progress_uc,
     get_set_published_uc,
-    get_translate_course_runner,
+    get_translation_job_store,
     get_update_course_uc,
     get_update_lesson_uc,
     translation_available,
@@ -201,6 +203,9 @@ from cyberdyne_backend.adapters.inbound.middleware.auth import (
     extract_token,
     get_user_profile_port,
 )
+from cyberdyne_backend.adapters.outbound.persistence.academy.job_store import (
+    SqlAlchemyTranslationJobStore,
+)
 from cyberdyne_backend.adapters.outbound.persistence.academy.translation_repository import (
     SqlAlchemyTranslationRepository,
 )
@@ -245,6 +250,8 @@ from cyberdyne_backend.application.academy import (
     GetCourseLanguages,
     MarkdownAwareTranslator,
     TranslateCourse,
+    TranslationJob,
+    TranslationWorker,
 )
 from cyberdyne_backend.application.ai_chat import (
     GetChatHistory,
@@ -361,14 +368,69 @@ def create_app() -> FastAPI:
     # Shared file-storage adapter (creates the media root if missing).
     file_storage = LocalFileStorage(settings.media_root)
 
+    # ── Durable translation worker ────────────────────────────────────
+    # A long-lived task drains the translation-job queue, replacing the old
+    # in-process BackgroundTask that a redeploy would kill mid-run. Both the
+    # store ops and each job's TranslateCourse get their OWN short-lived
+    # session (committed per unit of work), never a request-scoped one.
+
+    class _WorkerJobStore:
+        """``TranslationJobStore`` that opens a fresh session per call so the
+        worker's claims/marks are each their own committed transaction."""
+
+        async def enqueue(self, course_slug: str, language: str) -> None:
+            async with session_scope() as session:
+                await SqlAlchemyTranslationJobStore(session).enqueue(course_slug, language)
+
+        async def claim_next(self) -> TranslationJob | None:
+            async with session_scope() as session:
+                return await SqlAlchemyTranslationJobStore(session).claim_next()
+
+        async def mark_done(self, job_id: UUID) -> None:
+            async with session_scope() as session:
+                await SqlAlchemyTranslationJobStore(session).mark_done(job_id)
+
+        async def mark_failed(self, job_id: UUID, error: str) -> None:
+            async with session_scope() as session:
+                await SqlAlchemyTranslationJobStore(session).mark_failed(job_id, error)
+
+        async def requeue_running(self) -> int:
+            async with session_scope() as session:
+                return await SqlAlchemyTranslationJobStore(session).requeue_running()
+
+    @asynccontextmanager
+    async def _translate_course_scope() -> AsyncIterator[TranslateCourse]:
+        # One committed session per job, with its own LLM client.
+        async with session_scope() as session:
+            yield TranslateCourse(
+                course_repo=SqlAlchemyCourseRepository(session),
+                quiz_repo=SqlAlchemyQuizRepository(session),
+                translation_repo=SqlAlchemyTranslationRepository(session),
+                translator=MarkdownAwareTranslator(llm=container.chat_llm),
+            )
+
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         # Phase 1's public endpoints don't make outbound CyberdyneAuth-
         # authed calls, so we don't start the service-token provider
         # here. Phase 6 will: ``await container.service_token_provider.start()``.
+        worker_task: asyncio.Task[None] | None = None
+        if settings.openai_api_key is not None:
+            # Only run the worker when translation is actually available
+            # (mirrors the translation_available() gate). It requeues any
+            # job stranded ``running`` by the last restart, then drains.
+            worker = TranslationWorker(
+                store=_WorkerJobStore(),
+                translate_course_factory=_translate_course_scope,
+            )
+            worker_task = asyncio.create_task(worker.run_forever())
         try:
             yield
         finally:
+            if worker_task is not None:
+                worker_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await worker_task
             await container.aclose()
             await dispose_engine()
 
@@ -549,30 +611,9 @@ def create_app() -> FastAPI:
     def _translation_available_dep() -> bool:
         return settings.openai_api_key is not None
 
-    async def _translate_course_runner_dep() -> AsyncIterator[
-        Callable[[str, str], Awaitable[None]]
-    ]:
-        async def run(slug: str, language: str) -> None:
-            # Runs as a background task AFTER the request session closes, so it
-            # opens its own session + LLM client and disposes them when done.
-            async with session_scope() as session:
-                use_case = TranslateCourse(
-                    course_repo=SqlAlchemyCourseRepository(session),
-                    quiz_repo=SqlAlchemyQuizRepository(session),
-                    translation_repo=SqlAlchemyTranslationRepository(session),
-                    translator=MarkdownAwareTranslator(llm=container.chat_llm),
-                )
-                stats = await use_case.execute(slug, language)
-            logger.info(
-                "course translate — %s [%s]: +%d translated, %d skipped, %d failed",
-                slug,
-                language,
-                stats.translated,
-                stats.skipped,
-                stats.failed,
-            )
-
-        yield run
+    async def _translation_job_store_dep() -> AsyncIterator[SqlAlchemyTranslationJobStore]:
+        async with session_scope() as session:
+            yield SqlAlchemyTranslationJobStore(session)
 
     async def _reorder_courses_dep() -> AsyncIterator[ReorderCourses]:
         async with session_scope() as session:
@@ -910,7 +951,7 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_delete_course_uc] = _delete_course_dep
     app.dependency_overrides[get_reorder_courses_uc] = _reorder_courses_dep
     app.dependency_overrides[get_course_languages_uc] = _course_languages_dep
-    app.dependency_overrides[get_translate_course_runner] = _translate_course_runner_dep
+    app.dependency_overrides[get_translation_job_store] = _translation_job_store_dep
     app.dependency_overrides[translation_available] = _translation_available_dep
     app.dependency_overrides[get_add_lesson_uc] = _add_lesson_dep
     app.dependency_overrides[get_update_lesson_uc] = _update_lesson_dep
