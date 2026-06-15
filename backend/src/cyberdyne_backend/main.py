@@ -615,6 +615,7 @@ def create_app() -> FastAPI:
         async with session_scope() as session:
             yield GetCourseLanguages(
                 course_repo=SqlAlchemyCourseRepository(session),
+                quiz_repo=SqlAlchemyQuizRepository(session),
                 translation_repo=SqlAlchemyTranslationRepository(session),
             )
 

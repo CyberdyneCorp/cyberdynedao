@@ -20,7 +20,9 @@ from cyberdyne_backend.adapters.outbound.persistence.courses.models import (
 )
 from cyberdyne_backend.adapters.outbound.persistence.quizzes.models import (
     QuizOptionTranslationRow,
+    QuizQuestionRow,
     QuizQuestionTranslationRow,
+    QuizRow,
 )
 
 
@@ -52,6 +54,25 @@ class SqlAlchemyTranslationRepository:
                 .join(LessonRow, LessonRow.id == LessonTranslationRow.lesson_id)
                 .where(LessonRow.course_id == course_id)
                 .group_by(LessonTranslationRow.language)
+            )
+        ).all()
+        return {language: count for language, count in rows}
+
+    async def translated_question_counts(self, course_id: UUID) -> dict[str, int]:
+        rows = (
+            await self._session.execute(
+                select(
+                    QuizQuestionTranslationRow.language,
+                    func.count(QuizQuestionTranslationRow.id),
+                )
+                .join(
+                    QuizQuestionRow,
+                    QuizQuestionRow.id == QuizQuestionTranslationRow.question_id,
+                )
+                .join(QuizRow, QuizRow.id == QuizQuestionRow.quiz_id)
+                .join(LessonRow, LessonRow.id == QuizRow.lesson_id)
+                .where(LessonRow.course_id == course_id)
+                .group_by(QuizQuestionTranslationRow.language)
             )
         ).all()
         return {language: count for language, count in rows}
