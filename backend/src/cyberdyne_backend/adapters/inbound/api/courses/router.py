@@ -28,6 +28,7 @@ from cyberdyne_backend.adapters.inbound.api.courses.schemas import (
     SetCourseCategoryRequest,
     SetCourseDeadlineRequest,
     SetLessonProgressRequest,
+    UpdateCategoryRequest,
     UpdateCourseRequest,
     UpdateLessonRequest,
 )
@@ -66,6 +67,7 @@ from cyberdyne_backend.application.courses import (
     SetCourseDeadline,
     SetCoursePublished,
     SetLessonProgress,
+    UpdateCategory,
     UpdateCourse,
     UpdateCourseCommand,
     UpdateLesson,
@@ -75,6 +77,7 @@ from cyberdyne_backend.application.courses import (
 from cyberdyne_backend.application.courses.certificates import CourseCertificateVerification
 from cyberdyne_backend.domain.auth_identity import UserPrincipal
 from cyberdyne_backend.domain.courses import (
+    Category,
     CategoryNotFoundError,
     Course,
     CourseCertificate,
@@ -108,6 +111,10 @@ async def get_create_category_uc() -> CreateCategory:  # pragma: no cover - over
 
 
 async def get_delete_category_uc() -> DeleteCategory:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_update_category_uc() -> UpdateCategory:  # pragma: no cover - override target
     raise NotImplementedError
 
 
@@ -286,13 +293,19 @@ def _lesson_response(lesson: Lesson, *, include_body: bool = True) -> LessonResp
     )
 
 
-def _category_response(course: Course) -> CategoryResponse | None:
-    cat = course.category
-    if cat is None:
-        return None
+def _to_category_response(cat: Category) -> CategoryResponse:
     return CategoryResponse(
-        id=cat.id, slug=cat.slug, name=cat.name, icon=cat.icon, sort_order=cat.sort_order
+        id=cat.id,
+        slug=cat.slug,
+        name=cat.name,
+        icon=cat.icon,
+        sort_order=cat.sort_order,
+        parent_id=cat.parent_id,
     )
+
+
+def _category_response(course: Course) -> CategoryResponse | None:
+    return _to_category_response(course.category) if course.category is not None else None
 
 
 def _summary(course: Course) -> CourseSummaryResponse:
@@ -336,10 +349,7 @@ async def list_categories(
     use_case: Annotated[ListCategories, Depends(get_list_categories_uc)],
 ) -> list[CategoryResponse]:
     cats = await use_case.execute()
-    return [
-        CategoryResponse(id=c.id, slug=c.slug, name=c.name, icon=c.icon, sort_order=c.sort_order)
-        for c in cats
-    ]
+    return [_to_category_response(c) for c in cats]
 
 
 @category_admin_router.post(
@@ -353,16 +363,46 @@ async def create_category(
     try:
         cat = await use_case.execute(
             CreateCategoryCommand(
-                name=body.name, slug=body.slug, icon=body.icon, sort_order=body.sort_order
+                name=body.name,
+                slug=body.slug,
+                icon=body.icon,
+                sort_order=body.sort_order,
+                parent_id=body.parent_id,
             )
         )
     except DuplicateCategorySlugError as exc:
         raise HTTPException(status_code=409, detail="category slug already exists") from exc
+    except CategoryNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="parent category not found") from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return CategoryResponse(
-        id=cat.id, slug=cat.slug, name=cat.name, icon=cat.icon, sort_order=cat.sort_order
-    )
+    return _to_category_response(cat)
+
+
+@category_admin_router.patch(
+    "/{category_id}", response_model=CategoryResponse, response_model_by_alias=True
+)
+async def update_category(
+    category_id: UUID,
+    body: UpdateCategoryRequest,
+    use_case: Annotated[UpdateCategory, Depends(get_update_category_uc)],
+    _principal: Annotated[UserPrincipal, Depends(require_editor)],
+) -> CategoryResponse:
+    try:
+        cat = await use_case.execute(
+            category_id,
+            name=body.name,
+            icon=body.icon,
+            sort_order=body.sort_order,
+            # "parentId" present in the payload (even as null) means reparent.
+            set_parent="parent_id" in body.model_fields_set,
+            parent_id=body.parent_id,
+        )
+    except CategoryNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="category not found") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _to_category_response(cat)
 
 
 @category_admin_router.delete("/{category_id}", status_code=204)

@@ -44,6 +44,41 @@ BUILTIN_CATEGORIES: tuple[tuple[str, str, str], ...] = (
     ("electronic-engineering", "Electronic Engineering", "🔌"),
 )
 
+# Built-in parent groups (top-level categories): (slug, name, icon). Order is
+# the display order. Mirrors the frontend topicGroups.
+BUILTIN_GROUPS: tuple[tuple[str, str, str], ...] = (
+    ("programming", "Programming", "🧑‍💻"),
+    ("software-systems", "Software & Systems", "🧰"),
+    ("ai-data", "AI & Data", "🧠"),
+    ("engineering-robotics", "Engineering & Robotics", "🔬"),
+    ("web3", "Web3", "⛓️"),
+)
+
+# Which parent group each built-in (leaf) category belongs to. A leaf not listed
+# here stays top-level (e.g. Mathematics renders as its own row, as today).
+CATEGORY_PARENT: dict[str, str] = {
+    "foundations": "programming",
+    "languages": "programming",
+    "web-development": "programming",
+    "algorithms": "programming",
+    "software-engineering": "software-systems",
+    "devops": "software-systems",
+    "databases": "software-systems",
+    "operating-systems": "software-systems",
+    "networking": "software-systems",
+    "system-design": "software-systems",
+    "distributed-systems": "software-systems",
+    "concurrency-parallelism": "software-systems",
+    "cybersecurity": "software-systems",
+    "ai-machine-learning": "ai-data",
+    "data-engineering": "ai-data",
+    "physics": "engineering-robotics",
+    "computer-architecture": "engineering-robotics",
+    "electronic-engineering": "engineering-robotics",
+    "robotics": "engineering-robotics",
+    "blockchain": "web3",
+}
+
 _EE_RE = re.compile(
     r"^(electronics|analog-ic|antennas|power-electronics|pcb|semiconductor|embedded|signals|"
     r"signal-integrity|control|dsp|rf-comms|microwave|digital-comms|digital-logic|fpga|"
@@ -106,16 +141,39 @@ def category_slug_for(slug: str) -> str | None:
 
 
 async def seed_categories(repo: CategoryRepository) -> dict[str, Category]:
-    """Idempotently upsert the built-in categories and return them by slug.
-    Existing categories (matched by slug) are reused so an editor's renamed
-    icon/name and new categories survive a reseed."""
+    """Idempotently upsert the built-in parent groups + leaf categories and
+    return them all by slug. Existing categories (matched by slug) are reused so
+    an editor's renamed icon/name and custom categories survive a reseed. A
+    built-in leaf's parent is set only when currently unset, so a manual
+    reparent is not clobbered."""
     by_slug: dict[str, Category] = {}
-    for order, (slug, name, icon) in enumerate(BUILTIN_CATEGORIES):
+    # Parent groups first, so leaves can reference them.
+    for order, (slug, name, icon) in enumerate(BUILTIN_GROUPS):
         existing = await repo.get_by_slug(slug)
         if existing is not None:
             by_slug[slug] = existing
             continue
-        category = new_category(name=name, slug=slug, icon=icon, sort_order=order)
+        group = new_category(name=name, slug=slug, icon=icon, sort_order=order)
+        await repo.save(group)
+        by_slug[slug] = group
+    # Leaf categories, parented to their group.
+    for order, (slug, name, icon) in enumerate(BUILTIN_CATEGORIES):
+        parent_slug = CATEGORY_PARENT.get(slug)
+        parent = by_slug.get(parent_slug) if parent_slug else None
+        existing = await repo.get_by_slug(slug)
+        if existing is not None:
+            if existing.parent_id is None and parent is not None:
+                existing.parent_id = parent.id
+                await repo.save(existing)
+            by_slug[slug] = existing
+            continue
+        category = new_category(
+            name=name,
+            slug=slug,
+            icon=icon,
+            sort_order=order,
+            parent_id=parent.id if parent is not None else None,
+        )
         await repo.save(category)
         by_slug[slug] = category
     return by_slug

@@ -31,6 +31,14 @@ class CategoryRow(Base):
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     icon: Mapped[str] = mapped_column(String(16), nullable=False, default="")
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Self-referential parent (NULL = top-level group). SET NULL on delete so
+    # removing a parent group promotes its sub-categories to top level.
+    parent_id: Mapped[UUID | None] = mapped_column(
+        Uuid(),
+        ForeignKey("categories.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

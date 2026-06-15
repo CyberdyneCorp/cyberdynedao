@@ -68,6 +68,8 @@ class CategoryResponse(_CamelModel):
     name: str
     icon: str = ""
     sort_order: int = 0
+    # Parent group (null = top-level group). Children are sub-categories.
+    parent_id: UUID | None = None
 
 
 class CourseSummaryResponse(_CamelModel):
@@ -123,6 +125,16 @@ class CreateCategoryRequest(_StrictCamelModel):
     slug: str | None = Field(default=None, max_length=64)
     icon: str = Field(default="", max_length=16)
     sort_order: int = 0
+    # Optional parent group (must be a top-level category).
+    parent_id: UUID | None = None
+
+
+class UpdateCategoryRequest(_StrictCamelModel):
+    name: str | None = Field(default=None, min_length=1, max_length=128)
+    icon: str | None = Field(default=None, max_length=16)
+    sort_order: int | None = None
+    # When provided (even as null), reparents the category. null = top-level.
+    parent_id: UUID | None = None
 
 
 class SetCourseCategoryRequest(_StrictCamelModel):

@@ -96,12 +96,29 @@ class ListCategories:
         return await self.repo.list_categories()
 
 
+async def _validated_parent(
+    repo: CategoryRepository, parent_id: UUID | None, *, child_id: UUID | None = None
+) -> None:
+    """Validate a parent assignment: the parent must exist, be top-level (so the
+    hierarchy stays one level deep), and not be the category itself."""
+    if parent_id is None:
+        return
+    if child_id is not None and parent_id == child_id:
+        raise ValueError("a category cannot be its own parent")
+    parent = await repo.get_by_id(parent_id)
+    if parent is None:
+        raise CategoryNotFoundError(str(parent_id))
+    if parent.parent_id is not None:
+        raise ValueError("parent must be a top-level category (max one level of nesting)")
+
+
 @dataclass(slots=True)
 class CreateCategoryCommand:
     name: str
     slug: str | None = None
     icon: str = ""
     sort_order: int = 0
+    parent_id: UUID | None = None
 
 
 @dataclass(slots=True)
@@ -109,9 +126,50 @@ class CreateCategory:
     repo: CategoryRepository
 
     async def execute(self, cmd: CreateCategoryCommand) -> Category:
+        await _validated_parent(self.repo, cmd.parent_id)
         category = new_category(
-            name=cmd.name, slug=cmd.slug, icon=cmd.icon, sort_order=cmd.sort_order
+            name=cmd.name,
+            slug=cmd.slug,
+            icon=cmd.icon,
+            sort_order=cmd.sort_order,
+            parent_id=cmd.parent_id,
         )
+        await self.repo.save(category)
+        return category
+
+
+@dataclass(slots=True)
+class UpdateCategory:
+    """Edit a category's name/icon/sort_order and optionally reparent it.
+    ``set_parent`` distinguishes 'leave parent as-is' from 'set parent to
+    ``parent_id`` (possibly None → top-level)'."""
+
+    repo: CategoryRepository
+
+    async def execute(
+        self,
+        category_id: UUID,
+        *,
+        name: str | None = None,
+        icon: str | None = None,
+        sort_order: int | None = None,
+        set_parent: bool = False,
+        parent_id: UUID | None = None,
+    ) -> Category:
+        category = await self.repo.get_by_id(category_id)
+        if category is None:
+            raise CategoryNotFoundError(str(category_id))
+        if name is not None:
+            if not name.strip():
+                raise ValueError("name cannot be empty")
+            category.name = name.strip()
+        if icon is not None:
+            category.icon = icon.strip()
+        if sort_order is not None:
+            category.sort_order = sort_order
+        if set_parent:
+            await _validated_parent(self.repo, parent_id, child_id=category_id)
+            category.parent_id = parent_id
         await self.repo.save(category)
         return category
 
@@ -121,7 +179,8 @@ class DeleteCategory:
     repo: CategoryRepository
 
     async def execute(self, category_id: UUID) -> None:
-        # Courses referencing it become uncategorized (FK ON DELETE SET NULL).
+        # Courses referencing it become uncategorized (FK ON DELETE SET NULL),
+        # and any child categories are promoted to top level (self-FK SET NULL).
         await self.repo.delete(category_id)
 
 

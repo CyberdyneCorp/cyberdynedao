@@ -68,6 +68,7 @@ def _row_to_category(row: CategoryRow) -> Category:
         name=row.name,
         icon=row.icon,
         sort_order=row.sort_order,
+        parent_id=row.parent_id,
         created_at=row.created_at,
         updated_at=row.updated_at,
     )
@@ -347,6 +348,7 @@ class SqlAlchemyCategoryRepository:
                     name=category.name,
                     icon=category.icon,
                     sort_order=category.sort_order,
+                    parent_id=category.parent_id,
                     created_at=category.created_at,
                     updated_at=category.updated_at,
                 )
@@ -356,6 +358,7 @@ class SqlAlchemyCategoryRepository:
             existing.name = category.name
             existing.icon = category.icon
             existing.sort_order = category.sort_order
+            existing.parent_id = category.parent_id
             existing.updated_at = category.updated_at
         try:
             await self._session.flush()

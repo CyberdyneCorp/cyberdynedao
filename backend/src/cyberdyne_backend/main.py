@@ -95,6 +95,7 @@ from cyberdyne_backend.adapters.inbound.api.courses.router import (
     get_set_lesson_progress_uc,
     get_set_published_uc,
     get_translation_job_store,
+    get_update_category_uc,
     get_update_course_uc,
     get_update_lesson_uc,
     translation_available,
@@ -311,6 +312,7 @@ from cyberdyne_backend.application.courses import (
     SetCourseDeadline,
     SetCoursePublished,
     SetLessonProgress,
+    UpdateCategory,
     UpdateCourse,
     UpdateLesson,
     VerifyCourseCertificate,
@@ -574,6 +576,10 @@ def create_app() -> FastAPI:
     async def _delete_category_dep() -> AsyncIterator[DeleteCategory]:
         async with session_scope() as session:
             yield DeleteCategory(repo=SqlAlchemyCategoryRepository(session))
+
+    async def _update_category_dep() -> AsyncIterator[UpdateCategory]:
+        async with session_scope() as session:
+            yield UpdateCategory(repo=SqlAlchemyCategoryRepository(session))
 
     async def _set_course_category_dep() -> AsyncIterator[SetCourseCategory]:
         async with session_scope() as session:
@@ -986,6 +992,7 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_list_categories_uc] = _list_categories_dep
     app.dependency_overrides[get_create_category_uc] = _create_category_dep
     app.dependency_overrides[get_delete_category_uc] = _delete_category_dep
+    app.dependency_overrides[get_update_category_uc] = _update_category_dep
     app.dependency_overrides[get_set_course_category_uc] = _set_course_category_dep
     app.dependency_overrides[get_set_published_uc] = _set_published_dep
     app.dependency_overrides[get_set_course_deadline_uc] = _set_course_deadline_dep

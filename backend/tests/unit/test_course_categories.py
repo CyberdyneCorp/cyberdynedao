@@ -12,6 +12,7 @@ from cyberdyne_backend.application.courses import (
     DeleteCategory,
     ListCategories,
     SetCourseCategory,
+    UpdateCategory,
 )
 from cyberdyne_backend.application.courses.categories import (
     assign_course_categories,
@@ -128,6 +129,59 @@ async def test_set_course_category_validates_existence() -> None:
     # None clears the category (uncategorized).
     await uc.execute("comparch-basics", None)
     assert course_repo.assigned[course.id] is None
+
+
+async def test_create_category_under_parent_and_validation() -> None:
+    repo = FakeCategoryRepo()
+    create = CreateCategory(repo=repo)
+    group = await create.execute(CreateCategoryCommand(name="Programming"))
+    child = await create.execute(CreateCategoryCommand(name="Languages", parent_id=group.id))
+    assert child.parent_id == group.id
+
+    # Parent must exist.
+    with pytest.raises(CategoryNotFoundError):
+        await create.execute(CreateCategoryCommand(name="X", parent_id=uuid4()))
+    # Parent must be top-level (no nesting under a sub-category) → max 2 levels.
+    with pytest.raises(ValueError, match="top-level"):
+        await create.execute(CreateCategoryCommand(name="Y", parent_id=child.id))
+
+
+async def test_update_category_reparents_renames_and_guards_cycles() -> None:
+    repo = FakeCategoryRepo()
+    create = CreateCategory(repo=repo)
+    update = UpdateCategory(repo=repo)
+    g1 = await create.execute(CreateCategoryCommand(name="Programming"))
+    g2 = await create.execute(CreateCategoryCommand(name="Engineering"))
+    leaf = await create.execute(CreateCategoryCommand(name="Languages", parent_id=g1.id))
+
+    # Rename + reparent to another top-level group.
+    moved = await update.execute(leaf.id, name="Langs", set_parent=True, parent_id=g2.id)
+    assert moved.name == "Langs"
+    assert moved.parent_id == g2.id
+
+    # Clear the parent → top-level.
+    cleared = await update.execute(leaf.id, set_parent=True, parent_id=None)
+    assert cleared.parent_id is None
+
+    # A category cannot be its own parent.
+    with pytest.raises(ValueError, match="own parent"):
+        await update.execute(g1.id, set_parent=True, parent_id=g1.id)
+
+    # Unknown category → not found.
+    with pytest.raises(CategoryNotFoundError):
+        await update.execute(uuid4(), name="z")
+
+
+async def test_seed_categories_builds_two_level_hierarchy() -> None:
+    repo = FakeCategoryRepo()
+    cats = await seed_categories(repo)
+    # Parent groups exist as top-level categories.
+    assert cats["programming"].parent_id is None
+    # Built-in leaves are parented to their group.
+    assert cats["languages"].parent_id == cats["programming"].id
+    assert cats["computer-architecture"].parent_id == cats["engineering-robotics"].id
+    # Mathematics stays top-level (no parent group), as today.
+    assert cats["mathematics"].parent_id is None
 
 
 async def test_seed_categories_idempotent_and_assignment_fills_only_uncategorized() -> None:

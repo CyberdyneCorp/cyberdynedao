@@ -472,3 +472,40 @@ def test_category_crud_and_course_assignment(app: FastAPI) -> None:
     # Delete the category.
     assert client.delete(f"/api/v1/admin/categories/{cat['id']}").status_code == 204
     assert "robotics" not in {c["slug"] for c in client.get("/api/v1/categories").json()}
+
+
+@pytest.mark.usefixtures("_prepared_schema")
+def test_category_hierarchy_parent_and_reparent(app: FastAPI) -> None:
+    from cyberdyne_backend.adapters.inbound.api.courses.router import translation_available
+
+    app.dependency_overrides[require_editor] = _editor
+    app.dependency_overrides[translation_available] = lambda: True
+    client = TestClient(app)
+
+    group = client.post("/api/v1/admin/categories", json={"name": "Programming", "icon": "🧑‍💻"}).json()
+    assert group["parentId"] is None
+
+    # Create a sub-category under the group.
+    child = client.post(
+        "/api/v1/admin/categories", json={"name": "Languages", "parentId": group["id"]}
+    )
+    assert child.status_code == 201, child.text
+    assert child.json()["parentId"] == group["id"]
+
+    # Nesting under a sub-category is rejected (max one level).
+    deep = client.post(
+        "/api/v1/admin/categories", json={"name": "Rust", "parentId": child.json()["id"]}
+    )
+    assert deep.status_code == 422
+
+    # Reparent the child to top level via PATCH (parentId: null).
+    moved = client.patch(
+        f"/api/v1/admin/categories/{child.json()['id']}", json={"parentId": None}
+    )
+    assert moved.status_code == 200, moved.text
+    assert moved.json()["parentId"] is None
+
+    # The public list reflects the hierarchy fields.
+    listed = client.get("/api/v1/categories").json()
+    by_slug = {c["slug"]: c for c in listed}
+    assert by_slug["programming"]["parentId"] is None

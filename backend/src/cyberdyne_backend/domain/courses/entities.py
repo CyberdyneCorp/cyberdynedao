@@ -127,13 +127,19 @@ class Lesson:
 class Category:
     """A browsable course category (topic). Stored data — not derived from the
     course slug. A course references at most one; deleting a category leaves its
-    courses uncategorized (the slug-derived topic stays as a public fallback)."""
+    courses uncategorized (the slug-derived topic stays as a public fallback).
+
+    Categories form a one-level hierarchy via ``parent_id``: a top-level
+    category (``parent_id is None``) is a *group* (e.g. "Programming"); a child
+    is a *sub-category* (e.g. "Languages"). Deleting a parent re-parents its
+    children to top level (FK ON DELETE SET NULL)."""
 
     id: UUID
     slug: str
     name: str
     icon: str = ""
     sort_order: int = 0
+    parent_id: UUID | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
     updated_at: datetime | None = None
 
@@ -233,6 +239,7 @@ def new_category(
     slug: str | None = None,
     icon: str = "",
     sort_order: int = 0,
+    parent_id: UUID | None = None,
     now: datetime | None = None,
 ) -> Category:
     if not name.strip():
@@ -246,6 +253,7 @@ def new_category(
         name=name.strip(),
         icon=icon.strip(),
         sort_order=sort_order,
+        parent_id=parent_id,
         created_at=now or datetime.now(tz=UTC),
     )
 
