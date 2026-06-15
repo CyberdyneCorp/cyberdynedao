@@ -18,40 +18,50 @@ from cyberdyne_backend.domain.courses import (
     new_category,
 )
 
-# Built-in categories: (slug, name, icon). Order is the display order. Kept in
-# sync with the frontend topicOrder/topicMeta; the migration seeds the same set.
-BUILTIN_CATEGORIES: tuple[tuple[str, str, str], ...] = (
-    ("foundations", "Foundations", "🎯"),
-    ("languages", "Languages", "💻"),
-    ("databases", "Databases", "🗄️"),
-    ("devops", "DevOps", "⚙️"),
-    ("blockchain", "Blockchain", "⛓️"),
-    ("physics", "Physics", "⚛️"),
-    ("mathematics", "Mathematics", "➗"),
-    ("ai-machine-learning", "AI / Machine Learning", "🧠"),
-    ("robotics", "Robotics", "🤖"),
-    ("algorithms", "Algorithms", "🧮"),
-    ("software-engineering", "Software Engineering", "🧰"),
-    ("web-development", "Web Development", "🌍"),
-    ("system-design", "System Design", "🏗️"),
-    ("distributed-systems", "Distributed Systems", "🕸️"),
-    ("data-engineering", "Data Engineering", "🏭"),
-    ("concurrency-parallelism", "Concurrency & Parallelism", "⚡"),
-    ("operating-systems", "Operating Systems", "🖥️"),
-    ("networking", "Networking", "🌐"),
-    ("cybersecurity", "Cybersecurity", "🔒"),
-    ("computer-architecture", "Computer Architecture", "🏛️"),
-    ("electronic-engineering", "Electronic Engineering", "🔌"),
+# Built-in leaf categories: (slug, name, icon, sort_order). sort_order places a
+# leaf among its siblings (within its parent group); mathematics is top-level so
+# its sort_order orders it among the groups. Values reproduce the exact order the
+# frontend topicGroups/topicOrder used to hardcode.
+BUILTIN_CATEGORIES: tuple[tuple[str, str, str, int], ...] = (
+    # Programming
+    ("foundations", "Foundations", "🎯", 0),
+    ("languages", "Languages", "💻", 1),
+    ("web-development", "Web Development", "🌍", 2),
+    ("algorithms", "Algorithms", "🧮", 3),
+    # Software & Systems
+    ("software-engineering", "Software Engineering", "🧰", 0),
+    ("devops", "DevOps", "⚙️", 1),
+    ("databases", "Databases", "🗄️", 2),
+    ("operating-systems", "Operating Systems", "🖥️", 3),
+    ("networking", "Networking", "🌐", 4),
+    ("system-design", "System Design", "🏗️", 5),
+    ("distributed-systems", "Distributed Systems", "🕸️", 6),
+    ("concurrency-parallelism", "Concurrency & Parallelism", "⚡", 7),
+    ("cybersecurity", "Cybersecurity", "🔒", 8),
+    # AI & Data
+    ("ai-machine-learning", "AI / Machine Learning", "🧠", 0),
+    ("data-engineering", "Data Engineering", "🏭", 1),
+    # Mathematics — a standalone top-level category (sits 4th among top-level).
+    ("mathematics", "Mathematics", "➗", 3),
+    # Engineering & Robotics
+    ("physics", "Physics", "⚛️", 0),
+    ("computer-architecture", "Computer Architecture", "🏛️", 1),
+    ("electronic-engineering", "Electronic Engineering", "🔌", 2),
+    ("robotics", "Robotics", "🤖", 3),
+    # Web3
+    ("blockchain", "Blockchain", "⛓️", 0),
 )
 
 # Built-in parent groups (top-level categories): (slug, name, icon). Order is
 # the display order. Mirrors the frontend topicGroups.
-BUILTIN_GROUPS: tuple[tuple[str, str, str], ...] = (
-    ("programming", "Programming", "🧑‍💻"),
-    ("software-systems", "Software & Systems", "🧰"),
-    ("ai-data", "AI & Data", "🧠"),
-    ("engineering-robotics", "Engineering & Robotics", "🔬"),
-    ("web3", "Web3", "⛓️"),
+# Built-in parent groups: (slug, name, icon, sort_order). sort_order places the
+# group among the top-level items (mathematics, a top-level leaf, sits at 3).
+BUILTIN_GROUPS: tuple[tuple[str, str, str, int], ...] = (
+    ("programming", "Programming", "🧑‍💻", 0),
+    ("software-systems", "Software & Systems", "🧰", 1),
+    ("ai-data", "AI & Data", "🧠", 2),
+    ("engineering-robotics", "Engineering & Robotics", "🔬", 4),
+    ("web3", "Web3", "⛓️", 5),
 )
 
 # Which parent group each built-in (leaf) category belongs to. A leaf not listed
@@ -147,23 +157,35 @@ async def seed_categories(repo: CategoryRepository) -> dict[str, Category]:
     built-in leaf's parent is set only when currently unset, so a manual
     reparent is not clobbered."""
     by_slug: dict[str, Category] = {}
-    # Parent groups first, so leaves can reference them.
-    for order, (slug, name, icon) in enumerate(BUILTIN_GROUPS):
+    # Parent groups first, so leaves can reference them. sort_order is kept
+    # canonical for built-ins (there's no admin reorder), but an edited
+    # name/icon is preserved.
+    for slug, name, icon, order in BUILTIN_GROUPS:
         existing = await repo.get_by_slug(slug)
         if existing is not None:
+            if existing.sort_order != order:
+                existing.sort_order = order
+                await repo.save(existing)
             by_slug[slug] = existing
             continue
         group = new_category(name=name, slug=slug, icon=icon, sort_order=order)
         await repo.save(group)
         by_slug[slug] = group
-    # Leaf categories, parented to their group.
-    for order, (slug, name, icon) in enumerate(BUILTIN_CATEGORIES):
+    # Leaf categories, parented to their group. Parent is filled only when unset
+    # (so a manual reparent survives); sort_order is kept canonical.
+    for slug, name, icon, order in BUILTIN_CATEGORIES:
         parent_slug = CATEGORY_PARENT.get(slug)
         parent = by_slug.get(parent_slug) if parent_slug else None
         existing = await repo.get_by_slug(slug)
         if existing is not None:
+            changed = False
             if existing.parent_id is None and parent is not None:
                 existing.parent_id = parent.id
+                changed = True
+            if existing.sort_order != order:
+                existing.sort_order = order
+                changed = True
+            if changed:
                 await repo.save(existing)
             by_slug[slug] = existing
             continue
