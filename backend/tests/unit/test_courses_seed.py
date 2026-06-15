@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 190
+        assert len(summary) == 193
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -241,6 +241,9 @@ class TestSeedCourses:
             "comparch-basics",
             "comparch-intermediate",
             "comparch-advanced",
+            "sysverilog-basics",
+            "sysverilog-intermediate",
+            "sysverilog-advanced",
             "analog-ic-basics",
             "analog-ic-intermediate",
             "analog-ic-advanced",
@@ -849,6 +852,34 @@ class TestSeedCourses:
                 }
                 assert set(spec.per_lesson) == content_titles
         assert total_plots >= 120  # richly interactive across the 8 tracks
+
+    def test_sysverilog_track_complete(self) -> None:
+        # The SystemVerilog track backs Computer Architecture with RTL: three
+        # levels, SystemVerilog throughout, valid interactive plots, diagrams,
+        # and full quiz coverage. (It is text/RTL-based, not a MATLAB-runnable
+        # lab track, so it is verified here rather than in the Tier-3 EE test.)
+        import json
+        import re
+
+        from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
+        from cyberdyne_backend.application.courses.seed_sysverilog import SYSVERILOG_COURSES
+
+        assert len(SYSVERILOG_COURSES) == 3
+        assert {c.level for c in SYSVERILOG_COURSES} == {"Beginner", "Intermediate", "Advanced"}
+        for course in SYSVERILOG_COURSES:
+            assert course.slug.startswith("sysverilog-")
+            body = "\n".join(le.text_body or "" for le in course.lessons)
+            assert "```systemverilog" in body, f"{course.slug} missing SystemVerilog"
+            assert "```mermaid" in body, f"{course.slug} missing a diagram"
+            for raw in re.findall(r"```(?:plot|vectors)\n(.*?)\n```", body, re.S):
+                json.loads(raw)  # every interactive plot block is valid JSON
+            assert course.slug in QUIZ_REGISTRY
+            spec = QUIZ_REGISTRY[course.slug]
+            assert spec.final
+            content_titles = {
+                le.title for le in course.lessons if le.lesson_type in {"text", "code"}
+            }
+            assert set(spec.per_lesson) == content_titles
 
     def test_csharp_track_runs_basics_to_aspnet(self) -> None:
         from cyberdyne_backend.application.courses.seed_csharp import CSHARP_COURSES

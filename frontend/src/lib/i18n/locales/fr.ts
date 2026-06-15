@@ -188,6 +188,7 @@ export const fr: Messages = {
 	'topic.Statistics': 'Statistiques',
 	'topic.Robotics': 'Robotique',
 	'topic.Algorithms': 'Algorithmes',
+	'topic.Computer Architecture': 'Architecture des Ordinateurs',
 	'topic.Electronic Engineering': 'Génie Électronique',
 	'topic.Other': 'Autres',
 

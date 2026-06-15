@@ -172,14 +172,20 @@
 		'Operating Systems',
 		'Networking',
 		'Cybersecurity',
+		'Computer Architecture',
 		'Electronic Engineering',
 		'Other'
 	];
 	// The Tier-3 engineering curriculum: every electronics/EE family (each with
 	// basics/intermediate/advanced) collapses into one browsable category.
 	const electronicEngineeringSlug =
-		/^(electronics|analog-ic|antennas|power-electronics|pcb|semiconductor|embedded|signals|signal-integrity|control|dsp|rf-comms|microwave|digital-comms|digital-logic|fpga|comparch|electromagnetics|emc|test-measurement|hw-verification|vlsi|photonics|power-systems|battery|sensors|machines)-/;
+		/^(electronics|analog-ic|antennas|power-electronics|pcb|semiconductor|embedded|signals|signal-integrity|control|dsp|rf-comms|microwave|digital-comms|digital-logic|fpga|electromagnetics|emc|test-measurement|hw-verification|vlsi|photonics|power-systems|battery|sensors|machines)-/;
 	function courseTopic(slug: string): string {
+		// Computer Architecture is its own browsable category (CPU organization,
+		// pipelining, memory, ILP) and the SystemVerilog RTL track that backs it,
+		// rather than being buried in the broad Electronic Engineering bucket.
+		if (slug.startsWith('comparch-') || slug.startsWith('sysverilog-'))
+			return 'Computer Architecture';
 		if (slug.startsWith('ml-') || slug.startsWith('transformers')) return 'AI / Machine Learning';
 		if (slug.startsWith('security-')) return 'Cybersecurity';
 		if (slug.startsWith('os-')) return 'Operating Systems';
@@ -260,6 +266,7 @@
 		'Data Engineering': { icon: '🏭', accent: '#d97706', accentDark: '#92400e' },
 		'Concurrency & Parallelism': { icon: '⚡', accent: '#ca8a04', accentDark: '#854d0e' },
 		Cybersecurity: { icon: '🔒', accent: '#e11d48', accentDark: '#9f1239' },
+		'Computer Architecture': { icon: '🏛️', accent: '#9333ea', accentDark: '#6b21a8' },
 		'Electronic Engineering': { icon: '🔌', accent: '#6366f1', accentDark: '#4338ca' },
 		Other: { icon: '📦', accent: '#6b7280', accentDark: '#374151' }
 	};
@@ -326,7 +333,7 @@
 			icon: '🔬',
 			accent: '#6366f1',
 			accentDark: '#4338ca',
-			topics: ['Physics', 'Electronic Engineering', 'Robotics']
+			topics: ['Physics', 'Computer Architecture', 'Electronic Engineering', 'Robotics']
 		},
 		{
 			id: 'group:web3',

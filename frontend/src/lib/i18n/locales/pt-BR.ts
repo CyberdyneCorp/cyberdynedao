@@ -188,6 +188,7 @@ export const ptBR: Messages = {
 	'topic.Statistics': 'Estatística',
 	'topic.Robotics': 'Robótica',
 	'topic.Algorithms': 'Algoritmos',
+	'topic.Computer Architecture': 'Arquitetura de Computadores',
 	'topic.Electronic Engineering': 'Engenharia Eletrônica',
 	'topic.Other': 'Outros',
 

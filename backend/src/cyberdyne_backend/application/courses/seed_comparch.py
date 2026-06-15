@@ -188,6 +188,29 @@ def alu(a, b, op):
 print(alu(7, 5, 0), alu(7, 5, 1))   # 12 2
 ```
 
+The same ALU as **synthesizable RTL** -- a combinational block selected by `op`,
+plus the `zero` flag the branch logic needs. This is what the silicon actually is:
+
+```systemverilog
+// Combinational ALU: output follows the inputs, no clock involved.
+module alu #(parameter int W = 32) (
+    input  logic [W-1:0] a, b,
+    input  logic [1:0]   op,
+    output logic [W-1:0] y,
+    output logic         zero
+);
+  always_comb begin
+    unique case (op)
+      2'b00: y = a + b;   // add
+      2'b01: y = a - b;   // sub
+      2'b10: y = a & b;   // and
+      2'b11: y = a | b;   // or
+    endcase
+  end
+  assign zero = (y == '0);   // 1 when the result is zero (used by beq)
+endmodule
+```
+
 **Next:** where instructions and data live -- the memory hierarchy.
 """,
         ),
@@ -569,6 +592,26 @@ clean snapshot to the next on every clock edge -- the conveyor belts of the line
 The clock period now only has to cover the **slowest single stage**, not the
 whole instruction, so the clock can run much faster.
 
+In RTL a pipeline register is just a clocked latch with **stall** (hold) and
+**flush** (insert a bubble) controls -- the hooks the hazard logic pulls:
+
+```systemverilog
+// One pipeline register (e.g. ID/EX). Carries a stage's bundle to the next.
+module pipe_reg #(parameter int W = 64) (
+    input  logic         clk, rst_n,
+    input  logic         stall,   // hold the current value (freeze the stage)
+    input  logic         flush,   // replace with a NOP bubble
+    input  logic [W-1:0] d,
+    output logic [W-1:0] q
+);
+  always_ff @(posedge clk or negedge rst_n) begin
+    if      (!rst_n) q <= '0;
+    else if (flush)  q <= '0;     // squash: inject a bubble
+    else if (!stall) q <= d;      // advance; if stalled, q keeps its value
+  end
+endmodule
+```
+
 ```c
 /* Conceptually, three instructions overlap in flight:
    cycle:  1   2   3   4   5   6   7
@@ -634,6 +677,25 @@ Two fixes:
 flowchart LR
   EX["EX (produces result)"] -->|forward| EX2["next instr EX"]
   MEM["MEM (load result)"] -->|1 stall, then forward| ID["dependent instr"]
+```
+
+Both fixes are tiny pieces of RTL. Forwarding is a mux that picks the freshest
+copy of an operand; the load-use detector is a comparison that raises a stall:
+
+```systemverilog
+// Operand-A forwarding mux: prefer a newer in-flight result over the regfile.
+always_comb begin
+  unique case (forward_a)
+    2'b10:   alu_a = ex_mem_result;   // from the EX/MEM stage (1 ahead)
+    2'b01:   alu_a = mem_wb_result;   // from the MEM/WB stage (2 ahead)
+    default: alu_a = id_ex_rs1_val;   // no hazard: use the register file
+  endcase
+end
+
+// Load-use hazard: a load in EX whose dest feeds the next instruction must
+// stall the pipe for one cycle (forwarding alone can't beat the memory latency).
+assign load_use_stall = id_ex_mem_read &&
+       ((id_ex_rd == if_id_rs1) || (id_ex_rd == if_id_rs2));
 ```
 
 ## Control hazards
@@ -742,6 +804,28 @@ for (int i = 0; i < N; i++)
 def amat(t_hit, miss_rate, penalty):
     return t_hit + miss_rate * penalty
 print(amat(1, 0.05, 100))   # 6.0 cycles
+```
+
+The tag/index/offset split from the diagram above is literally how the hit
+signal is computed in RTL -- slice the address, compare the stored tag:
+
+```systemverilog
+// Direct-mapped cache hit: index selects a line, tag comparison decides hit.
+module dm_cache_hit #(
+    parameter int OFFSET = 6,                  // 64-byte line  -> bits [5:0]
+    parameter int INDEX  = 8                   // 256 lines     -> bits [13:6]
+)(
+    input  logic [31:0] addr,
+    input  logic        valid     [0:(1<<INDEX)-1],
+    input  logic [31-OFFSET-INDEX:0] tag_array [0:(1<<INDEX)-1],
+    output logic        hit
+);
+  logic [INDEX-1:0]           index;
+  logic [31-OFFSET-INDEX:0]   tag;
+  assign index = addr[OFFSET +: INDEX];        // middle bits pick the line
+  assign tag   = addr[31 -: (32-OFFSET-INDEX)];// upper bits are the tag
+  assign hit   = valid[index] && (tag_array[index] == tag);
+endmodule
 ```
 
 **Next:** giving every program its own private memory -- virtual memory.
@@ -1135,6 +1219,29 @@ def two_bit(outcomes):
     return mispred
 loop = [1] * 9 + [0]        # 9 iterations then exit
 print(two_bit(loop * 5))    # only a few mispredicts across 5 loops
+```
+
+That state machine above is one **BHT entry** in RTL: a 2-bit counter that
+saturates, predicting taken whenever the high bit is set:
+
+```systemverilog
+// One 2-bit saturating-counter predictor entry (a single BHT/PHT slot).
+module sat2 (
+    input  logic clk, rst_n,
+    input  logic update,          // pulse when the branch outcome is known
+    input  logic taken,           // the actual outcome, sampled on `update`
+    output logic predict_taken    // the prediction used at fetch time
+);
+  logic [1:0] ctr;
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n)            ctr <= 2'b01;             // weakly not-taken
+    else if (update) begin
+      if (taken && ctr != 2'b11)  ctr <= ctr + 2'd1; // toward strongly-taken
+      if (!taken && ctr != 2'b00) ctr <= ctr - 2'd1; // toward strongly-NT
+    end
+  end
+  assign predict_taken = ctr[1];   // high bit = taken (states 2 and 3)
+endmodule
 ```
 
 > **Practical insight:** unpredictable data-dependent branches (e.g. sorting

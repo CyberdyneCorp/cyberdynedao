@@ -248,6 +248,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
     swift_intermediate as _swift_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    sysverilog_advanced as _sysverilog_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    sysverilog_basics as _sysverilog_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    sysverilog_intermediate as _sysverilog_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     terraform_advanced as _terraform_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import terraform_basics as _terraform_basics
@@ -395,6 +404,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "statinf-intermediate": _statinf_intermediate.QUIZ,
     "swift-basics": _swift_basics.QUIZ,
     "swift-intermediate": _swift_intermediate.QUIZ,
+    "sysverilog-advanced": _sysverilog_advanced.QUIZ,
+    "sysverilog-basics": _sysverilog_basics.QUIZ,
+    "sysverilog-intermediate": _sysverilog_intermediate.QUIZ,
     "terraform-advanced": _terraform_advanced.QUIZ,
     "terraform-basics": _terraform_basics.QUIZ,
     "terraform-intermediate": _terraform_intermediate.QUIZ,

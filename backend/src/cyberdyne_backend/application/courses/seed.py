@@ -72,6 +72,7 @@ from cyberdyne_backend.application.courses.seed_signal_integrity import SIGNAL_I
 from cyberdyne_backend.application.courses.seed_signals import SIGNALS_COURSES
 from cyberdyne_backend.application.courses.seed_statistics import STATISTICS_COURSES
 from cyberdyne_backend.application.courses.seed_systemdesign import SYSTEM_DESIGN_COURSES
+from cyberdyne_backend.application.courses.seed_sysverilog import SYSVERILOG_COURSES
 from cyberdyne_backend.application.courses.seed_test_measurement import TEST_MEASUREMENT_COURSES
 from cyberdyne_backend.application.courses.seed_testing import TESTING_COURSES
 from cyberdyne_backend.application.courses.seed_types import (
@@ -1194,6 +1195,7 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *DSP_COURSES,
     *MACHINES_COURSES,
     *COMPARCH_COURSES,
+    *SYSVERILOG_COURSES,
     *ANALOG_IC_COURSES,
     *PHOTONICS_COURSES,
     *BATTERY_COURSES,

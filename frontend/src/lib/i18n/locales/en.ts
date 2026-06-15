@@ -198,6 +198,7 @@ export const en = {
 	'topic.Statistics': 'Statistics',
 	'topic.Robotics': 'Robotics',
 	'topic.Algorithms': 'Algorithms',
+	'topic.Computer Architecture': 'Computer Architecture',
 	'topic.Electronic Engineering': 'Electronic Engineering',
 	'topic.Other': 'Other',
 
