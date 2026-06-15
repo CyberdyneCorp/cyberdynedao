@@ -13,11 +13,15 @@ from datetime import datetime
 from uuid import UUID
 
 from cyberdyne_backend.domain.courses import (
+    Category,
+    CategoryNotFoundError,
+    CategoryRepository,
     Course,
     CourseLevel,
     CourseRepository,
     Lesson,
     LessonNotFoundError,
+    new_category,
     new_course,
     new_lesson,
 )
@@ -79,6 +83,61 @@ class CreateCourse:
         )
         await self.repo.save(course)
         return course
+
+
+# ── Categories ────────────────────────────────────────────────────────
+
+
+@dataclass(slots=True)
+class ListCategories:
+    repo: CategoryRepository
+
+    async def execute(self) -> list[Category]:
+        return await self.repo.list_categories()
+
+
+@dataclass(slots=True)
+class CreateCategoryCommand:
+    name: str
+    slug: str | None = None
+    icon: str = ""
+    sort_order: int = 0
+
+
+@dataclass(slots=True)
+class CreateCategory:
+    repo: CategoryRepository
+
+    async def execute(self, cmd: CreateCategoryCommand) -> Category:
+        category = new_category(
+            name=cmd.name, slug=cmd.slug, icon=cmd.icon, sort_order=cmd.sort_order
+        )
+        await self.repo.save(category)
+        return category
+
+
+@dataclass(slots=True)
+class DeleteCategory:
+    repo: CategoryRepository
+
+    async def execute(self, category_id: UUID) -> None:
+        # Courses referencing it become uncategorized (FK ON DELETE SET NULL).
+        await self.repo.delete(category_id)
+
+
+@dataclass(slots=True)
+class SetCourseCategory:
+    """Assign (or clear, with ``category_id=None``) a course's category."""
+
+    course_repo: CourseRepository
+    category_repo: CategoryRepository
+
+    async def execute(self, slug: str, category_id: UUID | None) -> Course:
+        course = await self.course_repo.get_by_slug(slug, include_drafts=True)
+        if category_id is not None and await self.category_repo.get_by_id(category_id) is None:
+            raise CategoryNotFoundError(str(category_id))
+        await self.course_repo.set_category(course.id, category_id)
+        return await self.course_repo.get_by_slug(slug, include_drafts=True)
 
 
 @dataclass(slots=True)

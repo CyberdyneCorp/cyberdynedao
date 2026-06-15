@@ -74,17 +74,23 @@ from cyberdyne_backend.adapters.inbound.api.courses.router import (
     admin_router as courses_admin_router,
 )
 from cyberdyne_backend.adapters.inbound.api.courses.router import (
+    category_admin_router,
+    category_public_router,
     get_add_lesson_uc,
     get_course_languages_uc,
     get_course_uc,
+    get_create_category_uc,
     get_create_course_uc,
+    get_delete_category_uc,
     get_delete_course_uc,
     get_delete_lesson_uc,
+    get_list_categories_uc,
     get_list_courses_uc,
     get_my_course_progress_uc,
     get_my_courses_progress_uc,
     get_reorder_courses_uc,
     get_reorder_lessons_uc,
+    get_set_course_category_uc,
     get_set_course_deadline_uc,
     get_set_lesson_progress_uc,
     get_set_published_uc,
@@ -228,6 +234,7 @@ from cyberdyne_backend.adapters.outbound.persistence.courses.progress_repository
     SqlAlchemyCourseProgressRepository,
 )
 from cyberdyne_backend.adapters.outbound.persistence.courses.repository import (
+    SqlAlchemyCategoryRepository,
     SqlAlchemyCourseRepository,
 )
 from cyberdyne_backend.adapters.outbound.persistence.leads.repository import (
@@ -285,18 +292,22 @@ from cyberdyne_backend.application.courses import (
     AddLesson,
     AwardCourseCertificate,
     CourseLessonCompleter,
+    CreateCategory,
     CreateCourse,
+    DeleteCategory,
     DeleteCourse,
     DeleteLesson,
     GetCourse,
     GetMyCourseCertificate,
     GetMyCourseProgress,
     IssueCourseCertificate,
+    ListCategories,
     ListCourses,
     ListMyCourseProgress,
     RenderCourseCertificatePdf,
     ReorderCourses,
     ReorderLessons,
+    SetCourseCategory,
     SetCourseDeadline,
     SetCoursePublished,
     SetLessonProgress,
@@ -550,6 +561,25 @@ def create_app() -> FastAPI:
             yield GenerateRssFeed(
                 repo=SqlAlchemyBlogRepository(session),
                 site_url=settings.public_site_url,
+            )
+
+    async def _list_categories_dep() -> AsyncIterator[ListCategories]:
+        async with session_scope() as session:
+            yield ListCategories(repo=SqlAlchemyCategoryRepository(session))
+
+    async def _create_category_dep() -> AsyncIterator[CreateCategory]:
+        async with session_scope() as session:
+            yield CreateCategory(repo=SqlAlchemyCategoryRepository(session))
+
+    async def _delete_category_dep() -> AsyncIterator[DeleteCategory]:
+        async with session_scope() as session:
+            yield DeleteCategory(repo=SqlAlchemyCategoryRepository(session))
+
+    async def _set_course_category_dep() -> AsyncIterator[SetCourseCategory]:
+        async with session_scope() as session:
+            yield SetCourseCategory(
+                course_repo=SqlAlchemyCourseRepository(session),
+                category_repo=SqlAlchemyCategoryRepository(session),
             )
 
     async def _list_courses_dep() -> AsyncIterator[ListCourses]:
@@ -953,6 +983,10 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_course_uc] = _get_course_dep
     app.dependency_overrides[get_create_course_uc] = _create_course_dep
     app.dependency_overrides[get_update_course_uc] = _update_course_dep
+    app.dependency_overrides[get_list_categories_uc] = _list_categories_dep
+    app.dependency_overrides[get_create_category_uc] = _create_category_dep
+    app.dependency_overrides[get_delete_category_uc] = _delete_category_dep
+    app.dependency_overrides[get_set_course_category_uc] = _set_course_category_dep
     app.dependency_overrides[get_set_published_uc] = _set_published_dep
     app.dependency_overrides[get_set_course_deadline_uc] = _set_course_deadline_dep
     app.dependency_overrides[get_issue_course_cert_uc] = _issue_course_cert_dep
@@ -1023,6 +1057,8 @@ def create_app() -> FastAPI:
     app.include_router(learning_admin_router)
     app.include_router(courses_public_router)
     app.include_router(courses_admin_router)
+    app.include_router(category_public_router)
+    app.include_router(category_admin_router)
     app.include_router(quizzes_player_router)
     app.include_router(quizzes_admin_router)
     app.include_router(uploads_admin_router)

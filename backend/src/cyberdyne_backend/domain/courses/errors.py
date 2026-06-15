@@ -16,6 +16,14 @@ class DuplicateCourseSlugError(ValueError):
     """A course with this slug already exists."""
 
 
+class CategoryNotFoundError(LookupError):
+    """No category with the requested id/slug exists."""
+
+
+class DuplicateCategorySlugError(ValueError):
+    """A category with this slug already exists."""
+
+
 class InvalidLessonContentError(ValueError):
     """A lesson's content doesn't satisfy the invariants for its type
     (e.g. a ``video`` lesson with no ``content_url``, or a ``text``

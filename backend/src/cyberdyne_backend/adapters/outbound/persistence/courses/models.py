@@ -21,6 +21,20 @@ from sqlalchemy.orm import Mapped, mapped_column
 from cyberdyne_backend.infrastructure.database.base import Base
 
 
+class CategoryRow(Base):
+    """A browsable course category (topic). Stored data, not slug-derived."""
+
+    __tablename__ = "categories"
+
+    id: Mapped[UUID] = mapped_column(Uuid(), primary_key=True)
+    slug: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    icon: Mapped[str] = mapped_column(String(16), nullable=False, default="")
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class CourseRow(Base):
     __tablename__ = "courses"
 
@@ -32,6 +46,14 @@ class CourseRow(Base):
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
     mandatory: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Assigned category (nullable = uncategorized). SET NULL on category delete
+    # so removing a category never cascades into deleting its courses.
+    category_id: Mapped[UUID | None] = mapped_column(
+        Uuid(),
+        ForeignKey("categories.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

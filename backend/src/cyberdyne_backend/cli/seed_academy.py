@@ -18,10 +18,15 @@ import asyncio
 import logging
 
 from cyberdyne_backend.adapters.outbound.persistence.courses.repository import (
+    SqlAlchemyCategoryRepository,
     SqlAlchemyCourseRepository,
 )
 from cyberdyne_backend.adapters.outbound.persistence.quizzes.repository import (
     SqlAlchemyQuizRepository,
+)
+from cyberdyne_backend.application.courses.categories import (
+    assign_course_categories,
+    seed_categories,
 )
 from cyberdyne_backend.application.courses.seed import seed_courses
 from cyberdyne_backend.application.quizzes.use_cases import UpsertQuiz
@@ -40,11 +45,19 @@ async def main() -> None:
                 SqlAlchemyCourseRepository(session),
                 quiz_author=UpsertQuiz(repo=SqlAlchemyQuizRepository(session)),
             )
+        # Built-in categories + a slug-derived default for any uncategorized
+        # course (fills gaps only — never overrides a manual reassignment).
+        async with session_scope() as session:
+            categories = await seed_categories(SqlAlchemyCategoryRepository(session))
+            assigned = await assign_course_categories(
+                SqlAlchemyCourseRepository(session), categories
+            )
         for line in summary:
             logger.info("academy seed — %s", line)
         print("Academy seed applied:")
         for line in summary:
             print(f"  • {line}")
+        print(f"  • categories: {len(categories)} ensured, {assigned} courses categorized")
     finally:
         await dispose_engine()
 

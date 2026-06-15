@@ -41,6 +41,11 @@ class FakeCourseRepo:
     async def delete(self, course_id: UUID) -> None:  # pragma: no cover - unused
         raise NotImplementedError
 
+    async def set_category(  # pragma: no cover - unused
+        self, course_id: UUID, category_id: UUID | None
+    ) -> None:
+        raise NotImplementedError
+
 
 class FakeAnalyticsRepo:
     def __init__(self, learner: LearnerCounts) -> None:

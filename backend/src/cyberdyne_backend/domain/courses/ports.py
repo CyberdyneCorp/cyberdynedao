@@ -6,7 +6,7 @@ from typing import Protocol, runtime_checkable
 from uuid import UUID
 
 from cyberdyne_backend.domain.courses.certificates import CourseCertificate
-from cyberdyne_backend.domain.courses.entities import Course, CourseLevel
+from cyberdyne_backend.domain.courses.entities import Category, Course, CourseLevel
 from cyberdyne_backend.domain.courses.progress import LessonProgress
 
 
@@ -51,6 +51,38 @@ class CourseRepository(Protocol):
 
     async def delete(self, course_id: UUID) -> None:
         """Delete a course and its lessons. No-op if absent."""
+        ...
+
+    async def set_category(self, course_id: UUID, category_id: UUID | None) -> None:
+        """Assign (or clear, with ``None``) a course's category in a single
+        UPDATE — does not touch the course's lessons."""
+        ...
+
+
+@runtime_checkable
+class CategoryRepository(Protocol):
+    """Persists course categories (browsable topics)."""
+
+    async def list_categories(self) -> list[Category]:
+        """All categories ordered by (sort_order, name)."""
+        ...
+
+    async def get_by_id(self, category_id: UUID) -> Category | None:
+        """A category by id, or ``None`` if absent."""
+        ...
+
+    async def get_by_slug(self, slug: str) -> Category | None:
+        """A category by slug, or ``None`` if absent."""
+        ...
+
+    async def save(self, category: Category) -> None:
+        """Insert or update a category. Raises ``DuplicateCategorySlugError``
+        if another category already owns the slug."""
+        ...
+
+    async def delete(self, category_id: UUID) -> None:
+        """Delete a category. Courses referencing it become uncategorized
+        (the FK is ``ON DELETE SET NULL``). No-op if absent."""
         ...
 
 

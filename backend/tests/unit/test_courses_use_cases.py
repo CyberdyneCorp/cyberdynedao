@@ -77,6 +77,11 @@ class FakeCourseRepo:
     async def delete(self, course_id: UUID) -> None:
         self._by_slug = {s: c for s, c in self._by_slug.items() if c.id != course_id}
 
+    async def set_category(self, course_id: UUID, category_id: UUID | None) -> None:
+        for course in self._by_slug.values():
+            if course.id == course_id:
+                course.category = None if category_id is None else course.category
+
 
 def test_fake_repo_matches_port() -> None:
     assert isinstance(FakeCourseRepo(), CourseRepository)

@@ -417,3 +417,58 @@ async def test_reseed_preserves_lesson_translations(db_session: AsyncSession) ->
     localized = await repo.get_by_slug("rob", include_drafts=True, locale="pt-BR")
     assert localized.lessons[0].title == "Juntas"
     assert localized.lessons[0].text_body == "Corpo"
+
+
+# ── Category management (HTTP) ────────────────────────────────────────
+
+
+@pytest.mark.usefixtures("_prepared_schema")
+def test_category_crud_and_course_assignment(app: FastAPI) -> None:
+    from cyberdyne_backend.adapters.inbound.api.courses.router import translation_available
+
+    app.dependency_overrides[require_editor] = _editor
+    app.dependency_overrides[translation_available] = lambda: True
+    client = TestClient(app)
+
+    # Create a category, then it shows in the public list.
+    created = client.post("/api/v1/admin/categories", json={"name": "Robotics", "icon": "🤖"})
+    assert created.status_code == 201, created.text
+    cat = created.json()
+    assert cat["slug"] == "robotics" and cat["icon"] == "🤖"
+    listed = client.get("/api/v1/categories").json()
+    assert "robotics" in {c["slug"] for c in listed}
+
+    # Duplicate slug → 409.
+    assert client.post("/api/v1/admin/categories", json={"name": "Robotics"}).status_code == 409
+
+    # A new course starts uncategorized.
+    course = client.post(
+        "/api/v1/admin/courses", json={"title": "Bot Course", "description": "d", "level": "Beginner"}
+    ).json()
+    assert course["category"] is None
+
+    # Assign the category → the course detail carries it.
+    assigned = client.put(
+        f"/api/v1/admin/courses/{course['slug']}/category", json={"categoryId": cat["id"]}
+    )
+    assert assigned.status_code == 200, assigned.text
+    assert assigned.json()["category"]["slug"] == "robotics"
+
+    # Assigning a non-existent category → 404.
+    assert (
+        client.put(
+            f"/api/v1/admin/courses/{course['slug']}/category",
+            json={"categoryId": str(uuid.uuid4())},
+        ).status_code
+        == 404
+    )
+
+    # Clear the category (null).
+    cleared = client.put(
+        f"/api/v1/admin/courses/{course['slug']}/category", json={"categoryId": None}
+    )
+    assert cleared.status_code == 200 and cleared.json()["category"] is None
+
+    # Delete the category.
+    assert client.delete(f"/api/v1/admin/categories/{cat['id']}").status_code == 204
+    assert "robotics" not in {c["slug"] for c in client.get("/api/v1/categories").json()}

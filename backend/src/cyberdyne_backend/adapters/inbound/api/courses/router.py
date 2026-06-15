@@ -9,6 +9,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from cyberdyne_backend.adapters.inbound.api.courses.schemas import (
+    CategoryResponse,
     CourseCertificateResponse,
     CourseCertificateVerificationResponse,
     CourseDetailResponse,
@@ -16,6 +17,7 @@ from cyberdyne_backend.adapters.inbound.api.courses.schemas import (
     CourseProgressResponse,
     CourseSummaryResponse,
     CourseTranslationStartedResponse,
+    CreateCategoryRequest,
     CreateCourseRequest,
     CreateLessonRequest,
     LessonProgressResponse,
@@ -23,6 +25,7 @@ from cyberdyne_backend.adapters.inbound.api.courses.schemas import (
     MyCourseProgressItem,
     ReorderCoursesRequest,
     ReorderLessonsRequest,
+    SetCourseCategoryRequest,
     SetCourseDeadlineRequest,
     SetLessonProgressRequest,
     UpdateCourseRequest,
@@ -42,19 +45,24 @@ from cyberdyne_backend.application.academy import (
 from cyberdyne_backend.application.courses import (
     AddLesson,
     AddLessonCommand,
+    CreateCategory,
+    CreateCategoryCommand,
     CreateCourse,
     CreateCourseCommand,
+    DeleteCategory,
     DeleteCourse,
     DeleteLesson,
     GetCourse,
     GetMyCourseCertificate,
     GetMyCourseProgress,
     IssueCourseCertificate,
+    ListCategories,
     ListCourses,
     ListMyCourseProgress,
     RenderCourseCertificatePdf,
     ReorderCourses,
     ReorderLessons,
+    SetCourseCategory,
     SetCourseDeadline,
     SetCoursePublished,
     SetLessonProgress,
@@ -67,12 +75,14 @@ from cyberdyne_backend.application.courses import (
 from cyberdyne_backend.application.courses.certificates import CourseCertificateVerification
 from cyberdyne_backend.domain.auth_identity import UserPrincipal
 from cyberdyne_backend.domain.courses import (
+    CategoryNotFoundError,
     Course,
     CourseCertificate,
     CourseCertificateNotEligibleError,
     CourseCertificateNotFoundError,
     CourseNotFoundError,
     CourseProgress,
+    DuplicateCategorySlugError,
     DuplicateCourseSlugError,
     InvalidCourseLevelError,
     InvalidLessonContentError,
@@ -84,9 +94,27 @@ from cyberdyne_backend.domain.learning import days_remaining, deadline_status
 
 public_router = APIRouter(prefix="/api/v1/courses", tags=["courses"])
 admin_router = APIRouter(prefix="/api/v1/admin/courses", tags=["courses-admin"])
+category_public_router = APIRouter(prefix="/api/v1/categories", tags=["categories"])
+category_admin_router = APIRouter(prefix="/api/v1/admin/categories", tags=["categories-admin"])
 
 
 # Dependency stubs — overridden in main.py.
+async def get_list_categories_uc() -> ListCategories:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_create_category_uc() -> CreateCategory:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_delete_category_uc() -> DeleteCategory:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_set_course_category_uc() -> SetCourseCategory:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
 async def get_list_courses_uc() -> ListCourses:  # pragma: no cover - override target
     raise NotImplementedError
 
@@ -258,6 +286,15 @@ def _lesson_response(lesson: Lesson, *, include_body: bool = True) -> LessonResp
     )
 
 
+def _category_response(course: Course) -> CategoryResponse | None:
+    cat = course.category
+    if cat is None:
+        return None
+    return CategoryResponse(
+        id=cat.id, slug=cat.slug, name=cat.name, icon=cat.icon, sort_order=cat.sort_order
+    )
+
+
 def _summary(course: Course) -> CourseSummaryResponse:
     now = datetime.now(tz=UTC)
     return CourseSummaryResponse(
@@ -275,6 +312,7 @@ def _summary(course: Course) -> CourseSummaryResponse:
         due_at=course.due_at,
         deadline_status=deadline_status(course.due_at, now=now).value,
         days_remaining=days_remaining(course.due_at, now=now),
+        category=_category_response(course),
     )
 
 
@@ -288,6 +326,53 @@ def _detail(course: Course, *, full_content: bool = True) -> CourseDetailRespons
             for idx, les in enumerate(course.lessons)
         ],
     )
+
+
+# ── Categories ────────────────────────────────────────────────────────
+
+
+@category_public_router.get("", response_model=list[CategoryResponse], response_model_by_alias=True)
+async def list_categories(
+    use_case: Annotated[ListCategories, Depends(get_list_categories_uc)],
+) -> list[CategoryResponse]:
+    cats = await use_case.execute()
+    return [
+        CategoryResponse(id=c.id, slug=c.slug, name=c.name, icon=c.icon, sort_order=c.sort_order)
+        for c in cats
+    ]
+
+
+@category_admin_router.post(
+    "", response_model=CategoryResponse, response_model_by_alias=True, status_code=201
+)
+async def create_category(
+    body: CreateCategoryRequest,
+    use_case: Annotated[CreateCategory, Depends(get_create_category_uc)],
+    _principal: Annotated[UserPrincipal, Depends(require_editor)],
+) -> CategoryResponse:
+    try:
+        cat = await use_case.execute(
+            CreateCategoryCommand(
+                name=body.name, slug=body.slug, icon=body.icon, sort_order=body.sort_order
+            )
+        )
+    except DuplicateCategorySlugError as exc:
+        raise HTTPException(status_code=409, detail="category slug already exists") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return CategoryResponse(
+        id=cat.id, slug=cat.slug, name=cat.name, icon=cat.icon, sort_order=cat.sort_order
+    )
+
+
+@category_admin_router.delete("/{category_id}", status_code=204)
+async def delete_category(
+    category_id: UUID,
+    use_case: Annotated[DeleteCategory, Depends(get_delete_category_uc)],
+    _principal: Annotated[UserPrincipal, Depends(require_editor)],
+) -> Response:
+    await use_case.execute(category_id)
+    return Response(status_code=204)
 
 
 # ── Public catalogue ─────────────────────────────────────────────────
@@ -585,6 +670,26 @@ async def unpublish_course(
         course = await use_case.execute(slug, published=False)
     except CourseNotFoundError as exc:
         raise HTTPException(status_code=404, detail="course not found") from exc
+    return _detail(course)
+
+
+@admin_router.put(
+    "/{slug}/category",
+    response_model=CourseDetailResponse,
+    response_model_by_alias=True,
+)
+async def set_course_category(
+    slug: str,
+    body: SetCourseCategoryRequest,
+    use_case: Annotated[SetCourseCategory, Depends(get_set_course_category_uc)],
+    _principal: Annotated[UserPrincipal, Depends(require_editor)],
+) -> CourseDetailResponse:
+    try:
+        course = await use_case.execute(slug, body.category_id)
+    except CourseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="course not found") from exc
+    except CategoryNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="category not found") from exc
     return _detail(course)
 
 

@@ -124,6 +124,21 @@ class Lesson:
 
 
 @dataclass(slots=True)
+class Category:
+    """A browsable course category (topic). Stored data — not derived from the
+    course slug. A course references at most one; deleting a category leaves its
+    courses uncategorized (the slug-derived topic stays as a public fallback)."""
+
+    id: UUID
+    slug: str
+    name: str
+    icon: str = ""
+    sort_order: int = 0
+    created_at: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
+    updated_at: datetime | None = None
+
+
+@dataclass(slots=True)
 class Course:
     id: UUID
     slug: str
@@ -140,6 +155,9 @@ class Course:
     # is derived from this relative to now at the read boundary.
     due_at: datetime | None = None
     lessons: list[Lesson] = field(default_factory=list)
+    # Assigned category (None = uncategorized). Set on read by the repo's join;
+    # on write, ``save`` persists ``category.id`` (or NULL).
+    category: Category | None = None
 
     def is_visible_to_anonymous(self) -> bool:
         return self.status is CourseStatus.PUBLISHED and self.published_at is not None
@@ -206,6 +224,29 @@ def new_course(
         sort_order=sort_order,
         created_at=created_at,
         due_at=due_at,
+    )
+
+
+def new_category(
+    *,
+    name: str,
+    slug: str | None = None,
+    icon: str = "",
+    sort_order: int = 0,
+    now: datetime | None = None,
+) -> Category:
+    if not name.strip():
+        raise ValueError("name cannot be empty")
+    effective_slug = normalize_slug(slug) if slug else normalize_slug(name)
+    if not effective_slug:
+        raise ValueError("slug normalises to empty")
+    return Category(
+        id=uuid.uuid4(),
+        slug=effective_slug,
+        name=name.strip(),
+        icon=icon.strip(),
+        sort_order=sort_order,
+        created_at=now or datetime.now(tz=UTC),
     )
 
 

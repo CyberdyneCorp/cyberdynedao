@@ -13,20 +13,24 @@ from cyberdyne_backend.domain.courses.certificates import (
     new_course_certificate,
 )
 from cyberdyne_backend.domain.courses.entities import (
+    Category,
     Course,
     CourseLevel,
     CourseStatus,
     Lesson,
     LessonType,
+    new_category,
     new_course,
     new_lesson,
     normalize_slug,
     parse_level,
 )
 from cyberdyne_backend.domain.courses.errors import (
+    CategoryNotFoundError,
     CourseCertificateNotEligibleError,
     CourseCertificateNotFoundError,
     CourseNotFoundError,
+    DuplicateCategorySlugError,
     DuplicateCourseSlugError,
     InvalidCourseLevelError,
     InvalidLessonContentError,
@@ -34,6 +38,7 @@ from cyberdyne_backend.domain.courses.errors import (
     ProgressOutOfRangeError,
 )
 from cyberdyne_backend.domain.courses.ports import (
+    CategoryRepository,
     CourseCertificateAwarder,
     CourseCertificatePdfRenderer,
     CourseCertificateRepository,
@@ -50,6 +55,9 @@ from cyberdyne_backend.domain.courses.progress import (
 )
 
 __all__ = [
+    "Category",
+    "CategoryNotFoundError",
+    "CategoryRepository",
     "Course",
     "CourseCertificate",
     "CourseCertificateAwarder",
@@ -64,6 +72,7 @@ __all__ = [
     "CourseProgressRepository",
     "CourseRepository",
     "CourseStatus",
+    "DuplicateCategorySlugError",
     "DuplicateCourseSlugError",
     "InvalidCourseLevelError",
     "InvalidLessonContentError",
@@ -75,6 +84,7 @@ __all__ = [
     "ProgressOutOfRangeError",
     "build_course_progress",
     "course_certificate_eligible",
+    "new_category",
     "new_course",
     "new_course_certificate",
     "new_lesson",

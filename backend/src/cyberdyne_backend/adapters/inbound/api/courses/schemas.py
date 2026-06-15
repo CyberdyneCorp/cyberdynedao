@@ -62,6 +62,14 @@ class LessonResponse(_CamelModel):
     duration: str | None = None
 
 
+class CategoryResponse(_CamelModel):
+    id: UUID
+    slug: str
+    name: str
+    icon: str = ""
+    sort_order: int = 0
+
+
 class CourseSummaryResponse(_CamelModel):
     id: UUID
     slug: str
@@ -78,6 +86,8 @@ class CourseSummaryResponse(_CamelModel):
     # Derived from due_at vs now at read time (not stored).
     deadline_status: DeadlineStatusLiteral = "none"
     days_remaining: int | None = None
+    # Assigned category (null = uncategorized). The frontend groups on this.
+    category: CategoryResponse | None = None
 
 
 class CourseDetailResponse(CourseSummaryResponse):
@@ -106,6 +116,18 @@ class UpdateCourseRequest(_StrictCamelModel):
 class ReorderCoursesRequest(_StrictCamelModel):
     # {slug: sort_order}
     order: dict[str, int]
+
+
+class CreateCategoryRequest(_StrictCamelModel):
+    name: str = Field(min_length=1, max_length=128)
+    slug: str | None = Field(default=None, max_length=64)
+    icon: str = Field(default="", max_length=16)
+    sort_order: int = 0
+
+
+class SetCourseCategoryRequest(_StrictCamelModel):
+    # null clears the course's category (uncategorized).
+    category_id: UUID | None = None
 
 
 class CreateLessonRequest(_StrictCamelModel):
