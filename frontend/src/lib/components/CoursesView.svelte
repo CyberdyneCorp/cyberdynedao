@@ -213,6 +213,13 @@
 		return 'Other';
 	}
 
+	// Prefer the course's stored category (admin-assigned); fall back to the
+	// slug-derived topic so uncategorized courses (or any that predate
+	// categories) still group exactly as before.
+	function topicForCourse(c: { slug: string; category?: { name: string } | null }): string {
+		return c.category?.name ?? courseTopic(c.slug);
+	}
+
 	const filteredCourses = $derived.by(() => {
 		const q = search.trim().toLowerCase();
 		const list = $courses.filter(
@@ -236,7 +243,7 @@
 	const groupedCourses = $derived.by(() => {
 		const groups = new Map<string, typeof coursesInTopic>();
 		for (const c of coursesInTopic) {
-			const t = courseTopic(c.slug);
+			const t = topicForCourse(c);
 			(groups.get(t) ?? groups.set(t, []).get(t)!).push(c);
 		}
 		return topicOrder
@@ -385,7 +392,7 @@
 	const topicCounts = $derived.by(() => {
 		const counts = new Map<string, number>();
 		for (const c of filteredCourses) {
-			const t = courseTopic(c.slug);
+			const t = topicForCourse(c);
 			counts.set(t, (counts.get(t) ?? 0) + 1);
 		}
 		return counts;
@@ -457,7 +464,7 @@
 	const coursesInTopic = $derived.by(() => {
 		const sel = selectedTopicsSet;
 		if (!sel) return filteredCourses;
-		return filteredCourses.filter((c) => sel.has(courseTopic(c.slug)));
+		return filteredCourses.filter((c) => sel.has(topicForCourse(c)));
 	});
 
 	// Is the current selection a multi-topic group? (drives sub-grouped grid)

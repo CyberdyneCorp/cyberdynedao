@@ -23,7 +23,8 @@ const summary: CourseSummary = {
 	publishedAt: '2026-01-01T00:00:00Z',
 	dueAt: null,
 	deadlineStatus: 'none',
-	daysRemaining: null
+	daysRemaining: null,
+	category: null
 };
 
 const detail: CourseDetail = {

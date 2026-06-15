@@ -12,6 +12,7 @@
 
 import { withAuth } from '$lib/auth/authToken';
 import type {
+	Category,
 	CourseDetail,
 	CourseLesson,
 	CourseLevel,
@@ -183,6 +184,33 @@ export function deleteCourse(slug: string): Promise<void> {
 
 export function reorderCourses(order: Record<string, number>): Promise<CourseSummary[]> {
 	return sendJson<CourseSummary[]>('POST', '/api/v1/admin/courses/reorder', { order });
+}
+
+// ── Categories ────────────────────────────────────────────────────────
+
+export interface CreateCategoryInput {
+	name: string;
+	slug?: string;
+	icon?: string;
+	sortOrder?: number;
+}
+
+export function createCategory(input: CreateCategoryInput): Promise<Category> {
+	return sendJson<Category>('POST', '/api/v1/admin/categories', input);
+}
+
+export function deleteCategory(categoryId: string): Promise<void> {
+	return del(`/api/v1/admin/categories/${enc(categoryId)}`);
+}
+
+/** Assign (or clear, with `categoryId: null`) a course's category. */
+export function setCourseCategory(
+	slug: string,
+	categoryId: string | null
+): Promise<CourseDetail> {
+	return sendJson<CourseDetail>('PUT', `/api/v1/admin/courses/${enc(slug)}/category`, {
+		categoryId
+	});
 }
 
 // ── Translations ──────────────────────────────────────────────────────

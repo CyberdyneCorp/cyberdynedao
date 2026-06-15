@@ -17,7 +17,7 @@
 	const STATUS_VARIANT = { draft: 'warning', published: 'success' } as const;
 
 	const vm = createAdminViewModel();
-	const { courses, selected, loading, busy, error, notice } = vm;
+	const { courses, categories, selected, loading, busy, error, notice } = vm;
 
 	// Auto-dismiss the success notice a few seconds after it appears.
 	$effect(() => {
@@ -54,6 +54,57 @@
 	const lessonTypeOptions = lessonTypes.map((t) => ({ value: t, label: t }));
 	const URL_TYPES: LessonType[] = ['video', 'pdf', 'presentation'];
 	const urlBacked = $derived(URL_TYPES.includes(lType));
+
+	// ── Search, category filter + category management ──────────────────
+	let courseSearch = $state('');
+	let categoryFilter = $state<string>('all'); // 'all' | 'uncategorized' | <category slug>
+	let newCategoryName = $state('');
+	let newCategoryIcon = $state('');
+	let confirmingCategoryDelete = $state<string | null>(null);
+
+	// Filter dropdown options: All / Uncategorized / each category.
+	const categoryFilterOptions = $derived([
+		{ value: 'all', label: 'All categories' },
+		{ value: 'uncategorized', label: 'Uncategorized' },
+		...$categories.map((c) => ({ value: c.slug, label: `${c.icon} ${c.name}`.trim() }))
+	]);
+	// Per-course assignment dropdown options (— = clear/uncategorized).
+	const categoryAssignOptions = $derived([
+		{ value: '', label: '— Uncategorized' },
+		...$categories.map((c) => ({ value: c.id, label: `${c.icon} ${c.name}`.trim() }))
+	]);
+
+	// Courses filtered by the search box (title or category name) + the
+	// category filter. Search and filter are view-only; the list itself is
+	// server truth from the view model.
+	const visibleCourses = $derived.by(() => {
+		const q = courseSearch.trim().toLowerCase();
+		return $courses.filter((c) => {
+			const matchesSearch =
+				q === '' ||
+				c.title.toLowerCase().includes(q) ||
+				(c.category?.name.toLowerCase().includes(q) ?? false);
+			const matchesFilter =
+				categoryFilter === 'all' ||
+				(categoryFilter === 'uncategorized' && c.category === null) ||
+				c.category?.slug === categoryFilter;
+			return matchesSearch && matchesFilter;
+		});
+	});
+
+	// Reorder only makes sense against the full list, so it's disabled while a
+	// search/filter narrows the view.
+	const filtering = $derived(courseSearch.trim() !== '' || categoryFilter !== 'all');
+
+	async function createCategory(): Promise<void> {
+		const name = newCategoryName.trim();
+		if (!name) return;
+		const ok = await vm.makeCategory({ name, icon: newCategoryIcon.trim() || undefined });
+		if (ok) {
+			newCategoryName = '';
+			newCategoryIcon = '';
+		}
+	}
 
 	// Load the course list once when authoring becomes available. Do NOT
 	// key this on `$courses.length` — an empty list is a valid result, and
@@ -635,8 +686,86 @@
 				</div>
 			</form>
 
+			<!-- Categories -->
+			<div class="new-course">
+				<h2>Categories</h2>
+				<p class="hint">
+					Categories group courses in the catalogue. Deleting one leaves its courses
+					uncategorized (it never deletes courses).
+				</p>
+				{#if $categories.length > 0}
+					<ul class="cat-list">
+						{#each $categories as cat (cat.id)}
+							<li class="cat">
+								<span class="cat__name">{cat.icon} {cat.name}</span>
+								<span class="cat__slug">{cat.slug}</span>
+								{#if confirmingCategoryDelete === cat.id}
+									<PixelButton
+										variant="solid"
+										size="sm"
+										disabled={$busy}
+										onclick={async () => {
+											await vm.removeCategory(cat.id);
+											confirmingCategoryDelete = null;
+										}}
+									>
+										Confirm
+									</PixelButton>
+									<PixelButton
+										variant="ghost"
+										size="sm"
+										onclick={() => (confirmingCategoryDelete = null)}
+									>
+										Cancel
+									</PixelButton>
+								{:else}
+									<PixelButton
+										variant="ghost"
+										size="sm"
+										disabled={$busy}
+										onclick={() => (confirmingCategoryDelete = cat.id)}
+									>
+										Delete
+									</PixelButton>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+				{/if}
+				<form
+					class="row row--end"
+					onsubmit={(e) => {
+						e.preventDefault();
+						void createCategory();
+					}}
+				>
+					<div class="grow">
+						<PixelInput placeholder="New category name" bind:value={newCategoryName} ariaLabel="New category name" />
+					</div>
+					<div class="cat-icon">
+						<PixelInput placeholder="Icon" bind:value={newCategoryIcon} ariaLabel="Category icon (emoji)" />
+					</div>
+					<PixelButton type="submit" variant="solid" size="sm" disabled={$busy || !newCategoryName.trim()}>
+						Add category
+					</PixelButton>
+				</form>
+			</div>
+
 			<!-- Course list -->
 			<h2>Courses</h2>
+			<div class="toolbar">
+				<div class="grow">
+					<PixelInput placeholder="Search courses by name or category…" bind:value={courseSearch} ariaLabel="Search courses" />
+				</div>
+				<div class="toolbar__filter">
+					<Select
+						label="Category"
+						value={categoryFilter}
+						options={categoryFilterOptions}
+						onchange={(e) => (categoryFilter = (e.target as HTMLSelectElement).value)}
+					/>
+				</div>
+			</div>
 			{#if $loading && $courses.length === 0}
 				<p class="hint">Loading…</p>
 			{:else if $courses.length === 0}
@@ -648,23 +777,34 @@
 				{:else}
 					<p class="hint">No courses yet — create your first draft above.</p>
 				{/if}
+			{:else if visibleCourses.length === 0}
+				<p class="hint">No courses match your search/filter.</p>
 			{:else}
 				<ul class="list">
-					{#each $courses as course, ci (course.id)}
+					{#each visibleCourses as course, ci (course.id)}
 						<li class="item item--{course.status}">
 							<div class="item__main">
 								<Badge variant={STATUS_VARIANT[course.status]} size="sm">{course.status}</Badge>
 								<span class="item__title">{course.title}</span>
 								<span class="item__meta">{course.level} · {course.lessonCount} lessons</span>
+								<span class="item__cat">{course.category ? `${course.category.icon} ${course.category.name}` : '— uncategorized'}</span>
 							</div>
 							<div class="item__actions">
 								<span class="item__reorder">
-									<PixelButton variant="ghost" size="sm" ariaLabel="Move course up" disabled={$busy || ci === 0} onclick={() => vm.moveCourse(course.slug, 'up')}>
+									<PixelButton variant="ghost" size="sm" ariaLabel="Move course up" disabled={$busy || filtering || ci === 0} onclick={() => vm.moveCourse(course.slug, 'up')}>
 										▲
 									</PixelButton>
-									<PixelButton variant="ghost" size="sm" ariaLabel="Move course down" disabled={$busy || ci === $courses.length - 1} onclick={() => vm.moveCourse(course.slug, 'down')}>
+									<PixelButton variant="ghost" size="sm" ariaLabel="Move course down" disabled={$busy || filtering || ci === visibleCourses.length - 1} onclick={() => vm.moveCourse(course.slug, 'down')}>
 										▼
 									</PixelButton>
+								</span>
+								<span class="item__assign">
+									<Select
+										value={course.category?.id ?? ''}
+										options={categoryAssignOptions}
+										onchange={(e) =>
+											vm.assignCategory(course.slug, (e.target as HTMLSelectElement).value || null)}
+									/>
 								</span>
 								<PixelButton variant="outline" size="sm" disabled={$busy} onclick={() => vm.openCourse(course.slug)}>
 									Edit
@@ -820,6 +960,54 @@
 	.item__meta {
 		font-size: 0.72rem;
 		color: #6b7280;
+	}
+	.item__cat {
+		font-size: 0.72rem;
+		color: #6d28d9;
+		font-weight: 600;
+	}
+	.item__assign {
+		min-width: 150px;
+	}
+	/* Search + category filter toolbar above the course list. */
+	.toolbar {
+		display: flex;
+		gap: 0.6rem;
+		align-items: flex-end;
+		flex-wrap: wrap;
+		margin-bottom: 0.6rem;
+	}
+	.toolbar__filter {
+		min-width: 180px;
+	}
+	/* Category management list. */
+	.cat-list {
+		list-style: none;
+		margin: 0 0 0.6rem;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+	}
+	.cat {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		padding: 0.3rem 0.5rem;
+		border: 1px solid #e5e7eb;
+		border-radius: 6px;
+	}
+	.cat__name {
+		font-weight: 600;
+	}
+	.cat__slug {
+		font-size: 0.72rem;
+		color: #9ca3af;
+		margin-right: auto;
+	}
+	.cat-icon {
+		width: 70px;
+		flex-shrink: 0;
 	}
 	.item__actions {
 		display: flex;

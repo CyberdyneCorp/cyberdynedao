@@ -11,15 +11,19 @@
 
 import { get, writable, type Writable } from 'svelte/store';
 import {
+	fetchCategories as apiFetchCategories,
 	fetchCourse as apiFetchCourse,
 	fetchCourses as apiFetchCourses,
+	type Category,
 	type CourseDetail,
 	type CourseSummary
 } from '$lib/api/coursesApi';
 import {
 	AdminApiError,
 	addLesson as apiAddLesson,
+	createCategory as apiCreateCategory,
 	createCourse as apiCreateCourse,
+	deleteCategory as apiDeleteCategory,
 	deleteCourse as apiDeleteCourse,
 	deleteLesson as apiDeleteLesson,
 	deleteQuiz as apiDeleteQuiz,
@@ -27,6 +31,7 @@ import {
 	publishCourse as apiPublishCourse,
 	reorderCourses as apiReorderCourses,
 	reorderLessons as apiReorderLessons,
+	setCourseCategory as apiSetCourseCategory,
 	setCourseDeadline as apiSetCourseDeadline,
 	unpublishCourse as apiUnpublishCourse,
 	updateCourse as apiUpdateCourse,
@@ -34,6 +39,7 @@ import {
 	upsertQuiz as apiUpsertQuiz,
 	uploadFile as apiUploadFile,
 	type AddLessonInput,
+	type CreateCategoryInput,
 	type CreateCourseInput,
 	type EditorQuiz,
 	type UpdateCourseInput,
@@ -93,6 +99,10 @@ export interface AdminViewModelDeps {
 	getQuiz: typeof apiGetQuiz;
 	upsertQuiz: typeof apiUpsertQuiz;
 	deleteQuiz: typeof apiDeleteQuiz;
+	listCategories: typeof apiFetchCategories;
+	createCategory: typeof apiCreateCategory;
+	deleteCategory: typeof apiDeleteCategory;
+	setCourseCategory: typeof apiSetCourseCategory;
 }
 
 const defaultDeps: AdminViewModelDeps = {
@@ -112,11 +122,16 @@ const defaultDeps: AdminViewModelDeps = {
 	uploadFile: apiUploadFile,
 	getQuiz: apiGetQuiz,
 	upsertQuiz: apiUpsertQuiz,
-	deleteQuiz: apiDeleteQuiz
+	deleteQuiz: apiDeleteQuiz,
+	listCategories: apiFetchCategories,
+	createCategory: apiCreateCategory,
+	deleteCategory: apiDeleteCategory,
+	setCourseCategory: apiSetCourseCategory
 };
 
 export interface AdminViewModel {
 	courses: Writable<CourseSummary[]>;
+	categories: Writable<Category[]>;
 	selected: Writable<CourseDetail | null>;
 	loading: Writable<boolean>;
 	busy: Writable<boolean>;
@@ -125,6 +140,12 @@ export interface AdminViewModel {
 	notice: Writable<string | null>;
 	clearNotice: () => void;
 	load: () => Promise<void>;
+	/** Create a category, then refresh the list. */
+	makeCategory: (input: CreateCategoryInput) => Promise<boolean>;
+	/** Delete a category (its courses become uncategorized) + refresh. */
+	removeCategory: (categoryId: string) => Promise<boolean>;
+	/** Assign (or clear, with null) a course's category + refresh the list. */
+	assignCategory: (slug: string, categoryId: string | null) => Promise<boolean>;
 	create: (input: CreateCourseInput) => Promise<boolean>;
 	editCourse: (slug: string, input: UpdateCourseInput) => Promise<boolean>;
 	setDeadline: (slug: string, dueAt: string | null) => Promise<boolean>;
@@ -147,6 +168,7 @@ export interface AdminViewModel {
 
 export function createAdminViewModel(deps: AdminViewModelDeps = defaultDeps): AdminViewModel {
 	const courses = writable<CourseSummary[]>([]);
+	const categories = writable<Category[]>([]);
 	const selected = writable<CourseDetail | null>(null);
 	const loading = writable(false);
 	const busy = writable(false);
@@ -159,7 +181,14 @@ export function createAdminViewModel(deps: AdminViewModelDeps = defaultDeps): Ad
 		loading.set(true);
 		error.set(null);
 		try {
-			courses.set(await deps.listCourses());
+			// Categories load alongside courses; a category failure must not
+			// blank the catalogue, so it's tolerated independently.
+			const [courseList, categoryList] = await Promise.all([
+				deps.listCourses(),
+				deps.listCategories().catch(() => get(categories))
+			]);
+			courses.set(courseList);
+			categories.set(categoryList);
 		} catch (err) {
 			error.set(message(err));
 		} finally {
@@ -282,6 +311,7 @@ export function createAdminViewModel(deps: AdminViewModelDeps = defaultDeps): Ad
 
 	return {
 		courses,
+		categories,
 		selected,
 		loading,
 		busy,
@@ -289,6 +319,11 @@ export function createAdminViewModel(deps: AdminViewModelDeps = defaultDeps): Ad
 		notice,
 		clearNotice: () => notice.set(null),
 		load,
+		makeCategory: (input) => mutate(() => deps.createCategory(input), 'Category created'),
+		removeCategory: (categoryId) =>
+			mutate(() => deps.deleteCategory(categoryId), 'Category deleted'),
+		assignCategory: (slug, categoryId) =>
+			mutate(() => deps.setCourseCategory(slug, categoryId), 'Category updated'),
 		create: (input) => mutate(() => deps.createCourse(input), 'Draft created'),
 		// Course-level edits happen while a course is open: refresh the
 		// open detail AND the list (so the catalogue reflects the new

@@ -23,7 +23,8 @@ const draft: CourseSummary = {
 	publishedAt: null,
 	dueAt: null,
 	deadlineStatus: 'none',
-	daysRemaining: null
+	daysRemaining: null,
+	category: null
 };
 
 const detail: CourseDetail = { ...draft, lessons: [] };
@@ -74,6 +75,12 @@ function fakeDeps(over: Partial<AdminViewModelDeps> = {}): AdminViewModelDeps {
 			.fn()
 			.mockResolvedValue({ id: 'q-1', lessonId: 'l-1', passingScore: 70, questions: [] }),
 		deleteQuiz: vi.fn().mockResolvedValue(undefined),
+		listCategories: vi.fn().mockResolvedValue([]),
+		createCategory: vi
+			.fn()
+			.mockResolvedValue({ id: 'cat-1', slug: 'robotics', name: 'Robotics', icon: '🤖', sortOrder: 0 }),
+		deleteCategory: vi.fn().mockResolvedValue(undefined),
+		setCourseCategory: vi.fn().mockResolvedValue(detail),
 		...over
 	};
 }
@@ -104,6 +111,52 @@ describe('adminViewModel — load', () => {
 		expect(get(vm.courses)).toEqual([]);
 		expect(get(vm.loading)).toBe(false);
 		expect(get(vm.error)).toBeNull();
+	});
+
+	it('loads categories alongside courses', async () => {
+		const cats = [{ id: 'cat-1', slug: 'robotics', name: 'Robotics', icon: '🤖', sortOrder: 0 }];
+		const vm = createAdminViewModel(
+			fakeDeps({ listCategories: vi.fn().mockResolvedValue(cats) })
+		);
+		await vm.load();
+		expect(get(vm.categories)).toEqual(cats);
+	});
+
+	it('a category load failure does not blank the catalogue', async () => {
+		const vm = createAdminViewModel(
+			fakeDeps({ listCategories: vi.fn().mockRejectedValue(new Error('nope')) })
+		);
+		await vm.load();
+		expect(get(vm.courses)).toEqual([draft]); // courses still load
+		expect(get(vm.categories)).toEqual([]);
+	});
+});
+
+describe('adminViewModel — categories', () => {
+	it('makeCategory creates then reloads', async () => {
+		const deps = fakeDeps();
+		const vm = createAdminViewModel(deps);
+		const ok = await vm.makeCategory({ name: 'Robotics' });
+		expect(ok).toBe(true);
+		expect(deps.createCategory).toHaveBeenCalledWith({ name: 'Robotics' });
+		expect(deps.listCourses).toHaveBeenCalled(); // reloaded after mutation
+	});
+
+	it('removeCategory deletes then reloads', async () => {
+		const deps = fakeDeps();
+		const vm = createAdminViewModel(deps);
+		await vm.removeCategory('cat-1');
+		expect(deps.deleteCategory).toHaveBeenCalledWith('cat-1');
+		expect(deps.listCourses).toHaveBeenCalled();
+	});
+
+	it('assignCategory assigns (and clears with null) then reloads', async () => {
+		const deps = fakeDeps();
+		const vm = createAdminViewModel(deps);
+		await vm.assignCategory('solidity-101', 'cat-1');
+		expect(deps.setCourseCategory).toHaveBeenCalledWith('solidity-101', 'cat-1');
+		await vm.assignCategory('solidity-101', null);
+		expect(deps.setCourseCategory).toHaveBeenCalledWith('solidity-101', null);
 	});
 });
 

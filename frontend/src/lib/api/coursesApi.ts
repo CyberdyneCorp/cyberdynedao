@@ -37,6 +37,14 @@ export interface CourseLesson {
 	duration: string | null;
 }
 
+export interface Category {
+	id: string;
+	slug: string;
+	name: string;
+	icon: string;
+	sortOrder: number;
+}
+
 export interface CourseSummary {
 	id: string;
 	slug: string;
@@ -52,6 +60,8 @@ export interface CourseSummary {
 	dueAt: string | null;
 	deadlineStatus: DeadlineStatus;
 	daysRemaining: number | null;
+	/** Assigned category, or null when uncategorized. */
+	category: Category | null;
 }
 
 export interface CourseDetail extends CourseSummary {
@@ -238,6 +248,10 @@ export function fetchCourses(level?: CourseLevel): Promise<CourseSummary[]> {
 
 export function fetchCourse(slug: string): Promise<CourseDetail> {
 	return getJson<CourseDetail>(`/api/v1/courses/${enc(slug)}`);
+}
+
+export function fetchCategories(): Promise<Category[]> {
+	return getJson<Category[]>('/api/v1/categories');
 }
 
 // ── Progress (me) ─────────────────────────────────────────────────────
