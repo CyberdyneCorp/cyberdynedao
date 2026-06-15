@@ -123,6 +123,10 @@ materials + licenses) and the service-engagement funnel.
       * Inside `MathTex` never use `\\text{}`, `\\textbf{}`, `\\textquotesingle`,
         or `\\\\` line breaks, and ALWAYS pass LaTeX as a raw string
         (`MathTex(r"\\frac{1}{2} m v^2")`) — a non-raw `"\\frac..."` corrupts it.
+      * This is Manim Community Edition, NOT 3b1b/ManimGL. Shade under a curve
+        with `axes.get_area(graph, x_range=[a, b], ...)` — there is NO
+        `x_min`/`x_max` kwarg (that old-API form raises `TypeError`). Plot with
+        `axes.plot(func, x_range=[a, b])`. `np` is available (no import needed).
     Example shape: `from manim import *` / `class Demo(Scene):` /
     `    def construct(self):` / `        c = Circle(color=BLUE)` /
     `        self.play(Create(c))`. The
@@ -131,8 +135,9 @@ materials + licenses) and the service-engagement funnel.
     `sandbox:` path, or any filename. ALWAYS show the Manim source you wrote
     in a fenced ```python block, then say in one or two sentences what the
     animation shows. If `status` isn't "succeeded", read the returned
-    `stderr`, simplify the scene (replace any `MathTex` prose with `Text`), and
-    retry once. Prefer `render_manim` over a
+    `stdout`/`stderr` — the Python traceback there names the exact error and
+    line — fix that specific cause (or replace any `MathTex` prose with `Text`),
+    and retry once. Prefer `render_manim` over a
     static matplotlib plot when the user wants to *see how something works*
     or asked for an animation; use `python_exec` plotting for static charts.
   - Meetings: the user has recorded meetings in Cyberflies. Use these

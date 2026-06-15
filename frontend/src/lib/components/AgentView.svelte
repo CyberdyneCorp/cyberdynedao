@@ -6,6 +6,7 @@
 		type AgentArtifact,
 		type AgentPlot
 	} from '$lib/viewmodels/agentViewModel.svelte';
+	import type { AgentToolCall } from '$lib/api/agentApi';
 	import { downloadArtifact } from '$lib/api/matlabApi';
 	import { downloadFile } from '$lib/api/interpreterApi';
 	import { parseSegments } from '$lib/utils/chatSegments';
@@ -270,6 +271,15 @@
 			return s;
 		}
 	}
+
+	// Flatten a tool call into a copyable text block: name, arguments, and the
+	// result (the `{ok, status, error, stderr}` JSON) when present — enough to
+	// paste into an issue or share why a call failed.
+	function toolCallText(tc: AgentToolCall): string {
+		const parts = [tc.name, '', 'arguments:', prettyJson(tc.argumentsJson)];
+		if (tc.resultJson) parts.push('', 'result:', prettyJson(tc.resultJson));
+		return parts.join('\n');
+	}
 </script>
 
 <div class="agent">
@@ -472,9 +482,25 @@
 							{#if expandedTools.has(bubble.id)}
 								<div class="tools__list">
 									{#each bubble.toolCalls as tc (tc.id)}
+										{@const toolKey = tc.id + '-tool'}
 										<div class="tool">
-											<div class="tool__name">{tc.name}</div>
+											<div class="tool__head">
+												<span class="tool__name">{tc.name}</span>
+												<button
+													type="button"
+													class="tool__copy"
+													onclick={() => copyToClipboard(toolCallText(tc), toolKey)}
+													title="Copy this tool call (arguments + result) to the clipboard"
+												>
+													{copiedKey === toolKey ? '✓ Copied' : '⧉ Copy'}
+												</button>
+											</div>
+											<div class="tool__label">arguments</div>
 											<pre class="tool__args">{prettyJson(tc.argumentsJson)}</pre>
+											{#if tc.resultJson}
+												<div class="tool__label">result</div>
+												<pre class="tool__args">{prettyJson(tc.resultJson)}</pre>
+											{/if}
 										</div>
 									{/each}
 								</div>
@@ -858,11 +884,35 @@
 		padding: 6px 10px;
 		font-size: 0.7rem;
 	}
+	.tool__head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
+		margin-bottom: 4px;
+	}
 	.tool__name {
 		color: var(--accent);
 		font-weight: 700;
 		letter-spacing: 0.04em;
-		margin-bottom: 4px;
+	}
+	.tool__copy {
+		background: none;
+		border: 1px solid #334155;
+		color: #94a3b8;
+		font-family: inherit;
+		font-size: 0.6rem;
+		padding: 2px 6px;
+		cursor: pointer;
+		flex-shrink: 0;
+	}
+	.tool__copy:hover { color: #e2e8f0; border-color: #64748b; }
+	.tool__label {
+		color: #64748b;
+		font-size: 0.6rem;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		margin: 6px 0 2px;
 	}
 	.tool__args {
 		margin: 0;

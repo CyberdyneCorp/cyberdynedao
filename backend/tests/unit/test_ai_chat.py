@@ -494,8 +494,16 @@ class _FakePython:
             status=self._manim_status,
             artifacts=artifacts,
             session_id=session_id,
-            error=None if self._manim_status == "succeeded" else "boom",
-            stderr="" if self._manim_status == "succeeded" else "Traceback: NameError",
+            error=None if self._manim_status == "succeeded" else "Manim render failed",
+            # The real renderer merges stderr into stdout, so a failed scene's
+            # traceback arrives in stdout while stderr stays empty.
+            stdout=""
+            if self._manim_status == "succeeded"
+            else (
+                "Traceback (most recent call last):\n"
+                "TypeError: get_area() got an unexpected keyword argument 'x_min'"
+            ),
+            stderr="",
         )
 
 
@@ -1246,7 +1254,11 @@ class TestToolDispatcher:
         assert python.created == 1
         assert python.calls[0]["session_id"] == python.manim_calls[0]["session_id"]
 
-    async def test_render_manim_surfaces_failure_with_stderr(self) -> None:
+    async def test_render_manim_surfaces_failure_traceback(self) -> None:
+        # Regression: the renderer merges stderr into stdout, so a failed scene's
+        # traceback lands in stdout — which the tool used to drop, leaving the
+        # model with only the generic `error`. It must forward stdout so the
+        # model can see the real cause (here, a bad get_area kwarg) and fix it.
         python = _FakePython(manim_status="failed")
         ctx = _build_ctx(python=python, bearer="tok")
         result = await ToolDispatcher(ctx).dispatch(
@@ -1261,7 +1273,8 @@ class TestToolDispatcher:
         assert data["ok"] is False
         assert data["status"] == "failed"
         assert data["has_figure"] is False
-        assert "NameError" in data["stderr"]
+        assert "TypeError" in data["stdout"]
+        assert "get_area" in data["stdout"]
 
     async def test_render_manim_rejects_empty_code_and_scene(self) -> None:
         ctx = _build_ctx(python=_FakePython(), bearer="t")

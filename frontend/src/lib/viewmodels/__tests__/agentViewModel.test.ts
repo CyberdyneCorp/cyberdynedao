@@ -212,6 +212,49 @@ describe('agentViewModel', () => {
 		expect(assistant.artifacts).toHaveLength(0);
 	});
 
+	it('attaches the tool result JSON to its tool call so the UI can show why it failed', async () => {
+		// Regression: the tool result (status/error/stderr) used to be mined only
+		// for figures/files and otherwise discarded, so a failed render_manim
+		// surfaced no reason in the UI. The result must ride along on the call.
+		sessionStorage.setItem(
+			'cyberdyne.agent.v1',
+			JSON.stringify({ sessionId: 's-err', bubbles: [] })
+		);
+		const resultJson = JSON.stringify({
+			ok: false,
+			status: 'failed',
+			scene: 'IntegralOfSine',
+			error: 'Manim render failed',
+			stderr: 'Traceback ... NameError: name BLUE is not defined'
+		});
+		vi.spyOn(agentApi, 'getHistory').mockResolvedValue({
+			sessionId: 's-err',
+			messages: [
+				{
+					id: 'u1', sessionId: 's-err', role: 'user', content: 'animate the integral',
+					toolCalls: [], toolCallId: null, tokensIn: 0, tokensOut: 0, model: null,
+					createdAt: '2026-06-15T09:00:00Z'
+				},
+				{
+					id: 'a1', sessionId: 's-err', role: 'assistant', content: 'Let me render that.',
+					toolCalls: [{ id: 'call_1', name: 'render_manim', argumentsJson: '{"scene":"IntegralOfSine"}' }],
+					toolCallId: null, tokensIn: 0, tokensOut: 0, model: 'gpt-4o-mini',
+					createdAt: '2026-06-15T09:00:01Z'
+				},
+				{
+					id: 't1', sessionId: 's-err', role: 'tool', content: resultJson,
+					toolCalls: [], toolCallId: 'call_1', tokensIn: 0, tokensOut: 0, model: null,
+					createdAt: '2026-06-15T09:00:02Z'
+				}
+			]
+		});
+		const vm = createAgentVM();
+		await vm.bootstrap();
+		const assistant = vm.bubbles[1];
+		expect(assistant.toolCalls).toHaveLength(1);
+		expect(assistant.toolCalls[0].resultJson).toBe(resultJson);
+	});
+
 	it('attaches python_exec file artifacts (download links) to the assistant bubble, skipping images', async () => {
 		sessionStorage.setItem(
 			'cyberdyne.agent.v1',

@@ -372,8 +372,14 @@ CYBERDYNE_TOOLS: list[ToolSchema] = [
             "• Use Manim Community names: Create, Write, FadeIn, FadeOut, Transform, "
             "GrowArrow, and obj.animate.<method>() for moves/scales. Position with "
             ".shift(), .next_to(), .to_edge().\n"
-            "• Keep it to ~6-8 self.play calls. If a render comes back failed, simplify "
-            "(replace any MathTex prose with Text) and retry once."
+            "• This is Manim Community Edition, NOT 3b1b/ManimGL — the APIs differ. "
+            "Shade under a curve with axes.get_area(graph, x_range=[a, b], color=..., "
+            "opacity=...); there is NO x_min/x_max kwarg (that's the old API and "
+            "raises TypeError). Plot with axes.plot(func, x_range=[a, b]). `np` is "
+            "available without importing numpy.\n"
+            "• Keep it to ~6-8 self.play calls. If a render comes back failed, read the "
+            "returned stdout/stderr (the Python traceback names the exact error), fix "
+            "that line — or replace any MathTex prose with Text — and retry once."
         ),
         parameters={
             "type": "object",
@@ -1023,7 +1029,11 @@ class ToolDispatcher:
                 "scene": res.scene,
                 "error": res.error,
                 # Renderer logs can be long; the tail is enough for the LLM to
-                # debug a failed scene without bloating the next round.
+                # debug a failed scene without bloating the next round. The
+                # renderer merges stderr into stdout, so a failed scene's Python
+                # traceback (e.g. a bad get_area kwarg) lands in stdout — forward
+                # both so the model can see the real cause, not just `error`.
+                "stdout": res.stdout[-1500:] if res.stdout else "",
                 "stderr": res.stderr[-1500:] if res.stderr else "",
                 "artifacts": list(res.artifacts),
                 "figures": figures,

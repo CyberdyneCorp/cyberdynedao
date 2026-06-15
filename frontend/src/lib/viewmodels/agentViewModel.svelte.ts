@@ -254,6 +254,13 @@ function bubblesFromMessages(messages: AgentMessage[]): AgentBubble[] {
 			// pending for the final text bubble.
 			if (m.content.trim() === '') continue;
 			const bubble = toBubble(m);
+			// Attach each tool call's result (the `{ok, status, error, stderr}`
+			// JSON) from its matching tool message so the UI can show and copy
+			// why a call failed, not just what was called.
+			bubble.toolCalls = bubble.toolCalls.map((tc) => {
+				const res = toolResultsById.get(tc.id);
+				return res ? { ...tc, resultJson: res.content } : tc;
+			});
 			bubble.plots = pendingPlots;
 			bubble.artifacts = dedupeArtifacts(pendingArtifacts);
 			pendingPlots = [];

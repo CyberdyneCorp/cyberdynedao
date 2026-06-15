@@ -20,6 +20,12 @@ export interface AgentToolCall {
 	id: string;
 	name: string;
 	argumentsJson: string;
+	/** The tool's result content (a JSON string: `{ok, status, error, stderr,
+	 *  ...}`). Absent on the live wire shape — the backend returns results as
+	 *  separate `tool`-role messages — so the view model attaches it from the
+	 *  matching result message once history is (re)loaded. Lets the UI show and
+	 *  copy *why* a tool call failed, not just what was called. */
+	resultJson?: string;
 }
 
 export interface AgentMessage {
