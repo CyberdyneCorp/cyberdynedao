@@ -76,9 +76,22 @@ function fakeDeps(over: Partial<AdminViewModelDeps> = {}): AdminViewModelDeps {
 			.mockResolvedValue({ id: 'q-1', lessonId: 'l-1', passingScore: 70, questions: [] }),
 		deleteQuiz: vi.fn().mockResolvedValue(undefined),
 		listCategories: vi.fn().mockResolvedValue([]),
-		createCategory: vi
-			.fn()
-			.mockResolvedValue({ id: 'cat-1', slug: 'robotics', name: 'Robotics', icon: '🤖', sortOrder: 0 }),
+		createCategory: vi.fn().mockResolvedValue({
+			id: 'cat-1',
+			slug: 'robotics',
+			name: 'Robotics',
+			icon: '🤖',
+			sortOrder: 0,
+			parentId: null
+		}),
+		updateCategory: vi.fn().mockResolvedValue({
+			id: 'cat-1',
+			slug: 'robotics',
+			name: 'Robotics',
+			icon: '🤖',
+			sortOrder: 0,
+			parentId: null
+		}),
 		deleteCategory: vi.fn().mockResolvedValue(undefined),
 		setCourseCategory: vi.fn().mockResolvedValue(detail),
 		...over
@@ -114,7 +127,9 @@ describe('adminViewModel — load', () => {
 	});
 
 	it('loads categories alongside courses', async () => {
-		const cats = [{ id: 'cat-1', slug: 'robotics', name: 'Robotics', icon: '🤖', sortOrder: 0 }];
+		const cats = [
+			{ id: 'cat-1', slug: 'robotics', name: 'Robotics', icon: '🤖', sortOrder: 0, parentId: null }
+		];
 		const vm = createAdminViewModel(
 			fakeDeps({ listCategories: vi.fn().mockResolvedValue(cats) })
 		);
@@ -140,6 +155,14 @@ describe('adminViewModel — categories', () => {
 		expect(ok).toBe(true);
 		expect(deps.createCategory).toHaveBeenCalledWith({ name: 'Robotics' });
 		expect(deps.listCourses).toHaveBeenCalled(); // reloaded after mutation
+	});
+
+	it('editCategory updates (rename / reparent) then reloads', async () => {
+		const deps = fakeDeps();
+		const vm = createAdminViewModel(deps);
+		await vm.editCategory('cat-1', { name: 'Robots', parentId: 'grp-1' });
+		expect(deps.updateCategory).toHaveBeenCalledWith('cat-1', { name: 'Robots', parentId: 'grp-1' });
+		expect(deps.listCourses).toHaveBeenCalled();
 	});
 
 	it('removeCategory deletes then reloads', async () => {

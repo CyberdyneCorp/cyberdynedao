@@ -43,6 +43,8 @@ export interface Category {
 	name: string;
 	icon: string;
 	sortOrder: number;
+	/** Parent group id, or null for a top-level group. */
+	parentId: string | null;
 }
 
 export interface CourseSummary {

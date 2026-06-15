@@ -193,10 +193,24 @@ export interface CreateCategoryInput {
 	slug?: string;
 	icon?: string;
 	sortOrder?: number;
+	/** Optional parent group (must be a top-level category). */
+	parentId?: string | null;
+}
+
+export interface UpdateCategoryInput {
+	name?: string;
+	icon?: string;
+	sortOrder?: number;
+	/** Include (even as null) to reparent; null = top-level. */
+	parentId?: string | null;
 }
 
 export function createCategory(input: CreateCategoryInput): Promise<Category> {
 	return sendJson<Category>('POST', '/api/v1/admin/categories', input);
+}
+
+export function updateCategory(categoryId: string, input: UpdateCategoryInput): Promise<Category> {
+	return sendJson<Category>('PATCH', `/api/v1/admin/categories/${enc(categoryId)}`, input);
 }
 
 export function deleteCategory(categoryId: string): Promise<void> {

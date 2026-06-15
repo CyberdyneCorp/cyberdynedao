@@ -5,7 +5,9 @@
 	import {
 		courseCertificatePdfUrl,
 		courseCodeLanguage,
+		fetchCategories,
 		fetchMyCoursesProgress,
+		type Category,
 		type CourseLevel,
 		type CourseSummary,
 		type DeadlineStatus,
@@ -57,8 +59,14 @@
 		}
 	}
 
+	// Categories drive the sidebar tree (groups → sub-categories). A fetch
+	// failure falls back to the built-in hardcoded structure below.
+	let apiCategories = $state<Category[]>([]);
 	onMount(() => {
 		void vm.loadCatalogue();
+		void fetchCategories()
+			.then((c) => (apiCategories = c))
+			.catch(() => {});
 	});
 
 	// Load the learner's dashboard + recommendations once auth is ready.
@@ -150,9 +158,12 @@
 	];
 	const levelRank: Record<CourseLevel, number> = { Beginner: 0, Intermediate: 1, Advanced: 2 };
 
-	// Topic grouping — derived from the slug (no per-course category field yet).
+	// Topic grouping. The structure is data-driven from the categories API when
+	// available (see the $derived topicOrder/topicGroups/topicMeta below); these
+	// hardcoded FALLBACK_* values are used until categories load (or if the
+	// endpoint fails), and the per-course mapping still falls back to the slug.
 	let groupByTopic = $state(true);
-	const topicOrder = [
+	const FALLBACK_topicOrder = [
 		'Foundations',
 		'Languages',
 		'Databases',
@@ -253,7 +264,7 @@
 
 	// ── Category left-menu (mirrors the Blog view's CATEGORIES sidebar) ──
 	// Icon + accent colour per topic so each category gets a coloured edge.
-	const topicMeta: Record<string, { icon: string; accent: string; accentDark: string }> = {
+	const FALLBACK_topicMeta: Record<string, { icon: string; accent: string; accentDark: string }> = {
 		Foundations: { icon: '🎯', accent: '#22c55e', accentDark: '#15803d' },
 		Languages: { icon: '💻', accent: '#3b82f6', accentDark: '#1d4ed8' },
 		Databases: { icon: '🗄️', accent: '#a855f7', accentDark: '#7e22ce' },
@@ -291,7 +302,7 @@
 		accentDark: string;
 		topics: string[];
 	};
-	const topicGroups: TopicGroup[] = [
+	const FALLBACK_topicGroups: TopicGroup[] = [
 		{
 			id: 'group:programming',
 			key: 'group.Programming',
@@ -351,21 +362,107 @@
 			topics: ['Blockchain']
 		}
 	];
+	// Accent palette for custom (admin-created) categories that have no built-in
+	// colour; built-in names keep their FALLBACK_topicMeta accent.
+	const ACCENT_PALETTE = [
+		{ accent: '#2563eb', accentDark: '#1e40af' },
+		{ accent: '#16a34a', accentDark: '#15803d' },
+		{ accent: '#9333ea', accentDark: '#6b21a8' },
+		{ accent: '#ea580c', accentDark: '#9a3412' },
+		{ accent: '#0d9488', accentDark: '#115e59' },
+		{ accent: '#db2777', accentDark: '#9d174d' }
+	];
+
+	// ── Data-driven topic structure (falls back to the hardcoded set) ──
+	const usingApiCategories = $derived(apiCategories.length > 0);
+	const byOrder = (a: { sortOrder: number }, b: { sortOrder: number }) =>
+		a.sortOrder - b.sortOrder;
+
+	const topicMeta = $derived.by(() => {
+		if (!usingApiCategories) return FALLBACK_topicMeta;
+		const meta: Record<string, { icon: string; accent: string; accentDark: string }> = {
+			...FALLBACK_topicMeta
+		};
+		apiCategories.forEach((c, i) => {
+			const fb = FALLBACK_topicMeta[c.name];
+			const pal = ACCENT_PALETTE[i % ACCENT_PALETTE.length];
+			meta[c.name] = {
+				icon: c.icon || fb?.icon || '📦',
+				accent: fb?.accent ?? pal.accent,
+				accentDark: fb?.accentDark ?? pal.accentDark
+			};
+		});
+		return meta;
+	});
+
+	const topicGroups = $derived.by<TopicGroup[]>(() => {
+		if (!usingApiCategories) return FALLBACK_topicGroups;
+		const tops = apiCategories.filter((c) => c.parentId === null).slice().sort(byOrder);
+		return tops.map((top) => {
+			const m = topicMeta[top.name] ?? fallbackTopicMeta;
+			const kids = apiCategories
+				.filter((c) => c.parentId === top.id)
+				.slice()
+				.sort(byOrder)
+				.map((c) => c.name);
+			return {
+				id: `group:${top.slug}`,
+				key: `group.${top.name}`,
+				icon: top.icon || m.icon,
+				accent: m.accent,
+				accentDark: m.accentDark,
+				// A childless top-level category is a single-topic "group" of itself.
+				topics: kids.length ? kids : [top.name]
+			};
+		});
+	});
+
+	const topicOrder = $derived.by<string[]>(() => {
+		if (!usingApiCategories) return FALLBACK_topicOrder;
+		const order: string[] = [];
+		for (const top of apiCategories.filter((c) => c.parentId === null).slice().sort(byOrder)) {
+			const kids = apiCategories.filter((c) => c.parentId === top.id).slice().sort(byOrder);
+			if (kids.length) kids.forEach((k) => order.push(k.name));
+			else order.push(top.name);
+		}
+		order.push('Other');
+		return order;
+	});
+
+	// i18n label with graceful fallback to the raw (custom) name when no key.
+	function topicLabel(tt: (k: string) => string, name: string): string {
+		const key = `topic.${name}`;
+		const v = tt(key);
+		return v === key ? name : v;
+	}
+	function groupLabel(tt: (k: string) => string, key: string): string {
+		const full = `topic.${key}`;
+		const v = tt(full);
+		return v === full ? key.replace(/^group\./, '') : v;
+	}
+
 	// Topics covered by a group — anything else (e.g. 'Other') falls through to a
 	// flat fallback row rendered after the groups.
-	const groupedTopicSet = new Set(topicGroups.flatMap((g) => g.topics));
-	const ungroupedTopics = topicOrder.filter((t) => !groupedTopicSet.has(t));
+	const groupedTopicSet = $derived(new Set(topicGroups.flatMap((g) => g.topics)));
+	const ungroupedTopics = $derived(topicOrder.filter((t) => !groupedTopicSet.has(t)));
 
 	// Selected category in the sidebar: 'all', a topic name, or a group id.
 	let selectedTopic = $state<string>('all');
 
 	// Which multi-topic groups are expanded. Default-expand the first two
-	// multi-topic groups (Programming, Software & Systems).
-	const defaultExpanded = topicGroups
-		.filter((g) => g.topics.length > 1)
-		.slice(0, 2)
-		.map((g) => g.id);
-	let expandedGroups = $state<Set<string>>(new Set(defaultExpanded));
+	// multi-topic groups, seeded once the (data-driven) groups are known.
+	let expandedGroups = $state<Set<string>>(new Set());
+	let expandSeeded = false;
+	$effect(() => {
+		if (expandSeeded || topicGroups.length === 0) return;
+		expandSeeded = true;
+		expandedGroups = new Set(
+			topicGroups
+				.filter((g) => g.topics.length > 1)
+				.slice(0, 2)
+				.map((g) => g.id)
+		);
+	});
 
 	// Expansion is driven solely by the toggle (the chevron), so a group can
 	// always be collapsed — even while it's the selected filter. Selecting a
@@ -478,8 +575,8 @@
 	// Human label for the current selection (for the empty-state message).
 	const selectedTopicLabel = $derived.by(() => {
 		if (selectedTopic === 'all') return '';
-		if (selectedGroup) return $t(`topic.${selectedGroup.key}`);
-		return $t(`topic.${selectedTopic}`);
+		if (selectedGroup) return groupLabel($t, selectedGroup.key);
+		return topicLabel($t, selectedTopic);
 	});
 
 	// ── Lesson focus mode ──
@@ -744,7 +841,7 @@
 										}}
 									>▸</span>
 									<span class="cat-btn__icon" aria-hidden="true">{group.icon}</span>
-									<span class="cat-btn__name">{$t(`topic.${group.key}`)}</span>
+									<span class="cat-btn__name">{groupLabel($t, group.key)}</span>
 									<Badge variant="neutral" size="sm">{group.count}</Badge>
 								</button>
 								{#if expanded}
@@ -757,7 +854,7 @@
 											onclick={() => (selectedTopic = sub.topic)}
 										>
 											<span class="cat-btn__icon" aria-hidden="true">{sub.icon}</span>
-											<span class="cat-btn__name">{$t(`topic.${sub.topic}`)}</span>
+											<span class="cat-btn__name">{topicLabel($t, sub.topic)}</span>
 											<Badge variant="neutral" size="sm">{sub.count}</Badge>
 										</button>
 									{/each}
@@ -773,7 +870,7 @@
 									onclick={() => (selectedTopic = sub.topic)}
 								>
 									<span class="cat-btn__icon" aria-hidden="true">{group.icon}</span>
-									<span class="cat-btn__name">{$t(`topic.${group.key}`)}</span>
+									<span class="cat-btn__name">{groupLabel($t, group.key)}</span>
 									<Badge variant="neutral" size="sm">{group.count}</Badge>
 								</button>
 							{/if}
@@ -789,7 +886,7 @@
 								onclick={() => (selectedTopic = cat.id)}
 							>
 								<span class="cat-btn__icon" aria-hidden="true">{cat.icon}</span>
-								<span class="cat-btn__name">{$t(`topic.${cat.id}`)}</span>
+								<span class="cat-btn__name">{topicLabel($t, cat.id)}</span>
 								<Badge variant="neutral" size="sm">{cat.count}</Badge>
 							</button>
 						{/each}
@@ -892,7 +989,7 @@
 				{#each groupedCourses as group (group.topic)}
 					<section class="topic">
 						<h3 class="topic__head">
-							{$t(`topic.${group.topic}`)} <span class="topic__count">{group.courses.length}</span>
+							{topicLabel($t, group.topic)} <span class="topic__count">{group.courses.length}</span>
 						</h3>
 						<ul class="catalogue">
 							{#each group.courses as course (course.id)}{@render courseCard(course)}{/each}

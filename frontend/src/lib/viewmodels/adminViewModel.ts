@@ -24,6 +24,7 @@ import {
 	createCategory as apiCreateCategory,
 	createCourse as apiCreateCourse,
 	deleteCategory as apiDeleteCategory,
+	updateCategory as apiUpdateCategory,
 	deleteCourse as apiDeleteCourse,
 	deleteLesson as apiDeleteLesson,
 	deleteQuiz as apiDeleteQuiz,
@@ -41,6 +42,7 @@ import {
 	type AddLessonInput,
 	type CreateCategoryInput,
 	type CreateCourseInput,
+	type UpdateCategoryInput,
 	type EditorQuiz,
 	type UpdateCourseInput,
 	type UpdateLessonInput,
@@ -101,6 +103,7 @@ export interface AdminViewModelDeps {
 	deleteQuiz: typeof apiDeleteQuiz;
 	listCategories: typeof apiFetchCategories;
 	createCategory: typeof apiCreateCategory;
+	updateCategory: typeof apiUpdateCategory;
 	deleteCategory: typeof apiDeleteCategory;
 	setCourseCategory: typeof apiSetCourseCategory;
 }
@@ -125,6 +128,7 @@ const defaultDeps: AdminViewModelDeps = {
 	deleteQuiz: apiDeleteQuiz,
 	listCategories: apiFetchCategories,
 	createCategory: apiCreateCategory,
+	updateCategory: apiUpdateCategory,
 	deleteCategory: apiDeleteCategory,
 	setCourseCategory: apiSetCourseCategory
 };
@@ -142,6 +146,8 @@ export interface AdminViewModel {
 	load: () => Promise<void>;
 	/** Create a category, then refresh the list. */
 	makeCategory: (input: CreateCategoryInput) => Promise<boolean>;
+	/** Edit a category (rename / icon / reparent) + refresh. */
+	editCategory: (categoryId: string, input: UpdateCategoryInput) => Promise<boolean>;
 	/** Delete a category (its courses become uncategorized) + refresh. */
 	removeCategory: (categoryId: string) => Promise<boolean>;
 	/** Assign (or clear, with null) a course's category + refresh the list. */
@@ -320,6 +326,8 @@ export function createAdminViewModel(deps: AdminViewModelDeps = defaultDeps): Ad
 		clearNotice: () => notice.set(null),
 		load,
 		makeCategory: (input) => mutate(() => deps.createCategory(input), 'Category created'),
+		editCategory: (categoryId, input) =>
+			mutate(() => deps.updateCategory(categoryId, input), 'Category updated'),
 		removeCategory: (categoryId) =>
 			mutate(() => deps.deleteCategory(categoryId), 'Category deleted'),
 		assignCategory: (slug, categoryId) =>

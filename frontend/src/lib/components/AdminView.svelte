@@ -60,7 +60,27 @@
 	let categoryFilter = $state<string>('all'); // 'all' | 'uncategorized' | <category slug>
 	let newCategoryName = $state('');
 	let newCategoryIcon = $state('');
+	let newCategoryParent = $state(''); // '' = top-level group
 	let confirmingCategoryDelete = $state<string | null>(null);
+
+	// Top-level categories are the only valid parents (max one level of nesting).
+	const parentOptions = $derived([
+		{ value: '', label: '— Top-level group' },
+		...$categories
+			.filter((c) => c.parentId === null)
+			.map((c) => ({ value: c.id, label: `${c.icon} ${c.name}`.trim() }))
+	]);
+
+	// Categories as a group → sub-categories tree for the admin panel.
+	const categoryTree = $derived.by(() => {
+		const byOrder = (a: { sortOrder: number }, b: { sortOrder: number }) =>
+			a.sortOrder - b.sortOrder;
+		const tops = $categories.filter((c) => c.parentId === null).sort(byOrder);
+		return tops.map((top) => ({
+			top,
+			children: $categories.filter((c) => c.parentId === top.id).sort(byOrder)
+		}));
+	});
 
 	// Filter dropdown options: All / Uncategorized / each category.
 	const categoryFilterOptions = $derived([
@@ -99,10 +119,15 @@
 	async function createCategory(): Promise<void> {
 		const name = newCategoryName.trim();
 		if (!name) return;
-		const ok = await vm.makeCategory({ name, icon: newCategoryIcon.trim() || undefined });
+		const ok = await vm.makeCategory({
+			name,
+			icon: newCategoryIcon.trim() || undefined,
+			parentId: newCategoryParent || null
+		});
 		if (ok) {
 			newCategoryName = '';
 			newCategoryIcon = '';
+			newCategoryParent = '';
 		}
 	}
 
@@ -687,48 +712,61 @@
 			</form>
 
 			<!-- Categories -->
+			{#snippet categoryRow(cat: (typeof $categories)[number], child: boolean)}
+				<li class="cat" class:cat--child={child}>
+					<span class="cat__name">{cat.icon} {cat.name}</span>
+					<span class="cat__slug">{cat.slug}</span>
+					<span class="cat__parent">
+						<Select
+							value={cat.parentId ?? ''}
+							options={parentOptions.filter((o) => o.value !== cat.id)}
+							onchange={(e) =>
+								vm.editCategory(cat.id, {
+									parentId: (e.target as HTMLSelectElement).value || null
+								})}
+						/>
+					</span>
+					{#if confirmingCategoryDelete === cat.id}
+						<PixelButton
+							variant="solid"
+							size="sm"
+							disabled={$busy}
+							onclick={async () => {
+								await vm.removeCategory(cat.id);
+								confirmingCategoryDelete = null;
+							}}
+						>
+							Confirm
+						</PixelButton>
+						<PixelButton variant="ghost" size="sm" onclick={() => (confirmingCategoryDelete = null)}>
+							Cancel
+						</PixelButton>
+					{:else}
+						<PixelButton
+							variant="ghost"
+							size="sm"
+							disabled={$busy}
+							onclick={() => (confirmingCategoryDelete = cat.id)}
+						>
+							Delete
+						</PixelButton>
+					{/if}
+				</li>
+			{/snippet}
 			<div class="new-course">
 				<h2>Categories</h2>
 				<p class="hint">
-					Categories group courses in the catalogue. Deleting one leaves its courses
-					uncategorized (it never deletes courses).
+					Categories group courses in the catalogue. A category can sit under a parent group
+					(one level). Deleting one leaves its courses uncategorized and promotes any
+					sub-categories to top level — it never deletes courses.
 				</p>
-				{#if $categories.length > 0}
+				{#if categoryTree.length > 0}
 					<ul class="cat-list">
-						{#each $categories as cat (cat.id)}
-							<li class="cat">
-								<span class="cat__name">{cat.icon} {cat.name}</span>
-								<span class="cat__slug">{cat.slug}</span>
-								{#if confirmingCategoryDelete === cat.id}
-									<PixelButton
-										variant="solid"
-										size="sm"
-										disabled={$busy}
-										onclick={async () => {
-											await vm.removeCategory(cat.id);
-											confirmingCategoryDelete = null;
-										}}
-									>
-										Confirm
-									</PixelButton>
-									<PixelButton
-										variant="ghost"
-										size="sm"
-										onclick={() => (confirmingCategoryDelete = null)}
-									>
-										Cancel
-									</PixelButton>
-								{:else}
-									<PixelButton
-										variant="ghost"
-										size="sm"
-										disabled={$busy}
-										onclick={() => (confirmingCategoryDelete = cat.id)}
-									>
-										Delete
-									</PixelButton>
-								{/if}
-							</li>
+						{#each categoryTree as node (node.top.id)}
+							{@render categoryRow(node.top, false)}
+							{#each node.children as child (child.id)}
+								{@render categoryRow(child, true)}
+							{/each}
 						{/each}
 					</ul>
 				{/if}
@@ -744,6 +782,14 @@
 					</div>
 					<div class="cat-icon">
 						<PixelInput placeholder="Icon" bind:value={newCategoryIcon} ariaLabel="Category icon (emoji)" />
+					</div>
+					<div class="toolbar__filter">
+						<Select
+							label="Parent group"
+							value={newCategoryParent}
+							options={parentOptions}
+							onchange={(e) => (newCategoryParent = (e.target as HTMLSelectElement).value)}
+						/>
 					</div>
 					<PixelButton type="submit" variant="solid" size="sm" disabled={$busy || !newCategoryName.trim()}>
 						Add category
@@ -1004,6 +1050,13 @@
 		font-size: 0.72rem;
 		color: #9ca3af;
 		margin-right: auto;
+	}
+	.cat--child {
+		margin-left: 1.4rem;
+		border-left: 3px solid #c7d2fe;
+	}
+	.cat__parent {
+		min-width: 160px;
 	}
 	.cat-icon {
 		width: 70px;
