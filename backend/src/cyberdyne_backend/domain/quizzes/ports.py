@@ -17,9 +17,12 @@ class QuizRepository(Protocol):
         ...
 
     async def upsert(self, quiz: Quiz) -> None:
-        """Insert or fully replace the quiz for ``quiz.lesson_id`` —
-        the quiz aggregate owns its questions and options, so a save
-        rewrites them wholesale."""
+        """Insert the quiz for ``quiz.lesson_id``, or reconcile it in place
+        if one already exists. The quiz aggregate owns its questions and
+        options, but they are matched to existing rows by position and
+        updated in place (not deleted and re-inserted) so dependent rows
+        keyed on their ids — e.g. quiz translations — survive a re-save.
+        The passed ``quiz`` is mutated to the persisted ids."""
         ...
 
     async def delete_by_lesson(self, lesson_id: UUID) -> None:

@@ -25,6 +25,10 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from cyberdyne_backend.adapters.outbound.persistence.content import models as _content  # noqa: F401
 from cyberdyne_backend.adapters.outbound.persistence.courses import models as courses_models
 from cyberdyne_backend.adapters.outbound.persistence.quizzes import models as _quizzes  # noqa: F401
+from cyberdyne_backend.adapters.outbound.persistence.quizzes.models import (
+    QuizOptionTranslationRow,
+    QuizQuestionTranslationRow,
+)
 from cyberdyne_backend.adapters.outbound.persistence.quizzes.repository import (
     SqlAlchemyQuizRepository,
 )
@@ -130,7 +134,8 @@ async def test_re_upsert_replaces_the_tree(fk_session: AsyncSession) -> None:
     repo = SqlAlchemyQuizRepository(fk_session)
     await UpsertQuiz(repo=repo).execute(lesson_id, _cmd())
 
-    # Second upsert must clear the old tree and re-insert without FK errors.
+    # Second upsert shrinks the tree (2 questions -> 1): the overlap is
+    # reconciled in place and the surplus question is dropped, no FK errors.
     await UpsertQuiz(repo=repo).execute(
         lesson_id,
         UpsertQuizCommand(
@@ -151,3 +156,53 @@ async def test_re_upsert_replaces_the_tree(fk_session: AsyncSession) -> None:
     assert stored is not None
     assert stored.passing_score == 80
     assert len(stored.questions) == 1
+
+
+async def test_re_upsert_preserves_quiz_translations(fk_session: AsyncSession) -> None:
+    """Regression: re-authoring an unchanged quiz must NOT wipe its
+    translations.
+
+    quiz_question_translations / quiz_option_translations CASCADE on the
+    question/option ids. The seeder re-authors quizzes on every boot, so a
+    delete + re-insert upsert cascade-erased every localized quiz on each
+    deploy — quizzes fell back to English. The fix reconciles the tree in
+    place (stable ids), so the translation rows below survive the re-upsert.
+    """
+    lesson_id = await _seed_quiz_lesson(fk_session)
+    repo = SqlAlchemyQuizRepository(fk_session)
+    await UpsertQuiz(repo=repo).execute(lesson_id, _cmd())
+
+    # Simulate the translate job: attach a pt-BR translation to the first
+    # question and its first option.
+    stored = await repo.get_by_lesson(lesson_id)
+    question = stored.questions[0]
+    option = question.options[0]
+    fk_session.add(
+        QuizQuestionTranslationRow(
+            id=uuid.uuid4(),
+            question_id=question.id,
+            language="pt-BR",
+            prompt="O que faz o apóstrofo?",
+            explanation="Transpõe.",
+            source_hash="hash-q",
+        )
+    )
+    fk_session.add(
+        QuizOptionTranslationRow(
+            id=uuid.uuid4(),
+            option_id=option.id,
+            language="pt-BR",
+            text="Transpõe a matriz",
+            source_hash="hash-o",
+        )
+    )
+    await fk_session.flush()
+
+    # Re-author the identical quiz, as seed_academy does on every boot.
+    await UpsertQuiz(repo=repo).execute(lesson_id, _cmd())
+
+    # The translation must still resolve through the localized read path.
+    localized = await repo.get_by_lesson(lesson_id, locale="pt-BR")
+    assert localized.questions[0].prompt == "O que faz o apóstrofo?"
+    assert localized.questions[0].explanation == "Transpõe."
+    assert localized.questions[0].options[0].text == "Transpõe a matriz"
