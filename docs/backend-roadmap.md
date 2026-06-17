@@ -68,7 +68,17 @@
 > published courses only. Skills below 40% the learner has engaged with
 > are flagged `weak`, surfaced in `weakAreas`, with next-step course
 > `suggestions` drawn from the weakest skills first. Derivation is
-> pure-domain; the adapter only aggregates).
+> pure-domain; the adapter only aggregates),
+> and **achievements/badges** (issue #163 — `GET /api/v1/achievements/me`
+> returns earned + in-progress achievements with `progress {current,
+> target}` and an `earnedAt` recorded the first time each is observed
+> earned. Award rules are deterministic and live in one place
+> (`domain/achievements`): each badge binds a metric — courses completed,
+> quizzes passed, perfect quizzes, certificates earned, modules completed
+> — to a target. Metrics are aggregated read-only across the
+> courses/quizzes/learning tables; award-on-read persists newly-earned
+> badges to `user_achievements` so the timestamp is stable, and re-reads
+> award nothing new).
 > All planned Academy AI phases are now delivered. Per-context detail
 > lives in each bounded
 > context under `backend/src/cyberdyne_backend/`.

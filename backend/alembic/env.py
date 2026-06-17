@@ -13,6 +13,9 @@ from alembic import context
 from cyberdyne_backend.adapters.outbound.persistence.academy import (  # noqa: F401
     models as _academy_models,
 )
+from cyberdyne_backend.adapters.outbound.persistence.achievements import (  # noqa: F401
+    models as _achievements_models,
+)
 from cyberdyne_backend.adapters.outbound.persistence.activity import (  # noqa: F401
     models as _activity_models,
 )

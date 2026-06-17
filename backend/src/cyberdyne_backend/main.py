@@ -19,6 +19,12 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cyberdyne_backend import __version__
+from cyberdyne_backend.adapters.inbound.api.achievements.router import (
+    get_my_achievements_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.achievements.router import (
+    public_router as achievements_public_router,
+)
 from cyberdyne_backend.adapters.inbound.api.activity.router import (
     get_learner_stats_uc,
     get_record_activity_uc,
@@ -243,6 +249,12 @@ from cyberdyne_backend.adapters.outbound.persistence.academy.job_store import (
 from cyberdyne_backend.adapters.outbound.persistence.academy.translation_repository import (
     SqlAlchemyTranslationRepository,
 )
+from cyberdyne_backend.adapters.outbound.persistence.achievements.metrics_reader import (
+    SqlAlchemyAchievementMetricsReader,
+)
+from cyberdyne_backend.adapters.outbound.persistence.achievements.repository import (
+    SqlAlchemyAchievementRepository,
+)
 from cyberdyne_backend.adapters.outbound.persistence.activity.repository import (
     SqlAlchemyActivityRepository,
 )
@@ -300,6 +312,7 @@ from cyberdyne_backend.application.academy import (
     TranslationJob,
     TranslationWorker,
 )
+from cyberdyne_backend.application.achievements import GetMyAchievements
 from cyberdyne_backend.application.activity import (
     GetLearnerStats,
     RecordActivity,
@@ -581,6 +594,14 @@ def create_app() -> FastAPI:
     async def _learner_dashboard_dep() -> AsyncIterator[GetLearnerDashboard]:
         async with session_scope() as session:
             yield GetLearnerDashboard(repo=SqlAlchemyAnalyticsRepository(session))
+
+    # Achievements/badges — earned + in-progress (issue #163).
+    async def _my_achievements_dep() -> AsyncIterator[GetMyAchievements]:
+        async with session_scope() as session:
+            yield GetMyAchievements(
+                reader=SqlAlchemyAchievementMetricsReader(session),
+                repo=SqlAlchemyAchievementRepository(session),
+            )
 
     # Learner activity + derived stats (issue #164).
     async def _record_activity_dep() -> AsyncIterator[RecordActivity]:
@@ -1069,6 +1090,7 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_admin_list_asks_uc] = _admin_list_asks_dep
     app.dependency_overrides[get_admin_update_ask_uc] = _admin_update_ask_dep
     app.dependency_overrides[get_learner_dashboard_uc] = _learner_dashboard_dep
+    app.dependency_overrides[get_my_achievements_uc] = _my_achievements_dep
     app.dependency_overrides[get_record_activity_uc] = _record_activity_dep
     app.dependency_overrides[get_learner_stats_uc] = _learner_stats_dep
     app.dependency_overrides[get_recommend_courses_uc] = _recommend_courses_dep
@@ -1156,6 +1178,7 @@ def create_app() -> FastAPI:
     app.include_router(leads_public_router)
     app.include_router(leads_admin_router)
     app.include_router(analytics_public_router)
+    app.include_router(achievements_public_router)
     app.include_router(activity_public_router)
     app.include_router(analytics_admin_router)
     app.include_router(recommendations_router)
