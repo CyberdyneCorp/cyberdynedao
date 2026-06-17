@@ -35,7 +35,17 @@
 > feedback** (`POST /api/v1/lessons/{id}/quiz/feedback` - LLM-personalized
 > "why it's wrong" per incorrect answer), and **LLM course
 > recommendations** (`GET /api/v1/recommendations/me` - deterministic
-> catalogue ranking against the learner's dashboard + an LLM narrative).
+> catalogue ranking against the learner's dashboard + an LLM narrative),
+> and **learner activity + stats** (issue #164 — the `activity` context
+> records lightweight per-user events via
+> `POST /api/v1/me/activity { kind, ref? }`
+> (`kind`: lesson_viewed / code_run / simulation_run / concept_mastered)
+> and derives the Profile/Today metric tiles via `GET /api/v1/me/stats`:
+> `currentStreakDays`, `longestStreakDays`, `lastActiveOn`,
+> `codeRunsCount`, `simulationsRun`, `conceptsMastered`. The streak is
+> consecutive calendar days with ≥1 event, keeping a one-day grace before
+> a streak is lost; days are bucketed in UTC unless the client passes
+> `tzOffsetMinutes` (minutes east of UTC, clamped to UTC-12..UTC+14)).
 > All planned Academy AI phases are now delivered. Per-context detail
 > lives in each bounded
 > context under `backend/src/cyberdyne_backend/`.
