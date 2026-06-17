@@ -140,7 +140,10 @@ QUIZ = CourseQuiz(
             "Why prefer 'logic' over Verilog's 'reg' and 'wire'?",
             (
                 opt("It is faster in hardware"),
-                opt("It is a single 4-state type the tool checks against your intent blocks", correct=True),
+                opt(
+                    "It is a single 4-state type the tool checks against your intent blocks",
+                    correct=True,
+                ),
                 opt("It uses less memory"),
                 opt("It is required for ROMs only"),
             ),

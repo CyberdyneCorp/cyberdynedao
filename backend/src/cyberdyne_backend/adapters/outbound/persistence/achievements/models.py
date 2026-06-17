@@ -15,9 +15,7 @@ class UserAchievementRow(Base):
     """Records the first time a learner earned an achievement."""
 
     __tablename__ = "user_achievements"
-    __table_args__ = (
-        UniqueConstraint("user_id", "key", name="uq_user_achievement_user_key"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "key", name="uq_user_achievement_user_key"),)
 
     id: Mapped[UUID] = mapped_column(Uuid(), primary_key=True)
     user_id: Mapped[UUID] = mapped_column(Uuid(), nullable=False, index=True)

@@ -35,7 +35,9 @@ QUIZ = CourseQuiz(
                 "When does a generate-for loop run?",
                 (
                     opt("Every clock cycle at runtime"),
-                    opt("Once at build/elaboration time, laying out parallel hardware", correct=True),
+                    opt(
+                        "Once at build/elaboration time, laying out parallel hardware", correct=True
+                    ),
                     opt("Only in simulation"),
                     opt("When reset is asserted"),
                 ),
@@ -70,7 +72,10 @@ QUIZ = CourseQuiz(
                 "Why put XLEN and the opcode enum in a package?",
                 (
                     opt("Packages run faster"),
-                    opt("Every module that imports it shares one definition, kept in sync", correct=True),
+                    opt(
+                        "Every module that imports it shares one definition, kept in sync",
+                        correct=True,
+                    ),
                     opt("It is the only place enums are allowed"),
                     opt("To avoid using parameters"),
                 ),
@@ -94,7 +99,10 @@ QUIZ = CourseQuiz(
                 "What does functional coverage tell you that a passing testbench does not?",
                 (
                     opt("Whether the checks passed"),
-                    opt("What fraction of the intended behaviour you actually exercised", correct=True),
+                    opt(
+                        "What fraction of the intended behaviour you actually exercised",
+                        correct=True,
+                    ),
                     opt("The clock frequency"),
                     opt("The gate count"),
                 ),
@@ -130,7 +138,9 @@ QUIZ = CourseQuiz(
             "What is a key benefit of passing a packed struct through a pipeline register?",
             (
                 opt("It runs without a clock"),
-                opt("The whole bundle moves as one typed signal, changed in one place", correct=True),
+                opt(
+                    "The whole bundle moves as one typed signal, changed in one place", correct=True
+                ),
                 opt("It removes the need for reset"),
                 opt("It halves the latency"),
             ),

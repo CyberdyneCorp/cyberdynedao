@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cyberdyne_backend.adapters.outbound.persistence.courses.models import (
@@ -71,5 +71,5 @@ class SqlAlchemyAchievementMetricsReader:
             ),
         )
 
-    async def _scalar(self, stmt) -> int:
+    async def _scalar(self, stmt: Select[tuple[int]]) -> int:
         return int((await self._session.execute(stmt)).scalar_one() or 0)

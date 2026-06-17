@@ -28,9 +28,7 @@ class SqlAlchemyAchievementRepository:
         rows = (
             (
                 await self._session.execute(
-                    select(UserAchievementRow).where(
-                        UserAchievementRow.user_id == user_id
-                    )
+                    select(UserAchievementRow).where(UserAchievementRow.user_id == user_id)
                 )
             )
             .scalars()
@@ -38,9 +36,7 @@ class SqlAlchemyAchievementRepository:
         )
         return {r.key: _as_utc(r.earned_at) for r in rows}
 
-    async def record_earned(
-        self, *, user_id: UUID, key: str, earned_at: datetime
-    ) -> None:
+    async def record_earned(self, *, user_id: UUID, key: str, earned_at: datetime) -> None:
         existing = (
             await self._session.execute(
                 select(UserAchievementRow).where(

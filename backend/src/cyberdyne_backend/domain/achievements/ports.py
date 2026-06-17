@@ -23,9 +23,7 @@ class AchievementRepository(Protocol):
         """Already-earned achievement keys → the time they were earned."""
         ...
 
-    async def record_earned(
-        self, *, user_id: UUID, key: str, earned_at: datetime
-    ) -> None:
+    async def record_earned(self, *, user_id: UUID, key: str, earned_at: datetime) -> None:
         """Persist a newly-earned achievement. Idempotent on
         ``(user_id, key)`` — a second call for the same pair is a no-op,
         so the original ``earned_at`` is preserved."""

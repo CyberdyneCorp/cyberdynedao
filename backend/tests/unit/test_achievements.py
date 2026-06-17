@@ -45,9 +45,7 @@ def test_threshold_crossing_earns_and_reports_newly() -> None:
 def test_existing_earned_at_is_preserved() -> None:
     earlier = datetime(2026, 1, 1, tzinfo=UTC)
     metrics = LearnerMetrics(courses_completed=3)
-    statuses, newly = build_achievements(
-        metrics, {"first_course": earlier}, now=_NOW
-    )
+    statuses, newly = build_achievements(metrics, {"first_course": earlier}, now=_NOW)
     # first_course keeps its original timestamp; not re-reported as new.
     assert _by_key(statuses)["first_course"].earned_at == earlier
     assert "first_course" not in newly
