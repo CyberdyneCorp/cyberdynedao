@@ -35,7 +35,15 @@
 > feedback** (`POST /api/v1/lessons/{id}/quiz/feedback` - LLM-personalized
 > "why it's wrong" per incorrect answer), and **LLM course
 > recommendations** (`GET /api/v1/recommendations/me` - deterministic
-> catalogue ranking against the learner's dashboard + an LLM narrative).
+> catalogue ranking against the learner's dashboard + an LLM narrative),
+> and a **standalone Concepts library** (issue #168 — the `concepts`
+> context makes concept cards first-class instead of buried in lesson
+> markdown: public `GET /api/v1/concepts?q=&domain=&cursor=&limit=`
+> (browse/search, keyset-paged) + `GET /api/v1/concepts/{slug}`, and
+> editor-gated admin CRUD `POST/PUT/DELETE /api/v1/admin/concepts[/{slug}]`.
+> Each card carries title, domain, markdown summary, optional formula and
+> back-links to the lessons/courses that teach it. Authored via the admin
+> API — seeded empty).
 > All planned Academy AI phases are now delivered. Per-context detail
 > lives in each bounded
 > context under `backend/src/cyberdyne_backend/`.
