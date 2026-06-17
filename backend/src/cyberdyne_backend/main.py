@@ -53,6 +53,16 @@ from cyberdyne_backend.adapters.inbound.api.blog.router import (
 from cyberdyne_backend.adapters.inbound.api.blog.router import (
     public_router as blog_public_router,
 )
+from cyberdyne_backend.adapters.inbound.api.bookmarks.router import (
+    get_add_favorite_uc,
+    get_list_favorites_uc,
+    get_list_recent_uc,
+    get_record_recent_uc,
+    get_remove_favorite_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.bookmarks.router import (
+    public_router as bookmarks_public_router,
+)
 from cyberdyne_backend.adapters.inbound.api.code.router import (
     get_run_code_uc,
 )
@@ -225,6 +235,9 @@ from cyberdyne_backend.adapters.outbound.persistence.analytics.repository import
 from cyberdyne_backend.adapters.outbound.persistence.blog.repository import (
     SqlAlchemyBlogRepository,
 )
+from cyberdyne_backend.adapters.outbound.persistence.bookmarks.repository import (
+    SqlAlchemyBookmarkRepository,
+)
 from cyberdyne_backend.adapters.outbound.persistence.content.repository import (
     SqlAlchemyContentRepository,
 )
@@ -279,6 +292,13 @@ from cyberdyne_backend.application.blog import (
     GetBlogPost,
     ListBlogPosts,
     PublishBlogPost,
+)
+from cyberdyne_backend.application.bookmarks import (
+    AddFavorite,
+    ListFavorites,
+    ListRecent,
+    RecordRecentView,
+    RemoveFavorite,
 )
 from cyberdyne_backend.application.code import RunLessonCode
 from cyberdyne_backend.application.content.use_cases import (
@@ -789,6 +809,27 @@ def create_app() -> FastAPI:
         async with session_scope() as session:
             yield GetMyLearningState(repo=SqlAlchemyLearningRepository(session))
 
+    # Favorites/bookmarks + recently-viewed (issue #162).
+    async def _list_favorites_dep() -> AsyncIterator[ListFavorites]:
+        async with session_scope() as session:
+            yield ListFavorites(repo=SqlAlchemyBookmarkRepository(session))
+
+    async def _add_favorite_dep() -> AsyncIterator[AddFavorite]:
+        async with session_scope() as session:
+            yield AddFavorite(repo=SqlAlchemyBookmarkRepository(session))
+
+    async def _remove_favorite_dep() -> AsyncIterator[RemoveFavorite]:
+        async with session_scope() as session:
+            yield RemoveFavorite(repo=SqlAlchemyBookmarkRepository(session))
+
+    async def _record_recent_dep() -> AsyncIterator[RecordRecentView]:
+        async with session_scope() as session:
+            yield RecordRecentView(repo=SqlAlchemyBookmarkRepository(session))
+
+    async def _list_recent_dep() -> AsyncIterator[ListRecent]:
+        async with session_scope() as session:
+            yield ListRecent(repo=SqlAlchemyBookmarkRepository(session))
+
     async def _path_gating_dep() -> AsyncIterator[GetPathGating]:
         async with session_scope() as session:
             yield GetPathGating(repo=SqlAlchemyLearningRepository(session))
@@ -1026,6 +1067,11 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_enroll_uc] = _enroll_dep
     app.dependency_overrides[get_update_progress_uc] = _update_progress_dep
     app.dependency_overrides[get_my_state_uc] = _my_state_dep
+    app.dependency_overrides[get_list_favorites_uc] = _list_favorites_dep
+    app.dependency_overrides[get_add_favorite_uc] = _add_favorite_dep
+    app.dependency_overrides[get_remove_favorite_uc] = _remove_favorite_dep
+    app.dependency_overrides[get_record_recent_uc] = _record_recent_dep
+    app.dependency_overrides[get_list_recent_uc] = _list_recent_dep
     app.dependency_overrides[get_path_gating_uc] = _path_gating_dep
     app.dependency_overrides[get_eligibility_uc] = _eligibility_dep
     app.dependency_overrides[get_issue_certificate_uc] = _issue_certificate_dep
@@ -1062,6 +1108,7 @@ def create_app() -> FastAPI:
     app.include_router(blog_admin_router)
     app.include_router(learning_public_router)
     app.include_router(learning_admin_router)
+    app.include_router(bookmarks_public_router)
     app.include_router(courses_public_router)
     app.include_router(courses_admin_router)
     app.include_router(category_public_router)

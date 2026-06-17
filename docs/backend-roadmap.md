@@ -35,7 +35,13 @@
 > feedback** (`POST /api/v1/lessons/{id}/quiz/feedback` - LLM-personalized
 > "why it's wrong" per incorrect answer), and **LLM course
 > recommendations** (`GET /api/v1/recommendations/me` - deterministic
-> catalogue ranking against the learner's dashboard + an LLM narrative).
+> catalogue ranking against the learner's dashboard + an LLM narrative),
+> and **favorites/bookmarks + recently-viewed** (issue #162 — the
+> `bookmarks` context backs the redesigned client's Saved/Recent sidebar:
+> `GET/POST /api/v1/me/favorites` + `DELETE /api/v1/me/favorites/{id}`
+> for course/lesson/note favorites idempotent on `(user, type, ref)`, and
+> `GET/POST /api/v1/me/recent` for a per-user most-recent-first history
+> that upserts `viewed_at` on re-view).
 > All planned Academy AI phases are now delivered. Per-context detail
 > lives in each bounded
 > context under `backend/src/cyberdyne_backend/`.

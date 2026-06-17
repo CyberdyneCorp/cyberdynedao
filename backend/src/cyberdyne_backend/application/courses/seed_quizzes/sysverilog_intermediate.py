@@ -59,7 +59,10 @@ QUIZ = CourseQuiz(
                 "What is the difference between the Carry and oVerflow flags?",
                 (
                     opt("Carry is signed overflow; overflow is unsigned"),
-                    opt("Carry is the unsigned out-of-range signal; overflow is the signed one", correct=True),
+                    opt(
+                        "Carry is the unsigned out-of-range signal; overflow is the signed one",
+                        correct=True,
+                    ),
                     opt("They always have the same value"),
                     opt("Carry is for subtraction only"),
                 ),
@@ -107,7 +110,10 @@ QUIZ = CourseQuiz(
             "Why name FSM states with a typedef enum?",
             (
                 opt("It makes the circuit faster"),
-                opt("Readable waveforms and the tool can catch illegal-state assignments", correct=True),
+                opt(
+                    "Readable waveforms and the tool can catch illegal-state assignments",
+                    correct=True,
+                ),
                 opt("It is required by SystemVerilog"),
                 opt("It reduces the number of flip-flops to zero"),
             ),
