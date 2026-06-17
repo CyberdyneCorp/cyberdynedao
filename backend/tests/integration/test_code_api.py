@@ -78,9 +78,7 @@ def test_requires_auth(client: TestClient) -> None:
 def test_matlab_run_returns_empty_variables_and_rich_outputs(
     code_client: TestClient,
 ) -> None:
-    resp = code_client.post(
-        f"/api/v1/lessons/{uuid.uuid4()}/code/run", json={"source": "x = 1"}
-    )
+    resp = code_client.post(f"/api/v1/lessons/{uuid.uuid4()}/code/run", json={"source": "x = 1"})
     body = resp.json()
     # Additive fields present + backward compatible (empty for MATLAB).
     assert body["variables"] == []
@@ -116,9 +114,5 @@ def test_python_run_surfaces_variables_and_rich_outputs(app: FastAPI) -> None:
     )
     assert resp.status_code == 200, resp.text
     body = resp.json()
-    assert body["variables"] == [
-        {"name": "x", "type": "int", "repr": "42", "sizeBytes": 28}
-    ]
-    assert body["richOutputs"] == [
-        {"mimeType": "image/png", "artifact": "plot.png", "text": None}
-    ]
+    assert body["variables"] == [{"name": "x", "type": "int", "repr": "42", "sizeBytes": 28}]
+    assert body["richOutputs"] == [{"mimeType": "image/png", "artifact": "plot.png", "text": None}]

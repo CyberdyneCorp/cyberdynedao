@@ -116,12 +116,8 @@ class TestRunLessonCode:
                     stdout="",
                     stderr="",
                     session_id=session_id,
-                    variables=(
-                        CodeVariable(name="x", type="int", repr="42", size_bytes=28),
-                    ),
-                    rich_outputs=(
-                        RichOutput(mime_type="image/png", artifact="fig1.png"),
-                    ),
+                    variables=(CodeVariable(name="x", type="int", repr="42", size_bytes=28),),
+                    rich_outputs=(RichOutput(mime_type="image/png", artifact="fig1.png"),),
                 )
 
         res = await RunLessonCode(matlab=_FakeMatlab(), python=_RichPython()).execute(

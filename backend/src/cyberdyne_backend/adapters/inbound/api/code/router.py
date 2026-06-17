@@ -57,9 +57,7 @@ async def run_lesson_code(
         session_id=res.session_id,
         timed_out=res.timed_out,
         variables=[
-            CodeVariableView(
-                name=v.name, type=v.type, repr=v.repr, size_bytes=v.size_bytes
-            )
+            CodeVariableView(name=v.name, type=v.type, repr=v.repr, size_bytes=v.size_bytes)
             for v in res.variables
         ],
         rich_outputs=[
