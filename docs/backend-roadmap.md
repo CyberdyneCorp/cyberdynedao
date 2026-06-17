@@ -29,13 +29,63 @@
 > `GET /api/v1/courses/certificates/{id}/verify`,
 > `GET /api/v1/courses/certificates/{id}/pdf`), and a
 > **learning-aware chat agent**
-> (see [`agents_capabilities.md`](agents_capabilities.md)), and the
+> (see [`agents_capabilities.md`](agents_capabilities.md); the streaming
+> reply SSE contract is documented in
+> [`chat-streaming.md`](chat-streaming.md) — issue #167), and the
 > **code-interpreter lesson type** (`code` lessons run on the MATLAB-LLVM
-> engine via `POST /api/v1/lessons/{id}/code/run`), **AI contextual quiz
+> engine via `POST /api/v1/lessons/{id}/code/run`; the run response also
+> carries the Lab **`variables`** namespace `[{name,type,repr,sizeBytes?}]`
+> and inline **`richOutputs`** `[{mimeType,artifact?,text?}]` for the
+> Variables/Plot panels — issue #166. Both are additive + default empty;
+> the Python interpreter populates them, MATLAB leaves them empty and
+> surfaces figures via `artifacts`), **AI contextual quiz
 > feedback** (`POST /api/v1/lessons/{id}/quiz/feedback` - LLM-personalized
 > "why it's wrong" per incorrect answer), and **LLM course
 > recommendations** (`GET /api/v1/recommendations/me` - deterministic
 > catalogue ranking against the learner's dashboard + an LLM narrative),
+> and **favorites/bookmarks + recently-viewed** (issue #162 — the
+> `bookmarks` context backs the redesigned client's Saved/Recent sidebar:
+> `GET/POST /api/v1/me/favorites` + `DELETE /api/v1/me/favorites/{id}`
+> for course/lesson/note favorites idempotent on `(user, type, ref)`, and
+> `GET/POST /api/v1/me/recent` for a per-user most-recent-first history
+> that upserts `viewed_at` on re-view),
+> and **browse/practice quizzes** (issue #169 —
+> `GET /api/v1/quizzes?courseSlug=&domain=&cursor=&limit=` lists quizzes
+> across lessons for *published* courses so the Quizzes nav can discover
+> them without opening a lesson; each item carries course/lesson
+> metadata, question count, and the learner's most-recent attempt, and is
+> keyset-paged on `(courseSlug, quizId)`; playing a quiz reuses the
+> existing per-lesson `GET /api/v1/lessons/{id}/quiz` + attempt flow via
+> the returned `lessonId`),
+> and **learner activity + stats** (issue #164 — the `activity` context
+> records lightweight per-user events via
+> `POST /api/v1/me/activity { kind, ref? }`
+> (`kind`: lesson_viewed / code_run / simulation_run / concept_mastered)
+> and derives the Profile/Today metric tiles via `GET /api/v1/me/stats`:
+> `currentStreakDays`, `longestStreakDays`, `lastActiveOn`,
+> `codeRunsCount`, `simulationsRun`, `conceptsMastered`. The streak is
+> consecutive calendar days with ≥1 event, keeping a one-day grace before
+> a streak is lost; days are bucketed in UTC unless the client passes
+> `tzOffsetMinutes` (minutes east of UTC, clamped to UTC-12..UTC+14)),
+> and the **Skill Map** (issue #165 — `GET /api/v1/skills/me` returns
+> per-domain skill mastery + weak areas, replacing the client's
+> course-percent approximation. A skill is a course category, its domain
+> the parent category; mastery blends lesson completion (weight 0.6) with
+> best-quiz performance (0.4, dropped when no quiz was attempted), over
+> published courses only. Skills below 40% the learner has engaged with
+> are flagged `weak`, surfaced in `weakAreas`, with next-step course
+> `suggestions` drawn from the weakest skills first. Derivation is
+> pure-domain; the adapter only aggregates),
+> and **achievements/badges** (issue #163 — `GET /api/v1/achievements/me`
+> returns earned + in-progress achievements with `progress {current,
+> target}` and an `earnedAt` recorded the first time each is observed
+> earned. Award rules are deterministic and live in one place
+> (`domain/achievements`): each badge binds a metric — courses completed,
+> quizzes passed, perfect quizzes, certificates earned, modules completed
+> — to a target. Metrics are aggregated read-only across the
+> courses/quizzes/learning tables; award-on-read persists newly-earned
+> badges to `user_achievements` so the timestamp is stable, and re-reads
+> award nothing new),
 > and a **standalone Concepts library** (issue #168 — the `concepts`
 > context makes concept cards first-class instead of buried in lesson
 > markdown: public `GET /api/v1/concepts?q=&domain=&cursor=&limit=`

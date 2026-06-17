@@ -124,15 +124,71 @@ async def send_message(
     return _message_response(message)
 
 
-@router.post("/sessions/{session_id}/messages/stream")
+@router.post(
+    "/sessions/{session_id}/messages/stream",
+    responses={
+        200: {
+            "description": (
+                "A Server-Sent Events stream (`text/event-stream`). Each event "
+                "is one `data:` line holding a JSON object, terminated by a "
+                "blank line: `data: <json>\\n\\n`. The `type` field "
+                "discriminates the chunk: `status` (a tool round is starting), "
+                "`delta` (an answer-text chunk), `done` (terminal event "
+                "carrying the full persisted assistant `ChatMessageResponse`, "
+                "including any `toolCalls`), or `error` (delivered in-band — "
+                "the HTTP status is still 200). There is **no** `[DONE]` "
+                "sentinel; `done` is the terminal marker. See "
+                "docs/chat-streaming.md for the full contract + a reference "
+                "transcript."
+            ),
+            "content": {
+                "text/event-stream": {
+                    "schema": {
+                        "type": "string",
+                        "description": (
+                            "SSE byte stream. Per-chunk JSON shapes: "
+                            "StreamStatusEvent | StreamDeltaEvent | "
+                            "StreamDoneEvent | StreamErrorEvent."
+                        ),
+                    },
+                    "example": (
+                        'data: {"type": "status", "tool": "list_projects"}\n\n'
+                        'data: {"type": "delta", "text": "We build "}\n\n'
+                        'data: {"type": "delta", "text": "CyberSTAC."}\n\n'
+                        'data: {"type": "done", "message": {"id": '
+                        '"4f1c...", "sessionId": "9ab2...", "role": '
+                        '"assistant", "content": "We build CyberSTAC.", '
+                        '"toolCalls": [], "createdAt": '
+                        '"2026-06-17T12:00:00Z"}}\n\n'
+                    ),
+                }
+            },
+        }
+    },
+)
 async def stream_message(
     session_id: UUID,
     body: SendMessageRequest,
     use_case: Annotated[StreamChatTurn, Depends(get_stream_turn_uc)],
 ) -> StreamingResponse:
-    """Server-Sent Events twin of send_message. Emits `status` (tool round),
-    `delta` (answer tokens), then `done` (final message) — or `error`. Errors
-    are delivered in-band as events since the stream has already begun."""
+    """Server-Sent Events twin of send_message.
+
+    Content type is ``text/event-stream``; each event is a single
+    ``data: <json>\\n\\n`` line. The JSON ``type`` field discriminates:
+
+    - ``{"type": "status", "tool": "<name>"}`` — a tool round is starting.
+    - ``{"type": "delta", "text": "<chunk>"}`` — an answer-text chunk;
+      concatenate ``text`` across deltas to rebuild the reply.
+    - ``{"type": "done", "message": {<ChatMessageResponse>}}`` — terminal
+      event with the full persisted assistant message (camelCase, includes
+      ``toolCalls``). This replaces a ``[DONE]`` sentinel.
+    - ``{"type": "error", "detail": "<message>"}`` — error delivered
+      in-band (the stream has already begun, so HTTP status stays 200).
+
+    See ``docs/chat-streaming.md`` for the authoritative contract and a
+    reference transcript. The non-streaming ``POST .../messages`` returns
+    the same final ``ChatMessageResponse`` as a plain JSON body.
+    """
 
     async def gen() -> AsyncIterator[str]:
         try:

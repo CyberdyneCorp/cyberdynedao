@@ -17,7 +17,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import UUID
 
-from cyberdyne_backend.domain.ai_chat import MatlabPort, MatlabRunResult, PythonInterpreterPort
+from cyberdyne_backend.domain.ai_chat import (
+    CodeRunResult,
+    MatlabPort,
+    PythonInterpreterPort,
+)
 
 
 @dataclass(slots=True)
@@ -33,31 +37,42 @@ class RunLessonCode:
         user_id: UUID,
         bearer: str | None,
         language: str = "matlab",
-    ) -> MatlabRunResult:
+    ) -> CodeRunResult:
         if language == "python" and self.python is not None:
             return await self._run_python(source=source, bearer=bearer)
         # Default: MATLAB. Per-(lesson, user) workspace — stateful within a
-        # lesson, isolated between learners.
+        # lesson, isolated between learners. MATLAB exposes no variable
+        # namespace / inline rich outputs here — figures land in artifacts.
         session_id = f"lesson-{lesson_id}-{user_id}"
-        return await self.matlab.run_repl(source=source, session_id=session_id, bearer=bearer)
+        res = await self.matlab.run_repl(source=source, session_id=session_id, bearer=bearer)
+        return CodeRunResult(
+            ok=res.ok,
+            stdout=res.stdout,
+            stderr=res.stderr,
+            artifacts=res.artifacts,
+            session_id=res.session_id,
+            timed_out=res.timed_out,
+        )
 
-    async def _run_python(self, *, source: str, bearer: str | None) -> MatlabRunResult:
+    async def _run_python(self, *, source: str, bearer: str | None) -> CodeRunResult:
         assert self.python is not None
         session_id = await self.python.create_session(bearer=bearer)
         res = await self.python.execute(code=source, session_id=session_id, bearer=bearer)
-        # Fold the interpreter's `error` into stderr and adapt to the shared
-        # run-result shape the endpoint already speaks (MatlabRunResult has the
-        # same fields the response needs; Python has no timeout signal).
+        # Fold the interpreter's `error` into stderr; surface the variable
+        # namespace + inline rich outputs the interpreter captured (the Lab
+        # Variables/Plot panels). Python has no timeout signal.
         stderr = res.stderr
         if res.error:
             stderr = f"{stderr}\n{res.error}" if stderr else res.error
-        return MatlabRunResult(
+        return CodeRunResult(
             ok=res.ok,
             stdout=res.stdout,
             stderr=stderr,
             artifacts=res.artifacts,
             session_id=res.session_id,
             timed_out=False,
+            variables=res.variables,
+            rich_outputs=res.rich_outputs,
         )
 
 

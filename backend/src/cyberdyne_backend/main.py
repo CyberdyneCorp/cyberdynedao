@@ -19,6 +19,19 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cyberdyne_backend import __version__
+from cyberdyne_backend.adapters.inbound.api.achievements.router import (
+    get_my_achievements_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.achievements.router import (
+    public_router as achievements_public_router,
+)
+from cyberdyne_backend.adapters.inbound.api.activity.router import (
+    get_learner_stats_uc,
+    get_record_activity_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.activity.router import (
+    public_router as activity_public_router,
+)
 from cyberdyne_backend.adapters.inbound.api.ai_chat.router import (
     get_history_uc as get_chat_history_uc,
 )
@@ -52,6 +65,16 @@ from cyberdyne_backend.adapters.inbound.api.blog.router import (
 )
 from cyberdyne_backend.adapters.inbound.api.blog.router import (
     public_router as blog_public_router,
+)
+from cyberdyne_backend.adapters.inbound.api.bookmarks.router import (
+    get_add_favorite_uc,
+    get_list_favorites_uc,
+    get_list_recent_uc,
+    get_record_recent_uc,
+    get_remove_favorite_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.bookmarks.router import (
+    public_router as bookmarks_public_router,
 )
 from cyberdyne_backend.adapters.inbound.api.code.router import (
     get_run_code_uc,
@@ -190,9 +213,13 @@ from cyberdyne_backend.adapters.inbound.api.quizzes.router import (
     admin_router as quizzes_admin_router,
 )
 from cyberdyne_backend.adapters.inbound.api.quizzes.router import (
+    catalog_router as quizzes_catalog_router,
+)
+from cyberdyne_backend.adapters.inbound.api.quizzes.router import (
     get_delete_quiz_uc,
     get_explain_answers_uc,
     get_list_attempts_uc,
+    get_list_catalog_uc,
     get_quiz_uc,
     get_submit_attempt_uc,
     get_upsert_quiz_uc,
@@ -205,6 +232,12 @@ from cyberdyne_backend.adapters.inbound.api.recommendations.router import (
 )
 from cyberdyne_backend.adapters.inbound.api.recommendations.router import (
     public_router as recommendations_router,
+)
+from cyberdyne_backend.adapters.inbound.api.skills.router import (
+    get_skill_map_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.skills.router import (
+    public_router as skills_public_router,
 )
 from cyberdyne_backend.adapters.inbound.api.uploads.router import (
     admin_router as uploads_admin_router,
@@ -229,6 +262,15 @@ from cyberdyne_backend.adapters.outbound.persistence.academy.job_store import (
 from cyberdyne_backend.adapters.outbound.persistence.academy.translation_repository import (
     SqlAlchemyTranslationRepository,
 )
+from cyberdyne_backend.adapters.outbound.persistence.achievements.metrics_reader import (
+    SqlAlchemyAchievementMetricsReader,
+)
+from cyberdyne_backend.adapters.outbound.persistence.achievements.repository import (
+    SqlAlchemyAchievementRepository,
+)
+from cyberdyne_backend.adapters.outbound.persistence.activity.repository import (
+    SqlAlchemyActivityRepository,
+)
 from cyberdyne_backend.adapters.outbound.persistence.ai_chat.repository import (
     SqlAlchemyChatRepository,
 )
@@ -237,6 +279,9 @@ from cyberdyne_backend.adapters.outbound.persistence.analytics.repository import
 )
 from cyberdyne_backend.adapters.outbound.persistence.blog.repository import (
     SqlAlchemyBlogRepository,
+)
+from cyberdyne_backend.adapters.outbound.persistence.bookmarks.repository import (
+    SqlAlchemyBookmarkRepository,
 )
 from cyberdyne_backend.adapters.outbound.persistence.concepts.repository import (
     SqlAlchemyConceptRepository,
@@ -263,8 +308,14 @@ from cyberdyne_backend.adapters.outbound.persistence.learning.repository import 
 from cyberdyne_backend.adapters.outbound.persistence.marketplace.repository import (
     SqlAlchemyMarketplaceRepository,
 )
+from cyberdyne_backend.adapters.outbound.persistence.quizzes.catalog_repository import (
+    SqlAlchemyQuizCatalogReader,
+)
 from cyberdyne_backend.adapters.outbound.persistence.quizzes.repository import (
     SqlAlchemyQuizRepository,
+)
+from cyberdyne_backend.adapters.outbound.persistence.skills.reader import (
+    SqlAlchemySkillMapReader,
 )
 from cyberdyne_backend.adapters.outbound.persistence.uploads.repository import (
     SqlAlchemyUploadRepository,
@@ -276,6 +327,11 @@ from cyberdyne_backend.application.academy import (
     TranslateCourse,
     TranslationJob,
     TranslationWorker,
+)
+from cyberdyne_backend.application.achievements import GetMyAchievements
+from cyberdyne_backend.application.activity import (
+    GetLearnerStats,
+    RecordActivity,
 )
 from cyberdyne_backend.application.ai_chat import (
     GetChatHistory,
@@ -295,6 +351,13 @@ from cyberdyne_backend.application.blog import (
     GetBlogPost,
     ListBlogPosts,
     PublishBlogPost,
+)
+from cyberdyne_backend.application.bookmarks import (
+    AddFavorite,
+    ListFavorites,
+    ListRecent,
+    RecordRecentView,
+    RemoveFavorite,
 )
 from cyberdyne_backend.application.code import RunLessonCode
 from cyberdyne_backend.application.concepts import (
@@ -376,10 +439,12 @@ from cyberdyne_backend.application.quizzes import (
     ExplainQuizAnswers,
     GetQuiz,
     ListMyAttempts,
+    ListQuizCatalog,
     SubmitQuizAttempt,
     UpsertQuiz,
 )
 from cyberdyne_backend.application.recommendations import RecommendCourses
+from cyberdyne_backend.application.skills import GetSkillMap
 from cyberdyne_backend.application.uploads import (
     GetUpload,
     SaveUpload,
@@ -574,6 +639,23 @@ def create_app() -> FastAPI:
         async with session_scope() as session:
             yield GetLearnerDashboard(repo=SqlAlchemyAnalyticsRepository(session))
 
+    # Achievements/badges — earned + in-progress (issue #163).
+    async def _my_achievements_dep() -> AsyncIterator[GetMyAchievements]:
+        async with session_scope() as session:
+            yield GetMyAchievements(
+                reader=SqlAlchemyAchievementMetricsReader(session),
+                repo=SqlAlchemyAchievementRepository(session),
+            )
+
+    # Learner activity + derived stats (issue #164).
+    async def _record_activity_dep() -> AsyncIterator[RecordActivity]:
+        async with session_scope() as session:
+            yield RecordActivity(repo=SqlAlchemyActivityRepository(session))
+
+    async def _learner_stats_dep() -> AsyncIterator[GetLearnerStats]:
+        async with session_scope() as session:
+            yield GetLearnerStats(repo=SqlAlchemyActivityRepository(session))
+
     async def _admin_overview_dep() -> AsyncIterator[GetAdminOverview]:
         async with session_scope() as session:
             yield GetAdminOverview(repo=SqlAlchemyAnalyticsRepository(session))
@@ -585,6 +667,11 @@ def create_app() -> FastAPI:
                 analytics=SqlAlchemyAnalyticsRepository(session),
                 llm=container.chat_llm,
             )
+
+    # Skill Map — per-domain mastery + weak areas (issue #165).
+    async def _skill_map_dep() -> AsyncIterator[GetSkillMap]:
+        async with session_scope() as session:
+            yield GetSkillMap(reader=SqlAlchemySkillMapReader(session))
 
     async def _list_blog_posts_dep() -> AsyncIterator[ListBlogPosts]:
         async with session_scope() as session:
@@ -784,6 +871,10 @@ def create_app() -> FastAPI:
         async with session_scope() as session:
             yield ListMyAttempts(repo=SqlAlchemyQuizRepository(session))
 
+    async def _list_quiz_catalog_dep() -> AsyncIterator[ListQuizCatalog]:
+        async with session_scope() as session:
+            yield ListQuizCatalog(reader=SqlAlchemyQuizCatalogReader(session))
+
     async def _explain_answers_dep() -> AsyncIterator[ExplainQuizAnswers]:
         async with session_scope() as session:
             yield ExplainQuizAnswers(
@@ -832,6 +923,27 @@ def create_app() -> FastAPI:
     async def _my_state_dep() -> AsyncIterator[GetMyLearningState]:
         async with session_scope() as session:
             yield GetMyLearningState(repo=SqlAlchemyLearningRepository(session))
+
+    # Favorites/bookmarks + recently-viewed (issue #162).
+    async def _list_favorites_dep() -> AsyncIterator[ListFavorites]:
+        async with session_scope() as session:
+            yield ListFavorites(repo=SqlAlchemyBookmarkRepository(session))
+
+    async def _add_favorite_dep() -> AsyncIterator[AddFavorite]:
+        async with session_scope() as session:
+            yield AddFavorite(repo=SqlAlchemyBookmarkRepository(session))
+
+    async def _remove_favorite_dep() -> AsyncIterator[RemoveFavorite]:
+        async with session_scope() as session:
+            yield RemoveFavorite(repo=SqlAlchemyBookmarkRepository(session))
+
+    async def _record_recent_dep() -> AsyncIterator[RecordRecentView]:
+        async with session_scope() as session:
+            yield RecordRecentView(repo=SqlAlchemyBookmarkRepository(session))
+
+    async def _list_recent_dep() -> AsyncIterator[ListRecent]:
+        async with session_scope() as session:
+            yield ListRecent(repo=SqlAlchemyBookmarkRepository(session))
 
     async def _path_gating_dep() -> AsyncIterator[GetPathGating]:
         async with session_scope() as session:
@@ -1027,7 +1139,11 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_admin_list_asks_uc] = _admin_list_asks_dep
     app.dependency_overrides[get_admin_update_ask_uc] = _admin_update_ask_dep
     app.dependency_overrides[get_learner_dashboard_uc] = _learner_dashboard_dep
+    app.dependency_overrides[get_my_achievements_uc] = _my_achievements_dep
+    app.dependency_overrides[get_record_activity_uc] = _record_activity_dep
+    app.dependency_overrides[get_learner_stats_uc] = _learner_stats_dep
     app.dependency_overrides[get_recommend_courses_uc] = _recommend_courses_dep
+    app.dependency_overrides[get_skill_map_uc] = _skill_map_dep
     app.dependency_overrides[get_admin_overview_uc] = _admin_overview_dep
     app.dependency_overrides[get_list_posts_uc] = _list_blog_posts_dep
     app.dependency_overrides[get_post_uc] = _get_blog_post_dep
@@ -1066,6 +1182,7 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_delete_quiz_uc] = _delete_quiz_dep
     app.dependency_overrides[get_submit_attempt_uc] = _submit_attempt_dep
     app.dependency_overrides[get_list_attempts_uc] = _list_attempts_dep
+    app.dependency_overrides[get_list_catalog_uc] = _list_quiz_catalog_dep
     app.dependency_overrides[get_explain_answers_uc] = _explain_answers_dep
     app.dependency_overrides[get_save_upload_uc] = _save_upload_dep
     app.dependency_overrides[get_save_uploads_uc] = _save_uploads_dep
@@ -1075,6 +1192,11 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_enroll_uc] = _enroll_dep
     app.dependency_overrides[get_update_progress_uc] = _update_progress_dep
     app.dependency_overrides[get_my_state_uc] = _my_state_dep
+    app.dependency_overrides[get_list_favorites_uc] = _list_favorites_dep
+    app.dependency_overrides[get_add_favorite_uc] = _add_favorite_dep
+    app.dependency_overrides[get_remove_favorite_uc] = _remove_favorite_dep
+    app.dependency_overrides[get_record_recent_uc] = _record_recent_dep
+    app.dependency_overrides[get_list_recent_uc] = _list_recent_dep
     app.dependency_overrides[get_path_gating_uc] = _path_gating_dep
     app.dependency_overrides[get_eligibility_uc] = _eligibility_dep
     app.dependency_overrides[get_issue_certificate_uc] = _issue_certificate_dep
@@ -1107,18 +1229,23 @@ def create_app() -> FastAPI:
     app.include_router(leads_public_router)
     app.include_router(leads_admin_router)
     app.include_router(analytics_public_router)
+    app.include_router(achievements_public_router)
+    app.include_router(activity_public_router)
     app.include_router(analytics_admin_router)
     app.include_router(recommendations_router)
+    app.include_router(skills_public_router)
     app.include_router(blog_public_router)
     app.include_router(blog_admin_router)
     app.include_router(learning_public_router)
     app.include_router(learning_admin_router)
+    app.include_router(bookmarks_public_router)
     app.include_router(courses_public_router)
     app.include_router(courses_admin_router)
     app.include_router(category_public_router)
     app.include_router(category_admin_router)
     app.include_router(quizzes_player_router)
     app.include_router(quizzes_admin_router)
+    app.include_router(quizzes_catalog_router)
     app.include_router(uploads_admin_router)
     app.include_router(uploads_public_router)
     # Serve uploaded media read-only. check_dir=False so the mount is

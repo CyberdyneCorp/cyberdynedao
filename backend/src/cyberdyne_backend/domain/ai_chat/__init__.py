@@ -27,6 +27,8 @@ from cyberdyne_backend.domain.ai_chat.errors import (
 from cyberdyne_backend.domain.ai_chat.ports import (
     ChatLLMPort,
     ChatRepository,
+    CodeRunResult,
+    CodeVariable,
     CyberfliesPort,
     DocumentRendererPort,
     KnowledgeSearchPort,
@@ -54,6 +56,8 @@ __all__ = [
     "ChatRole",
     "ChatSession",
     "ChatSessionNotFoundError",
+    "CodeRunResult",
+    "CodeVariable",
     "CyberfliesPort",
     "DocumentRendererPort",
     "KnowledgeSearchPort",

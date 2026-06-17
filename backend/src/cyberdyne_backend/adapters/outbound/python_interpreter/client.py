@@ -19,7 +19,12 @@ from typing import Any, cast
 
 import httpx
 
-from cyberdyne_backend.domain.ai_chat import ManimRenderResult, PythonExecResult, RichOutput
+from cyberdyne_backend.domain.ai_chat import (
+    CodeVariable,
+    ManimRenderResult,
+    PythonExecResult,
+    RichOutput,
+)
 
 logger = logging.getLogger("cyberdyne_backend.python_interpreter")
 
@@ -154,6 +159,30 @@ class PythonInterpreterClient:
         return tuple(outs)
 
     @staticmethod
+    def _variables(raw: object) -> tuple[CodeVariable, ...]:
+        # Upstream variables are {name, type, repr, size_bytes?}. Keep only
+        # well-formed entries (name is mandatory); ignore the rest. Absent on
+        # backends that don't expose a namespace yet — forward-compatible.
+        out: list[CodeVariable] = []
+        if isinstance(raw, list):
+            for v in raw:
+                if not isinstance(v, dict):
+                    continue
+                name = v.get("name")
+                if not isinstance(name, str) or not name:
+                    continue
+                size = v.get("size_bytes")
+                out.append(
+                    CodeVariable(
+                        name=name,
+                        type=str(v.get("type") or ""),
+                        repr=str(v.get("repr") or ""),
+                        size_bytes=size if isinstance(size, int) else None,
+                    )
+                )
+        return tuple(out)
+
+    @staticmethod
     def _artifact_names(raw_artifacts: object) -> list[str]:
         # Upstream artifacts are FileMeta objects ({name, size_bytes,
         # modified_at}); keep just the names, like the MATLAB client.
@@ -196,6 +225,7 @@ class PythonInterpreterClient:
             artifacts=tuple(names),
             session_id=session_id,
             rich_outputs=self._rich_outputs(body.get("rich_outputs")),
+            variables=self._variables(body.get("variables")),
         )
 
     async def _post(

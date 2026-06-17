@@ -135,6 +135,37 @@ class TestPythonInterpreterClient:
         res = await client.execute(code="x", session_id="s", bearer=None)
         assert res.rich_outputs == ()
 
+    async def test_execute_parses_variables(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                200,
+                json={
+                    "success": True,
+                    "stdout": "",
+                    "stderr": "",
+                    "variables": [
+                        {"name": "x", "type": "int", "repr": "42", "size_bytes": 28},
+                        {"name": "arr", "type": "ndarray", "repr": "[1 2 3]"},
+                        {"type": "int", "repr": "1"},  # missing name → dropped
+                        "not-an-object",  # malformed → dropped
+                    ],
+                },
+            )
+
+        client = _client_with(handler)
+        res = await client.execute(code="x", session_id="s", bearer=None)
+        assert [v.name for v in res.variables] == ["x", "arr"]
+        assert res.variables[0].size_bytes == 28
+        assert res.variables[1].size_bytes is None  # absent → None
+
+    async def test_execute_defaults_variables_to_empty(self) -> None:
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json={"success": True, "stdout": "", "stderr": ""})
+
+        client = _client_with(handler)
+        res = await client.execute(code="x", session_id="s", bearer=None)
+        assert res.variables == ()
+
     async def test_execute_raises_on_http_error(self) -> None:
         client = _client_with(lambda r: httpx.Response(500, json={"detail": "kaboom"}))
         with pytest.raises(RuntimeError, match="python_interpreter /execute 500"):

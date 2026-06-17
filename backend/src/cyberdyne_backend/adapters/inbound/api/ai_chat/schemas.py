@@ -59,3 +59,44 @@ class ChatMessageResponse(_CamelModel):
 class ChatHistoryResponse(_CamelModel):
     session_id: UUID
     messages: list[ChatMessageResponse]
+
+
+# ── Streaming (SSE) event chunks ─────────────────────────────────────
+#
+# `POST /api/v1/chat/sessions/{id}/messages/stream` returns
+# `text/event-stream`. Each SSE event is a single `data:` line holding one
+# JSON object below, terminated by a blank line (`data: <json>\n\n`).
+# There is NO `[DONE]` sentinel — the terminal event is `type: "done"`,
+# which carries the full persisted assistant `ChatMessageResponse`
+# (including any `toolCalls`). These models exist to document the chunk
+# schema (and for client codegen); the endpoint streams raw JSON, not a
+# declared `response_model`. See docs/chat-streaming.md.
+
+
+class StreamStatusEvent(_CamelModel):
+    """A tool round is starting; `tool` is the tool name about to run."""
+
+    type: Literal["status"] = "status"
+    tool: str
+
+
+class StreamDeltaEvent(_CamelModel):
+    """An incremental chunk of the assistant's answer text."""
+
+    type: Literal["delta"] = "delta"
+    text: str
+
+
+class StreamDoneEvent(_CamelModel):
+    """Terminal event: the full persisted assistant message."""
+
+    type: Literal["done"] = "done"
+    message: ChatMessageResponse
+
+
+class StreamErrorEvent(_CamelModel):
+    """An error delivered in-band (the stream had already begun, so the
+    HTTP status is still 200); `detail` is a human-readable message."""
+
+    type: Literal["error"] = "error"
+    detail: str
