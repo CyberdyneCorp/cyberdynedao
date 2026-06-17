@@ -808,6 +808,11 @@ One Coolify application: **cyberdyne-backend**.
 
 ### Build-time vs runtime env vars
 
+> The complete, code-derived env-var inventory (every setting, its default,
+> and which mocks must be replaced for prod) lives in
+> [`backend-env-vars.md`](backend-env-vars.md). This section covers only the
+> build-vs-runtime split.
+
 Follow the OrgPilot recipe — **anything baked into the build is `is_build = true`** in Coolify (Sentry release tag, build-time auth tokens for private indices like `NPM_TOKEN` if we ever ship a frontend artifact from this repo — which we shouldn't). Everything else is `is_runtime = true`.
 
 **Build-time (`is_build`):**
