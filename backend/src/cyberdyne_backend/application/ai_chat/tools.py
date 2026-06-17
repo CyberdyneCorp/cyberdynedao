@@ -43,6 +43,7 @@ from cyberdyne_backend.application.learning import (
 )
 from cyberdyne_backend.application.lesson_notes import ListUserNotes
 from cyberdyne_backend.application.marketplace import GetProduct
+from cyberdyne_backend.application.notebook import ListFlashcards, ListNotes
 from cyberdyne_backend.application.quizzes import GetQuiz
 from cyberdyne_backend.domain.ai_chat import (
     CyberfliesPort,
@@ -75,6 +76,7 @@ from cyberdyne_backend.domain.learning import (
     ProgressOutOfRangeError,
 )
 from cyberdyne_backend.domain.marketplace import ProductNotFoundError
+from cyberdyne_backend.domain.notebook import Note, NoteType
 from cyberdyne_backend.domain.quizzes import QuizNotFoundError
 
 logger = logging.getLogger("cyberdyne_backend.ai_chat.tools")
@@ -677,6 +679,34 @@ CYBERDYNE_TOOLS: list[ToolSchema] = [
             },
         },
     ),
+    ToolSchema(
+        name="get_my_notebook",
+        description=(
+            "The signed-in learner's Notebook — their standalone study notes (markdown "
+            "title + body, a type, optional course/lesson link, and any saved-from-the-Lab "
+            "code) together with the flashcards on each note. Use this for 'what's in my "
+            "notebook?', 'show my flashcards', 'search my notes for X', or 'quiz me on "
+            "what's due'. Optional filters: query (free-text search), due (only notes/cards "
+            "due for spaced review), type (one of lesson/lab/code/simulation/theory/"
+            "problem). Distinct from get_my_notes, which is the notes pinned to course "
+            "lessons. Requires authentication."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Optional free-text search."},
+                "due": {
+                    "type": "boolean",
+                    "description": "Optional: only notes due for spaced review.",
+                },
+                "type": {
+                    "type": "string",
+                    "enum": ["lesson", "lab", "code", "simulation", "theory", "problem"],
+                    "description": "Optional: filter by note type.",
+                },
+            },
+        },
+    ),
 ]
 
 
@@ -727,6 +757,10 @@ class ToolContext:
     learner_dashboard: GetLearnerDashboard | None = None
     # The learner's own course/lesson notes (read-only) for get_my_notes.
     list_user_notes: ListUserNotes | None = None
+    # The learner's notebook (standalone notes + flashcards) for
+    # get_my_notebook — both read-only.
+    list_notebook_notes: ListNotes | None = None
+    list_note_flashcards: ListFlashcards | None = None
     user_id: UUID | None = None
 
 
@@ -848,6 +882,12 @@ class ToolDispatcher:
                 return await self._get_my_courses()
             if call.name == "get_my_notes":
                 return await self._get_my_notes(cast("str | None", args.get("course_slug")))
+            if call.name == "get_my_notebook":
+                return await self._get_my_notebook(
+                    cast("str | None", args.get("query")),
+                    bool(args.get("due", False)),
+                    cast("str | None", args.get("type")),
+                )
         except Exception as exc:
             logger.exception("tool %s failed", call.name)
             return json.dumps({"error": "tool_failed", "detail": str(exc)})
@@ -1574,6 +1614,43 @@ class ToolDispatcher:
                 "next_cursor": page.next_cursor,
             }
         )
+
+    async def _get_my_notebook(self, query: str | None, due: bool, note_type: str | None) -> str:
+        if self._ctx.list_notebook_notes is None:
+            return json.dumps({"error": "notebook_unavailable"})
+        if self._ctx.user_id is None:
+            return json.dumps({"error": "sign_in_required"})
+        # Lenient type parse: ignore an unrecognized value rather than error.
+        parsed_type = next((t for t in NoteType if t.value == note_type), None)
+        page = await self._ctx.list_notebook_notes.execute(
+            user_id=self._ctx.user_id,
+            type=parsed_type,
+            query=query or None,
+            due=due,
+        )
+        notes = [await self._notebook_note_json(n) for n in page.items]
+        return json.dumps({"notes": notes, "next_cursor": page.next_cursor})
+
+    async def _notebook_note_json(self, n: Note) -> dict[str, object]:
+        cards: list[dict[str, str]] = []
+        if self._ctx.list_note_flashcards is not None and self._ctx.user_id is not None:
+            flashcards = await self._ctx.list_note_flashcards.execute(
+                user_id=self._ctx.user_id, note_id=n.id
+            )
+            cards = [{"question": c.question, "answer": c.answer} for c in flashcards]
+        return {
+            "id": str(n.id),
+            "title": n.title,
+            "type": n.type.value,
+            "body": n.body,
+            "course_slug": n.course_slug,
+            "lesson_id": str(n.lesson_id) if n.lesson_id else None,
+            "language": n.language,
+            "tags": list(n.tags),
+            "next_review_at": n.next_review_at.isoformat() if n.next_review_at else None,
+            "review_interval_days": n.review_interval_days,
+            "flashcards": cards,
+        }
 
     def _fill_identity(self, name: str, email: str) -> tuple[str, str]:
         """Back-fill name/email from the signed-in profile when the LLM

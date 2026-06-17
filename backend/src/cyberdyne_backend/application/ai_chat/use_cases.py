@@ -184,6 +184,15 @@ materials + licenses) and the service-engagement funnel.
     notes", or "what did I write on <course>?"; pass `course_slug` to filter
     to one course. Ground your answer in the returned notes; don't invent
     notes the user didn't write.
+  - Notebook: `get_my_notebook` returns the learner's standalone study
+    notes (title, body, type, any saved-from-the-Lab code) plus the
+    flashcards on each note. Use it for "what's in my notebook?", "search my
+    notes for X" (pass `query`), "show my flashcards", or "quiz me on what's
+    due" (pass `due: true` for notes due for spaced review); `type` filters
+    by note kind. This is distinct from `get_my_notes` (notes pinned to
+    course lessons). To run a review session, pull the due notes and ask the
+    user each flashcard `question`, then reveal the `answer`. Ground answers
+    in the returned content.
   - Blog: `list_blog_posts` (recent posts) and `lookup_blog_post`
     (full body, for summarizing).
   - Math: the chat typesets LaTeX. Wrap inline math in \\( … \\) and
