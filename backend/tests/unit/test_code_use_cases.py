@@ -5,7 +5,12 @@ from __future__ import annotations
 import uuid
 
 from cyberdyne_backend.application.code import RunLessonCode
-from cyberdyne_backend.domain.ai_chat import MatlabRunResult, PythonExecResult
+from cyberdyne_backend.domain.ai_chat import (
+    CodeVariable,
+    MatlabRunResult,
+    PythonExecResult,
+    RichOutput,
+)
 
 
 class _FakeMatlab:
@@ -102,3 +107,35 @@ class TestRunLessonCode:
         )
         assert len(matlab.calls) == 1
         assert python.calls == []
+
+    async def test_python_surfaces_variables_and_rich_outputs(self) -> None:
+        class _RichPython(_FakePython):
+            async def execute(self, *, code, session_id, bearer, restricted=True):
+                return PythonExecResult(
+                    ok=True,
+                    stdout="",
+                    stderr="",
+                    session_id=session_id,
+                    variables=(CodeVariable(name="x", type="int", repr="42", size_bytes=28),),
+                    rich_outputs=(RichOutput(mime_type="image/png", artifact="fig1.png"),),
+                )
+
+        res = await RunLessonCode(matlab=_FakeMatlab(), python=_RichPython()).execute(
+            lesson_id=uuid.uuid4(),
+            source="x = 42",
+            user_id=uuid.uuid4(),
+            bearer=None,
+            language="python",
+        )
+        assert [v.name for v in res.variables] == ["x"]
+        assert res.variables[0].repr == "42"
+        assert res.variables[0].size_bytes == 28
+        assert res.rich_outputs[0].mime_type == "image/png"
+        assert res.rich_outputs[0].artifact == "fig1.png"
+
+    async def test_matlab_run_has_empty_variables_and_rich_outputs(self) -> None:
+        res = await RunLessonCode(matlab=_FakeMatlab()).execute(
+            lesson_id=uuid.uuid4(), source="2+2", user_id=uuid.uuid4(), bearer=None
+        )
+        assert res.variables == ()
+        assert res.rich_outputs == ()

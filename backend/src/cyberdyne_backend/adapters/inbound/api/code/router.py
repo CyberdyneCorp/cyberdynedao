@@ -8,7 +8,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from cyberdyne_backend.adapters.inbound.api.code.schemas import RunCodeRequest, RunCodeResponse
+from cyberdyne_backend.adapters.inbound.api.code.schemas import (
+    CodeVariableView,
+    RichOutputView,
+    RunCodeRequest,
+    RunCodeResponse,
+)
 from cyberdyne_backend.adapters.inbound.middleware.auth import extract_token, require_principal
 from cyberdyne_backend.application.code import RunLessonCode
 from cyberdyne_backend.domain.auth_identity import UserPrincipal
@@ -51,6 +56,14 @@ async def run_lesson_code(
         artifacts=list(res.artifacts),
         session_id=res.session_id,
         timed_out=res.timed_out,
+        variables=[
+            CodeVariableView(name=v.name, type=v.type, repr=v.repr, size_bytes=v.size_bytes)
+            for v in res.variables
+        ],
+        rich_outputs=[
+            RichOutputView(mime_type=o.mime_type, artifact=o.artifact, text=o.text)
+            for o in res.rich_outputs
+        ],
     )
 
 
