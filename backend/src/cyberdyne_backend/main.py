@@ -1247,6 +1247,7 @@ def create_app() -> FastAPI:
             path_gating=GetPathGating(repo=learning_repo),
             get_quiz=GetQuiz(repo=SqlAlchemyQuizRepository(session)),
             learner_dashboard=GetLearnerDashboard(repo=SqlAlchemyAnalyticsRepository(session)),
+            get_wallet_access=GetWalletAccess(reader=container.access_reader),
             user_id=profile.user_id if profile else None,
         )
 
