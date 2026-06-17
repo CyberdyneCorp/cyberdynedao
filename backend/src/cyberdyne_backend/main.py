@@ -82,6 +82,19 @@ from cyberdyne_backend.adapters.inbound.api.code.router import (
 from cyberdyne_backend.adapters.inbound.api.code.router import (
     player_router as code_player_router,
 )
+from cyberdyne_backend.adapters.inbound.api.concepts.router import (
+    admin_router as concepts_admin_router,
+)
+from cyberdyne_backend.adapters.inbound.api.concepts.router import (
+    get_concept_uc,
+    get_create_concept_uc,
+    get_delete_concept_uc,
+    get_list_concepts_uc,
+    get_update_concept_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.concepts.router import (
+    public_router as concepts_public_router,
+)
 from cyberdyne_backend.adapters.inbound.api.content.router import (
     get_contact_page_uc,
     get_cyberdyne_page_uc,
@@ -270,6 +283,9 @@ from cyberdyne_backend.adapters.outbound.persistence.blog.repository import (
 from cyberdyne_backend.adapters.outbound.persistence.bookmarks.repository import (
     SqlAlchemyBookmarkRepository,
 )
+from cyberdyne_backend.adapters.outbound.persistence.concepts.repository import (
+    SqlAlchemyConceptRepository,
+)
 from cyberdyne_backend.adapters.outbound.persistence.content.repository import (
     SqlAlchemyContentRepository,
 )
@@ -344,6 +360,13 @@ from cyberdyne_backend.application.bookmarks import (
     RemoveFavorite,
 )
 from cyberdyne_backend.application.code import RunLessonCode
+from cyberdyne_backend.application.concepts import (
+    CreateConcept,
+    DeleteConcept,
+    GetConcept,
+    ListConcepts,
+    UpdateConcept,
+)
 from cyberdyne_backend.application.content.use_cases import (
     GetContactPage,
     GetCyberdynePage,
@@ -554,6 +577,27 @@ def create_app() -> FastAPI:
     async def _list_team_dep() -> AsyncIterator[ListTeam]:
         async with session_scope() as session:
             yield ListTeam(repo=SqlAlchemyContentRepository(session))
+
+    # Concepts library — public browse/search + admin authoring (issue #168).
+    async def _list_concepts_dep() -> AsyncIterator[ListConcepts]:
+        async with session_scope() as session:
+            yield ListConcepts(repo=SqlAlchemyConceptRepository(session))
+
+    async def _get_concept_dep() -> AsyncIterator[GetConcept]:
+        async with session_scope() as session:
+            yield GetConcept(repo=SqlAlchemyConceptRepository(session))
+
+    async def _create_concept_dep() -> AsyncIterator[CreateConcept]:
+        async with session_scope() as session:
+            yield CreateConcept(repo=SqlAlchemyConceptRepository(session))
+
+    async def _update_concept_dep() -> AsyncIterator[UpdateConcept]:
+        async with session_scope() as session:
+            yield UpdateConcept(repo=SqlAlchemyConceptRepository(session))
+
+    async def _delete_concept_dep() -> AsyncIterator[DeleteConcept]:
+        async with session_scope() as session:
+            yield DeleteConcept(repo=SqlAlchemyConceptRepository(session))
 
     async def _cyberdyne_page_dep() -> AsyncIterator[GetCyberdynePage]:
         async with session_scope() as session:
@@ -1081,6 +1125,11 @@ def create_app() -> FastAPI:
             )
 
     app.dependency_overrides[get_list_team_uc] = _list_team_dep
+    app.dependency_overrides[get_list_concepts_uc] = _list_concepts_dep
+    app.dependency_overrides[get_concept_uc] = _get_concept_dep
+    app.dependency_overrides[get_create_concept_uc] = _create_concept_dep
+    app.dependency_overrides[get_update_concept_uc] = _update_concept_dep
+    app.dependency_overrides[get_delete_concept_uc] = _delete_concept_dep
     app.dependency_overrides[get_cyberdyne_page_uc] = _cyberdyne_page_dep
     app.dependency_overrides[get_list_projects_uc] = _list_projects_dep
     app.dependency_overrides[get_services_page_uc] = _services_page_dep
@@ -1175,6 +1224,8 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(content_router)
+    app.include_router(concepts_public_router)
+    app.include_router(concepts_admin_router)
     app.include_router(leads_public_router)
     app.include_router(leads_admin_router)
     app.include_router(analytics_public_router)

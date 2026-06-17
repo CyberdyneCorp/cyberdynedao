@@ -53,6 +53,9 @@ from cyberdyne_backend.adapters.outbound.persistence.uploads import (  # noqa: F
 from cyberdyne_backend.adapters.outbound.persistence.bookmarks import (  # noqa: F401
     models as _bookmarks_models,
 )
+from cyberdyne_backend.adapters.outbound.persistence.concepts import (  # noqa: F401
+    models as _concepts_models,
+)
 from cyberdyne_backend.infrastructure.database.base import Base
 from cyberdyne_backend.infrastructure.settings import get_settings
 
