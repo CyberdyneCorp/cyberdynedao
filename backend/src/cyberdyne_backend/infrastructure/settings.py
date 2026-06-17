@@ -16,6 +16,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 Environment = Literal["local", "ci", "staging", "production"]
 
 
+class InsecureProductionConfigError(RuntimeError):
+    """Raised when a staging/production process is configured with the
+    dev-default mock adapters that must never run in a shared environment."""
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -155,6 +160,39 @@ class Settings(BaseSettings):
     @classmethod
     def _upper_log_level(cls, value: str) -> str:
         return value.upper()
+
+    def model_post_init(self, __context: object) -> None:
+        """Refuse to start with dev-default mock adapters in a shared
+        environment. Local + CI keep the mocks (they're what makes the
+        suite hermetic); staging/production MUST supply real credentials
+        and providers — see issue #7's Operational guardrails."""
+        if self.environment not in ("staging", "production"):
+            return
+
+        problems: list[str] = []
+        if self.chain_reader_provider == "fake":
+            problems.append(
+                "chain_reader_provider=fake (set CHAIN_READER_PROVIDER=web3py + BASE_RPC_URL)"
+            )
+        if self.captcha_provider == "mock":
+            problems.append(
+                "captcha_provider=mock (set CAPTCHA_PROVIDER=turnstile + CAPTCHA_SECRET)"
+            )
+        if self.stripe_secret_key is None:
+            problems.append("STRIPE_SECRET_KEY is unset (MockStripeCheckoutClient)")
+        if self.stripe_webhook_secret is None:
+            problems.append(
+                "STRIPE_WEBHOOK_SECRET is unset (MockStripeWebhookVerifier trusts every payload)"
+            )
+        if self.openai_api_key is None:
+            problems.append("OPENAI_API_KEY is unset (StaticChatClient offline mode)")
+
+        if problems:
+            joined = "\n  - ".join(problems)
+            raise InsecureProductionConfigError(
+                f"refusing to start in {self.environment!r} with dev-default "
+                f"mock adapters active:\n  - {joined}"
+            )
 
 
 @lru_cache
