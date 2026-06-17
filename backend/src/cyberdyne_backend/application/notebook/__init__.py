@@ -10,6 +10,7 @@ from cyberdyne_backend.application.notebook.use_cases import (
     GetNote,
     ListFlashcards,
     ListNotes,
+    ReviewNote,
     UpdateNote,
 )
 
@@ -23,5 +24,6 @@ __all__ = [
     "GetNote",
     "ListFlashcards",
     "ListNotes",
+    "ReviewNote",
     "UpdateNote",
 ]

@@ -32,6 +32,9 @@ class NoteResponse(_CamelModel):
     run_result: dict[str, object] | None = None
     plot_refs: list[str] = []
     tags: list[str] = []
+    reviewed_at: datetime | None = None
+    next_review_at: datetime | None = None
+    review_interval_days: int = 0
     created_at: datetime
     updated_at: datetime | None = None
 
@@ -65,3 +68,10 @@ class FlashcardResponse(_CamelModel):
 class FlashcardWriteRequest(_StrictCamelModel):
     question: str = Field(min_length=1, max_length=2000)
     answer: str = Field(min_length=1, max_length=2000)
+
+
+ReviewRatingLiteral = Literal["again", "hard", "good", "easy"]
+
+
+class ReviewRequest(_StrictCamelModel):
+    rating: ReviewRatingLiteral

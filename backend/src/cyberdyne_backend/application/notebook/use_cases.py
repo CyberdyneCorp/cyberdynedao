@@ -14,9 +14,11 @@ from cyberdyne_backend.domain.notebook import (
     NoteNotFoundError,
     NotePage,
     NoteType,
+    ReviewRating,
     apply_fields,
     new_flashcard,
     new_note,
+    record_review,
 )
 
 DEFAULT_NOTE_LIMIT = 20
@@ -49,12 +51,18 @@ class ListNotes:
         user_id: UUID,
         type: NoteType | None = None,
         query: str | None = None,
+        due: bool = False,
         cursor: str | None = None,
         limit: int = DEFAULT_NOTE_LIMIT,
     ) -> NotePage:
         clamped = max(1, min(limit, MAX_NOTE_LIMIT))
         return await self.repo.list_for_user(
-            user_id=user_id, type=type, query=query, cursor=cursor, limit=clamped
+            user_id=user_id,
+            type=type,
+            query=query,
+            due=due,
+            cursor=cursor,
+            limit=clamped,
         )
 
 
@@ -114,3 +122,16 @@ class DeleteFlashcard:
         removed = await self.repo.delete_flashcard(note_id=note_id, flashcard_id=flashcard_id)
         if not removed:
             raise FlashcardNotFoundError(f"flashcard {flashcard_id} not found")
+
+
+@dataclass(slots=True)
+class ReviewNote:
+    """Record a spaced-review of a note: advance the interval and reschedule
+    the next review. The note is loaded scoped to the user."""
+
+    repo: NotebookRepository
+
+    async def execute(self, *, user_id: UUID, note_id: UUID, rating: ReviewRating) -> Note:
+        note = await self.repo.get(user_id=user_id, note_id=note_id)
+        record_review(note, rating)
+        return await self.repo.update(note)

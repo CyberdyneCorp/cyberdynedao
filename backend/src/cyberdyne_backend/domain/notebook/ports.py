@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Protocol, runtime_checkable
 from uuid import UUID
 
@@ -29,11 +30,15 @@ class NotebookRepository(Protocol):
         user_id: UUID,
         type: NoteType | None = None,
         query: str | None = None,
+        due: bool = False,
+        now: datetime | None = None,
         cursor: str | None = None,
         limit: int = 20,
     ) -> NotePage:
-        """List the user's notes newest-first, optionally filtered by type
-        and a title/body substring, paged with an opaque keyset cursor."""
+        """List the user's notes newest-first, optionally filtered by type,
+        a title/body substring, and (when ``due``) only notes whose
+        ``next_review_at`` is at or before ``now``. Paged with an opaque
+        keyset cursor."""
         ...
 
     async def update(self, note: Note) -> Note:

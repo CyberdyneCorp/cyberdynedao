@@ -10,13 +10,14 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from uuid import UUID
 
 from cyberdyne_backend.domain.notebook.errors import (
     InvalidFlashcardError,
     InvalidNoteError,
+    InvalidReviewError,
 )
 
 _MAX_TITLE = 200
@@ -56,6 +57,12 @@ class Note:
     run_result: dict[str, object] | None = None
     plot_refs: tuple[str, ...] = ()
     tags: tuple[str, ...] = ()
+    # Spaced-review schedule (issue #161, part 3). `review_interval_days` is
+    # the current spacing in days (0 = never reviewed); the timestamps are
+    # the last review and when the note is next due.
+    reviewed_at: datetime | None = None
+    next_review_at: datetime | None = None
+    review_interval_days: int = 0
     created_at: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
     updated_at: datetime | None = None
 
@@ -156,3 +163,58 @@ def new_flashcard(
         answer=a,
         created_at=now or datetime.now(tz=UTC),
     )
+
+
+# ── Spaced review (issue #161, part 3) ────────────────────────────────
+
+
+class ReviewRating(StrEnum):
+    """How well the learner recalled the note at review time."""
+
+    AGAIN = "again"  # forgot — reset spacing
+    HARD = "hard"
+    GOOD = "good"
+    EASY = "easy"
+
+
+# Cap the spacing so an interval can't run away.
+_MAX_INTERVAL_DAYS = 365
+
+
+def parse_review_rating(raw: str) -> ReviewRating:
+    try:
+        return ReviewRating(raw)
+    except ValueError as exc:
+        allowed = ", ".join(r.value for r in ReviewRating)
+        raise InvalidReviewError(
+            f"unknown review rating {raw!r}; expected one of: {allowed}"
+        ) from exc
+
+
+def next_interval_days(previous: int, rating: ReviewRating) -> int:
+    """Deterministic spaced-repetition schedule (Leitner/SM-2-lite).
+
+    A forgotten note resets to 1 day; otherwise the interval grows by a
+    rating-dependent factor. ``previous`` is the current interval in days
+    (0 = never reviewed). Result is clamped to 1..365.
+    """
+    if rating is ReviewRating.AGAIN:
+        return 1
+    if previous <= 0:
+        first = {ReviewRating.HARD: 1, ReviewRating.GOOD: 2, ReviewRating.EASY: 4}
+        return first[rating]
+    factor = {ReviewRating.HARD: 1.2, ReviewRating.GOOD: 2.0, ReviewRating.EASY: 2.5}
+    grown = max(previous + 1, round(previous * factor[rating]))
+    return min(grown, _MAX_INTERVAL_DAYS)
+
+
+def record_review(note: Note, rating: ReviewRating, *, now: datetime | None = None) -> Note:
+    """Apply a review to ``note`` in place: advance the interval, stamp
+    ``reviewed_at`` and the next due time."""
+    moment = now or datetime.now(tz=UTC)
+    interval = next_interval_days(note.review_interval_days, rating)
+    note.review_interval_days = interval
+    note.reviewed_at = moment
+    note.next_review_at = moment + timedelta(days=interval)
+    note.updated_at = moment
+    return note

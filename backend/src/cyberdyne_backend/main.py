@@ -217,6 +217,7 @@ from cyberdyne_backend.adapters.inbound.api.notebook.router import (
     get_list_flashcards_uc,
     get_list_notes_uc,
     get_note_uc,
+    get_review_note_uc,
     get_update_note_uc,
 )
 from cyberdyne_backend.adapters.inbound.api.notebook.router import (
@@ -458,6 +459,7 @@ from cyberdyne_backend.application.notebook import (
     GetNote,
     ListFlashcards,
     ListNotes,
+    ReviewNote,
     UpdateNote,
 )
 from cyberdyne_backend.application.quizzes import (
@@ -904,6 +906,10 @@ def create_app() -> FastAPI:
         async with session_scope() as session:
             yield DeleteFlashcard(repo=SqlAlchemyNotebookRepository(session))
 
+    async def _review_note_dep() -> AsyncIterator[ReviewNote]:
+        async with session_scope() as session:
+            yield ReviewNote(repo=SqlAlchemyNotebookRepository(session))
+
     async def _upsert_quiz_dep() -> AsyncIterator[UpsertQuiz]:
         async with session_scope() as session:
             yield UpsertQuiz(repo=SqlAlchemyQuizRepository(session))
@@ -1246,6 +1252,7 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_add_flashcard_uc] = _add_flashcard_dep
     app.dependency_overrides[get_list_flashcards_uc] = _list_flashcards_dep
     app.dependency_overrides[get_delete_flashcard_uc] = _delete_flashcard_dep
+    app.dependency_overrides[get_review_note_uc] = _review_note_dep
     app.dependency_overrides[get_upsert_quiz_uc] = _upsert_quiz_dep
     app.dependency_overrides[get_delete_quiz_uc] = _delete_quiz_dep
     app.dependency_overrides[get_submit_attempt_uc] = _submit_attempt_dep
