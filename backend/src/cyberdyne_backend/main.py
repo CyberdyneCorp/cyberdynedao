@@ -187,9 +187,13 @@ from cyberdyne_backend.adapters.inbound.api.quizzes.router import (
     admin_router as quizzes_admin_router,
 )
 from cyberdyne_backend.adapters.inbound.api.quizzes.router import (
+    catalog_router as quizzes_catalog_router,
+)
+from cyberdyne_backend.adapters.inbound.api.quizzes.router import (
     get_delete_quiz_uc,
     get_explain_answers_uc,
     get_list_attempts_uc,
+    get_list_catalog_uc,
     get_quiz_uc,
     get_submit_attempt_uc,
     get_upsert_quiz_uc,
@@ -259,6 +263,9 @@ from cyberdyne_backend.adapters.outbound.persistence.learning.repository import 
 )
 from cyberdyne_backend.adapters.outbound.persistence.marketplace.repository import (
     SqlAlchemyMarketplaceRepository,
+)
+from cyberdyne_backend.adapters.outbound.persistence.quizzes.catalog_repository import (
+    SqlAlchemyQuizCatalogReader,
 )
 from cyberdyne_backend.adapters.outbound.persistence.quizzes.repository import (
     SqlAlchemyQuizRepository,
@@ -373,6 +380,7 @@ from cyberdyne_backend.application.quizzes import (
     ExplainQuizAnswers,
     GetQuiz,
     ListMyAttempts,
+    ListQuizCatalog,
     SubmitQuizAttempt,
     UpsertQuiz,
 )
@@ -760,6 +768,10 @@ def create_app() -> FastAPI:
         async with session_scope() as session:
             yield ListMyAttempts(repo=SqlAlchemyQuizRepository(session))
 
+    async def _list_quiz_catalog_dep() -> AsyncIterator[ListQuizCatalog]:
+        async with session_scope() as session:
+            yield ListQuizCatalog(reader=SqlAlchemyQuizCatalogReader(session))
+
     async def _explain_answers_dep() -> AsyncIterator[ExplainQuizAnswers]:
         async with session_scope() as session:
             yield ExplainQuizAnswers(
@@ -1058,6 +1070,7 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_delete_quiz_uc] = _delete_quiz_dep
     app.dependency_overrides[get_submit_attempt_uc] = _submit_attempt_dep
     app.dependency_overrides[get_list_attempts_uc] = _list_attempts_dep
+    app.dependency_overrides[get_list_catalog_uc] = _list_quiz_catalog_dep
     app.dependency_overrides[get_explain_answers_uc] = _explain_answers_dep
     app.dependency_overrides[get_save_upload_uc] = _save_upload_dep
     app.dependency_overrides[get_save_uploads_uc] = _save_uploads_dep
@@ -1115,6 +1128,7 @@ def create_app() -> FastAPI:
     app.include_router(category_admin_router)
     app.include_router(quizzes_player_router)
     app.include_router(quizzes_admin_router)
+    app.include_router(quizzes_catalog_router)
     app.include_router(uploads_admin_router)
     app.include_router(uploads_public_router)
     # Serve uploaded media read-only. check_dir=False so the mount is
