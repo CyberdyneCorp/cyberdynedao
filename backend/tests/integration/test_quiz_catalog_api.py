@@ -104,12 +104,8 @@ def _quiz_with_two_questions(quiz_id, lesson_id) -> list:
                 sort_order=i,
             )
         )
-        rows.append(
-            QuizOptionRow(id=uuid.uuid4(), question_id=q_id, text="a", is_correct=True)
-        )
-        rows.append(
-            QuizOptionRow(id=uuid.uuid4(), question_id=q_id, text="b", is_correct=False)
-        )
+        rows.append(QuizOptionRow(id=uuid.uuid4(), question_id=q_id, text="a", is_correct=True))
+        rows.append(QuizOptionRow(id=uuid.uuid4(), question_id=q_id, text="b", is_correct=False))
     return rows
 
 
@@ -117,9 +113,7 @@ def _quiz_with_two_questions(quiz_id, lesson_id) -> list:
 async def seeded(_prepared_schema: None) -> AsyncIterator[None]:
     factory = get_session_factory()
     async with factory() as s:
-        s.add(
-            CategoryRow(id=_CAT, slug="programming", name="Programming", created_at=_NOW)
-        )
+        s.add(CategoryRow(id=_CAT, slug="programming", name="Programming", created_at=_NOW))
         s.add_all(
             [
                 _course(_COURSE_PUB, "alpha", "published", category_id=_CAT),
@@ -170,9 +164,7 @@ def learner_client(app: FastAPI) -> TestClient:
     return TestClient(app)
 
 
-def test_browse_lists_published_quizzes_only(
-    seeded: None, learner_client: TestClient
-) -> None:
+def test_browse_lists_published_quizzes_only(seeded: None, learner_client: TestClient) -> None:
     resp = learner_client.get("/api/v1/quizzes")
     assert resp.status_code == 200, resp.text
     body = resp.json()
@@ -212,16 +204,12 @@ def test_pagination_with_cursor(seeded: None, learner_client: TestClient) -> Non
     assert [it["courseSlug"] for it in first["items"]] == ["alpha"]
     assert first["nextCursor"] is not None
 
-    second = learner_client.get(
-        f"/api/v1/quizzes?limit=1&cursor={first['nextCursor']}"
-    ).json()
+    second = learner_client.get(f"/api/v1/quizzes?limit=1&cursor={first['nextCursor']}").json()
     assert [it["courseSlug"] for it in second["items"]] == ["beta"]
     assert second["nextCursor"] is None
 
 
-def test_malformed_cursor_starts_from_beginning(
-    seeded: None, learner_client: TestClient
-) -> None:
+def test_malformed_cursor_starts_from_beginning(seeded: None, learner_client: TestClient) -> None:
     body = learner_client.get("/api/v1/quizzes?cursor=not-a-cursor").json()
     assert [it["courseSlug"] for it in body["items"]] == ["alpha", "beta"]
 

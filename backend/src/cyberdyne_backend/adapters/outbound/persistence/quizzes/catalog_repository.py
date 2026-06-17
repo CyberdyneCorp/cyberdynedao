@@ -146,9 +146,7 @@ class SqlAlchemyQuizCatalogReader:
         ]
 
         next_cursor = (
-            _encode_cursor(items[-1].course_slug, items[-1].quiz_id)
-            if has_more and items
-            else None
+            _encode_cursor(items[-1].course_slug, items[-1].quiz_id) if has_more and items else None
         )
         return QuizCatalogPage(items=items, next_cursor=next_cursor)
 
