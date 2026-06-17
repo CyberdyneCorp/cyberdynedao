@@ -142,3 +142,32 @@ class AnswerFeedbackResponse(_CamelModel):
     static_explanation: str
     # The personalized LLM explanation; null for answers the learner got right.
     ai_explanation: str | None
+
+
+# ── Browse/practice catalogue (issue #169) ───────────────────────────
+
+
+class LastAttemptResponse(_CamelModel):
+    score: int
+    passed: bool
+    attempt_number: int
+    submitted_at: datetime
+
+
+class QuizSummaryResponse(_CamelModel):
+    quiz_id: UUID
+    lesson_id: UUID
+    lesson_title: str
+    course_slug: str
+    course_title: str
+    category_slug: str | None
+    passing_score: int
+    question_count: int
+    # The learner's most recent attempt at this quiz; null if never taken.
+    last_attempt: LastAttemptResponse | None = None
+
+
+class QuizCatalogResponse(_CamelModel):
+    items: list[QuizSummaryResponse]
+    # Opaque forward cursor; null on the last page.
+    next_cursor: str | None = None

@@ -8,6 +8,13 @@ player surface never receives the correct flags or explanations until an
 attempt is submitted.
 """
 
+from cyberdyne_backend.domain.quizzes.catalog import (
+    DEFAULT_CATALOG_LIMIT,
+    MAX_CATALOG_LIMIT,
+    LastAttempt,
+    QuizCatalogPage,
+    QuizSummary,
+)
 from cyberdyne_backend.domain.quizzes.entities import (
     DEFAULT_PASSING_SCORE,
     MAX_OPTIONS,
@@ -32,11 +39,14 @@ from cyberdyne_backend.domain.quizzes.errors import (
 )
 from cyberdyne_backend.domain.quizzes.ports import (
     LessonCompleter,
+    QuizCatalogReader,
     QuizRepository,
 )
 
 __all__ = [
+    "DEFAULT_CATALOG_LIMIT",
     "DEFAULT_PASSING_SCORE",
+    "MAX_CATALOG_LIMIT",
     "MAX_OPTIONS",
     "MAX_QUESTIONS",
     "MIN_OPTIONS",
@@ -44,14 +54,18 @@ __all__ = [
     "GradedAttempt",
     "InvalidAttemptError",
     "InvalidQuizError",
+    "LastAttempt",
     "LessonCompleter",
     "Question",
     "QuestionOption",
     "QuestionResult",
     "Quiz",
     "QuizAttempt",
+    "QuizCatalogPage",
+    "QuizCatalogReader",
     "QuizNotFoundError",
     "QuizRepository",
+    "QuizSummary",
     "build_question",
     "grade",
     "new_attempt",

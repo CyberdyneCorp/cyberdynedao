@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Protocol, runtime_checkable
 from uuid import UUID
 
+from cyberdyne_backend.domain.quizzes.catalog import QuizCatalogPage
 from cyberdyne_backend.domain.quizzes.entities import Quiz, QuizAttempt
 
 
@@ -40,6 +41,26 @@ class QuizRepository(Protocol):
     async def count_attempts(self, *, user_id: UUID, quiz_id: UUID) -> int:
         """How many times the user has already attempted the quiz."""
         ...
+
+
+@runtime_checkable
+class QuizCatalogReader(Protocol):
+    """Read-only browse view across quizzes/lessons/courses (issue #169).
+
+    Lists quizzes for *published* courses with denormalized course/lesson
+    metadata and the requesting learner's most-recent attempt. Filtering
+    is optional; ``cursor`` is the opaque token returned by the prior
+    page (``None`` for the first page)."""
+
+    async def list_quizzes(
+        self,
+        *,
+        user_id: UUID,
+        course_slug: str | None = None,
+        category_slug: str | None = None,
+        cursor: str | None = None,
+        limit: int = 20,
+    ) -> QuizCatalogPage: ...
 
 
 @runtime_checkable
