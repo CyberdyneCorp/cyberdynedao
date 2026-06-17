@@ -35,6 +35,7 @@ class NoteResponse(_CamelModel):
     reviewed_at: datetime | None = None
     next_review_at: datetime | None = None
     review_interval_days: int = 0
+    ai_summary: str | None = None
     created_at: datetime
     updated_at: datetime | None = None
 

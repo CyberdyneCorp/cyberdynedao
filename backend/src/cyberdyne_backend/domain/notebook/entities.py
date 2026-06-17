@@ -63,6 +63,8 @@ class Note:
     reviewed_at: datetime | None = None
     next_review_at: datetime | None = None
     review_interval_days: int = 0
+    # LLM-generated condensed summary, populated on demand (issue #187).
+    ai_summary: str | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
     updated_at: datetime | None = None
 

@@ -28,10 +28,12 @@ from cyberdyne_backend.application.notebook import (
     CreateNote,
     DeleteFlashcard,
     DeleteNote,
+    GenerateFlashcards,
     GetNote,
     ListFlashcards,
     ListNotes,
     ReviewNote,
+    SummarizeNote,
     UpdateNote,
 )
 from cyberdyne_backend.domain.auth_identity import UserPrincipal
@@ -88,6 +90,14 @@ async def get_review_note_uc() -> ReviewNote:  # pragma: no cover - override tar
     raise NotImplementedError
 
 
+async def get_generate_flashcards_uc() -> GenerateFlashcards:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_summarize_note_uc() -> SummarizeNote:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
 def _flashcard_response(f: Flashcard) -> FlashcardResponse:
     return FlashcardResponse(
         id=f.id,
@@ -120,6 +130,7 @@ def _note_response(n: Note) -> NoteResponse:
         reviewed_at=n.reviewed_at,
         next_review_at=n.next_review_at,
         review_interval_days=n.review_interval_days,
+        ai_summary=n.ai_summary,
         created_at=n.created_at,
         updated_at=n.updated_at,
     )
@@ -317,6 +328,52 @@ async def review_note(
             note_id=note_id,
             rating=parse_review_rating(body.rating),
         )
+    except NoteNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return _note_response(note)
+
+
+# ── AI generation (issue #187) ────────────────────────────────────────
+
+
+@public_router.post(
+    "/notes/{note_id}/flashcards/generate",
+    response_model=list[FlashcardResponse],
+    response_model_by_alias=True,
+    status_code=201,
+)
+async def generate_flashcards(
+    note_id: UUID,
+    use_case: Annotated[GenerateFlashcards, Depends(get_generate_flashcards_uc)],
+    principal: Annotated[UserPrincipal, Depends(require_principal)],
+) -> list[FlashcardResponse]:
+    """LLM-generate flashcards from the note and persist them (they then
+    appear in `GET /notes/{id}/flashcards` and the `?due=` review queue).
+    Returns the created cards — empty if the model produced none (e.g. the
+    offline fallback when no API key is configured)."""
+    user = _require_user(principal)
+    try:
+        cards = await use_case.execute(user_id=user.user_id, note_id=note_id)
+    except NoteNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return [_flashcard_response(c) for c in cards]
+
+
+@public_router.post(
+    "/notes/{note_id}/summary",
+    response_model=NoteResponse,
+    response_model_by_alias=True,
+)
+async def summarize_note(
+    note_id: UUID,
+    use_case: Annotated[SummarizeNote, Depends(get_summarize_note_uc)],
+    principal: Annotated[UserPrincipal, Depends(require_principal)],
+) -> NoteResponse:
+    """LLM-summarize the note, persist the summary onto it (`aiSummary`),
+    and return the updated note."""
+    user = _require_user(principal)
+    try:
+        note = await use_case.execute(user_id=user.user_id, note_id=note_id)
     except NoteNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return _note_response(note)
