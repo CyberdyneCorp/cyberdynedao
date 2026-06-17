@@ -35,7 +35,17 @@
 > feedback** (`POST /api/v1/lessons/{id}/quiz/feedback` - LLM-personalized
 > "why it's wrong" per incorrect answer), and **LLM course
 > recommendations** (`GET /api/v1/recommendations/me` - deterministic
-> catalogue ranking against the learner's dashboard + an LLM narrative).
+> catalogue ranking against the learner's dashboard + an LLM narrative),
+> and **achievements/badges** (issue #163 — `GET /api/v1/achievements/me`
+> returns earned + in-progress achievements with `progress {current,
+> target}` and an `earnedAt` recorded the first time each is observed
+> earned. Award rules are deterministic and live in one place
+> (`domain/achievements`): each badge binds a metric — courses completed,
+> quizzes passed, perfect quizzes, certificates earned, modules completed
+> — to a target. Metrics are aggregated read-only across the
+> courses/quizzes/learning tables; award-on-read persists newly-earned
+> badges to `user_achievements` so the timestamp is stable, and re-reads
+> award nothing new).
 > All planned Academy AI phases are now delivered. Per-context detail
 > lives in each bounded
 > context under `backend/src/cyberdyne_backend/`.

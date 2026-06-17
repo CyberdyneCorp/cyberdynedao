@@ -19,6 +19,12 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cyberdyne_backend import __version__
+from cyberdyne_backend.adapters.inbound.api.achievements.router import (
+    get_my_achievements_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.achievements.router import (
+    public_router as achievements_public_router,
+)
 from cyberdyne_backend.adapters.inbound.api.ai_chat.router import (
     get_history_uc as get_chat_history_uc,
 )
@@ -216,6 +222,12 @@ from cyberdyne_backend.adapters.outbound.persistence.academy.job_store import (
 from cyberdyne_backend.adapters.outbound.persistence.academy.translation_repository import (
     SqlAlchemyTranslationRepository,
 )
+from cyberdyne_backend.adapters.outbound.persistence.achievements.metrics_reader import (
+    SqlAlchemyAchievementMetricsReader,
+)
+from cyberdyne_backend.adapters.outbound.persistence.achievements.repository import (
+    SqlAlchemyAchievementRepository,
+)
 from cyberdyne_backend.adapters.outbound.persistence.ai_chat.repository import (
     SqlAlchemyChatRepository,
 )
@@ -261,6 +273,7 @@ from cyberdyne_backend.application.academy import (
     TranslationJob,
     TranslationWorker,
 )
+from cyberdyne_backend.application.achievements import GetMyAchievements
 from cyberdyne_backend.application.ai_chat import (
     GetChatHistory,
     RunChatTurn,
@@ -529,6 +542,14 @@ def create_app() -> FastAPI:
     async def _learner_dashboard_dep() -> AsyncIterator[GetLearnerDashboard]:
         async with session_scope() as session:
             yield GetLearnerDashboard(repo=SqlAlchemyAnalyticsRepository(session))
+
+    # Achievements/badges — earned + in-progress (issue #163).
+    async def _my_achievements_dep() -> AsyncIterator[GetMyAchievements]:
+        async with session_scope() as session:
+            yield GetMyAchievements(
+                reader=SqlAlchemyAchievementMetricsReader(session),
+                repo=SqlAlchemyAchievementRepository(session),
+            )
 
     async def _admin_overview_dep() -> AsyncIterator[GetAdminOverview]:
         async with session_scope() as session:
@@ -978,6 +999,7 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_admin_list_asks_uc] = _admin_list_asks_dep
     app.dependency_overrides[get_admin_update_ask_uc] = _admin_update_ask_dep
     app.dependency_overrides[get_learner_dashboard_uc] = _learner_dashboard_dep
+    app.dependency_overrides[get_my_achievements_uc] = _my_achievements_dep
     app.dependency_overrides[get_recommend_courses_uc] = _recommend_courses_dep
     app.dependency_overrides[get_admin_overview_uc] = _admin_overview_dep
     app.dependency_overrides[get_list_posts_uc] = _list_blog_posts_dep
@@ -1056,6 +1078,7 @@ def create_app() -> FastAPI:
     app.include_router(leads_public_router)
     app.include_router(leads_admin_router)
     app.include_router(analytics_public_router)
+    app.include_router(achievements_public_router)
     app.include_router(analytics_admin_router)
     app.include_router(recommendations_router)
     app.include_router(blog_public_router)
