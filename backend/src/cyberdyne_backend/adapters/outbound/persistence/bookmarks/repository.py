@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cyberdyne_backend.adapters.outbound.persistence.bookmarks.models import (
@@ -92,14 +92,19 @@ class SqlAlchemyBookmarkRepository:
         return [_row_to_favorite(r) for r in rows]
 
     async def remove_favorite(self, *, user_id: UUID, favorite_id: UUID) -> bool:
-        result = await self._session.execute(
-            delete(FavoriteRow).where(
-                FavoriteRow.id == favorite_id,
-                FavoriteRow.user_id == user_id,
+        existing = (
+            await self._session.execute(
+                select(FavoriteRow).where(
+                    FavoriteRow.id == favorite_id,
+                    FavoriteRow.user_id == user_id,
+                )
             )
-        )
+        ).scalar_one_or_none()
+        if existing is None:
+            return False
+        await self._session.delete(existing)
         await self._session.flush()
-        return (result.rowcount or 0) > 0
+        return True
 
     # ── Recently viewed ───────────────────────────────────────────────
     async def record_recent_view(self, view: RecentView) -> RecentView:
@@ -129,9 +134,7 @@ class SqlAlchemyBookmarkRepository:
         await self._session.flush()
         return view
 
-    async def list_recent_for_user(
-        self, user_id: UUID, *, limit: int
-    ) -> list[RecentView]:
+    async def list_recent_for_user(self, user_id: UUID, *, limit: int) -> list[RecentView]:
         rows = (
             (
                 await self._session.execute(

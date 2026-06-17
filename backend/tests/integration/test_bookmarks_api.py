@@ -61,12 +61,8 @@ def test_add_list_and_delete_favorite(learner_client: TestClient) -> None:
 
 
 def test_favorite_is_idempotent(learner_client: TestClient) -> None:
-    first = learner_client.post(
-        "/api/v1/me/favorites", json={"type": "lesson", "ref": "l1"}
-    )
-    second = learner_client.post(
-        "/api/v1/me/favorites", json={"type": "lesson", "ref": "l1"}
-    )
+    first = learner_client.post("/api/v1/me/favorites", json={"type": "lesson", "ref": "l1"})
+    second = learner_client.post("/api/v1/me/favorites", json={"type": "lesson", "ref": "l1"})
     assert first.json()["id"] == second.json()["id"]
     assert len(learner_client.get("/api/v1/me/favorites").json()) == 1
 
@@ -77,9 +73,7 @@ def test_delete_missing_favorite_returns_404(learner_client: TestClient) -> None
 
 
 def test_invalid_favorite_type_rejected(learner_client: TestClient) -> None:
-    resp = learner_client.post(
-        "/api/v1/me/favorites", json={"type": "bogus", "ref": "x"}
-    )
+    resp = learner_client.post("/api/v1/me/favorites", json={"type": "bogus", "ref": "x"})
     assert resp.status_code == 422
 
 
@@ -98,9 +92,7 @@ def test_record_and_list_recent(learner_client: TestClient) -> None:
 
 def test_recent_limit_is_enforced(learner_client: TestClient) -> None:
     for i in range(5):
-        learner_client.post(
-            "/api/v1/me/recent", json={"type": "note", "ref": f"n{i}"}
-        )
+        learner_client.post("/api/v1/me/recent", json={"type": "note", "ref": f"n{i}"})
     limited = learner_client.get("/api/v1/me/recent?limit=2")
     assert limited.status_code == 200
     assert len(limited.json()) == 2

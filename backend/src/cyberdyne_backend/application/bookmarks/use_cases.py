@@ -35,9 +35,7 @@ class AddFavorite:
 
     repo: BookmarkRepository
 
-    async def execute(
-        self, *, user_id: UUID, type: BookmarkType, ref: str
-    ) -> Favorite:
+    async def execute(self, *, user_id: UUID, type: BookmarkType, ref: str) -> Favorite:
         candidate = new_favorite(user_id=user_id, type=type, ref=ref)
         return await self.repo.add_favorite(candidate)
 
@@ -47,9 +45,7 @@ class RemoveFavorite:
     repo: BookmarkRepository
 
     async def execute(self, *, user_id: UUID, favorite_id: UUID) -> None:
-        removed = await self.repo.remove_favorite(
-            user_id=user_id, favorite_id=favorite_id
-        )
+        removed = await self.repo.remove_favorite(user_id=user_id, favorite_id=favorite_id)
         if not removed:
             raise FavoriteNotFoundError(f"favorite {favorite_id} not found")
 
@@ -60,9 +56,7 @@ class RecordRecentView:
 
     repo: BookmarkRepository
 
-    async def execute(
-        self, *, user_id: UUID, type: BookmarkType, ref: str
-    ) -> RecentView:
+    async def execute(self, *, user_id: UUID, type: BookmarkType, ref: str) -> RecentView:
         candidate = new_recent_view(user_id=user_id, type=type, ref=ref)
         return await self.repo.record_recent_view(candidate)
 

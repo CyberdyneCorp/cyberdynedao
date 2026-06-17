@@ -111,7 +111,9 @@ async def test_create_category_rejects_duplicate_slug() -> None:
 
 
 async def test_set_course_category_validates_existence() -> None:
-    course = new_course(title="Comp Arch", description="d", level="Beginner", slug="comparch-basics")
+    course = new_course(
+        title="Comp Arch", description="d", level="Beginner", slug="comparch-basics"
+    )
     course_repo = FakeCourseRepo([course])
     cat_repo = FakeCategoryRepo()
     cat = new_category(name="Computer Architecture", slug="computer-architecture")

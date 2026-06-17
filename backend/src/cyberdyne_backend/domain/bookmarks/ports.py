@@ -31,8 +31,6 @@ class BookmarkRepository(Protocol):
         ``(user_id, type, ref)`` — re-viewing updates ``viewed_at``."""
         ...
 
-    async def list_recent_for_user(
-        self, user_id: UUID, *, limit: int
-    ) -> list[RecentView]:
+    async def list_recent_for_user(self, user_id: UUID, *, limit: int) -> list[RecentView]:
         """Recently-viewed items for a user, most-recent first."""
         ...

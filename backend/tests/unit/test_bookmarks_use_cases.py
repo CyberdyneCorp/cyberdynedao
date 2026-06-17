@@ -42,14 +42,10 @@ class _FakeRepo:
         rows = [f for f in self.favorites if f.user_id == user_id]
         return sorted(rows, key=lambda f: f.added_at, reverse=True)
 
-    async def remove_favorite(
-        self, *, user_id: uuid.UUID, favorite_id: uuid.UUID
-    ) -> bool:
+    async def remove_favorite(self, *, user_id: uuid.UUID, favorite_id: uuid.UUID) -> bool:
         before = len(self.favorites)
         self.favorites = [
-            f
-            for f in self.favorites
-            if not (f.id == favorite_id and f.user_id == user_id)
+            f for f in self.favorites if not (f.id == favorite_id and f.user_id == user_id)
         ]
         return len(self.favorites) < before
 
@@ -65,9 +61,7 @@ class _FakeRepo:
         self.recent.append(view)
         return view
 
-    async def list_recent_for_user(
-        self, user_id: uuid.UUID, *, limit: int
-    ) -> list[RecentView]:
+    async def list_recent_for_user(self, user_id: uuid.UUID, *, limit: int) -> list[RecentView]:
         rows = [v for v in self.recent if v.user_id == user_id]
         rows.sort(key=lambda v: v.viewed_at, reverse=True)
         return rows[:limit]
@@ -78,12 +72,8 @@ def test_add_favorite_is_idempotent() -> None:
     uc = AddFavorite(repo=repo)
     user = uuid.uuid4()
 
-    first = asyncio.run(
-        uc.execute(user_id=user, type=BookmarkType.COURSE, ref="quantum-101")
-    )
-    second = asyncio.run(
-        uc.execute(user_id=user, type=BookmarkType.COURSE, ref="quantum-101")
-    )
+    first = asyncio.run(uc.execute(user_id=user, type=BookmarkType.COURSE, ref="quantum-101"))
+    second = asyncio.run(uc.execute(user_id=user, type=BookmarkType.COURSE, ref="quantum-101"))
 
     assert first.id == second.id
     assert len(repo.favorites) == 1
@@ -93,9 +83,7 @@ def test_list_favorites_is_user_scoped() -> None:
     repo = _FakeRepo()
     me, other = uuid.uuid4(), uuid.uuid4()
     asyncio.run(AddFavorite(repo=repo).execute(user_id=me, type=BookmarkType.COURSE, ref="a"))
-    asyncio.run(
-        AddFavorite(repo=repo).execute(user_id=other, type=BookmarkType.COURSE, ref="b")
-    )
+    asyncio.run(AddFavorite(repo=repo).execute(user_id=other, type=BookmarkType.COURSE, ref="b"))
 
     mine = asyncio.run(ListFavorites(repo=repo).execute(me))
     assert [f.ref for f in mine] == ["a"]
@@ -125,9 +113,7 @@ def test_list_recent_clamps_limit() -> None:
     user = uuid.uuid4()
     for i in range(5):
         asyncio.run(
-            RecordRecentView(repo=repo).execute(
-                user_id=user, type=BookmarkType.NOTE, ref=f"n{i}"
-            )
+            RecordRecentView(repo=repo).execute(user_id=user, type=BookmarkType.NOTE, ref=f"n{i}")
         )
 
     # Over-large limits are clamped down to the available rows; a
