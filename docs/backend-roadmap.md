@@ -35,7 +35,16 @@
 > feedback** (`POST /api/v1/lessons/{id}/quiz/feedback` - LLM-personalized
 > "why it's wrong" per incorrect answer), and **LLM course
 > recommendations** (`GET /api/v1/recommendations/me` - deterministic
-> catalogue ranking against the learner's dashboard + an LLM narrative).
+> catalogue ranking against the learner's dashboard + an LLM narrative),
+> and the **Skill Map** (issue #165 — `GET /api/v1/skills/me` returns
+> per-domain skill mastery + weak areas, replacing the client's
+> course-percent approximation. A skill is a course category, its domain
+> the parent category; mastery blends lesson completion (weight 0.6) with
+> best-quiz performance (0.4, dropped when no quiz was attempted), over
+> published courses only. Skills below 40% the learner has engaged with
+> are flagged `weak`, surfaced in `weakAreas`, with next-step course
+> `suggestions` drawn from the weakest skills first. Derivation is
+> pure-domain; the adapter only aggregates).
 > All planned Academy AI phases are now delivered. Per-context detail
 > lives in each bounded
 > context under `backend/src/cyberdyne_backend/`.
