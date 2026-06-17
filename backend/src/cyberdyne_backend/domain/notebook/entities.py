@@ -14,9 +14,13 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from uuid import UUID
 
-from cyberdyne_backend.domain.notebook.errors import InvalidNoteError
+from cyberdyne_backend.domain.notebook.errors import (
+    InvalidFlashcardError,
+    InvalidNoteError,
+)
 
 _MAX_TITLE = 200
+_MAX_FLASHCARD = 2000
 
 
 class NoteType(StrEnum):
@@ -119,3 +123,36 @@ def apply_fields(note: Note, fields: NoteFields, *, now: datetime | None = None)
 class NotePage:
     items: list[Note] = field(default_factory=list)
     next_cursor: str | None = None
+
+
+@dataclass(slots=True)
+class Flashcard:
+    """A question/answer card generated from (or attached to) a note, for
+    self-testing + spaced review."""
+
+    id: UUID
+    note_id: UUID
+    question: str
+    answer: str
+    created_at: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
+
+
+def new_flashcard(
+    *,
+    note_id: UUID,
+    question: str,
+    answer: str,
+    now: datetime | None = None,
+) -> Flashcard:
+    q, a = question.strip(), answer.strip()
+    if not q or len(q) > _MAX_FLASHCARD:
+        raise InvalidFlashcardError(f"question must be 1..{_MAX_FLASHCARD} chars")
+    if not a or len(a) > _MAX_FLASHCARD:
+        raise InvalidFlashcardError(f"answer must be 1..{_MAX_FLASHCARD} chars")
+    return Flashcard(
+        id=uuid.uuid4(),
+        note_id=note_id,
+        question=q,
+        answer=a,
+        created_at=now or datetime.now(tz=UTC),
+    )

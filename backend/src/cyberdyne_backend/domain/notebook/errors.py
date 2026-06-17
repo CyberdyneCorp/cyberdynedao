@@ -9,3 +9,11 @@ class NoteNotFoundError(LookupError):
 
 class InvalidNoteError(ValueError):
     """Raised when a note fails its invariants (bad title/type)."""
+
+
+class FlashcardNotFoundError(LookupError):
+    """Raised when a flashcard can't be found on the user's note."""
+
+
+class InvalidFlashcardError(ValueError):
+    """Raised when a flashcard fails its invariants (empty question/answer)."""

@@ -122,3 +122,56 @@ def test_notes_are_user_scoped(app: FastAPI, _prepared_schema: None) -> None:
     # Other user can't read or list it.
     assert other.get(f"/api/v1/notebook/notes/{nid}").status_code == 404
     assert other.get("/api/v1/notebook/notes").json()["items"] == []
+
+
+def test_flashcard_crud(client: TestClient) -> None:
+    note_id = client.post("/api/v1/notebook/notes", json=_note()).json()["id"]
+
+    created = client.post(
+        f"/api/v1/notebook/notes/{note_id}/flashcards",
+        json={"question": "What is V=IR?", "answer": "Ohm's Law"},
+    )
+    assert created.status_code == 201, created.text
+    body = created.json()
+    assert body["question"] == "What is V=IR?"
+    assert body["noteId"] == note_id
+    fid = body["id"]
+
+    listed = client.get(f"/api/v1/notebook/notes/{note_id}/flashcards")
+    assert [c["answer"] for c in listed.json()] == ["Ohm's Law"]
+
+    deleted = client.delete(f"/api/v1/notebook/notes/{note_id}/flashcards/{fid}")
+    assert deleted.status_code == 204
+    assert client.get(f"/api/v1/notebook/notes/{note_id}/flashcards").json() == []
+
+
+def test_flashcard_on_missing_note_404(client: TestClient) -> None:
+    resp = client.post(
+        f"/api/v1/notebook/notes/{uuid.uuid4()}/flashcards",
+        json={"question": "q", "answer": "a"},
+    )
+    assert resp.status_code == 404
+
+
+def test_empty_flashcard_rejected(client: TestClient) -> None:
+    note_id = client.post("/api/v1/notebook/notes", json=_note()).json()["id"]
+    resp = client.post(
+        f"/api/v1/notebook/notes/{note_id}/flashcards",
+        json={"question": "", "answer": "a"},
+    )
+    assert resp.status_code == 422
+
+
+def test_flashcards_are_user_scoped(app: FastAPI, _prepared_schema: None) -> None:
+    app.dependency_overrides[require_principal] = lambda: _principal(_USER)
+    me = TestClient(app)
+    note_id = me.post("/api/v1/notebook/notes", json=_note()).json()["id"]
+    me.post(
+        f"/api/v1/notebook/notes/{note_id}/flashcards",
+        json={"question": "q", "answer": "a"},
+    )
+
+    app.dependency_overrides[require_principal] = lambda: _principal(_OTHER)
+    other = TestClient(app)
+    # Other user can't reach flashcards on my note (note lookup 404s).
+    assert other.get(f"/api/v1/notebook/notes/{note_id}/flashcards").status_code == 404

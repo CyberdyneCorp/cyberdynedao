@@ -43,10 +43,26 @@ def test_new_note_trims_title_and_stamps() -> None:
 class _FakeRepo:
     def __init__(self) -> None:
         self.notes: dict[uuid.UUID, Note] = {}
+        self.flashcards: dict[uuid.UUID, object] = {}
 
     async def add(self, note: Note) -> Note:
         self.notes[note.id] = note
         return note
+
+    async def add_flashcard(self, flashcard):
+        self.flashcards[flashcard.id] = flashcard
+        return flashcard
+
+    async def list_flashcards(self, note_id):
+        rows = [c for c in self.flashcards.values() if c.note_id == note_id]
+        return sorted(rows, key=lambda c: c.created_at)
+
+    async def delete_flashcard(self, *, note_id, flashcard_id):
+        c = self.flashcards.get(flashcard_id)
+        if c is None or c.note_id != note_id:
+            return False
+        del self.flashcards[flashcard_id]
+        return True
 
     async def get(self, *, user_id, note_id) -> Note:
         n = self.notes.get(note_id)
@@ -106,3 +122,48 @@ def test_list_clamps_limit() -> None:
         asyncio.run(CreateNote(repo=repo).execute(user_id=me, fields=_fields()))
     page = asyncio.run(ListNotes(repo=repo).execute(user_id=me, limit=9999))
     assert len(page.items) == 3
+
+
+def test_add_flashcard_requires_owned_note() -> None:
+    from cyberdyne_backend.application.notebook import AddFlashcard, ListFlashcards
+    from cyberdyne_backend.domain.notebook import InvalidFlashcardError
+
+    repo = _FakeRepo()
+    me, other = uuid.uuid4(), uuid.uuid4()
+    note = asyncio.run(CreateNote(repo=repo).execute(user_id=me, fields=_fields()))
+
+    card = asyncio.run(
+        AddFlashcard(repo=repo).execute(user_id=me, note_id=note.id, question="Q?", answer="A")
+    )
+    assert card.note_id == note.id
+    listed = asyncio.run(ListFlashcards(repo=repo).execute(user_id=me, note_id=note.id))
+    assert [c.question for c in listed] == ["Q?"]
+
+    # Another user cannot add a flashcard to my note.
+    with pytest.raises(NoteNotFoundError):
+        asyncio.run(
+            AddFlashcard(repo=repo).execute(
+                user_id=other, note_id=note.id, question="x", answer="y"
+            )
+        )
+
+    # Empty question rejected.
+    with pytest.raises(InvalidFlashcardError):
+        asyncio.run(
+            AddFlashcard(repo=repo).execute(user_id=me, note_id=note.id, question="  ", answer="A")
+        )
+
+
+def test_delete_missing_flashcard_raises() -> None:
+    from cyberdyne_backend.application.notebook import DeleteFlashcard
+    from cyberdyne_backend.domain.notebook import FlashcardNotFoundError
+
+    repo = _FakeRepo()
+    me = uuid.uuid4()
+    note = asyncio.run(CreateNote(repo=repo).execute(user_id=me, fields=_fields()))
+    with pytest.raises(FlashcardNotFoundError):
+        asyncio.run(
+            DeleteFlashcard(repo=repo).execute(
+                user_id=me, note_id=note.id, flashcard_id=uuid.uuid4()
+            )
+        )

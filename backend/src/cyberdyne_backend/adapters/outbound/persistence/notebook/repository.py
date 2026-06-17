@@ -10,8 +10,12 @@ from uuid import UUID
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from cyberdyne_backend.adapters.outbound.persistence.notebook.models import NoteRow
+from cyberdyne_backend.adapters.outbound.persistence.notebook.models import (
+    FlashcardRow,
+    NoteRow,
+)
 from cyberdyne_backend.domain.notebook import (
+    Flashcard,
     Note,
     NoteNotFoundError,
     NotePage,
@@ -57,6 +61,16 @@ def _row_to_note(row: NoteRow) -> Note:
         tags=tuple(row.tags),
         created_at=_as_utc(row.created_at) or row.created_at,
         updated_at=_as_utc(row.updated_at),
+    )
+
+
+def _row_to_flashcard(row: FlashcardRow) -> Flashcard:
+    return Flashcard(
+        id=row.id,
+        note_id=row.note_id,
+        question=row.question,
+        answer=row.answer,
+        created_at=_as_utc(row.created_at) or row.created_at,
     )
 
 
@@ -164,6 +178,49 @@ class SqlAlchemyNotebookRepository:
 
     async def delete(self, *, user_id: UUID, note_id: UUID) -> bool:
         row = await self._row(user_id=user_id, note_id=note_id)
+        if row is None:
+            return False
+        await self._session.delete(row)
+        await self._session.flush()
+        return True
+
+    # ── Flashcards ────────────────────────────────────────────────────
+    async def add_flashcard(self, flashcard: Flashcard) -> Flashcard:
+        self._session.add(
+            FlashcardRow(
+                id=flashcard.id,
+                note_id=flashcard.note_id,
+                question=flashcard.question,
+                answer=flashcard.answer,
+                created_at=flashcard.created_at,
+            )
+        )
+        await self._session.flush()
+        return flashcard
+
+    async def list_flashcards(self, note_id: UUID) -> list[Flashcard]:
+        rows = (
+            (
+                await self._session.execute(
+                    select(FlashcardRow)
+                    .where(FlashcardRow.note_id == note_id)
+                    .order_by(FlashcardRow.created_at)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        return [_row_to_flashcard(r) for r in rows]
+
+    async def delete_flashcard(self, *, note_id: UUID, flashcard_id: UUID) -> bool:
+        row = (
+            await self._session.execute(
+                select(FlashcardRow).where(
+                    FlashcardRow.id == flashcard_id,
+                    FlashcardRow.note_id == note_id,
+                )
+            )
+        ).scalar_one_or_none()
         if row is None:
             return False
         await self._session.delete(row)

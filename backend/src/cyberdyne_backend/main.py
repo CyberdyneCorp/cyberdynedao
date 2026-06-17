@@ -210,8 +210,11 @@ from cyberdyne_backend.adapters.inbound.api.marketplace.router import (
     webhook_router as marketplace_webhook_router,
 )
 from cyberdyne_backend.adapters.inbound.api.notebook.router import (
+    get_add_flashcard_uc,
     get_create_note_uc,
+    get_delete_flashcard_uc,
     get_delete_note_uc,
+    get_list_flashcards_uc,
     get_list_notes_uc,
     get_note_uc,
     get_update_note_uc,
@@ -448,9 +451,12 @@ from cyberdyne_backend.application.marketplace import (
 )
 from cyberdyne_backend.application.marketplace.use_cases import GetProduct
 from cyberdyne_backend.application.notebook import (
+    AddFlashcard,
     CreateNote,
+    DeleteFlashcard,
     DeleteNote,
     GetNote,
+    ListFlashcards,
     ListNotes,
     UpdateNote,
 )
@@ -885,6 +891,19 @@ def create_app() -> FastAPI:
         async with session_scope() as session:
             yield DeleteNote(repo=SqlAlchemyNotebookRepository(session))
 
+    # Notebook flashcards (issue #161, part 2).
+    async def _add_flashcard_dep() -> AsyncIterator[AddFlashcard]:
+        async with session_scope() as session:
+            yield AddFlashcard(repo=SqlAlchemyNotebookRepository(session))
+
+    async def _list_flashcards_dep() -> AsyncIterator[ListFlashcards]:
+        async with session_scope() as session:
+            yield ListFlashcards(repo=SqlAlchemyNotebookRepository(session))
+
+    async def _delete_flashcard_dep() -> AsyncIterator[DeleteFlashcard]:
+        async with session_scope() as session:
+            yield DeleteFlashcard(repo=SqlAlchemyNotebookRepository(session))
+
     async def _upsert_quiz_dep() -> AsyncIterator[UpsertQuiz]:
         async with session_scope() as session:
             yield UpsertQuiz(repo=SqlAlchemyQuizRepository(session))
@@ -1224,6 +1243,9 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_note_uc] = _get_note_dep
     app.dependency_overrides[get_update_note_uc] = _update_note_dep
     app.dependency_overrides[get_delete_note_uc] = _delete_note_dep
+    app.dependency_overrides[get_add_flashcard_uc] = _add_flashcard_dep
+    app.dependency_overrides[get_list_flashcards_uc] = _list_flashcards_dep
+    app.dependency_overrides[get_delete_flashcard_uc] = _delete_flashcard_dep
     app.dependency_overrides[get_upsert_quiz_uc] = _upsert_quiz_dep
     app.dependency_overrides[get_delete_quiz_uc] = _delete_quiz_dep
     app.dependency_overrides[get_submit_attempt_uc] = _submit_attempt_dep
