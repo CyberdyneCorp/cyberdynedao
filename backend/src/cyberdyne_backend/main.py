@@ -442,7 +442,10 @@ from cyberdyne_backend.application.courses import (
     UpdateLesson,
     VerifyCourseCertificate,
 )
-from cyberdyne_backend.application.dao_treasury import GetDaoOverview
+from cyberdyne_backend.application.dao_treasury import (
+    GetDaoOverview,
+    TreasurySnapshotPrewarmer,
+)
 from cyberdyne_backend.application.leads import (
     AdminListAsks,
     AdminUpdateAsk,
@@ -598,6 +601,15 @@ def create_app() -> FastAPI:
                     translate_course_factory=_translate_course_scope,
                 )
                 worker_tasks.append(asyncio.create_task(worker.run_forever()))
+        if settings.dao_snapshot_prewarm and settings.dao_treasury_address:
+            # Keep the treasury snapshot cache warm so the DaoView never
+            # eats a cold on-chain read. Inert without a treasury address.
+            prewarmer = TreasurySnapshotPrewarmer(
+                reader=container.chain_reader,
+                treasury_address=settings.dao_treasury_address,
+                interval_s=settings.dao_snapshot_ttl_s,
+            )
+            worker_tasks.append(asyncio.create_task(prewarmer.run_forever()))
         try:
             yield
         finally:

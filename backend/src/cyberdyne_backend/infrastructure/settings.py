@@ -122,6 +122,13 @@ class Settings(BaseSettings):
     # rate-limited RPCs.
     dao_snapshot_ttl_s: int = 300
 
+    # Background prewarm: when enabled AND a treasury address is set, a
+    # worker re-reads the snapshot every ``dao_snapshot_ttl_s`` so requests
+    # are served from a warm cache instead of paying a lazy on-chain read
+    # on the first request after each expiry. Inert with no treasury
+    # address (local/dev). Disable to fall back to purely-lazy caching.
+    dao_snapshot_prewarm: bool = True
+
     # Optional: number of token holders, surfaced in /dao/overview.
     # Filled in by the governance subgraph once it ships; defaults to 0.
     dao_holders_count: int = 0
