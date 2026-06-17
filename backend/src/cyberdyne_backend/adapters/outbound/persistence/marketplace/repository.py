@@ -15,6 +15,9 @@ from cyberdyne_backend.adapters.outbound.persistence.marketplace.models import (
     ProductRow,
     StripeWebhookEventRow,
 )
+from cyberdyne_backend.adapters.outbound.persistence.marketplace.redaction import (
+    redact_webhook_payload,
+)
 from cyberdyne_backend.domain.marketplace import (
     LicenseKey,
     Order,
@@ -209,6 +212,9 @@ class SqlAlchemyMarketplaceRepository:
         # On Postgres, ``ON CONFLICT DO NOTHING`` is the clean way. The
         # aiosqlite test backend doesn't support it via the pg-specific
         # construct, so we fall back to a try/insert/IntegrityError path.
+        # The stored copy is audit/idempotency-only (fulfillment reads the
+        # live verified event), so strip PII / card data before persisting.
+        safe_payload = redact_webhook_payload(event.payload)
         dialect = self._session.bind.dialect.name if self._session.bind else ""
         if dialect == "postgresql":
             stmt = (
@@ -216,7 +222,7 @@ class SqlAlchemyMarketplaceRepository:
                 .values(
                     stripe_event_id=event.stripe_event_id,
                     type=event.type,
-                    payload=event.payload,
+                    payload=safe_payload,
                     processed_at=event.processed_at,
                 )
                 .on_conflict_do_nothing(index_elements=["stripe_event_id"])
@@ -234,7 +240,7 @@ class SqlAlchemyMarketplaceRepository:
             StripeWebhookEventRow(
                 stripe_event_id=event.stripe_event_id,
                 type=event.type,
-                payload=event.payload,
+                payload=safe_payload,
                 processed_at=event.processed_at,
             )
         )
