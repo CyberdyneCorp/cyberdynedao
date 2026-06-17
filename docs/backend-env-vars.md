@@ -54,7 +54,9 @@ dev-only adapters** that must be replaced before a real go-live (see
 
 | Env var | Default | Notes |
 |---------|---------|-------|
-| `CERT_SIGNING_KEY` | _(unset)_ | 🔒 HMAC-SHA256 key for signing certificates. Unset → ephemeral key (dev only; verify-by-id won't survive a restart). |
+| `CERT_SIGNER` | `hmac` | `hmac` (shared secret, our backend verifies) or `ed25519` (keypair — external verifiers use the published public key at `GET /api/v1/learning/certificates/signing-key`). |
+| `CERT_SIGNING_KEY` | _(unset)_ | 🔒 HMAC-SHA256 key (`CERT_SIGNER=hmac`). Unset → ephemeral key (dev only; verify-by-id won't survive a restart). |
+| `CERT_ED25519_PRIVATE_KEY` | _(unset)_ | 🔒 base64url 32-byte seed (`CERT_SIGNER=ed25519`). Required when that scheme is selected. |
 
 ## DAO treasury / Web3
 
@@ -65,7 +67,9 @@ dev-only adapters** that must be replaced before a real go-live (see
 | `BASE_RPC_URL` | _(unset)_ | Required when provider is `web3py`. |
 | `AAVE_POOL_DATA_PROVIDER` | `0x2A09…dFBa` | Base deployment; override only if it moves. |
 | `UNISWAP_V4_POSITION_MANAGER` | `0x7C5f…9bDc` | Base deployment. |
+| `CYBERDYNE_ACCESS_NFT_ADDRESS` | _(unset)_ | CyberdyneAccessNFT contract backing `GET /api/v1/wallet/{address}/access-tier`. Unset → stub reader reports "no access NFT" for every address; real web3py reader lands with `BASE_RPC_URL`. |
 | `DAO_SNAPSHOT_TTL_S` | `300` | Chain-snapshot cache TTL. |
+| `DAO_SNAPSHOT_PREWARM` | `true` | Background worker re-reads the snapshot every `DAO_SNAPSHOT_TTL_S` so the DaoView is served from a warm cache. Inert unless `DAO_TREASURY_ADDRESS` is set; disable for purely-lazy caching. |
 | `DAO_HOLDERS_COUNT` | `0` | Surfaced in `/dao/overview` until the governance subgraph ships. |
 
 ## Marketplace / Stripe
@@ -88,6 +92,23 @@ dev-only adapters** that must be replaced before a real go-live (see
 | `PYTHON_INTERPRETER_URL` | `https://interpreter.backend.coolify.cyberdynecorp.ai` | `python_exec` + code-run lessons. |
 | `CYBERFLIES_URL` | `https://cyberflies.backend.coolify.cyberdynecorp.ai` | Meetings tools. |
 
+## Email (notifications + license delivery)
+
+| Env var | Default | Notes |
+|---------|---------|-------|
+| `EMAIL_PROVIDER` | `logging` | `logging` (logs every notification — dev/test default) \| `smtp` (deliver via the relay below). |
+| `SMTP_HOST` | _(unset)_ | Relay hostname. Required to actually send when provider is `smtp`; unset → falls back to logging. |
+| `SMTP_PORT` | `587` | Submission port (STARTTLS). |
+| `SMTP_USERNAME` | _(unset)_ | SMTP auth user (optional for unauthenticated relays). |
+| `SMTP_PASSWORD` | _(unset)_ | 🔒 SMTP auth password. |
+| `SMTP_USE_TLS` | `true` | STARTTLS on connect. Disable only for a local plaintext relay (e.g. MailHog). |
+| `EMAIL_FROM` | `no-reply@cyberdynecorp.ai` | Envelope From for outbound mail. |
+| `EMAIL_ADMIN_RECIPIENT` | _(unset)_ | Team inbox new-ask (lead/contact) notifications go to. Required for SMTP ask notifications; unset → asks log only while license emails still send. |
+
+Any SMTP relay works (Postmark / SES / Mailgun / Gmail). License-key
+emails always go to the buyer's address; new-ask notifications go to
+`EMAIL_ADMIN_RECIPIENT`.
+
 ## Uploads / media
 
 | Env var | Default | Notes |
@@ -107,8 +128,10 @@ each is resolved), provision:
 - `OPENAI_API_KEY`
 
 Also recommended for prod regardless of the guardrail: `CERT_SIGNING_KEY`
-(stable certificate verification), real `CORS_ORIGINS` / `PUBLIC_SITE_URL`,
-and a `MEDIA_ROOT` on a persistent volume.
+(stable certificate verification), `EMAIL_PROVIDER=smtp` + the SMTP relay
+vars (so lead notifications + license keys actually get delivered instead
+of only logged), real `CORS_ORIGINS` / `PUBLIC_SITE_URL`, and a
+`MEDIA_ROOT` on a persistent volume.
 
 ### Local dev
 

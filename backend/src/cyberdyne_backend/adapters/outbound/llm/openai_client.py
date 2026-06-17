@@ -1,10 +1,16 @@
 """OpenAI Chat Completions adapter — ``httpx``-only (no ``openai`` dep).
 
 Translates Cyberdyne ``ChatMessage``s into OpenAI's wire format and
-back. v1 is non-streaming for simplicity; the SSE response endpoint
-emits ``assistant`` and ``tool`` events as the dispatcher loop runs.
-Streaming the *token deltas* themselves is a follow-up; the LLM call
-finishes in one POST today.
+back. Two call paths share the same translation:
+
+  - ``complete`` — a single non-streaming POST returning the full
+    ``LLMResponse`` (used by the JSON ``send_message`` endpoint and the
+    notebook AI use cases).
+  - ``stream`` — a streamed POST (``stream=True``) whose SSE chunks are
+    folded by ``_StreamAccumulator`` into per-token ``content_delta``
+    events plus a final chunk carrying the complete ``LLMResponse``
+    (content + reassembled tool calls + usage). Drives the SSE
+    ``messages/stream`` endpoint.
 """
 
 from __future__ import annotations

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import httpx
 
+from cyberdyne_backend.adapters.outbound.access.fake_reader import FakeAccessReader
 from cyberdyne_backend.adapters.outbound.auth.caching_auth_port import CachingAuthPort
 from cyberdyne_backend.adapters.outbound.auth.introspection_client import IntrospectionClient
 from cyberdyne_backend.adapters.outbound.auth.profile_client import CyberdyneAuthProfileClient
@@ -21,6 +22,7 @@ from cyberdyne_backend.adapters.outbound.certificates.pdf import (
     ReportlabCertificateRenderer,
 )
 from cyberdyne_backend.adapters.outbound.certificates.signer import (
+    Ed25519CertificateSigner,
     EphemeralCertificateSigner,
     HmacCertificateSigner,
 )
@@ -32,6 +34,12 @@ from cyberdyne_backend.adapters.outbound.documents.pdf import ReportlabDocumentR
 from cyberdyne_backend.adapters.outbound.email.notifiers import (
     LoggingEmailNotifier,
     LoggingLicenseEmailNotifier,
+)
+from cyberdyne_backend.adapters.outbound.email.smtp import (
+    SmtpEmailNotifier,
+    SmtpLicenseEmailNotifier,
+    SmtpMailer,
+    SmtpSettings,
 )
 from cyberdyne_backend.adapters.outbound.llm.openai_client import (
     OpenAIChatClient,
@@ -50,6 +58,7 @@ from cyberdyne_backend.adapters.outbound.stripe.webhook_verifier import (
     MockStripeWebhookVerifier,
     StripeWebhookVerifier,
 )
+from cyberdyne_backend.domain.access import AccessReaderPort
 from cyberdyne_backend.domain.ai_chat import (
     ChatLLMPort,
     CyberfliesPort,
@@ -81,9 +90,11 @@ class Container:
         self._service_token_provider: ServiceTokenProvider | None = None
         self._captcha_port: CaptchaPort | None = None
         self._email_notifier: EmailNotifierPort | None = None
+        self._smtp_mailer: SmtpMailer | None = None
         self._certificate_signer: CertificateSigner | None = None
         self._certificate_pdf_renderer: ReportlabCertificateRenderer | None = None
         self._chain_reader: ChainReaderPort | None = None
+        self._access_reader: AccessReaderPort | None = None
         self._stripe_checkout: StripeCheckoutPort | None = None
         self._stripe_webhook_verifier: StripeWebhookVerifierPort | None = None
         self._license_email_notifier: LicenseEmailNotifierPort | None = None
@@ -178,11 +189,35 @@ class Container:
             self._captcha_port = AlwaysPassCaptchaProvider(environment=self._settings.environment)
         return self._captcha_port
 
+    def _build_smtp_mailer(self) -> SmtpMailer | None:
+        """The shared SMTP mailer when ``email_provider=smtp`` and a host is
+        configured; ``None`` otherwise (callers fall back to logging)."""
+        if self._settings.email_provider != "smtp" or not self._settings.smtp_host:
+            return None
+        if self._smtp_mailer is None:
+            password = self._settings.smtp_password
+            self._smtp_mailer = SmtpMailer(
+                SmtpSettings(
+                    host=self._settings.smtp_host,
+                    port=self._settings.smtp_port,
+                    from_addr=self._settings.email_from,
+                    username=self._settings.smtp_username,
+                    password=password.get_secret_value() if password else None,
+                    use_tls=self._settings.smtp_use_tls,
+                )
+            )
+        return self._smtp_mailer
+
     @property
     def email_notifier(self) -> EmailNotifierPort:
-        if self._email_notifier is None:
-            # Only logger-backed in Phase 2; real SMTP / Postmark lands
-            # when the provider is provisioned.
+        if self._email_notifier is not None:
+            return self._email_notifier
+        mailer = self._build_smtp_mailer()
+        recipient = self._settings.email_admin_recipient
+        if mailer is not None and recipient:
+            self._email_notifier = SmtpEmailNotifier(mailer, recipient=recipient)
+        else:
+            # Default (or SMTP requested without a team inbox): log only.
             self._email_notifier = LoggingEmailNotifier()
         return self._email_notifier
 
@@ -191,9 +226,15 @@ class Container:
     def certificate_signer(self) -> CertificateSigner:
         if self._certificate_signer is not None:
             return self._certificate_signer
-        secret = self._settings.cert_signing_key
-        if secret is not None:
-            self._certificate_signer = HmacCertificateSigner(secret=secret.get_secret_value())
+        if self._settings.cert_signer == "ed25519":
+            key = self._settings.cert_ed25519_private_key
+            if key is None:
+                raise ValueError("cert_signer=ed25519 requires CERT_ED25519_PRIVATE_KEY")
+            self._certificate_signer = Ed25519CertificateSigner(key.get_secret_value())
+        elif self._settings.cert_signing_key is not None:
+            self._certificate_signer = HmacCertificateSigner(
+                secret=self._settings.cert_signing_key.get_secret_value()
+            )
         else:
             self._certificate_signer = EphemeralCertificateSigner(
                 environment=self._settings.environment
@@ -228,6 +269,14 @@ class Container:
         )
         return self._chain_reader
 
+    @property
+    def access_reader(self) -> AccessReaderPort:
+        # Stub reader (no access NFT for any address) until the web3py-backed
+        # reader is wired — that needs BASE_RPC_URL + the access-NFT address.
+        if self._access_reader is None:
+            self._access_reader = FakeAccessReader()
+        return self._access_reader
+
     # ── Marketplace / Stripe (Phase 6) ───────────────────────────────
     @property
     def stripe_checkout(self) -> StripeCheckoutPort:
@@ -258,7 +307,12 @@ class Container:
 
     @property
     def license_email_notifier(self) -> LicenseEmailNotifierPort:
-        if self._license_email_notifier is None:
+        if self._license_email_notifier is not None:
+            return self._license_email_notifier
+        mailer = self._build_smtp_mailer()
+        if mailer is not None:
+            self._license_email_notifier = SmtpLicenseEmailNotifier(mailer)
+        else:
             self._license_email_notifier = LoggingLicenseEmailNotifier()
         return self._license_email_notifier
 

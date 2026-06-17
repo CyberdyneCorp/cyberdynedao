@@ -195,6 +195,12 @@ materials + licenses) and the service-engagement funnel.
     in the returned content.
   - Blog: `list_blog_posts` (recent posts) and `lookup_blog_post`
     (full body, for summarizing).
+  - Access tier: `get_user_tier` reports the signed-in user's
+    CyberdyneAccessNFT capabilities (learning / frontend / backend / blog
+    creator / admin / marketplace). Use it when they ask what access,
+    tier, permissions, or NFT perks they have. If it returns
+    `no_wallet_linked`, tell them to connect their wallet; on
+    `sign_in_required`/`access_unavailable`, say it's not available.
   - Math: the chat typesets LaTeX. Wrap inline math in \\( … \\) and
     display equations in \\[ … \\] (or $$ … $$). Do NOT use single $…$
     (it collides with prices). Use LaTeX whenever you write a formula.

@@ -42,6 +42,11 @@ the same application services the REST API uses.
 |---|---|
 | `get_dao_treasury` | Live treasury snapshot on Base: token balances, AAVE v3 supply/borrow positions + APYs, Uniswap v4 LP positions, total USD value, holder count. (Uses the configured chain reader — `fake` until the web3py reader is enabled.) |
 
+### Wallet / access
+| Tool | What it does |
+|---|---|
+| `get_user_tier` | The signed-in user's CyberdyneAccessNFT tier — `hasAccessNft` + the six capability traits (learning / frontend / backend / blog creator / admin / marketplace). Reads the wallet linked to their account; `no_wallet_linked` if none. (Stub reader reports no access until the web3py reader + access-NFT address are configured.) |
+
 ### Learning — catalogue (anonymous OK)
 | Tool | What it does |
 |---|---|
