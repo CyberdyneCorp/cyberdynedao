@@ -1,0 +1,72 @@
+# ai-chat Specification
+
+## Purpose
+
+The AI Tutor: chat sessions (anonymous or authenticated), a tool-using agent
+turn (non-streaming JSON and an SSE streaming twin), and history. (src:
+adapters/inbound/api/ai_chat/router.py, application/ai_chat, docs/chat-streaming.md)
+
+## Requirements
+
+### Requirement: Sessions and history
+
+The system SHALL create a chat session (`POST /api/v1/chat/sessions`) for an
+anonymous (`user_id = null`) or authenticated caller, and return its messages
+in order (`GET /api/v1/chat/sessions/{id}`). An unknown session SHALL return
+`404`. Sessions SHALL be isolated; no cross-session history is exposed.
+
+#### Scenario: Anonymous session
+
+- GIVEN no auth token
+- WHEN a client POSTs `/api/v1/chat/sessions`
+- THEN a session is created with a null user and `201` is returned
+
+#### Scenario: Unknown session history
+
+- GIVEN a non-existent session id
+- WHEN history is requested
+- THEN the system SHALL respond `404`
+
+### Requirement: Tool-using message turn
+
+The system SHALL run a message turn (`POST /api/v1/chat/sessions/{id}/messages`,
+content 1..4000 chars) that loops the LLM with the Cyberdyne tool set up to a
+bounded number of tool rounds (4), persisting user/assistant/tool messages,
+and returns the final assistant message. An upstream LLM failure SHALL return
+`502`; an unknown session SHALL return `404`. An optional
+`interpreterSessionId` + `attachments` SHALL thread into tool dispatch; the
+caller's bearer SHALL be forwarded to tools.
+
+#### Scenario: Tool round then final answer
+
+- GIVEN the LLM requests a tool then answers
+- WHEN a turn runs
+- THEN the tool is dispatched, results persisted, and the final assistant message returned
+
+#### Scenario: Tool-round cap
+
+- GIVEN an LLM that always requests another tool
+- WHEN a turn runs
+- THEN the loop stops at the 4-round cap and returns the last assistant message
+
+### Requirement: SSE streaming twin
+
+The system SHALL provide `POST /api/v1/chat/sessions/{id}/messages/stream`
+returning `text/event-stream`. Each event SHALL be one `data: <json>\n\n`
+line whose `type` is `status` (tool round starting), `delta` (answer-text
+chunk), `done` (terminal; carries the full persisted assistant message), or
+`error` (in-band; HTTP stays 200). There SHALL be no `[DONE]` sentinel; the
+terminal event SHALL be `done` or `error`, after zero+ `status` then zero+
+`delta` events.
+
+#### Scenario: Stream ordering
+
+- GIVEN a turn that runs a tool then answers
+- WHEN the stream is consumed
+- THEN a `status` event precedes the `delta` events, ending with a single `done` event
+
+#### Scenario: Error delivered in-band
+
+- GIVEN the provider fails after the stream has opened
+- WHEN streaming
+- THEN an `error` event is emitted and the HTTP status remains 200

@@ -1,8 +1,8 @@
 # Cyberdyne Backend
 
-Hexagonal FastAPI service that backs the SvelteKit frontend (`../frontend`). Plan and rationale live in [`../docs/backend-roadmap.md`](../docs/backend-roadmap.md).
+Hexagonal FastAPI service that backs the SvelteKit frontend (`../frontend`). Plan and rationale live in [`../docs/backend-roadmap.md`](../docs/backend-roadmap.md); **baseline behaviour specs** (the source of truth for what each capability does today) live in [`../openspec/specs/`](../openspec/specs/).
 
-**Status:** Phase 1 scaffold. `/healthz` + `/readyz` only. Real endpoints land in Phase 1.5+.
+**Status:** Live in production on Coolify. The Academy platform is built out across ~19 bounded contexts — auth, content, blog, leads, marketplace, uploads, courses (lessons, categories, progress, certificates, i18n), quizzes, learning paths, analytics, recommendations, the AI Tutor chat agent + code interpreter, DAO treasury, and the redesigned-client surfaces (bookmarks, activity/streak, skill map, achievements, concepts). See `../openspec/specs/` for the per-capability contracts.
 
 ---
 
@@ -19,8 +19,8 @@ src/cyberdyne_backend/
 ├── domain/         # entities, value objects, ports — pure Python, no I/O
 ├── application/    # use cases, orchestration
 ├── adapters/
-│   ├── inbound/    # FastAPI routers (right now: /healthz, /readyz)
-│   └── outbound/   # external clients (CyberdyneAuth, Stripe, Web3 — Phase 1.5+)
+│   ├── inbound/    # FastAPI routers (one package per bounded context) + auth middleware
+│   └── outbound/   # external clients (CyberdyneAuth, Stripe, Web3, LLM, MATLAB/Python) + persistence
 ├── infrastructure/ # settings, logging, container wiring
 └── main.py         # ASGI app factory
 ```

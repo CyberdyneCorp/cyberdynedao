@@ -1,40 +1,37 @@
 # Cyberdyne DAO Terminal
 
-A futuristic terminal-style application built with SvelteKit, featuring Web3Auth authentication, WalletConnect integration, and a retro cyberpunk aesthetic inspired by Cyberdyne Systems.
+A futuristic terminal-style application — a SvelteKit frontend (Web3Auth + WalletConnect, retro cyberpunk aesthetic) backed by a hexagonal FastAPI service that powers the **Cyberdyne Academy** learning platform, an AI Tutor agent, and a marketplace, plus on-chain smart contracts.
 
 ## 🏗️ Project Structure
 
-This project is organized into a clean frontend-focused structure:
+This is a monorepo with three application areas — `frontend/`, `backend/`, and `contracts/` — plus shared docs and specs:
 
 ```
-retro-terminal/
+cyberdynedao/
 ├── README.md                 # Project documentation
-├── contracts/                # Smart contracts directory
-│   ├── contracts/            # Solidity smart contracts
-│   ├── test/                 # Contract tests
-│   ├── scripts/              # Deployment scripts
-│   ├── hardhat.config.js     # Hardhat configuration
-│   └── package.json          # Contract dependencies
-└── frontend/                 # Main application directory
-    ├── Dockerfile            # Production Docker configuration
-    ├── package.json          # Dependencies and scripts
-    ├── svelte.config.js      # SvelteKit configuration
-    ├── vite.config.ts        # Vite build configuration
-    ├── tailwind.config.js    # Tailwind CSS configuration
-    ├── .env                  # Environment variables
-    ├── src/                  # Source code
-    │   ├── app.html          # HTML template
-    │   ├── app.css           # Global styles
-    │   ├── lib/              # Shared libraries
-    │   │   ├── components/   # Svelte components
-    │   │   ├── web3/         # Web3Auth & wallet integration
-    │   │   ├── stores/       # Svelte stores
-    │   │   ├── utils/        # Utility functions
-    │   │   └── types/        # TypeScript definitions
-    │   └── routes/           # SvelteKit pages
-    └── static/               # Static assets
-        └── assets/           # Icons, images, and media
+├── docs/                     # Architecture, roadmap & integration guides
+├── openspec/                 # OpenSpec — baseline behaviour specs (source of truth)
+│   └── specs/                # One spec per capability (auth, courses, quizzes, …)
+├── contracts/                # Solidity smart contracts (Hardhat, Base network)
+│   ├── contracts/            # Solidity sources
+│   ├── test/ · scripts/      # Contract tests & deployment scripts
+│   └── hardhat.config.js
+├── backend/                  # Hexagonal FastAPI service (Python 3.12, uv)
+│   ├── src/cyberdyne_backend/
+│   │   ├── domain/           # entities, value objects, ports — pure, no I/O
+│   │   ├── application/      # use cases / orchestration
+│   │   ├── adapters/         # inbound (FastAPI routers) + outbound (clients, persistence)
+│   │   ├── infrastructure/   # settings, logging, container wiring
+│   │   └── main.py           # ASGI app factory
+│   ├── alembic/              # database migrations
+│   └── tests/                # unit + integration tests
+└── frontend/                 # SvelteKit application
+    ├── src/lib/              # components, web3, stores, utils, types
+    ├── src/routes/           # SvelteKit pages
+    └── static/               # icons, images, media
 ```
+
+> Backend behaviour is documented as OpenSpec baseline specs under [`openspec/specs/`](openspec/specs/); the build plan lives in [`docs/backend-roadmap.md`](docs/backend-roadmap.md).
 
 ## ✨ Features
 

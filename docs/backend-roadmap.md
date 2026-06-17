@@ -98,7 +98,7 @@
 > lives in each bounded
 > context under `backend/src/cyberdyne_backend/`.
 
-This doc is the plan, not a spec. Anything declared here is the default; anything in **Open Questions** is unblocked work that needs a decision before Phase 2 starts.
+This doc is the plan, not a spec. Anything declared here is the default; anything in **Open Questions** is unblocked work that needs a decision before Phase 2 starts. **Baseline behaviour specs** — what each capability actually does today, reverse-engineered from the code — live under [`../openspec/specs/`](../openspec/specs/) (the OpenSpec source of truth); the live endpoint list is in the deployed OpenAPI. New work should flow through OpenSpec changes against that baseline.
 
 ---
 
@@ -311,7 +311,7 @@ Keys: every public ID is a slug (kebab-case) or a UUID v7. Stripe ids and on-cha
 
 ## 5. Module-by-Module Breakdown
 
-For each module: **purpose**, three representative endpoints, **key dependencies**, **testing approach**. Authoritative endpoint list lives in OpenAPI; this is just the spine.
+For each module: **purpose**, three representative endpoints, **key dependencies**, **testing approach**. Authoritative endpoint list lives in OpenAPI; authoritative *behaviour* lives in [`../openspec/specs/`](../openspec/specs/); this is just the spine.
 
 ### 5.1 Auth Integration (consume only)
 
