@@ -158,6 +158,25 @@ class Settings(BaseSettings):
     # list_meetings tools call (as the signed-in user).
     cyberflies_url: str = "https://cyberflies.backend.coolify.cyberdynecorp.ai"
 
+    # ── Email delivery (Operational — issue #7) ───────────────────────
+    # "logging" (default) just logs every notification — safe for dev and
+    # tests. "smtp" delivers via the relay below: new-ask notifications to
+    # ``email_admin_recipient`` and license keys to the buyer. Any SMTP
+    # relay works (Postmark / SES / Mailgun / Gmail).
+    email_provider: Literal["logging", "smtp"] = "logging"
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_username: str | None = None
+    smtp_password: SecretStr | None = None
+    # STARTTLS on the default submission port. Disable only for a local
+    # test relay (e.g. MailHog) that speaks plaintext.
+    smtp_use_tls: bool = True
+    # Envelope From for outbound mail.
+    email_from: str = "no-reply@cyberdynecorp.ai"
+    # Team inbox that new-ask (lead/contact) notifications are sent to.
+    # Required for SMTP ask notifications; unset → asks fall back to logging.
+    email_admin_recipient: str | None = None
+
     # ── Uploads / media (Phase 8 — course content) ────────────────────
     # Where uploaded course/lesson media is written. In prod point this
     # at the Coolify persistent volume mount; locally it defaults to a

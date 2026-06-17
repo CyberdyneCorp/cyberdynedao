@@ -88,6 +88,23 @@ dev-only adapters** that must be replaced before a real go-live (see
 | `PYTHON_INTERPRETER_URL` | `https://interpreter.backend.coolify.cyberdynecorp.ai` | `python_exec` + code-run lessons. |
 | `CYBERFLIES_URL` | `https://cyberflies.backend.coolify.cyberdynecorp.ai` | Meetings tools. |
 
+## Email (notifications + license delivery)
+
+| Env var | Default | Notes |
+|---------|---------|-------|
+| `EMAIL_PROVIDER` | `logging` | `logging` (logs every notification — dev/test default) \| `smtp` (deliver via the relay below). |
+| `SMTP_HOST` | _(unset)_ | Relay hostname. Required to actually send when provider is `smtp`; unset → falls back to logging. |
+| `SMTP_PORT` | `587` | Submission port (STARTTLS). |
+| `SMTP_USERNAME` | _(unset)_ | SMTP auth user (optional for unauthenticated relays). |
+| `SMTP_PASSWORD` | _(unset)_ | 🔒 SMTP auth password. |
+| `SMTP_USE_TLS` | `true` | STARTTLS on connect. Disable only for a local plaintext relay (e.g. MailHog). |
+| `EMAIL_FROM` | `no-reply@cyberdynecorp.ai` | Envelope From for outbound mail. |
+| `EMAIL_ADMIN_RECIPIENT` | _(unset)_ | Team inbox new-ask (lead/contact) notifications go to. Required for SMTP ask notifications; unset → asks log only while license emails still send. |
+
+Any SMTP relay works (Postmark / SES / Mailgun / Gmail). License-key
+emails always go to the buyer's address; new-ask notifications go to
+`EMAIL_ADMIN_RECIPIENT`.
+
 ## Uploads / media
 
 | Env var | Default | Notes |
@@ -107,8 +124,10 @@ each is resolved), provision:
 - `OPENAI_API_KEY`
 
 Also recommended for prod regardless of the guardrail: `CERT_SIGNING_KEY`
-(stable certificate verification), real `CORS_ORIGINS` / `PUBLIC_SITE_URL`,
-and a `MEDIA_ROOT` on a persistent volume.
+(stable certificate verification), `EMAIL_PROVIDER=smtp` + the SMTP relay
+vars (so lead notifications + license keys actually get delivered instead
+of only logged), real `CORS_ORIGINS` / `PUBLIC_SITE_URL`, and a
+`MEDIA_ROOT` on a persistent volume.
 
 ### Local dev
 

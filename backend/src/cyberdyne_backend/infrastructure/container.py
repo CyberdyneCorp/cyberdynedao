@@ -33,6 +33,12 @@ from cyberdyne_backend.adapters.outbound.email.notifiers import (
     LoggingEmailNotifier,
     LoggingLicenseEmailNotifier,
 )
+from cyberdyne_backend.adapters.outbound.email.smtp import (
+    SmtpEmailNotifier,
+    SmtpLicenseEmailNotifier,
+    SmtpMailer,
+    SmtpSettings,
+)
 from cyberdyne_backend.adapters.outbound.llm.openai_client import (
     OpenAIChatClient,
     StaticChatClient,
@@ -81,6 +87,7 @@ class Container:
         self._service_token_provider: ServiceTokenProvider | None = None
         self._captcha_port: CaptchaPort | None = None
         self._email_notifier: EmailNotifierPort | None = None
+        self._smtp_mailer: SmtpMailer | None = None
         self._certificate_signer: CertificateSigner | None = None
         self._certificate_pdf_renderer: ReportlabCertificateRenderer | None = None
         self._chain_reader: ChainReaderPort | None = None
@@ -178,11 +185,35 @@ class Container:
             self._captcha_port = AlwaysPassCaptchaProvider(environment=self._settings.environment)
         return self._captcha_port
 
+    def _build_smtp_mailer(self) -> SmtpMailer | None:
+        """The shared SMTP mailer when ``email_provider=smtp`` and a host is
+        configured; ``None`` otherwise (callers fall back to logging)."""
+        if self._settings.email_provider != "smtp" or not self._settings.smtp_host:
+            return None
+        if self._smtp_mailer is None:
+            password = self._settings.smtp_password
+            self._smtp_mailer = SmtpMailer(
+                SmtpSettings(
+                    host=self._settings.smtp_host,
+                    port=self._settings.smtp_port,
+                    from_addr=self._settings.email_from,
+                    username=self._settings.smtp_username,
+                    password=password.get_secret_value() if password else None,
+                    use_tls=self._settings.smtp_use_tls,
+                )
+            )
+        return self._smtp_mailer
+
     @property
     def email_notifier(self) -> EmailNotifierPort:
-        if self._email_notifier is None:
-            # Only logger-backed in Phase 2; real SMTP / Postmark lands
-            # when the provider is provisioned.
+        if self._email_notifier is not None:
+            return self._email_notifier
+        mailer = self._build_smtp_mailer()
+        recipient = self._settings.email_admin_recipient
+        if mailer is not None and recipient:
+            self._email_notifier = SmtpEmailNotifier(mailer, recipient=recipient)
+        else:
+            # Default (or SMTP requested without a team inbox): log only.
             self._email_notifier = LoggingEmailNotifier()
         return self._email_notifier
 
@@ -258,7 +289,12 @@ class Container:
 
     @property
     def license_email_notifier(self) -> LicenseEmailNotifierPort:
-        if self._license_email_notifier is None:
+        if self._license_email_notifier is not None:
+            return self._license_email_notifier
+        mailer = self._build_smtp_mailer()
+        if mailer is not None:
+            self._license_email_notifier = SmtpLicenseEmailNotifier(mailer)
+        else:
             self._license_email_notifier = LoggingLicenseEmailNotifier()
         return self._license_email_notifier
 
