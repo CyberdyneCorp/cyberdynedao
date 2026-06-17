@@ -41,6 +41,7 @@ from cyberdyne_backend.application.learning import (
     ListPaths,
     UpdateModuleProgress,
 )
+from cyberdyne_backend.application.lesson_notes import ListUserNotes
 from cyberdyne_backend.application.marketplace import GetProduct
 from cyberdyne_backend.application.quizzes import GetQuiz
 from cyberdyne_backend.domain.ai_chat import (
@@ -657,6 +658,25 @@ CYBERDYNE_TOOLS: list[ToolSchema] = [
         ),
         parameters={"type": "object", "properties": {}},
     ),
+    ToolSchema(
+        name="get_my_notes",
+        description=(
+            "The signed-in learner's own course notes — the notes they wrote on course "
+            "lessons. Each note has its course slug, lesson id, the note body, and any "
+            "highlighted quote. Use this for 'what notes did I take?', 'show my notes', or "
+            "'what did I write on <course>?'. Pass course_slug to filter to one course. "
+            "Requires authentication."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "course_slug": {
+                    "type": "string",
+                    "description": "Optional: only return notes for this course slug.",
+                }
+            },
+        },
+    ),
 ]
 
 
@@ -705,6 +725,8 @@ class ToolContext:
     path_gating: GetPathGating | None = None
     get_quiz: GetQuiz | None = None
     learner_dashboard: GetLearnerDashboard | None = None
+    # The learner's own course/lesson notes (read-only) for get_my_notes.
+    list_user_notes: ListUserNotes | None = None
     user_id: UUID | None = None
 
 
@@ -824,6 +846,8 @@ class ToolDispatcher:
                 return await self._get_my_course_progress(cast(str, args.get("slug", "")))
             if call.name == "get_my_courses":
                 return await self._get_my_courses()
+            if call.name == "get_my_notes":
+                return await self._get_my_notes(cast("str | None", args.get("course_slug")))
         except Exception as exc:
             logger.exception("tool %s failed", call.name)
             return json.dumps({"error": "tool_failed", "detail": str(exc)})
@@ -1525,6 +1549,31 @@ class ToolDispatcher:
                 }
             )
         return json.dumps({"courses": out})
+
+    async def _get_my_notes(self, course_slug: str | None) -> str:
+        if self._ctx.list_user_notes is None:
+            return json.dumps({"error": "notes_unavailable"})
+        if self._ctx.user_id is None:
+            return json.dumps({"error": "sign_in_required"})
+        page = await self._ctx.list_user_notes.execute(
+            user_id=self._ctx.user_id, course_slug=course_slug or None
+        )
+        return json.dumps(
+            {
+                "notes": [
+                    {
+                        "id": str(n.id),
+                        "course_slug": n.course_slug,
+                        "lesson_id": n.lesson_id,
+                        "body": n.body,
+                        "quote": n.quote,
+                        "created_at": n.created_at.isoformat(),
+                    }
+                    for n in page.items
+                ],
+                "next_cursor": page.next_cursor,
+            }
+        )
 
     def _fill_identity(self, name: str, email: str) -> tuple[str, str]:
         """Back-fill name/email from the signed-in profile when the LLM
