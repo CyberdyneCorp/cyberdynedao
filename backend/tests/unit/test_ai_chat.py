@@ -608,6 +608,7 @@ def _build_ctx(
     dao: bool = False,
     user_id: object | None = None,
     list_user_notes: object | None = None,
+    wallet_access: object | None = None,
 ) -> ToolContext:
     from cyberdyne_backend.application.analytics import GetLearnerDashboard
     from cyberdyne_backend.application.blog import GetBlogPost, ListBlogPosts
@@ -671,6 +672,7 @@ def _build_ctx(
         get_quiz=GetQuiz(repo=quizzes),  # type: ignore[arg-type]
         learner_dashboard=GetLearnerDashboard(repo=_FakeAnalyticsRepo()),  # type: ignore[arg-type]
         list_user_notes=list_user_notes,  # type: ignore[arg-type]
+        get_wallet_access=wallet_access,  # type: ignore[arg-type]
         user_id=user_id,  # type: ignore[arg-type]
     )
 
@@ -2087,6 +2089,71 @@ class TestGetMyNotesTool:
         )
         data = json.loads(out)
         assert [n["course_slug"] for n in data["notes"]] == ["rust-201"]
+
+
+class TestGetUserTierTool:
+    def _profile(self, **kw):
+        from cyberdyne_backend.domain.auth_identity import UserProfile
+
+        base = dict(
+            user_id=uuid.uuid4(),
+            email="leo@amini.ai",
+            wallet_address="0xABCDEF0000000000000000000000000000001234",
+            organization_id=None,
+            is_email_verified=True,
+        )
+        base.update(kw)
+        return UserProfile(**base)  # type: ignore[arg-type]
+
+    def _wallet_access(self, grants=None):
+        from cyberdyne_backend.adapters.outbound.access.fake_reader import FakeAccessReader
+        from cyberdyne_backend.application.access import GetWalletAccess
+
+        return GetWalletAccess(reader=FakeAccessReader(grants or {}))
+
+    async def test_no_wallet_linked_when_profile_has_no_wallet(self) -> None:
+        ctx = _build_ctx(
+            user=self._profile(wallet_address=None),
+            wallet_access=self._wallet_access(),
+        )
+        out = await ToolDispatcher(ctx).dispatch(
+            ToolCall(id="x", name="get_user_tier", arguments_json="{}")
+        )
+        assert json.loads(out) == {"error": "no_wallet_linked"}
+
+    async def test_reports_no_access_for_unknown_wallet(self) -> None:
+        ctx = _build_ctx(user=self._profile(), wallet_access=self._wallet_access())
+        out = await ToolDispatcher(ctx).dispatch(
+            ToolCall(id="x", name="get_user_tier", arguments_json="{}")
+        )
+        data = json.loads(out)
+        assert data["has_access_nft"] is False
+        assert data["token_count"] == 0
+        assert all(v is False for v in data["traits"].values())
+
+    async def test_surfaces_granted_traits(self) -> None:
+        from cyberdyne_backend.domain.access import AccessTraits, WalletAccess
+
+        addr = "0xabcdef0000000000000000000000000000001234"
+        grant = WalletAccess(
+            address=addr,
+            has_access_nft=True,
+            token_count=1,
+            traits=AccessTraits(learning=True, admin=True),
+        )
+        ctx = _build_ctx(
+            user=self._profile(),
+            wallet_access=self._wallet_access({addr: grant}),
+        )
+        out = await ToolDispatcher(ctx).dispatch(
+            ToolCall(id="x", name="get_user_tier", arguments_json="{}")
+        )
+        data = json.loads(out)
+        assert data["has_access_nft"] is True
+        assert data["token_count"] == 1
+        assert data["traits"]["learning"] is True
+        assert data["traits"]["admin"] is True
+        assert data["traits"]["marketplace"] is False
 
 
 # Suppress unused-import warning.

@@ -182,11 +182,15 @@ from cyberdyne_backend.adapters.inbound.api.learning.router import (
     get_path_gating_uc,
     get_render_pdf_uc,
     get_set_deadline_uc,
+    get_signing_key_info,
     get_update_progress_uc,
     get_verify_certificate_uc,
 )
 from cyberdyne_backend.adapters.inbound.api.learning.router import (
     public_router as learning_public_router,
+)
+from cyberdyne_backend.adapters.inbound.api.learning.schemas import (
+    SigningKeyResponse,
 )
 from cyberdyne_backend.adapters.inbound.api.lesson_notes.router import (
     get_delete_note_uc as get_delete_lesson_note_uc,
@@ -283,11 +287,20 @@ from cyberdyne_backend.adapters.inbound.api.uploads.router import (
 from cyberdyne_backend.adapters.inbound.api.uploads.router import (
     public_router as uploads_public_router,
 )
+from cyberdyne_backend.adapters.inbound.api.wallet.router import (
+    get_wallet_access_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.wallet.router import (
+    router as wallet_router,
+)
 from cyberdyne_backend.adapters.inbound.health.router import router as health_router
 from cyberdyne_backend.adapters.inbound.middleware.auth import (
     AuthMiddleware,
     extract_token,
     get_user_profile_port,
+)
+from cyberdyne_backend.adapters.outbound.certificates.signer import (
+    Ed25519CertificateSigner,
 )
 from cyberdyne_backend.adapters.outbound.persistence.academy.job_store import (
     SqlAlchemyTranslationJobStore,
@@ -367,6 +380,7 @@ from cyberdyne_backend.application.academy import (
     TranslationJob,
     TranslationWorker,
 )
+from cyberdyne_backend.application.access import GetWalletAccess
 from cyberdyne_backend.application.achievements import GetMyAchievements
 from cyberdyne_backend.application.activity import (
     GetLearnerStats,
@@ -442,7 +456,10 @@ from cyberdyne_backend.application.courses import (
     UpdateLesson,
     VerifyCourseCertificate,
 )
-from cyberdyne_backend.application.dao_treasury import GetDaoOverview
+from cyberdyne_backend.application.dao_treasury import (
+    GetDaoOverview,
+    TreasurySnapshotPrewarmer,
+)
 from cyberdyne_backend.application.leads import (
     AdminListAsks,
     AdminUpdateAsk,
@@ -598,6 +615,15 @@ def create_app() -> FastAPI:
                     translate_course_factory=_translate_course_scope,
                 )
                 worker_tasks.append(asyncio.create_task(worker.run_forever()))
+        if settings.dao_snapshot_prewarm and settings.dao_treasury_address:
+            # Keep the treasury snapshot cache warm so the DaoView never
+            # eats a cold on-chain read. Inert without a treasury address.
+            prewarmer = TreasurySnapshotPrewarmer(
+                reader=container.chain_reader,
+                treasury_address=settings.dao_treasury_address,
+                interval_s=settings.dao_snapshot_ttl_s,
+            )
+            worker_tasks.append(asyncio.create_task(prewarmer.run_forever()))
         try:
             yield
         finally:
@@ -1105,6 +1131,14 @@ def create_app() -> FastAPI:
                 signer=container.certificate_signer,
             )
 
+    def _signing_key_info_dep() -> SigningKeyResponse:
+        # Publish the verification key: the Ed25519 public key for external
+        # verifiers, or just the algorithm (null key) for the HMAC scheme.
+        signer = container.certificate_signer
+        if isinstance(signer, Ed25519CertificateSigner):
+            return SigningKeyResponse(algorithm="ed25519", public_key=signer.public_key_b64)
+        return SigningKeyResponse(algorithm="hmac-sha256", public_key=None)
+
     async def _render_pdf_dep() -> AsyncIterator[RenderCertificatePdf]:
         async with session_scope() as session:
             yield RenderCertificatePdf(
@@ -1128,6 +1162,10 @@ def create_app() -> FastAPI:
             treasury_address=settings.dao_treasury_address,
             holders=settings.dao_holders_count,
         )
+
+    async def _wallet_access_dep() -> AsyncIterator[GetWalletAccess]:
+        # No DB session — access reads are chain-only (stub for now).
+        yield GetWalletAccess(reader=container.access_reader)
 
     async def _run_code_dep() -> AsyncIterator[RunLessonCode]:
         # No DB session — execution is HTTP-only against the MATLAB engine
@@ -1237,6 +1275,7 @@ def create_app() -> FastAPI:
             get_quiz=GetQuiz(repo=SqlAlchemyQuizRepository(session)),
             learner_dashboard=GetLearnerDashboard(repo=SqlAlchemyAnalyticsRepository(session)),
             list_user_notes=ListUserNotes(repo=SqlAlchemyLessonNoteRepository(session)),
+            get_wallet_access=GetWalletAccess(reader=container.access_reader),
             user_id=profile.user_id if profile else None,
         )
 
@@ -1356,10 +1395,12 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_eligibility_uc] = _eligibility_dep
     app.dependency_overrides[get_issue_certificate_uc] = _issue_certificate_dep
     app.dependency_overrides[get_verify_certificate_uc] = _verify_certificate_dep
+    app.dependency_overrides[get_signing_key_info] = _signing_key_info_dep
     app.dependency_overrides[get_render_pdf_uc] = _render_pdf_dep
     app.dependency_overrides[get_my_deadlines_uc] = _my_deadlines_dep
     app.dependency_overrides[get_set_deadline_uc] = _set_deadline_dep
     app.dependency_overrides[get_dao_overview_uc] = _dao_overview_dep
+    app.dependency_overrides[get_wallet_access_uc] = _wallet_access_dep
     app.dependency_overrides[get_run_code_uc] = _run_code_dep
     app.dependency_overrides[get_list_products_uc] = _list_marketplace_products_dep
     app.dependency_overrides[get_create_checkout_uc] = _create_checkout_dep
@@ -1414,6 +1455,7 @@ def create_app() -> FastAPI:
         name="media",
     )
     app.include_router(dao_router)
+    app.include_router(wallet_router)
     app.include_router(code_player_router)
     app.include_router(marketplace_public_router)
     app.include_router(marketplace_me_router)

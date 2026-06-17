@@ -24,6 +24,7 @@ from decimal import Decimal
 from typing import cast
 from uuid import UUID, uuid4
 
+from cyberdyne_backend.application.access import GetWalletAccess
 from cyberdyne_backend.application.analytics import GetLearnerDashboard
 from cyberdyne_backend.application.blog.use_cases import (
     GetBlogPost,
@@ -44,6 +45,7 @@ from cyberdyne_backend.application.learning import (
 from cyberdyne_backend.application.lesson_notes import ListUserNotes
 from cyberdyne_backend.application.marketplace import GetProduct
 from cyberdyne_backend.application.quizzes import GetQuiz
+from cyberdyne_backend.domain.access import InvalidWalletAddressError
 from cyberdyne_backend.domain.ai_chat import (
     CyberfliesPort,
     DocumentRendererPort,
@@ -677,6 +679,18 @@ CYBERDYNE_TOOLS: list[ToolSchema] = [
             },
         },
     ),
+    ToolSchema(
+        name="get_user_tier",
+        description=(
+            "The signed-in user's CyberdyneAccessNFT access tier — whether they hold an "
+            "access NFT and which capabilities it grants (learning, frontend, backend, "
+            "blog creator, admin, marketplace selling). Use this when the user asks what "
+            "access / tier / permissions / NFT perks they have. Reads the wallet linked to "
+            "their account; if no wallet is linked it returns no_wallet_linked — tell them "
+            "to connect their wallet. Requires authentication."
+        ),
+        parameters={"type": "object", "properties": {}},
+    ),
 ]
 
 
@@ -727,6 +741,8 @@ class ToolContext:
     learner_dashboard: GetLearnerDashboard | None = None
     # The learner's own course/lesson notes (read-only) for get_my_notes.
     list_user_notes: ListUserNotes | None = None
+    # Access-tier lookup for get_user_tier (reads the user's linked wallet).
+    get_wallet_access: GetWalletAccess | None = None
     user_id: UUID | None = None
 
 
@@ -848,6 +864,8 @@ class ToolDispatcher:
                 return await self._get_my_courses()
             if call.name == "get_my_notes":
                 return await self._get_my_notes(cast("str | None", args.get("course_slug")))
+            if call.name == "get_user_tier":
+                return await self._get_user_tier()
         except Exception as exc:
             logger.exception("tool %s failed", call.name)
             return json.dumps({"error": "tool_failed", "detail": str(exc)})
@@ -1572,6 +1590,33 @@ class ToolDispatcher:
                     for n in page.items
                 ],
                 "next_cursor": page.next_cursor,
+            }
+        )
+
+    async def _get_user_tier(self) -> str:
+        if self._ctx.get_wallet_access is None:
+            return json.dumps({"error": "access_unavailable"})
+        wallet = self._ctx.user.wallet_address if self._ctx.user else None
+        if not wallet:
+            return json.dumps({"error": "no_wallet_linked"})
+        try:
+            access = await self._ctx.get_wallet_access.execute(wallet)
+        except InvalidWalletAddressError:
+            return json.dumps({"error": "invalid_wallet_address", "wallet": wallet})
+        t = access.traits
+        return json.dumps(
+            {
+                "address": access.address,
+                "has_access_nft": access.has_access_nft,
+                "token_count": access.token_count,
+                "traits": {
+                    "learning": t.learning,
+                    "frontend": t.frontend,
+                    "backend": t.backend,
+                    "blog_creator": t.blog_creator,
+                    "admin": t.admin,
+                    "marketplace": t.marketplace,
+                },
             }
         )
 
