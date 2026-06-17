@@ -182,11 +182,15 @@ from cyberdyne_backend.adapters.inbound.api.learning.router import (
     get_path_gating_uc,
     get_render_pdf_uc,
     get_set_deadline_uc,
+    get_signing_key_info,
     get_update_progress_uc,
     get_verify_certificate_uc,
 )
 from cyberdyne_backend.adapters.inbound.api.learning.router import (
     public_router as learning_public_router,
+)
+from cyberdyne_backend.adapters.inbound.api.learning.schemas import (
+    SigningKeyResponse,
 )
 from cyberdyne_backend.adapters.inbound.api.lesson_notes.router import (
     get_delete_note_uc as get_delete_lesson_note_uc,
@@ -288,6 +292,9 @@ from cyberdyne_backend.adapters.inbound.middleware.auth import (
     AuthMiddleware,
     extract_token,
     get_user_profile_port,
+)
+from cyberdyne_backend.adapters.outbound.certificates.signer import (
+    Ed25519CertificateSigner,
 )
 from cyberdyne_backend.adapters.outbound.persistence.academy.job_store import (
     SqlAlchemyTranslationJobStore,
@@ -1105,6 +1112,14 @@ def create_app() -> FastAPI:
                 signer=container.certificate_signer,
             )
 
+    def _signing_key_info_dep() -> SigningKeyResponse:
+        # Publish the verification key: the Ed25519 public key for external
+        # verifiers, or just the algorithm (null key) for the HMAC scheme.
+        signer = container.certificate_signer
+        if isinstance(signer, Ed25519CertificateSigner):
+            return SigningKeyResponse(algorithm="ed25519", public_key=signer.public_key_b64)
+        return SigningKeyResponse(algorithm="hmac-sha256", public_key=None)
+
     async def _render_pdf_dep() -> AsyncIterator[RenderCertificatePdf]:
         async with session_scope() as session:
             yield RenderCertificatePdf(
@@ -1355,6 +1370,7 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_eligibility_uc] = _eligibility_dep
     app.dependency_overrides[get_issue_certificate_uc] = _issue_certificate_dep
     app.dependency_overrides[get_verify_certificate_uc] = _verify_certificate_dep
+    app.dependency_overrides[get_signing_key_info] = _signing_key_info_dep
     app.dependency_overrides[get_render_pdf_uc] = _render_pdf_dep
     app.dependency_overrides[get_my_deadlines_uc] = _my_deadlines_dep
     app.dependency_overrides[get_set_deadline_uc] = _set_deadline_dep

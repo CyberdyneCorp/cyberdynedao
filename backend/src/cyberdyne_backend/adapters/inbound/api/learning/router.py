@@ -20,6 +20,7 @@ from cyberdyne_backend.adapters.inbound.api.learning.schemas import (
     ModuleProgressResponse,
     MyLearningStateResponse,
     SetDeadlineRequest,
+    SigningKeyResponse,
     UpdateProgressRequest,
 )
 from cyberdyne_backend.adapters.inbound.middleware.auth import (
@@ -88,6 +89,10 @@ async def get_issue_certificate_uc() -> IssueCertificate:  # pragma: no cover - 
 
 
 async def get_verify_certificate_uc() -> VerifyCertificate:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_signing_key_info() -> SigningKeyResponse:  # pragma: no cover - override target
     raise NotImplementedError
 
 
@@ -224,6 +229,21 @@ async def verify_certificate(
     # Public: anyone with the certificate id can check authenticity.
     result = await use_case.execute(certificate_id)
     return _verification_response(result)
+
+
+@public_router.get(
+    "/certificates/signing-key",
+    response_model=SigningKeyResponse,
+    response_model_by_alias=True,
+)
+async def certificate_signing_key(
+    info: Annotated[SigningKeyResponse, Depends(get_signing_key_info)],
+) -> SigningKeyResponse:
+    """Publish the certificate verification key. For the Ed25519 scheme
+    this returns the base64url public key so external verifiers (partner
+    LMS, NFT minting) can check signatures without our secret; for HMAC it
+    reports the algorithm with a null key (the secret is not publishable)."""
+    return info
 
 
 @public_router.get(

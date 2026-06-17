@@ -67,6 +67,13 @@ class CertificateVerificationResponse(_CamelModel):
     certificate: CertificateResponse | None = None
 
 
+class SigningKeyResponse(_CamelModel):
+    # `publicKey` is the base64url Ed25519 verification key for external
+    # verifiers; null for HMAC (a shared secret that must not be published).
+    algorithm: Literal["hmac-sha256", "ed25519"]
+    public_key: str | None = None
+
+
 DeadlineStatusLiteral = Literal["none", "upcoming", "urgent", "overdue"]
 
 
