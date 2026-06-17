@@ -608,6 +608,8 @@ def _build_ctx(
     dao: bool = False,
     user_id: object | None = None,
     list_user_notes: object | None = None,
+    list_notebook_notes: object | None = None,
+    list_note_flashcards: object | None = None,
     wallet_access: object | None = None,
 ) -> ToolContext:
     from cyberdyne_backend.application.analytics import GetLearnerDashboard
@@ -672,6 +674,8 @@ def _build_ctx(
         get_quiz=GetQuiz(repo=quizzes),  # type: ignore[arg-type]
         learner_dashboard=GetLearnerDashboard(repo=_FakeAnalyticsRepo()),  # type: ignore[arg-type]
         list_user_notes=list_user_notes,  # type: ignore[arg-type]
+        list_notebook_notes=list_notebook_notes,  # type: ignore[arg-type]
+        list_note_flashcards=list_note_flashcards,  # type: ignore[arg-type]
         get_wallet_access=wallet_access,  # type: ignore[arg-type]
         user_id=user_id,  # type: ignore[arg-type]
     )
@@ -2089,6 +2093,109 @@ class TestGetMyNotesTool:
         )
         data = json.loads(out)
         assert [n["course_slug"] for n in data["notes"]] == ["rust-201"]
+
+
+class TestGetMyNotebookTool:
+    def _note(self, *, title="Newton's laws", note_type="theory", body="F = ma", cards=()):
+        from cyberdyne_backend.domain.notebook.entities import Flashcard, Note, NoteType
+
+        note = Note(
+            id=uuid.uuid4(),
+            user_id=uuid.uuid4(),
+            title=title,
+            type=NoteType(note_type),
+            body=body,
+        )
+        flashcards = [
+            Flashcard(id=uuid.uuid4(), note_id=note.id, question=q, answer=a) for q, a in cards
+        ]
+        return note, flashcards
+
+    def _wire(self, pairs, *, expect_due=False, expect_query=None, expect_type=None):
+        from cyberdyne_backend.application.notebook import ListFlashcards, ListNotes
+        from cyberdyne_backend.domain.notebook.entities import NotePage
+
+        notes = [n for n, _ in pairs]
+        cards_by_note = {n.id: cards for n, cards in pairs}
+        captured: dict = {}
+
+        class _FakeNotebookRepo:
+            async def list_for_user(
+                self, *, user_id, type=None, query=None, due=False, cursor=None, limit=20
+            ):
+                captured.update({"type": type, "query": query, "due": due})
+                return NotePage(items=notes, next_cursor=None)
+
+            async def get(self, *, user_id, note_id):
+                return next(n for n in notes if n.id == note_id)
+
+            async def list_flashcards(self, note_id):
+                return cards_by_note.get(note_id, [])
+
+        repo = _FakeNotebookRepo()
+        return (
+            ListNotes(repo=repo),  # type: ignore[arg-type]
+            ListFlashcards(repo=repo),  # type: ignore[arg-type]
+            captured,
+        )
+
+    async def test_sign_in_required_when_anonymous(self) -> None:
+        list_notes, list_cards, _ = self._wire([self._note()])
+        ctx = _build_ctx(list_notebook_notes=list_notes, list_note_flashcards=list_cards)
+        out = await ToolDispatcher(ctx).dispatch(
+            ToolCall(id="x", name="get_my_notebook", arguments_json="{}")
+        )
+        assert json.loads(out) == {"error": "sign_in_required"}
+
+    async def test_returns_notes_with_flashcards(self) -> None:
+        pairs = [self._note(cards=[("What is F?", "mass times acceleration")])]
+        list_notes, list_cards, _ = self._wire(pairs)
+        ctx = _build_ctx(
+            user_id=uuid.uuid4(),
+            list_notebook_notes=list_notes,
+            list_note_flashcards=list_cards,
+        )
+        out = await ToolDispatcher(ctx).dispatch(
+            ToolCall(id="x", name="get_my_notebook", arguments_json="{}")
+        )
+        data = json.loads(out)
+        note = data["notes"][0]
+        assert note["title"] == "Newton's laws"
+        assert note["type"] == "theory"
+        assert note["flashcards"] == [
+            {"question": "What is F?", "answer": "mass times acceleration"}
+        ]
+
+    async def test_passes_filters_through(self) -> None:
+        list_notes, list_cards, captured = self._wire([self._note()])
+        ctx = _build_ctx(
+            user_id=uuid.uuid4(),
+            list_notebook_notes=list_notes,
+            list_note_flashcards=list_cards,
+        )
+        await ToolDispatcher(ctx).dispatch(
+            ToolCall(
+                id="x",
+                name="get_my_notebook",
+                arguments_json='{"query": "newton", "due": true, "type": "theory"}',
+            )
+        )
+        assert captured["query"] == "newton"
+        assert captured["due"] is True
+        assert captured["type"] is not None
+        assert captured["type"].value == "theory"
+
+    async def test_ignores_unknown_type(self) -> None:
+        list_notes, list_cards, captured = self._wire([self._note()])
+        ctx = _build_ctx(
+            user_id=uuid.uuid4(),
+            list_notebook_notes=list_notes,
+            list_note_flashcards=list_cards,
+        )
+        await ToolDispatcher(ctx).dispatch(
+            ToolCall(id="x", name="get_my_notebook", arguments_json='{"type": "bogus"}')
+        )
+        assert captured["type"] is None
 
 
 class TestGetUserTierTool:
