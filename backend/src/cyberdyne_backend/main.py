@@ -209,6 +209,16 @@ from cyberdyne_backend.adapters.inbound.api.marketplace.router import (
 from cyberdyne_backend.adapters.inbound.api.marketplace.router import (
     webhook_router as marketplace_webhook_router,
 )
+from cyberdyne_backend.adapters.inbound.api.notebook.router import (
+    get_create_note_uc,
+    get_delete_note_uc,
+    get_list_notes_uc,
+    get_note_uc,
+    get_update_note_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.notebook.router import (
+    public_router as notebook_public_router,
+)
 from cyberdyne_backend.adapters.inbound.api.quizzes.router import (
     admin_router as quizzes_admin_router,
 )
@@ -307,6 +317,9 @@ from cyberdyne_backend.adapters.outbound.persistence.learning.repository import 
 )
 from cyberdyne_backend.adapters.outbound.persistence.marketplace.repository import (
     SqlAlchemyMarketplaceRepository,
+)
+from cyberdyne_backend.adapters.outbound.persistence.notebook.repository import (
+    SqlAlchemyNotebookRepository,
 )
 from cyberdyne_backend.adapters.outbound.persistence.quizzes.catalog_repository import (
     SqlAlchemyQuizCatalogReader,
@@ -434,6 +447,13 @@ from cyberdyne_backend.application.marketplace import (
     ListProducts as ListMarketplaceProducts,
 )
 from cyberdyne_backend.application.marketplace.use_cases import GetProduct
+from cyberdyne_backend.application.notebook import (
+    CreateNote,
+    DeleteNote,
+    GetNote,
+    ListNotes,
+    UpdateNote,
+)
 from cyberdyne_backend.application.quizzes import (
     DeleteQuiz,
     ExplainQuizAnswers,
@@ -844,6 +864,27 @@ def create_app() -> FastAPI:
         async with session_scope() as session:
             yield GetQuiz(repo=SqlAlchemyQuizRepository(session))
 
+    # Notebook notes CRUD (issue #161).
+    async def _create_note_dep() -> AsyncIterator[CreateNote]:
+        async with session_scope() as session:
+            yield CreateNote(repo=SqlAlchemyNotebookRepository(session))
+
+    async def _list_notes_dep() -> AsyncIterator[ListNotes]:
+        async with session_scope() as session:
+            yield ListNotes(repo=SqlAlchemyNotebookRepository(session))
+
+    async def _get_note_dep() -> AsyncIterator[GetNote]:
+        async with session_scope() as session:
+            yield GetNote(repo=SqlAlchemyNotebookRepository(session))
+
+    async def _update_note_dep() -> AsyncIterator[UpdateNote]:
+        async with session_scope() as session:
+            yield UpdateNote(repo=SqlAlchemyNotebookRepository(session))
+
+    async def _delete_note_dep() -> AsyncIterator[DeleteNote]:
+        async with session_scope() as session:
+            yield DeleteNote(repo=SqlAlchemyNotebookRepository(session))
+
     async def _upsert_quiz_dep() -> AsyncIterator[UpsertQuiz]:
         async with session_scope() as session:
             yield UpsertQuiz(repo=SqlAlchemyQuizRepository(session))
@@ -1178,6 +1219,11 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_my_course_progress_uc] = _my_course_progress_dep
     app.dependency_overrides[get_my_courses_progress_uc] = _my_courses_progress_dep
     app.dependency_overrides[get_quiz_uc] = _get_quiz_dep
+    app.dependency_overrides[get_create_note_uc] = _create_note_dep
+    app.dependency_overrides[get_list_notes_uc] = _list_notes_dep
+    app.dependency_overrides[get_note_uc] = _get_note_dep
+    app.dependency_overrides[get_update_note_uc] = _update_note_dep
+    app.dependency_overrides[get_delete_note_uc] = _delete_note_dep
     app.dependency_overrides[get_upsert_quiz_uc] = _upsert_quiz_dep
     app.dependency_overrides[get_delete_quiz_uc] = _delete_quiz_dep
     app.dependency_overrides[get_submit_attempt_uc] = _submit_attempt_dep
@@ -1243,6 +1289,7 @@ def create_app() -> FastAPI:
     app.include_router(courses_admin_router)
     app.include_router(category_public_router)
     app.include_router(category_admin_router)
+    app.include_router(notebook_public_router)
     app.include_router(quizzes_player_router)
     app.include_router(quizzes_admin_router)
     app.include_router(quizzes_catalog_router)
