@@ -5,7 +5,12 @@ from __future__ import annotations
 from typing import Protocol, runtime_checkable
 from uuid import UUID
 
-from cyberdyne_backend.domain.notebook.entities import Note, NotePage, NoteType
+from cyberdyne_backend.domain.notebook.entities import (
+    Flashcard,
+    Note,
+    NotePage,
+    NoteType,
+)
 
 
 @runtime_checkable
@@ -38,4 +43,17 @@ class NotebookRepository(Protocol):
 
     async def delete(self, *, user_id: UUID, note_id: UUID) -> bool:
         """Delete a note owned by the user. Returns ``True`` if removed."""
+        ...
+
+    # ── Flashcards (the caller verifies note ownership first) ──────────
+    async def add_flashcard(self, flashcard: Flashcard) -> Flashcard:
+        """Persist a flashcard against its note."""
+        ...
+
+    async def list_flashcards(self, note_id: UUID) -> list[Flashcard]:
+        """Flashcards for a note, oldest first."""
+        ...
+
+    async def delete_flashcard(self, *, note_id: UUID, flashcard_id: UUID) -> bool:
+        """Delete a flashcard from a note. Returns ``True`` if removed."""
         ...

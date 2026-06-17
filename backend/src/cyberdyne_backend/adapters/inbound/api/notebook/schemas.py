@@ -52,3 +52,16 @@ class NoteWriteRequest(_StrictCamelModel):
     run_result: dict[str, object] | None = None
     plot_refs: list[str] = Field(default_factory=list, max_length=50)
     tags: list[str] = Field(default_factory=list, max_length=50)
+
+
+class FlashcardResponse(_CamelModel):
+    id: UUID
+    note_id: UUID
+    question: str
+    answer: str
+    created_at: datetime
+
+
+class FlashcardWriteRequest(_StrictCamelModel):
+    question: str = Field(min_length=1, max_length=2000)
+    answer: str = Field(min_length=1, max_length=2000)

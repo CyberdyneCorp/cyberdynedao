@@ -13,6 +13,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from cyberdyne_backend.adapters.inbound.api.notebook.schemas import (
+    FlashcardResponse,
+    FlashcardWriteRequest,
     NoteListResponse,
     NoteResponse,
     NoteWriteRequest,
@@ -21,14 +23,20 @@ from cyberdyne_backend.adapters.inbound.middleware.auth import require_principal
 from cyberdyne_backend.application.notebook import (
     DEFAULT_NOTE_LIMIT,
     MAX_NOTE_LIMIT,
+    AddFlashcard,
     CreateNote,
+    DeleteFlashcard,
     DeleteNote,
     GetNote,
+    ListFlashcards,
     ListNotes,
     UpdateNote,
 )
 from cyberdyne_backend.domain.auth_identity import UserPrincipal
 from cyberdyne_backend.domain.notebook import (
+    Flashcard,
+    FlashcardNotFoundError,
+    InvalidFlashcardError,
     InvalidNoteError,
     Note,
     NoteFields,
@@ -59,6 +67,28 @@ async def get_update_note_uc() -> UpdateNote:  # pragma: no cover - override tar
 
 async def get_delete_note_uc() -> DeleteNote:  # pragma: no cover - override target
     raise NotImplementedError
+
+
+async def get_add_flashcard_uc() -> AddFlashcard:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_list_flashcards_uc() -> ListFlashcards:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_delete_flashcard_uc() -> DeleteFlashcard:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+def _flashcard_response(f: Flashcard) -> FlashcardResponse:
+    return FlashcardResponse(
+        id=f.id,
+        note_id=f.note_id,
+        question=f.question,
+        answer=f.answer,
+        created_at=f.created_at,
+    )
 
 
 def _require_user(principal: UserPrincipal) -> UserPrincipal:
@@ -183,6 +213,69 @@ async def delete_note(
     try:
         await use_case.execute(user_id=user.user_id, note_id=note_id)
     except NoteNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return Response(status_code=204)
+
+
+# ── Flashcards ────────────────────────────────────────────────────────
+
+
+@public_router.post(
+    "/notes/{note_id}/flashcards",
+    response_model=FlashcardResponse,
+    response_model_by_alias=True,
+    status_code=201,
+)
+async def add_flashcard(
+    note_id: UUID,
+    body: FlashcardWriteRequest,
+    use_case: Annotated[AddFlashcard, Depends(get_add_flashcard_uc)],
+    principal: Annotated[UserPrincipal, Depends(require_principal)],
+) -> FlashcardResponse:
+    user = _require_user(principal)
+    try:
+        card = await use_case.execute(
+            user_id=user.user_id,
+            note_id=note_id,
+            question=body.question,
+            answer=body.answer,
+        )
+    except NoteNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except InvalidFlashcardError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _flashcard_response(card)
+
+
+@public_router.get(
+    "/notes/{note_id}/flashcards",
+    response_model=list[FlashcardResponse],
+    response_model_by_alias=True,
+)
+async def list_flashcards(
+    note_id: UUID,
+    use_case: Annotated[ListFlashcards, Depends(get_list_flashcards_uc)],
+    principal: Annotated[UserPrincipal, Depends(require_principal)],
+) -> list[FlashcardResponse]:
+    user = _require_user(principal)
+    try:
+        cards = await use_case.execute(user_id=user.user_id, note_id=note_id)
+    except NoteNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return [_flashcard_response(c) for c in cards]
+
+
+@public_router.delete("/notes/{note_id}/flashcards/{flashcard_id}", status_code=204)
+async def delete_flashcard(
+    note_id: UUID,
+    flashcard_id: UUID,
+    use_case: Annotated[DeleteFlashcard, Depends(get_delete_flashcard_uc)],
+    principal: Annotated[UserPrincipal, Depends(require_principal)],
+) -> Response:
+    user = _require_user(principal)
+    try:
+        await use_case.execute(user_id=user.user_id, note_id=note_id, flashcard_id=flashcard_id)
+    except (NoteNotFoundError, FlashcardNotFoundError) as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return Response(status_code=204)
 

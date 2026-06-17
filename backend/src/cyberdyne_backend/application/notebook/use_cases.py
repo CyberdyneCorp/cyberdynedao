@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from cyberdyne_backend.domain.notebook import (
+    Flashcard,
+    FlashcardNotFoundError,
     Note,
     NotebookRepository,
     NoteFields,
@@ -13,6 +15,7 @@ from cyberdyne_backend.domain.notebook import (
     NotePage,
     NoteType,
     apply_fields,
+    new_flashcard,
     new_note,
 )
 
@@ -72,3 +75,42 @@ class DeleteNote:
         removed = await self.repo.delete(user_id=user_id, note_id=note_id)
         if not removed:
             raise NoteNotFoundError(f"note {note_id} not found")
+
+
+# ── Flashcards (issue #161, part 2) ───────────────────────────────────
+#
+# Every flashcard operation first loads the note scoped to the user, so a
+# learner can only touch flashcards on notes they own (raises
+# NoteNotFoundError otherwise).
+
+
+@dataclass(slots=True)
+class AddFlashcard:
+    repo: NotebookRepository
+
+    async def execute(
+        self, *, user_id: UUID, note_id: UUID, question: str, answer: str
+    ) -> Flashcard:
+        await self.repo.get(user_id=user_id, note_id=note_id)
+        card = new_flashcard(note_id=note_id, question=question, answer=answer)
+        return await self.repo.add_flashcard(card)
+
+
+@dataclass(slots=True)
+class ListFlashcards:
+    repo: NotebookRepository
+
+    async def execute(self, *, user_id: UUID, note_id: UUID) -> list[Flashcard]:
+        await self.repo.get(user_id=user_id, note_id=note_id)
+        return await self.repo.list_flashcards(note_id)
+
+
+@dataclass(slots=True)
+class DeleteFlashcard:
+    repo: NotebookRepository
+
+    async def execute(self, *, user_id: UUID, note_id: UUID, flashcard_id: UUID) -> None:
+        await self.repo.get(user_id=user_id, note_id=note_id)
+        removed = await self.repo.delete_flashcard(note_id=note_id, flashcard_id=flashcard_id)
+        if not removed:
+            raise FlashcardNotFoundError(f"flashcard {flashcard_id} not found")
