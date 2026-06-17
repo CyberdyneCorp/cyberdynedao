@@ -175,3 +175,43 @@ def test_flashcards_are_user_scoped(app: FastAPI, _prepared_schema: None) -> Non
     other = TestClient(app)
     # Other user can't reach flashcards on my note (note lookup 404s).
     assert other.get(f"/api/v1/notebook/notes/{note_id}/flashcards").status_code == 404
+
+
+def test_review_advances_schedule(client: TestClient) -> None:
+    nid = client.post("/api/v1/notebook/notes", json=_note()).json()["id"]
+
+    # A fresh note isn't yet scheduled.
+    fresh = client.get(f"/api/v1/notebook/notes/{nid}").json()
+    assert fresh["reviewedAt"] is None
+    assert fresh["nextReviewAt"] is None
+    assert fresh["reviewIntervalDays"] == 0
+
+    reviewed = client.post(f"/api/v1/notebook/notes/{nid}/review", json={"rating": "good"})
+    assert reviewed.status_code == 200, reviewed.text
+    body = reviewed.json()
+    assert body["reviewIntervalDays"] == 2
+    assert body["reviewedAt"] is not None
+    assert body["nextReviewAt"] is not None
+
+
+def test_review_invalid_rating_422(client: TestClient) -> None:
+    nid = client.post("/api/v1/notebook/notes", json=_note()).json()["id"]
+    resp = client.post(f"/api/v1/notebook/notes/{nid}/review", json={"rating": "bogus"})
+    assert resp.status_code == 422
+
+
+def test_review_missing_note_404(client: TestClient) -> None:
+    resp = client.post(f"/api/v1/notebook/notes/{uuid.uuid4()}/review", json={"rating": "good"})
+    assert resp.status_code == 404
+
+
+def test_due_filter_excludes_future_reviews(client: TestClient) -> None:
+    nid = client.post("/api/v1/notebook/notes", json=_note()).json()["id"]
+    # Reviewing schedules the next review in the future (>= 1 day out).
+    client.post(f"/api/v1/notebook/notes/{nid}/review", json={"rating": "easy"})
+
+    # Not due yet → excluded from the due list; still in the full list.
+    due = client.get("/api/v1/notebook/notes?due=true").json()
+    assert due["items"] == []
+    all_notes = client.get("/api/v1/notebook/notes").json()
+    assert [n["id"] for n in all_notes["items"]] == [nid]

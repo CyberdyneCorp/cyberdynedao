@@ -59,6 +59,9 @@ def _row_to_note(row: NoteRow) -> Note:
         run_result=row.run_result,
         plot_refs=tuple(row.plot_refs),
         tags=tuple(row.tags),
+        reviewed_at=_as_utc(row.reviewed_at),
+        next_review_at=_as_utc(row.next_review_at),
+        review_interval_days=row.review_interval_days,
         created_at=_as_utc(row.created_at) or row.created_at,
         updated_at=_as_utc(row.updated_at),
     )
@@ -88,6 +91,9 @@ def _note_to_row(note: Note) -> NoteRow:
         run_result=note.run_result,
         plot_refs=list(note.plot_refs),
         tags=list(note.tags),
+        reviewed_at=note.reviewed_at,
+        next_review_at=note.next_review_at,
+        review_interval_days=note.review_interval_days,
         created_at=note.created_at,
         updated_at=note.updated_at,
     )
@@ -121,6 +127,8 @@ class SqlAlchemyNotebookRepository:
         user_id: UUID,
         type: NoteType | None = None,
         query: str | None = None,
+        due: bool = False,
+        now: datetime | None = None,
         cursor: str | None = None,
         limit: int = 20,
     ) -> NotePage:
@@ -133,6 +141,12 @@ class SqlAlchemyNotebookRepository:
         )
         if type is not None:
             stmt = stmt.where(NoteRow.type == type.value)
+        if due:
+            cutoff = now or datetime.now(tz=UTC)
+            stmt = stmt.where(
+                NoteRow.next_review_at.is_not(None),
+                NoteRow.next_review_at <= cutoff,
+            )
         if query:
             needle = f"%{query.lower()}%"
             stmt = stmt.where(
@@ -172,6 +186,9 @@ class SqlAlchemyNotebookRepository:
         row.run_result = note.run_result
         row.plot_refs = list(note.plot_refs)
         row.tags = list(note.tags)
+        row.reviewed_at = note.reviewed_at
+        row.next_review_at = note.next_review_at
+        row.review_interval_days = note.review_interval_days
         row.updated_at = note.updated_at
         await self._session.flush()
         return note

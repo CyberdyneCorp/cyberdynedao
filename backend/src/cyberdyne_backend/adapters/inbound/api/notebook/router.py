@@ -18,6 +18,7 @@ from cyberdyne_backend.adapters.inbound.api.notebook.schemas import (
     NoteListResponse,
     NoteResponse,
     NoteWriteRequest,
+    ReviewRequest,
 )
 from cyberdyne_backend.adapters.inbound.middleware.auth import require_principal
 from cyberdyne_backend.application.notebook import (
@@ -30,6 +31,7 @@ from cyberdyne_backend.application.notebook import (
     GetNote,
     ListFlashcards,
     ListNotes,
+    ReviewNote,
     UpdateNote,
 )
 from cyberdyne_backend.domain.auth_identity import UserPrincipal
@@ -43,6 +45,7 @@ from cyberdyne_backend.domain.notebook import (
     NoteNotFoundError,
     NotePage,
     parse_note_type,
+    parse_review_rating,
 )
 
 public_router = APIRouter(prefix="/api/v1/notebook", tags=["notebook"])
@@ -81,6 +84,10 @@ async def get_delete_flashcard_uc() -> DeleteFlashcard:  # pragma: no cover - ov
     raise NotImplementedError
 
 
+async def get_review_note_uc() -> ReviewNote:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
 def _flashcard_response(f: Flashcard) -> FlashcardResponse:
     return FlashcardResponse(
         id=f.id,
@@ -110,6 +117,9 @@ def _note_response(n: Note) -> NoteResponse:
         run_result=n.run_result,
         plot_refs=list(n.plot_refs),
         tags=list(n.tags),
+        reviewed_at=n.reviewed_at,
+        next_review_at=n.next_review_at,
+        review_interval_days=n.review_interval_days,
         created_at=n.created_at,
         updated_at=n.updated_at,
     )
@@ -159,13 +169,16 @@ async def list_notes(
     principal: Annotated[UserPrincipal, Depends(require_principal)],
     type: Annotated[str | None, Query()] = None,
     q: Annotated[str | None, Query(max_length=128)] = None,
+    due: Annotated[bool, Query()] = False,
     cursor: Annotated[str | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=MAX_NOTE_LIMIT)] = DEFAULT_NOTE_LIMIT,
 ) -> NoteListResponse:
+    """List the learner's notes. ``due=true`` returns only notes whose
+    spaced-review schedule is due now (``nextReviewAt <= now``)."""
     user = _require_user(principal)
     note_type = parse_note_type(type) if type is not None else None
     page = await use_case.execute(
-        user_id=user.user_id, type=note_type, query=q, cursor=cursor, limit=limit
+        user_id=user.user_id, type=note_type, query=q, due=due, cursor=cursor, limit=limit
     )
     return _list_response(page)
 
@@ -278,6 +291,35 @@ async def delete_flashcard(
     except (NoteNotFoundError, FlashcardNotFoundError) as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return Response(status_code=204)
+
+
+# ── Spaced review ─────────────────────────────────────────────────────
+
+
+@public_router.post(
+    "/notes/{note_id}/review",
+    response_model=NoteResponse,
+    response_model_by_alias=True,
+)
+async def review_note(
+    note_id: UUID,
+    body: ReviewRequest,
+    use_case: Annotated[ReviewNote, Depends(get_review_note_uc)],
+    principal: Annotated[UserPrincipal, Depends(require_principal)],
+) -> NoteResponse:
+    """Record a spaced-review of a note. The `rating`
+    (`again`/`hard`/`good`/`easy`) advances the review interval and
+    reschedules `nextReviewAt`; the updated note is returned."""
+    user = _require_user(principal)
+    try:
+        note = await use_case.execute(
+            user_id=user.user_id,
+            note_id=note_id,
+            rating=parse_review_rating(body.rating),
+        )
+    except NoteNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return _note_response(note)
 
 
 __all__ = ["public_router"]

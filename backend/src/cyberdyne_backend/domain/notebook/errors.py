@@ -17,3 +17,7 @@ class FlashcardNotFoundError(LookupError):
 
 class InvalidFlashcardError(ValueError):
     """Raised when a flashcard fails its invariants (empty question/answer)."""
+
+
+class InvalidReviewError(ValueError):
+    """Raised when an unknown spaced-review rating is supplied."""

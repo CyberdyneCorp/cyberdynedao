@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Index, String, Text, Uuid
+from sqlalchemy import JSON, DateTime, ForeignKey, Index, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from cyberdyne_backend.infrastructure.database.base import Base
@@ -26,12 +26,17 @@ class NoteRow(Base):
     run_result: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
     plot_refs: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     tags: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    next_review_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    review_interval_days: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
         # Newest-first listing per user is the hot path.
         Index("ix_notebook_notes_user_created", "user_id", "created_at"),
+        # Due-for-review lookups (`?due=true`).
+        Index("ix_notebook_notes_user_next_review", "user_id", "next_review_at"),
     )
 
 

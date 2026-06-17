@@ -82,9 +82,11 @@ class _FakeRepo:
         return True
 
     async def list_for_user(
-        self, *, user_id, type=None, query=None, cursor=None, limit=20
+        self, *, user_id, type=None, query=None, due=False, now=None, cursor=None, limit=20
     ) -> NotePage:
         rows = [n for n in self.notes.values() if n.user_id == user_id]
+        if due:
+            rows = [n for n in rows if n.next_review_at is not None]
         return NotePage(items=rows[:limit], next_cursor=None)
 
 
@@ -166,4 +168,46 @@ def test_delete_missing_flashcard_raises() -> None:
             DeleteFlashcard(repo=repo).execute(
                 user_id=me, note_id=note.id, flashcard_id=uuid.uuid4()
             )
+        )
+
+
+def test_next_interval_schedule() -> None:
+    from cyberdyne_backend.domain.notebook import ReviewRating, next_interval_days
+
+    # New card (interval 0).
+    assert next_interval_days(0, ReviewRating.AGAIN) == 1
+    assert next_interval_days(0, ReviewRating.HARD) == 1
+    assert next_interval_days(0, ReviewRating.GOOD) == 2
+    assert next_interval_days(0, ReviewRating.EASY) == 4
+    # Existing card grows by the rating factor; AGAIN always resets.
+    assert next_interval_days(10, ReviewRating.AGAIN) == 1
+    assert next_interval_days(10, ReviewRating.GOOD) == 20
+    assert next_interval_days(10, ReviewRating.EASY) == 25
+    assert next_interval_days(10, ReviewRating.HARD) == 12
+    # Interval is capped at 365.
+    assert next_interval_days(300, ReviewRating.EASY) == 365
+
+
+def test_review_advances_schedule_and_is_user_scoped() -> None:
+    from cyberdyne_backend.application.notebook import ReviewNote
+    from cyberdyne_backend.domain.notebook import ReviewRating
+
+    repo = _FakeRepo()
+    me, other = uuid.uuid4(), uuid.uuid4()
+    note = asyncio.run(CreateNote(repo=repo).execute(user_id=me, fields=_fields()))
+    assert note.review_interval_days == 0
+    assert note.next_review_at is None
+
+    reviewed = asyncio.run(
+        ReviewNote(repo=repo).execute(user_id=me, note_id=note.id, rating=ReviewRating.GOOD)
+    )
+    assert reviewed.review_interval_days == 2
+    assert reviewed.reviewed_at is not None
+    assert reviewed.next_review_at is not None
+    assert reviewed.next_review_at > reviewed.reviewed_at
+
+    # Another user can't review my note.
+    with pytest.raises(NoteNotFoundError):
+        asyncio.run(
+            ReviewNote(repo=repo).execute(user_id=other, note_id=note.id, rating=ReviewRating.GOOD)
         )
