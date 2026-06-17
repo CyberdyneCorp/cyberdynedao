@@ -185,7 +185,9 @@ async def test_get_course_languages_quiz_untranslated_not_available() -> None:
 
 async def test_get_course_languages_unknown_slug_raises() -> None:
     uc = GetCourseLanguages(
-        course_repo=FakeCourseRepo(), quiz_repo=FakeQuizRepo(), translation_repo=FakeTranslationRepo()
+        course_repo=FakeCourseRepo(),
+        quiz_repo=FakeQuizRepo(),
+        translation_repo=FakeTranslationRepo(),
     )
     with pytest.raises(CourseNotFoundError):
         await uc.execute("nope")

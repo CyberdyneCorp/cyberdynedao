@@ -9,9 +9,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
-ActivityKindLiteral = Literal[
-    "lesson_viewed", "code_run", "simulation_run", "concept_mastered"
-]
+ActivityKindLiteral = Literal["lesson_viewed", "code_run", "simulation_run", "concept_mastered"]
 
 
 class _CamelModel(BaseModel):

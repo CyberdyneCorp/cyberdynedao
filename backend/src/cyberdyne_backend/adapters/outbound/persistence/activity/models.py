@@ -18,10 +18,6 @@ class ActivityEventRow(Base):
     user_id: Mapped[UUID] = mapped_column(Uuid(), nullable=False, index=True)
     kind: Mapped[str] = mapped_column(String(32), nullable=False)
     ref: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    occurred_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
-    __table_args__ = (
-        Index("ix_activity_events_user_occurred", "user_id", "occurred_at"),
-    )
+    __table_args__ = (Index("ix_activity_events_user_occurred", "user_id", "occurred_at"),)

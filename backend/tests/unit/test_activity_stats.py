@@ -115,9 +115,7 @@ def test_record_activity_use_case() -> None:
     repo = _FakeRepo()
     user = uuid.uuid4()
     out = asyncio.run(
-        RecordActivity(repo=repo).execute(
-            user_id=user, kind=ActivityKind.CODE_RUN, ref="lesson-1"
-        )
+        RecordActivity(repo=repo).execute(user_id=user, kind=ActivityKind.CODE_RUN, ref="lesson-1")
     )
     assert out.kind is ActivityKind.CODE_RUN
     assert repo.events[0].user_id == user
@@ -127,9 +125,7 @@ def test_get_stats_clamps_tz_offset() -> None:
     repo = _FakeRepo()
     user = uuid.uuid4()
     # An out-of-range offset must not raise; it's clamped.
-    stats = asyncio.run(
-        GetLearnerStats(repo=repo).execute(user, tz_offset_minutes=99999)
-    )
+    stats = asyncio.run(GetLearnerStats(repo=repo).execute(user, tz_offset_minutes=99999))
     assert stats.current_streak_days == 0
 
 

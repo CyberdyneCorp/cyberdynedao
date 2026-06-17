@@ -38,12 +38,8 @@ def test_record_then_stats_reflect_counts(client: TestClient) -> None:
     for kind in ["code_run", "code_run", "simulation_run"]:
         resp = client.post("/api/v1/me/activity", json={"kind": kind})
         assert resp.status_code == 201, resp.text
-    client.post(
-        "/api/v1/me/activity", json={"kind": "concept_mastered", "ref": "ohms-law"}
-    )
-    client.post(
-        "/api/v1/me/activity", json={"kind": "concept_mastered", "ref": "ohms-law"}
-    )
+    client.post("/api/v1/me/activity", json={"kind": "concept_mastered", "ref": "ohms-law"})
+    client.post("/api/v1/me/activity", json={"kind": "concept_mastered", "ref": "ohms-law"})
 
     stats = client.get("/api/v1/me/stats")
     assert stats.status_code == 200, stats.text

@@ -36,9 +36,7 @@ class RecordActivity:
 class GetLearnerStats:
     repo: ActivityRepository
 
-    async def execute(
-        self, user_id: UUID, *, tz_offset_minutes: int = 0
-    ) -> LearnerStats:
+    async def execute(self, user_id: UUID, *, tz_offset_minutes: int = 0) -> LearnerStats:
         offset = max(_MIN_TZ_OFFSET, min(tz_offset_minutes, _MAX_TZ_OFFSET))
         events = await self.repo.list_for_user(user_id)
         today = (datetime.now(tz=UTC) + timedelta(minutes=offset)).date()
