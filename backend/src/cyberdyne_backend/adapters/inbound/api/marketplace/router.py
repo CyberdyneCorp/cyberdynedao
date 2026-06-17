@@ -43,6 +43,35 @@ from cyberdyne_backend.domain.marketplace import (
 
 logger = logging.getLogger("cyberdyne_backend.marketplace.router")
 
+# Cap the Stripe webhook body. Real Stripe events are a few KB; this guards
+# the public endpoint against a client streaming an unbounded body into
+# memory before the signature is even checked (issue #7).
+_MAX_WEBHOOK_BYTES = 256 * 1024
+
+
+async def _read_capped_body(request: Request, max_bytes: int) -> bytes:
+    """Read the request body, rejecting with 413 once it exceeds
+    ``max_bytes``. Checks Content-Length first (honest clients) and also
+    enforces the cap while streaming (chunked / spoofed length)."""
+    declared = request.headers.get("content-length")
+    if declared is not None and declared.isdigit() and int(declared) > max_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail="webhook payload too large",
+        )
+    chunks: list[bytes] = []
+    total = 0
+    async for chunk in request.stream():
+        total += len(chunk)
+        if total > max_bytes:
+            raise HTTPException(
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                detail="webhook payload too large",
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
 public_router = APIRouter(prefix="/api/v1/marketplace", tags=["marketplace"])
 me_router = APIRouter(prefix="/api/v1/me", tags=["me"])
 webhook_router = APIRouter(prefix="/api/v1", tags=["stripe-webhook"])
@@ -178,7 +207,7 @@ async def stripe_webhook(
     verifier: Annotated[StripeWebhookVerifierPort, Depends(get_webhook_verifier)],
     stripe_signature: Annotated[str | None, Header(alias="Stripe-Signature")] = None,
 ) -> dict[str, str]:
-    raw_body = await request.body()
+    raw_body = await _read_capped_body(request, _MAX_WEBHOOK_BYTES)
     if not stripe_signature:
         raise HTTPException(status_code=400, detail="missing Stripe-Signature header")
     try:

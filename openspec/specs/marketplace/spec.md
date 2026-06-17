@@ -59,6 +59,12 @@ license → issue key + email). On `charge.refunded` the order SHALL become
 - WHEN it reaches the webhook
 - THEN the system SHALL respond `400`
 
+#### Scenario: Oversized payload is capped
+
+- GIVEN a request body larger than the webhook size cap (256 KiB)
+- WHEN it reaches the webhook
+- THEN the system SHALL respond `413` before the signature is verified
+
 ### Requirement: Buyer orders and licenses
 
 The system SHALL expose `GET /api/v1/me/orders` and `GET /api/v1/me/licenses`
