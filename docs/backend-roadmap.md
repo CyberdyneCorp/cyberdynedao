@@ -59,7 +59,16 @@
 > `codeRunsCount`, `simulationsRun`, `conceptsMastered`. The streak is
 > consecutive calendar days with ≥1 event, keeping a one-day grace before
 > a streak is lost; days are bucketed in UTC unless the client passes
-> `tzOffsetMinutes` (minutes east of UTC, clamped to UTC-12..UTC+14)).
+> `tzOffsetMinutes` (minutes east of UTC, clamped to UTC-12..UTC+14)),
+> and the **Skill Map** (issue #165 — `GET /api/v1/skills/me` returns
+> per-domain skill mastery + weak areas, replacing the client's
+> course-percent approximation. A skill is a course category, its domain
+> the parent category; mastery blends lesson completion (weight 0.6) with
+> best-quiz performance (0.4, dropped when no quiz was attempted), over
+> published courses only. Skills below 40% the learner has engaged with
+> are flagged `weak`, surfaced in `weakAreas`, with next-step course
+> `suggestions` drawn from the weakest skills first. Derivation is
+> pure-domain; the adapter only aggregates).
 > All planned Academy AI phases are now delivered. Per-context detail
 > lives in each bounded
 > context under `backend/src/cyberdyne_backend/`.
