@@ -65,6 +65,20 @@ license → issue key + email). On `charge.refunded` the order SHALL become
 - WHEN it reaches the webhook
 - THEN the system SHALL respond `413` before the signature is verified
 
+### Requirement: Stored webhook payloads are redacted
+
+The system SHALL mask customer PII and card identifiers in the persisted
+`stripe_webhook_events.payload` (kept for idempotency + audit). Fulfilment
+reads the live verified event, never the stored row, so the row MUST NOT
+accumulate regulated data. Structural fields (ids, type, amounts, status)
+SHALL be preserved for debugging.
+
+#### Scenario: Persisted payload masks PII
+
+- GIVEN a `checkout.session.completed` event carrying a customer email + name
+- WHEN it is recorded
+- THEN the stored payload masks those values while keeping the session id and amount
+
 ### Requirement: Buyer orders and licenses
 
 The system SHALL expose `GET /api/v1/me/orders` and `GET /api/v1/me/licenses`

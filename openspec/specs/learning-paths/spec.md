@@ -86,3 +86,24 @@ return `404`. Certificates SHALL be publicly verifiable by id (returning
 - GIVEN a user who has not completed every module
 - WHEN an editor issues the certificate
 - THEN the system SHALL respond `409`
+
+### Requirement: Published verification key
+
+The system SHALL expose the certificate verification key at public
+`GET /api/v1/learning/certificates/signing-key`, returning the signing
+`algorithm`. When the Ed25519 scheme is active it SHALL include the
+base64url `publicKey` so external verifiers can check signatures without
+the backend's secret; under HMAC the `publicKey` SHALL be null (a shared
+secret is not publishable).
+
+#### Scenario: Ed25519 public key is published
+
+- GIVEN the backend signs certificates with Ed25519
+- WHEN a client GETs the signing-key endpoint
+- THEN it receives `algorithm: ed25519` and the base64url public key, which verifies a real signature
+
+#### Scenario: HMAC publishes no key
+
+- GIVEN the backend signs with HMAC
+- WHEN a client GETs the signing-key endpoint
+- THEN `publicKey` is null

@@ -94,10 +94,17 @@ class Settings(BaseSettings):
     captcha_secret: SecretStr | None = None
 
     # ── Certificates (Phase 4 — Learning platform) ────────────────────
-    # HMAC-SHA256 shared secret used to sign learning certificates.
-    # If unset the EphemeralCertificateSigner kicks in — fine for local
-    # dev, loud in staging/prod via a startup warning.
+    # Signature scheme. ``hmac`` (default): shared-secret HMAC-SHA256 — our
+    # backend verifies. ``ed25519``: keypair signatures so EXTERNAL verifiers
+    # (partner LMS, NFT minting) verify with the published public key.
+    cert_signer: Literal["hmac", "ed25519"] = "hmac"
+    # HMAC-SHA256 shared secret (cert_signer=hmac). If unset the
+    # EphemeralCertificateSigner kicks in — fine for local dev, loud in
+    # staging/prod via a startup warning.
     cert_signing_key: SecretStr | None = None
+    # Ed25519 private key — a base64url-encoded 32-byte seed (cert_signer=
+    # ed25519). Generate with the signer's ``generate()`` helper.
+    cert_ed25519_private_key: SecretStr | None = None
 
     # ── DAO treasury / Web3 (Phase 5) ─────────────────────────────────
     # ``fake`` ships deterministic data and is the default until a real
@@ -128,6 +135,13 @@ class Settings(BaseSettings):
     # Cache TTL for chain snapshots. Default 5 minutes; tune up for
     # rate-limited RPCs.
     dao_snapshot_ttl_s: int = 300
+
+    # Background prewarm: when enabled AND a treasury address is set, a
+    # worker re-reads the snapshot every ``dao_snapshot_ttl_s`` so requests
+    # are served from a warm cache instead of paying a lazy on-chain read
+    # on the first request after each expiry. Inert with no treasury
+    # address (local/dev). Disable to fall back to purely-lazy caching.
+    dao_snapshot_prewarm: bool = True
 
     # Optional: number of token holders, surfaced in /dao/overview.
     # Filled in by the governance subgraph once it ships; defaults to 0.
@@ -164,6 +178,25 @@ class Settings(BaseSettings):
     # Cyberflies (meetings) backend the chat agent's ask_meetings /
     # list_meetings tools call (as the signed-in user).
     cyberflies_url: str = "https://cyberflies.backend.coolify.cyberdynecorp.ai"
+
+    # ── Email delivery (Operational — issue #7) ───────────────────────
+    # "logging" (default) just logs every notification — safe for dev and
+    # tests. "smtp" delivers via the relay below: new-ask notifications to
+    # ``email_admin_recipient`` and license keys to the buyer. Any SMTP
+    # relay works (Postmark / SES / Mailgun / Gmail).
+    email_provider: Literal["logging", "smtp"] = "logging"
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_username: str | None = None
+    smtp_password: SecretStr | None = None
+    # STARTTLS on the default submission port. Disable only for a local
+    # test relay (e.g. MailHog) that speaks plaintext.
+    smtp_use_tls: bool = True
+    # Envelope From for outbound mail.
+    email_from: str = "no-reply@cyberdynecorp.ai"
+    # Team inbox that new-ask (lead/contact) notifications are sent to.
+    # Required for SMTP ask notifications; unset → asks fall back to logging.
+    email_admin_recipient: str | None = None
 
     # ── Uploads / media (Phase 8 — course content) ────────────────────
     # Where uploaded course/lesson media is written. In prod point this
