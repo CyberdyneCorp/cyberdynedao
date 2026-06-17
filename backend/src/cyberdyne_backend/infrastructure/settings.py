@@ -7,6 +7,7 @@ env-var inventory in docs/backend-roadmap.md §9 lands per-phase.
 
 from __future__ import annotations
 
+import logging
 from functools import lru_cache
 from typing import Literal
 
@@ -33,6 +34,14 @@ class Settings(BaseSettings):
     environment: Environment = "local"
     log_level: str = Field("INFO", description="Root log level — DEBUG / INFO / WARNING / ERROR")
     port: int = 8000
+
+    # When true, app startup HARD-FAILS in staging/production if any
+    # dev-default mock adapter is still active (see ``mock_adapter_problems``).
+    # Default false: the app still boots and only logs warnings, so a
+    # partially-provisioned environment (e.g. real DB but the DAO multisig /
+    # Stripe / OpenAI not wired yet) isn't blocked. Flip this on once every
+    # production adapter is configured. See issue #7's Operational guardrails.
+    enforce_production_adapters: bool = False
 
     # Comma-separated list of allowed origins for browser fetches.
     # Locally defaults to the SvelteKit dev server. In prod set to the
@@ -161,13 +170,14 @@ class Settings(BaseSettings):
     def _upper_log_level(cls, value: str) -> str:
         return value.upper()
 
-    def model_post_init(self, __context: object) -> None:
-        """Refuse to start with dev-default mock adapters in a shared
-        environment. Local + CI keep the mocks (they're what makes the
-        suite hermetic); staging/production MUST supply real credentials
-        and providers — see issue #7's Operational guardrails."""
+    def mock_adapter_problems(self) -> list[str]:
+        """Dev-default mock adapters that should not run in a shared
+        environment. Empty outside staging/production, so this is a pure,
+        side-effect-free check (does NOT run on settings construction — it
+        must not break ``alembic upgrade`` or other tooling that only needs
+        the DB URL)."""
         if self.environment not in ("staging", "production"):
-            return
+            return []
 
         problems: list[str] = []
         if self.chain_reader_provider == "fake":
@@ -186,13 +196,31 @@ class Settings(BaseSettings):
             )
         if self.openai_api_key is None:
             problems.append("OPENAI_API_KEY is unset (StaticChatClient offline mode)")
+        return problems
 
-        if problems:
-            joined = "\n  - ".join(problems)
+    def check_production_adapters(self, log: logging.Logger) -> None:
+        """Gate app serving (call from the app factory, NOT from settings
+        construction). Logs a warning per active mock adapter; raises
+        ``InsecureProductionConfigError`` only when
+        ``enforce_production_adapters`` is set, so a partially-provisioned
+        environment still boots while a fully-provisioned one can be locked
+        down. See issue #7's Operational guardrails."""
+        problems = self.mock_adapter_problems()
+        if not problems:
+            return
+        joined = "\n  - ".join(problems)
+        if self.enforce_production_adapters:
             raise InsecureProductionConfigError(
                 f"refusing to start in {self.environment!r} with dev-default "
                 f"mock adapters active:\n  - {joined}"
             )
+        log.warning(
+            "running in %r with dev-default mock adapters active (set "
+            "ENFORCE_PRODUCTION_ADAPTERS=true to hard-fail once provisioned):"
+            "\n  - %s",
+            self.environment,
+            joined,
+        )
 
 
 @lru_cache
