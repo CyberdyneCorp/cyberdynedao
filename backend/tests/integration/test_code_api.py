@@ -18,7 +18,12 @@ from fastapi.testclient import TestClient
 from cyberdyne_backend.adapters.inbound.api.code.router import get_run_code_uc
 from cyberdyne_backend.adapters.inbound.middleware.auth import require_principal
 from cyberdyne_backend.application.code import RunLessonCode
-from cyberdyne_backend.domain.ai_chat import MatlabRunResult
+from cyberdyne_backend.domain.ai_chat import (
+    CodeVariable,
+    MatlabRunResult,
+    PythonExecResult,
+    RichOutput,
+)
 from cyberdyne_backend.domain.auth_identity import UserPrincipal
 
 pytestmark = pytest.mark.integration
@@ -68,3 +73,52 @@ def test_empty_source_rejected(code_client: TestClient) -> None:
 def test_requires_auth(client: TestClient) -> None:
     resp = client.post(f"/api/v1/lessons/{uuid.uuid4()}/code/run", json={"source": "1"})
     assert resp.status_code in (401, 403)
+
+
+def test_matlab_run_returns_empty_variables_and_rich_outputs(
+    code_client: TestClient,
+) -> None:
+    resp = code_client.post(
+        f"/api/v1/lessons/{uuid.uuid4()}/code/run", json={"source": "x = 1"}
+    )
+    body = resp.json()
+    # Additive fields present + backward compatible (empty for MATLAB).
+    assert body["variables"] == []
+    assert body["richOutputs"] == []
+
+
+class _FakePython:
+    async def create_session(self, *, bearer):
+        return "srv-1"
+
+    async def execute(self, *, code, session_id, bearer, restricted=True):
+        return PythonExecResult(
+            ok=True,
+            stdout="done",
+            stderr="",
+            session_id=session_id,
+            variables=(CodeVariable(name="x", type="int", repr="42", size_bytes=28),),
+            rich_outputs=(RichOutput(mime_type="image/png", artifact="plot.png"),),
+        )
+
+
+def test_python_run_surfaces_variables_and_rich_outputs(app: FastAPI) -> None:
+    async def _uc() -> AsyncIterator[RunLessonCode]:
+        yield RunLessonCode(matlab=_FakeMatlab(), python=_FakePython())  # type: ignore[arg-type]
+
+    app.dependency_overrides[get_run_code_uc] = _uc
+    app.dependency_overrides[require_principal] = lambda: _LEARNER
+    client = TestClient(app)
+
+    resp = client.post(
+        f"/api/v1/lessons/{uuid.uuid4()}/code/run",
+        json={"source": "x = 42", "language": "python"},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["variables"] == [
+        {"name": "x", "type": "int", "repr": "42", "sizeBytes": 28}
+    ]
+    assert body["richOutputs"] == [
+        {"mimeType": "image/png", "artifact": "plot.png", "text": None}
+    ]

@@ -155,6 +155,18 @@ class RichOutput:
 
 
 @dataclass(frozen=True, slots=True)
+class CodeVariable:
+    """One entry in the post-run variable namespace (the Lab Variables
+    panel). ``repr`` is a bounded/truncated string rendering; ``size_bytes``
+    is the variable's in-memory size when the backend reports it."""
+
+    name: str
+    type: str
+    repr: str
+    size_bytes: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class PythonExecResult:
     """One Python interpreter execution. Like MATLAB, files written to the
     workspace are referenced by ``artifacts`` (filenames) + ``session_id``,
@@ -170,6 +182,26 @@ class PythonExecResult:
     error: str | None = None
     artifacts: tuple[str, ...] = ()
     session_id: str = ""
+    rich_outputs: tuple[RichOutput, ...] = ()
+    # Post-run variable namespace, when the backend reports one. Empty for
+    # backends that don't yet expose it (forward-compatible).
+    variables: tuple[CodeVariable, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class CodeRunResult:
+    """Unified result of running a code lesson's source, regardless of
+    engine. Adds the Lab ``variables`` namespace + inline ``rich_outputs``
+    to the original run fields. MATLAB runs leave both empty (figures are
+    surfaced via ``artifacts``); the Python interpreter populates them."""
+
+    ok: bool
+    stdout: str
+    stderr: str
+    artifacts: tuple[str, ...] = ()
+    session_id: str = ""
+    timed_out: bool = False
+    variables: tuple[CodeVariable, ...] = ()
     rich_outputs: tuple[RichOutput, ...] = ()
 
 

@@ -31,7 +31,12 @@
 > **learning-aware chat agent**
 > (see [`agents_capabilities.md`](agents_capabilities.md)), and the
 > **code-interpreter lesson type** (`code` lessons run on the MATLAB-LLVM
-> engine via `POST /api/v1/lessons/{id}/code/run`), **AI contextual quiz
+> engine via `POST /api/v1/lessons/{id}/code/run`; the run response also
+> carries the Lab **`variables`** namespace `[{name,type,repr,sizeBytes?}]`
+> and inline **`richOutputs`** `[{mimeType,artifact?,text?}]` for the
+> Variables/Plot panels — issue #166. Both are additive + default empty;
+> the Python interpreter populates them, MATLAB leaves them empty and
+> surfaces figures via `artifacts`), **AI contextual quiz
 > feedback** (`POST /api/v1/lessons/{id}/quiz/feedback` - LLM-personalized
 > "why it's wrong" per incorrect answer), and **LLM course
 > recommendations** (`GET /api/v1/recommendations/me` - deterministic
