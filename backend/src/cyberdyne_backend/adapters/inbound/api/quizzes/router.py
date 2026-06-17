@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from cyberdyne_backend.adapters.inbound.api.locale import resolve_locale
 from cyberdyne_backend.adapters.inbound.api.quizzes.schemas import (
@@ -20,10 +20,13 @@ from cyberdyne_backend.adapters.inbound.api.quizzes.schemas import (
     EditorOptionResponse,
     EditorQuestionResponse,
     EditorQuizResponse,
+    LastAttemptResponse,
     PlayerOptionResponse,
     PlayerQuestionResponse,
     PlayerQuizResponse,
     QuestionResultResponse,
+    QuizCatalogResponse,
+    QuizSummaryResponse,
     SubmitAttemptRequest,
     UpsertQuizRequest,
 )
@@ -36,6 +39,7 @@ from cyberdyne_backend.application.quizzes import (
     ExplainQuizAnswers,
     GetQuiz,
     ListMyAttempts,
+    ListQuizCatalog,
     OptionInput,
     QuestionInput,
     SubmitQuizAttempt,
@@ -45,15 +49,19 @@ from cyberdyne_backend.application.quizzes import (
 )
 from cyberdyne_backend.domain.auth_identity import UserPrincipal
 from cyberdyne_backend.domain.quizzes import (
+    DEFAULT_CATALOG_LIMIT,
+    MAX_CATALOG_LIMIT,
     InvalidAttemptError,
     InvalidQuizError,
     Quiz,
     QuizAttempt,
+    QuizCatalogPage,
     QuizNotFoundError,
 )
 
 player_router = APIRouter(prefix="/api/v1/lessons", tags=["quizzes"])
 admin_router = APIRouter(prefix="/api/v1/admin/lessons", tags=["quizzes-admin"])
+catalog_router = APIRouter(prefix="/api/v1/quizzes", tags=["quizzes"])
 
 
 # Dependency stubs — overridden in main.py.
@@ -78,6 +86,10 @@ async def get_list_attempts_uc() -> ListMyAttempts:  # pragma: no cover - overri
 
 
 async def get_explain_answers_uc() -> ExplainQuizAnswers:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_list_catalog_uc() -> ListQuizCatalog:  # pragma: no cover - override target
     raise NotImplementedError
 
 
@@ -153,6 +165,35 @@ def _require_user(principal: UserPrincipal) -> UserPrincipal:
     if not isinstance(principal, UserPrincipal):
         raise HTTPException(status_code=403, detail="user token required")
     return principal
+
+
+def _catalog_response(page: QuizCatalogPage) -> QuizCatalogResponse:
+    return QuizCatalogResponse(
+        items=[
+            QuizSummaryResponse(
+                quiz_id=s.quiz_id,
+                lesson_id=s.lesson_id,
+                lesson_title=s.lesson_title,
+                course_slug=s.course_slug,
+                course_title=s.course_title,
+                category_slug=s.category_slug,
+                passing_score=s.passing_score,
+                question_count=s.question_count,
+                last_attempt=(
+                    LastAttemptResponse(
+                        score=s.last_attempt.score,
+                        passed=s.last_attempt.passed,
+                        attempt_number=s.last_attempt.attempt_number,
+                        submitted_at=s.last_attempt.submitted_at,
+                    )
+                    if s.last_attempt is not None
+                    else None
+                ),
+            )
+            for s in page.items
+        ],
+        next_cursor=page.next_cursor,
+    )
 
 
 # ── Player ────────────────────────────────────────────────────────────
@@ -255,6 +296,38 @@ async def explain_quiz_answers(
     ]
 
 
+# ── Browse / practice catalogue ──────────────────────────────────────
+
+
+@catalog_router.get(
+    "",
+    response_model=QuizCatalogResponse,
+    response_model_by_alias=True,
+)
+async def browse_quizzes(
+    use_case: Annotated[ListQuizCatalog, Depends(get_list_catalog_uc)],
+    principal: Annotated[UserPrincipal, Depends(require_principal)],
+    course_slug: Annotated[str | None, Query(alias="courseSlug")] = None,
+    domain: Annotated[str | None, Query()] = None,
+    cursor: Annotated[str | None, Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=MAX_CATALOG_LIMIT)] = DEFAULT_CATALOG_LIMIT,
+) -> QuizCatalogResponse:
+    """List quizzes from published courses so a learner can discover and
+    start them without first opening a specific lesson. ``domain`` filters
+    by the course's category slug. Reuses the existing per-lesson quiz +
+    attempt endpoints to actually play a quiz (via the returned
+    ``lessonId``)."""
+    user = _require_user(principal)
+    page = await use_case.execute(
+        user_id=user.user_id,
+        course_slug=course_slug,
+        category_slug=domain,
+        cursor=cursor,
+        limit=limit,
+    )
+    return _catalog_response(page)
+
+
 # ── Admin authoring ──────────────────────────────────────────────────
 
 
@@ -320,4 +393,4 @@ async def delete_quiz(
         raise HTTPException(status_code=404, detail="quiz not found") from exc
 
 
-__all__ = ["admin_router", "player_router"]
+__all__ = ["admin_router", "catalog_router", "player_router"]

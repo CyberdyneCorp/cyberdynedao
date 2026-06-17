@@ -47,6 +47,9 @@ from cyberdyne_backend.adapters.outbound.persistence.quizzes import (  # noqa: F
 from cyberdyne_backend.adapters.outbound.persistence.uploads import (  # noqa: F401
     models as _uploads_models,
 )
+from cyberdyne_backend.adapters.outbound.persistence.bookmarks import (  # noqa: F401
+    models as _bookmarks_models,
+)
 from cyberdyne_backend.infrastructure.database.base import Base
 from cyberdyne_backend.infrastructure.settings import get_settings
 

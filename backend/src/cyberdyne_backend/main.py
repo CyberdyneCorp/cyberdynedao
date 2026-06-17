@@ -60,6 +60,16 @@ from cyberdyne_backend.adapters.inbound.api.blog.router import (
 from cyberdyne_backend.adapters.inbound.api.blog.router import (
     public_router as blog_public_router,
 )
+from cyberdyne_backend.adapters.inbound.api.bookmarks.router import (
+    get_add_favorite_uc,
+    get_list_favorites_uc,
+    get_list_recent_uc,
+    get_record_recent_uc,
+    get_remove_favorite_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.bookmarks.router import (
+    public_router as bookmarks_public_router,
+)
 from cyberdyne_backend.adapters.inbound.api.code.router import (
     get_run_code_uc,
 )
@@ -184,9 +194,13 @@ from cyberdyne_backend.adapters.inbound.api.quizzes.router import (
     admin_router as quizzes_admin_router,
 )
 from cyberdyne_backend.adapters.inbound.api.quizzes.router import (
+    catalog_router as quizzes_catalog_router,
+)
+from cyberdyne_backend.adapters.inbound.api.quizzes.router import (
     get_delete_quiz_uc,
     get_explain_answers_uc,
     get_list_attempts_uc,
+    get_list_catalog_uc,
     get_quiz_uc,
     get_submit_attempt_uc,
     get_upsert_quiz_uc,
@@ -235,6 +249,9 @@ from cyberdyne_backend.adapters.outbound.persistence.analytics.repository import
 from cyberdyne_backend.adapters.outbound.persistence.blog.repository import (
     SqlAlchemyBlogRepository,
 )
+from cyberdyne_backend.adapters.outbound.persistence.bookmarks.repository import (
+    SqlAlchemyBookmarkRepository,
+)
 from cyberdyne_backend.adapters.outbound.persistence.content.repository import (
     SqlAlchemyContentRepository,
 )
@@ -256,6 +273,9 @@ from cyberdyne_backend.adapters.outbound.persistence.learning.repository import 
 )
 from cyberdyne_backend.adapters.outbound.persistence.marketplace.repository import (
     SqlAlchemyMarketplaceRepository,
+)
+from cyberdyne_backend.adapters.outbound.persistence.quizzes.catalog_repository import (
+    SqlAlchemyQuizCatalogReader,
 )
 from cyberdyne_backend.adapters.outbound.persistence.quizzes.repository import (
     SqlAlchemyQuizRepository,
@@ -293,6 +313,13 @@ from cyberdyne_backend.application.blog import (
     GetBlogPost,
     ListBlogPosts,
     PublishBlogPost,
+)
+from cyberdyne_backend.application.bookmarks import (
+    AddFavorite,
+    ListFavorites,
+    ListRecent,
+    RecordRecentView,
+    RemoveFavorite,
 )
 from cyberdyne_backend.application.code import RunLessonCode
 from cyberdyne_backend.application.content.use_cases import (
@@ -367,6 +394,7 @@ from cyberdyne_backend.application.quizzes import (
     ExplainQuizAnswers,
     GetQuiz,
     ListMyAttempts,
+    ListQuizCatalog,
     SubmitQuizAttempt,
     UpsertQuiz,
 )
@@ -763,6 +791,10 @@ def create_app() -> FastAPI:
         async with session_scope() as session:
             yield ListMyAttempts(repo=SqlAlchemyQuizRepository(session))
 
+    async def _list_quiz_catalog_dep() -> AsyncIterator[ListQuizCatalog]:
+        async with session_scope() as session:
+            yield ListQuizCatalog(reader=SqlAlchemyQuizCatalogReader(session))
+
     async def _explain_answers_dep() -> AsyncIterator[ExplainQuizAnswers]:
         async with session_scope() as session:
             yield ExplainQuizAnswers(
@@ -811,6 +843,27 @@ def create_app() -> FastAPI:
     async def _my_state_dep() -> AsyncIterator[GetMyLearningState]:
         async with session_scope() as session:
             yield GetMyLearningState(repo=SqlAlchemyLearningRepository(session))
+
+    # Favorites/bookmarks + recently-viewed (issue #162).
+    async def _list_favorites_dep() -> AsyncIterator[ListFavorites]:
+        async with session_scope() as session:
+            yield ListFavorites(repo=SqlAlchemyBookmarkRepository(session))
+
+    async def _add_favorite_dep() -> AsyncIterator[AddFavorite]:
+        async with session_scope() as session:
+            yield AddFavorite(repo=SqlAlchemyBookmarkRepository(session))
+
+    async def _remove_favorite_dep() -> AsyncIterator[RemoveFavorite]:
+        async with session_scope() as session:
+            yield RemoveFavorite(repo=SqlAlchemyBookmarkRepository(session))
+
+    async def _record_recent_dep() -> AsyncIterator[RecordRecentView]:
+        async with session_scope() as session:
+            yield RecordRecentView(repo=SqlAlchemyBookmarkRepository(session))
+
+    async def _list_recent_dep() -> AsyncIterator[ListRecent]:
+        async with session_scope() as session:
+            yield ListRecent(repo=SqlAlchemyBookmarkRepository(session))
 
     async def _path_gating_dep() -> AsyncIterator[GetPathGating]:
         async with session_scope() as session:
@@ -1042,6 +1095,7 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_delete_quiz_uc] = _delete_quiz_dep
     app.dependency_overrides[get_submit_attempt_uc] = _submit_attempt_dep
     app.dependency_overrides[get_list_attempts_uc] = _list_attempts_dep
+    app.dependency_overrides[get_list_catalog_uc] = _list_quiz_catalog_dep
     app.dependency_overrides[get_explain_answers_uc] = _explain_answers_dep
     app.dependency_overrides[get_save_upload_uc] = _save_upload_dep
     app.dependency_overrides[get_save_uploads_uc] = _save_uploads_dep
@@ -1051,6 +1105,11 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_enroll_uc] = _enroll_dep
     app.dependency_overrides[get_update_progress_uc] = _update_progress_dep
     app.dependency_overrides[get_my_state_uc] = _my_state_dep
+    app.dependency_overrides[get_list_favorites_uc] = _list_favorites_dep
+    app.dependency_overrides[get_add_favorite_uc] = _add_favorite_dep
+    app.dependency_overrides[get_remove_favorite_uc] = _remove_favorite_dep
+    app.dependency_overrides[get_record_recent_uc] = _record_recent_dep
+    app.dependency_overrides[get_list_recent_uc] = _list_recent_dep
     app.dependency_overrides[get_path_gating_uc] = _path_gating_dep
     app.dependency_overrides[get_eligibility_uc] = _eligibility_dep
     app.dependency_overrides[get_issue_certificate_uc] = _issue_certificate_dep
@@ -1088,12 +1147,14 @@ def create_app() -> FastAPI:
     app.include_router(blog_admin_router)
     app.include_router(learning_public_router)
     app.include_router(learning_admin_router)
+    app.include_router(bookmarks_public_router)
     app.include_router(courses_public_router)
     app.include_router(courses_admin_router)
     app.include_router(category_public_router)
     app.include_router(category_admin_router)
     app.include_router(quizzes_player_router)
     app.include_router(quizzes_admin_router)
+    app.include_router(quizzes_catalog_router)
     app.include_router(uploads_admin_router)
     app.include_router(uploads_public_router)
     # Serve uploaded media read-only. check_dir=False so the mount is
