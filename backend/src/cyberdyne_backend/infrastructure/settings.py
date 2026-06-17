@@ -125,6 +125,13 @@ class Settings(BaseSettings):
     aave_pool_data_provider: str = "0x2A0979257105834789bC6b9E1B00446DFbA8dFBa"
     uniswap_v4_position_manager: str = "0x7C5f5A4bBd8fD63184577525326123B519429bDc"
 
+    # CyberdyneAccessNFT contract on Base — backs the wallet access-tier
+    # lookup (and the chat agent's get_user_tier tool). Mirrors the
+    # frontend's VITE_CYBERDYNE_ACCESS_NFT_ADDRESS. Unset → the stub reader
+    # reports "no access NFT" for every address; the real web3py reader
+    # lands with BASE_RPC_URL + this address.
+    cyberdyne_access_nft_address: str | None = None
+
     # Cache TTL for chain snapshots. Default 5 minutes; tune up for
     # rate-limited RPCs.
     dao_snapshot_ttl_s: int = 300

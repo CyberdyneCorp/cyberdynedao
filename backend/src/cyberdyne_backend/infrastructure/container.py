@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import httpx
 
+from cyberdyne_backend.adapters.outbound.access.fake_reader import FakeAccessReader
 from cyberdyne_backend.adapters.outbound.auth.caching_auth_port import CachingAuthPort
 from cyberdyne_backend.adapters.outbound.auth.introspection_client import IntrospectionClient
 from cyberdyne_backend.adapters.outbound.auth.profile_client import CyberdyneAuthProfileClient
@@ -57,6 +58,7 @@ from cyberdyne_backend.adapters.outbound.stripe.webhook_verifier import (
     MockStripeWebhookVerifier,
     StripeWebhookVerifier,
 )
+from cyberdyne_backend.domain.access import AccessReaderPort
 from cyberdyne_backend.domain.ai_chat import (
     ChatLLMPort,
     CyberfliesPort,
@@ -92,6 +94,7 @@ class Container:
         self._certificate_signer: CertificateSigner | None = None
         self._certificate_pdf_renderer: ReportlabCertificateRenderer | None = None
         self._chain_reader: ChainReaderPort | None = None
+        self._access_reader: AccessReaderPort | None = None
         self._stripe_checkout: StripeCheckoutPort | None = None
         self._stripe_webhook_verifier: StripeWebhookVerifierPort | None = None
         self._license_email_notifier: LicenseEmailNotifierPort | None = None
@@ -265,6 +268,14 @@ class Container:
             ttl_s=self._settings.dao_snapshot_ttl_s,
         )
         return self._chain_reader
+
+    @property
+    def access_reader(self) -> AccessReaderPort:
+        # Stub reader (no access NFT for any address) until the web3py-backed
+        # reader is wired — that needs BASE_RPC_URL + the access-NFT address.
+        if self._access_reader is None:
+            self._access_reader = FakeAccessReader()
+        return self._access_reader
 
     # ── Marketplace / Stripe (Phase 6) ───────────────────────────────
     @property

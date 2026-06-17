@@ -287,6 +287,12 @@ from cyberdyne_backend.adapters.inbound.api.uploads.router import (
 from cyberdyne_backend.adapters.inbound.api.uploads.router import (
     public_router as uploads_public_router,
 )
+from cyberdyne_backend.adapters.inbound.api.wallet.router import (
+    get_wallet_access_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.wallet.router import (
+    router as wallet_router,
+)
 from cyberdyne_backend.adapters.inbound.health.router import router as health_router
 from cyberdyne_backend.adapters.inbound.middleware.auth import (
     AuthMiddleware,
@@ -374,6 +380,7 @@ from cyberdyne_backend.application.academy import (
     TranslationJob,
     TranslationWorker,
 )
+from cyberdyne_backend.application.access import GetWalletAccess
 from cyberdyne_backend.application.achievements import GetMyAchievements
 from cyberdyne_backend.application.activity import (
     GetLearnerStats,
@@ -1156,6 +1163,10 @@ def create_app() -> FastAPI:
             holders=settings.dao_holders_count,
         )
 
+    async def _wallet_access_dep() -> AsyncIterator[GetWalletAccess]:
+        # No DB session — access reads are chain-only (stub for now).
+        yield GetWalletAccess(reader=container.access_reader)
+
     async def _run_code_dep() -> AsyncIterator[RunLessonCode]:
         # No DB session — execution is HTTP-only against the MATLAB engine
         # (matlab lessons) or the Python interpreter sandbox (python lessons).
@@ -1387,6 +1398,7 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_my_deadlines_uc] = _my_deadlines_dep
     app.dependency_overrides[get_set_deadline_uc] = _set_deadline_dep
     app.dependency_overrides[get_dao_overview_uc] = _dao_overview_dep
+    app.dependency_overrides[get_wallet_access_uc] = _wallet_access_dep
     app.dependency_overrides[get_run_code_uc] = _run_code_dep
     app.dependency_overrides[get_list_products_uc] = _list_marketplace_products_dep
     app.dependency_overrides[get_create_checkout_uc] = _create_checkout_dep
@@ -1441,6 +1453,7 @@ def create_app() -> FastAPI:
         name="media",
     )
     app.include_router(dao_router)
+    app.include_router(wallet_router)
     app.include_router(code_player_router)
     app.include_router(marketplace_public_router)
     app.include_router(marketplace_me_router)

@@ -19,6 +19,7 @@ layers =
 # import concrete adapters by definition. Listed explicitly because
 # import-linter ignore_imports doesn't support wildcards.
 ignore_imports =
+    cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.access.fake_reader
     cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.auth.introspection_client
     cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.auth.caching_auth_port
     cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.auth.profile_client
