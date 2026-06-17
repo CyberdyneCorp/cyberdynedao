@@ -54,9 +54,7 @@ def _client(app: FastAPI, events: list[StreamEvent]) -> TestClient:
 
 def _data_chunks(body: str) -> list[dict]:
     return [
-        json.loads(line[len("data: ") :])
-        for line in body.splitlines()
-        if line.startswith("data: ")
+        json.loads(line[len("data: ") :]) for line in body.splitlines() if line.startswith("data: ")
     ]
 
 
@@ -97,9 +95,7 @@ def test_stream_emits_status_delta_then_done(app: FastAPI) -> None:
 
 def test_stream_error_is_delivered_in_band_with_200(app: FastAPI) -> None:
     client = _client(app, [StreamEvent(kind="error", text="provider down")])
-    resp = client.post(
-        f"/api/v1/chat/sessions/{_SESSION}/messages/stream", json={"content": "hi"}
-    )
+    resp = client.post(f"/api/v1/chat/sessions/{_SESSION}/messages/stream", json={"content": "hi"})
     # Errors after the stream opens stay HTTP 200, framed as an error event.
     assert resp.status_code == 200
     chunks = _data_chunks(resp.text)
