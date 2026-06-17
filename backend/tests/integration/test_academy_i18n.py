@@ -443,7 +443,8 @@ def test_category_crud_and_course_assignment(app: FastAPI) -> None:
 
     # A new course starts uncategorized.
     course = client.post(
-        "/api/v1/admin/courses", json={"title": "Bot Course", "description": "d", "level": "Beginner"}
+        "/api/v1/admin/courses",
+        json={"title": "Bot Course", "description": "d", "level": "Beginner"},
     ).json()
     assert course["category"] is None
 
@@ -482,7 +483,9 @@ def test_category_hierarchy_parent_and_reparent(app: FastAPI) -> None:
     app.dependency_overrides[translation_available] = lambda: True
     client = TestClient(app)
 
-    group = client.post("/api/v1/admin/categories", json={"name": "Programming", "icon": "🧑‍💻"}).json()
+    group = client.post(
+        "/api/v1/admin/categories", json={"name": "Programming", "icon": "🧑‍💻"}
+    ).json()
     assert group["parentId"] is None
 
     # Create a sub-category under the group.
@@ -499,9 +502,7 @@ def test_category_hierarchy_parent_and_reparent(app: FastAPI) -> None:
     assert deep.status_code == 422
 
     # Reparent the child to top level via PATCH (parentId: null).
-    moved = client.patch(
-        f"/api/v1/admin/categories/{child.json()['id']}", json={"parentId": None}
-    )
+    moved = client.patch(f"/api/v1/admin/categories/{child.json()['id']}", json={"parentId": None})
     assert moved.status_code == 200, moved.text
     assert moved.json()["parentId"] is None
 

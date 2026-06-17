@@ -72,9 +72,7 @@ def test_empty_skill_not_weak() -> None:
 def test_suggestions_come_from_weak_skills_weakest_first() -> None:
     sm = build_skill_map(
         [
-            _inp(
-                "a", total_lessons=1, lesson_percent_sum=35, suggestion_slug="course-a"
-            ),  # 35
+            _inp("a", total_lessons=1, lesson_percent_sum=35, suggestion_slug="course-a"),  # 35
             _inp(
                 "b", total_lessons=1, lesson_percent_sum=10, suggestion_slug="course-b"
             ),  # 10 (weaker)

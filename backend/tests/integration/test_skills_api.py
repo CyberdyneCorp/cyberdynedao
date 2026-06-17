@@ -114,9 +114,23 @@ def _seed(_prepared_schema: None) -> None:
         async with factory() as s:
             s.add_all(
                 [
-                    CategoryRow(id=_MATH, slug="eng-math", name="Engineering Math", created_at=_NOW),
-                    CategoryRow(id=_LINALG, slug="linalg", name="Linear Algebra", parent_id=_MATH, created_at=_NOW),
-                    CategoryRow(id=_DIFFEQ, slug="diffeq", name="Differential Equations", parent_id=_MATH, created_at=_NOW),
+                    CategoryRow(
+                        id=_MATH, slug="eng-math", name="Engineering Math", created_at=_NOW
+                    ),
+                    CategoryRow(
+                        id=_LINALG,
+                        slug="linalg",
+                        name="Linear Algebra",
+                        parent_id=_MATH,
+                        created_at=_NOW,
+                    ),
+                    CategoryRow(
+                        id=_DIFFEQ,
+                        slug="diffeq",
+                        name="Differential Equations",
+                        parent_id=_MATH,
+                        created_at=_NOW,
+                    ),
                     CategoryRow(id=_PROG, slug="programming", name="Programming", created_at=_NOW),
                 ]
             )
@@ -150,15 +164,31 @@ def _seed(_prepared_schema: None) -> None:
             s.add_all(
                 [
                     QuizRow(id=_LIN_QUIZ, lesson_id=_LIN_L1, passing_score=70, created_at=_NOW),
-                    QuizQuestionRow(id=q_id, quiz_id=_LIN_QUIZ, prompt="q", explanation="", sort_order=0),
+                    QuizQuestionRow(
+                        id=q_id, quiz_id=_LIN_QUIZ, prompt="q", explanation="", sort_order=0
+                    ),
                     QuizOptionRow(id=opt, question_id=q_id, text="a", is_correct=True),
                     QuizAttemptRow(
-                        id=uuid.uuid4(), user_id=_USER, quiz_id=_LIN_QUIZ, lesson_id=_LIN_L1,
-                        score=60, passed=False, attempt_number=1, answers={}, submitted_at=_NOW,
+                        id=uuid.uuid4(),
+                        user_id=_USER,
+                        quiz_id=_LIN_QUIZ,
+                        lesson_id=_LIN_L1,
+                        score=60,
+                        passed=False,
+                        attempt_number=1,
+                        answers={},
+                        submitted_at=_NOW,
                     ),
                     QuizAttemptRow(
-                        id=uuid.uuid4(), user_id=_USER, quiz_id=_LIN_QUIZ, lesson_id=_LIN_L1,
-                        score=80, passed=True, attempt_number=2, answers={}, submitted_at=_NOW,
+                        id=uuid.uuid4(),
+                        user_id=_USER,
+                        quiz_id=_LIN_QUIZ,
+                        lesson_id=_LIN_L1,
+                        score=80,
+                        passed=True,
+                        attempt_number=2,
+                        answers={},
+                        submitted_at=_NOW,
                     ),
                 ]
             )

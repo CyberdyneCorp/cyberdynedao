@@ -50,11 +50,7 @@ class SqlAlchemySkillMapReader:
                 continue
             slug, name, domain = meta
             total_lessons = sum(len(course_lessons[c]) for c in course_ids)
-            percent_sum = sum(
-                progress.get(lid, 0)
-                for c in course_ids
-                for lid in course_lessons[c]
-            )
+            percent_sum = sum(progress.get(lid, 0) for c in course_ids for lid in course_lessons[c])
             inputs.append(
                 SkillInput(
                     slug=slug,
@@ -84,10 +80,7 @@ class SqlAlchemySkillMapReader:
             )
         ).all()
         # domain = parent category name, or the skill's own name if top-level.
-        return {
-            cid: (slug, name, parent_name or name)
-            for cid, slug, name, parent_name in rows
-        }
+        return {cid: (slug, name, parent_name or name) for cid, slug, name, parent_name in rows}
 
     async def _published_courses(
         self,
@@ -115,9 +108,7 @@ class SqlAlchemySkillMapReader:
             return course_lessons
         rows = (
             await self._session.execute(
-                select(LessonRow.id, LessonRow.course_id).where(
-                    LessonRow.course_id.in_(course_ids)
-                )
+                select(LessonRow.id, LessonRow.course_id).where(LessonRow.course_id.in_(course_ids))
             )
         ).all()
         for lesson_id, course_id in rows:
