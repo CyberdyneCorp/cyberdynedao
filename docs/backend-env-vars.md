@@ -66,6 +66,7 @@ dev-only adapters** that must be replaced before a real go-live (see
 | `AAVE_POOL_DATA_PROVIDER` | `0x2A09…dFBa` | Base deployment; override only if it moves. |
 | `UNISWAP_V4_POSITION_MANAGER` | `0x7C5f…9bDc` | Base deployment. |
 | `DAO_SNAPSHOT_TTL_S` | `300` | Chain-snapshot cache TTL. |
+| `DAO_SNAPSHOT_PREWARM` | `true` | Background worker re-reads the snapshot every `DAO_SNAPSHOT_TTL_S` so the DaoView is served from a warm cache. Inert unless `DAO_TREASURY_ADDRESS` is set; disable for purely-lazy caching. |
 | `DAO_HOLDERS_COUNT` | `0` | Surfaced in `/dao/overview` until the governance subgraph ships. |
 
 ## Marketplace / Stripe
