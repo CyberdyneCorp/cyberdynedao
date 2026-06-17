@@ -35,7 +35,15 @@
 > feedback** (`POST /api/v1/lessons/{id}/quiz/feedback` - LLM-personalized
 > "why it's wrong" per incorrect answer), and **LLM course
 > recommendations** (`GET /api/v1/recommendations/me` - deterministic
-> catalogue ranking against the learner's dashboard + an LLM narrative).
+> catalogue ranking against the learner's dashboard + an LLM narrative),
+> and **browse/practice quizzes** (issue #169 —
+> `GET /api/v1/quizzes?courseSlug=&domain=&cursor=&limit=` lists quizzes
+> across lessons for *published* courses so the Quizzes nav can discover
+> them without opening a lesson; each item carries course/lesson
+> metadata, question count, and the learner's most-recent attempt, and is
+> keyset-paged on `(courseSlug, quizId)`; playing a quiz reuses the
+> existing per-lesson `GET /api/v1/lessons/{id}/quiz` + attempt flow via
+> the returned `lessonId`).
 > All planned Academy AI phases are now delivered. Per-context detail
 > lives in each bounded
 > context under `backend/src/cyberdyne_backend/`.
