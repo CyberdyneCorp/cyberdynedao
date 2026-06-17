@@ -26,6 +26,7 @@ from cyberdyne_backend.adapters.inbound.api.ai_chat.schemas import (
     StartSessionResponse,
     ToolCallView,
 )
+from cyberdyne_backend.adapters.inbound.api.rate_limit import SlidingWindowRateLimiter
 from cyberdyne_backend.application.ai_chat import (
     GetChatHistory,
     RunChatTurn,
@@ -42,6 +43,18 @@ from cyberdyne_backend.domain.auth_identity import UserPrincipal
 logger = logging.getLogger("cyberdyne_backend.ai_chat.api")
 
 router = APIRouter(prefix="/api/v1/chat", tags=["chat"])
+
+# Per-IP cap on chat turns — a coarse guard against a single client
+# burning LLM tokens in a loop (issue #7). Per-replica, resets on restart;
+# shared across the JSON + streaming message endpoints.
+_chat_rate_limiter = SlidingWindowRateLimiter(
+    limit=20, window_s=60.0, detail="too many chat messages; slow down"
+)
+
+
+def _chat_rate_limit(request: Request) -> None:
+    client = request.client
+    _chat_rate_limiter.check(client.host if client is not None else None)
 
 
 async def get_start_session_uc() -> StartChatSession:  # pragma: no cover
@@ -104,6 +117,7 @@ async def start_session(
     "/sessions/{session_id}/messages",
     response_model=ChatMessageResponse,
     response_model_by_alias=True,
+    dependencies=[Depends(_chat_rate_limit)],
 )
 async def send_message(
     session_id: UUID,
@@ -126,6 +140,7 @@ async def send_message(
 
 @router.post(
     "/sessions/{session_id}/messages/stream",
+    dependencies=[Depends(_chat_rate_limit)],
     responses={
         200: {
             "description": (
