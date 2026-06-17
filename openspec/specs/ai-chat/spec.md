@@ -70,3 +70,17 @@ terminal event SHALL be `done` or `error`, after zero+ `status` then zero+
 - GIVEN the provider fails after the stream has opened
 - WHEN streaming
 - THEN an `error` event is emitted and the HTTP status remains 200
+
+### Requirement: Per-IP rate limit on message turns
+
+The system SHALL rate-limit the chat message endpoints
+(`POST .../messages` and `.../messages/stream`) per client IP — a coarse
+guard against a single client burning LLM tokens in a loop. Exceeding the
+limit SHALL return `429`. The limit is in-memory and per-replica; a request
+with no resolvable client IP SHALL be allowed through.
+
+#### Scenario: Too many messages
+
+- GIVEN a client has reached the per-IP message limit within the window
+- WHEN it posts another chat message
+- THEN the system SHALL respond `429`
