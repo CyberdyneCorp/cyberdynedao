@@ -12,6 +12,7 @@ import contextlib
 import logging
 
 from cyberdyne_backend.domain.leads import Ask
+from cyberdyne_backend.infrastructure.redaction import redact_email
 
 logger = logging.getLogger("cyberdyne_backend.email")
 
@@ -26,7 +27,7 @@ class LoggingEmailNotifier:
                 "new ask received | id=%s channel=%s from=%s product=%s",
                 ask.id,
                 ask.channel.value,
-                ask.email,
+                redact_email(ask.email),
                 ask.product_slug,
             )
 
@@ -46,9 +47,12 @@ class LoggingLicenseEmailNotifier:
         expires_at_iso: str | None,
     ) -> None:
         with contextlib.suppress(Exception):
+            # Recipient email is PII → masked. The plaintext key is the
+            # whole point of this no-SMTP fallback (an operator copies it
+            # from the log to deliver manually), so it stays unmasked.
             logger.info(
                 "license issued | to=%s product=%r key=%s expires=%s",
-                to_email,
+                redact_email(to_email),
                 product_title,
                 plaintext_key,
                 expires_at_iso,
