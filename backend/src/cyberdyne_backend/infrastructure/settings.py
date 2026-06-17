@@ -94,10 +94,17 @@ class Settings(BaseSettings):
     captcha_secret: SecretStr | None = None
 
     # ── Certificates (Phase 4 — Learning platform) ────────────────────
-    # HMAC-SHA256 shared secret used to sign learning certificates.
-    # If unset the EphemeralCertificateSigner kicks in — fine for local
-    # dev, loud in staging/prod via a startup warning.
+    # Signature scheme. ``hmac`` (default): shared-secret HMAC-SHA256 — our
+    # backend verifies. ``ed25519``: keypair signatures so EXTERNAL verifiers
+    # (partner LMS, NFT minting) verify with the published public key.
+    cert_signer: Literal["hmac", "ed25519"] = "hmac"
+    # HMAC-SHA256 shared secret (cert_signer=hmac). If unset the
+    # EphemeralCertificateSigner kicks in — fine for local dev, loud in
+    # staging/prod via a startup warning.
     cert_signing_key: SecretStr | None = None
+    # Ed25519 private key — a base64url-encoded 32-byte seed (cert_signer=
+    # ed25519). Generate with the signer's ``generate()`` helper.
+    cert_ed25519_private_key: SecretStr | None = None
 
     # ── DAO treasury / Web3 (Phase 5) ─────────────────────────────────
     # ``fake`` ships deterministic data and is the default until a real

@@ -21,6 +21,7 @@ from cyberdyne_backend.adapters.outbound.certificates.pdf import (
     ReportlabCertificateRenderer,
 )
 from cyberdyne_backend.adapters.outbound.certificates.signer import (
+    Ed25519CertificateSigner,
     EphemeralCertificateSigner,
     HmacCertificateSigner,
 )
@@ -191,9 +192,15 @@ class Container:
     def certificate_signer(self) -> CertificateSigner:
         if self._certificate_signer is not None:
             return self._certificate_signer
-        secret = self._settings.cert_signing_key
-        if secret is not None:
-            self._certificate_signer = HmacCertificateSigner(secret=secret.get_secret_value())
+        if self._settings.cert_signer == "ed25519":
+            key = self._settings.cert_ed25519_private_key
+            if key is None:
+                raise ValueError("cert_signer=ed25519 requires CERT_ED25519_PRIVATE_KEY")
+            self._certificate_signer = Ed25519CertificateSigner(key.get_secret_value())
+        elif self._settings.cert_signing_key is not None:
+            self._certificate_signer = HmacCertificateSigner(
+                secret=self._settings.cert_signing_key.get_secret_value()
+            )
         else:
             self._certificate_signer = EphemeralCertificateSigner(
                 environment=self._settings.environment

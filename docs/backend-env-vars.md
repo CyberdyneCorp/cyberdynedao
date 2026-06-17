@@ -54,7 +54,9 @@ dev-only adapters** that must be replaced before a real go-live (see
 
 | Env var | Default | Notes |
 |---------|---------|-------|
-| `CERT_SIGNING_KEY` | _(unset)_ | 🔒 HMAC-SHA256 key for signing certificates. Unset → ephemeral key (dev only; verify-by-id won't survive a restart). |
+| `CERT_SIGNER` | `hmac` | `hmac` (shared secret, our backend verifies) or `ed25519` (keypair — external verifiers use the published public key at `GET /api/v1/learning/certificates/signing-key`). |
+| `CERT_SIGNING_KEY` | _(unset)_ | 🔒 HMAC-SHA256 key (`CERT_SIGNER=hmac`). Unset → ephemeral key (dev only; verify-by-id won't survive a restart). |
+| `CERT_ED25519_PRIVATE_KEY` | _(unset)_ | 🔒 base64url 32-byte seed (`CERT_SIGNER=ed25519`). Required when that scheme is selected. |
 
 ## DAO treasury / Web3
 
