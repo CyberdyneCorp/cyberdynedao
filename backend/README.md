@@ -39,7 +39,17 @@ Run individual gates: `just lint`, `just fmt-check`, `just typecheck`, `just lin
 
 ## Environment
 
-Phase 1 needs almost nothing — `LOG_LEVEL` (default `INFO`) and `ENVIRONMENT` (default `local`). Full env-var inventory in the roadmap doc, §9.
+Phase 1 needs almost nothing — `LOG_LEVEL` (default `INFO`) and `ENVIRONMENT` (default `local`). Full env-var inventory + Coolify config companion in [`../docs/backend-env-vars.md`](../docs/backend-env-vars.md) (the roadmap doc §9 has the original rationale).
+
+### Local Stripe webhooks
+
+The marketplace fulfils orders on Stripe webhooks. To exercise that flow locally, forward events to the dev server with the Stripe CLI:
+
+```bash
+stripe listen --forward-to localhost:8000/api/v1/stripe/webhook
+```
+
+Use the `whsec_…` it prints as `STRIPE_WEBHOOK_SECRET`. **Never point your dev box at the production Stripe webhook endpoint.** With no `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` set, the backend falls back to the mock Stripe adapters (checkout + a verifier that trusts every payload) — fine for local dev, unsafe anywhere shared.
 
 ## Tests
 
