@@ -66,6 +66,7 @@ the same application services the REST API uses.
 | `get_my_deadlines` | Enrollment deadlines with status (overdue / urgent / upcoming / none) + days remaining. |
 | `get_path_gating` | Per-module lock state in a path (unlocked/locked) and the reason (level / sequential prerequisite). |
 | `get_my_dashboard` | Learner analytics: enrolled/completed/active paths, completed + in-progress modules, completed + in-progress courses, avg module %, quizzes attempted/passed + pass rate + avg score, certificate count — for a narrative progress summary. |
+| `get_my_notes` | The learner's own course notes (notes written on lessons: course slug, lesson id, body, highlighted quote). Optional `course_slug` filter. Read-only. |
 
 User-scoped tools return `sign_in_required` when the caller is anonymous;
 the agent then asks the user to sign in. (Path-certificate *issuance*

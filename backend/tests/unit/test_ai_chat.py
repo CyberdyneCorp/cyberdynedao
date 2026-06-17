@@ -607,6 +607,7 @@ def _build_ctx(
     blog_posts: list | None = None,
     dao: bool = False,
     user_id: object | None = None,
+    list_user_notes: object | None = None,
     wallet_access: object | None = None,
 ) -> ToolContext:
     from cyberdyne_backend.application.analytics import GetLearnerDashboard
@@ -670,6 +671,7 @@ def _build_ctx(
         path_gating=GetPathGating(repo=learning),
         get_quiz=GetQuiz(repo=quizzes),  # type: ignore[arg-type]
         learner_dashboard=GetLearnerDashboard(repo=_FakeAnalyticsRepo()),  # type: ignore[arg-type]
+        list_user_notes=list_user_notes,  # type: ignore[arg-type]
         get_wallet_access=wallet_access,  # type: ignore[arg-type]
         user_id=user_id,  # type: ignore[arg-type]
     )
@@ -2035,6 +2037,58 @@ class TestLearningAwarenessTools:
         assert intro["total_lessons"] == 1
         assert intro["completed"] is False
         assert intro["percent"] == 0
+
+
+class TestGetMyNotesTool:
+    def _notes_uc(self, notes):
+        from cyberdyne_backend.application.lesson_notes import ListUserNotes
+        from cyberdyne_backend.domain.lesson_notes.entities import LessonNotePage
+
+        class _FakeNotesRepo:
+            async def list_for_user(self, *, user_id, course_slug=None, cursor=None, limit=50):
+                items = [n for n in notes if course_slug is None or n.course_slug == course_slug]
+                return LessonNotePage(items=items, next_cursor=None)
+
+        return ListUserNotes(repo=_FakeNotesRepo())  # type: ignore[arg-type]
+
+    def _note(self, course_slug="quantum-101", body="my note"):
+        from cyberdyne_backend.domain.lesson_notes.entities import LessonNote
+
+        return LessonNote(
+            id=uuid.uuid4(),
+            user_id=uuid.uuid4(),
+            course_slug=course_slug,
+            lesson_id="l1",
+            body=body,
+            quote="a highlighted line",
+        )
+
+    async def test_sign_in_required_when_anonymous(self) -> None:
+        ctx = _build_ctx(list_user_notes=self._notes_uc([self._note()]))
+        out = await ToolDispatcher(ctx).dispatch(
+            ToolCall(id="x", name="get_my_notes", arguments_json="{}")
+        )
+        assert json.loads(out) == {"error": "sign_in_required"}
+
+    async def test_returns_user_notes(self) -> None:
+        notes = [self._note(body="note A"), self._note(body="note B")]
+        ctx = _build_ctx(user_id=uuid.uuid4(), list_user_notes=self._notes_uc(notes))
+        out = await ToolDispatcher(ctx).dispatch(
+            ToolCall(id="x", name="get_my_notes", arguments_json="{}")
+        )
+        data = json.loads(out)
+        assert [n["body"] for n in data["notes"]] == ["note A", "note B"]
+        assert data["notes"][0]["quote"] == "a highlighted line"
+        assert data["notes"][0]["lesson_id"] == "l1"
+
+    async def test_filters_by_course_slug(self) -> None:
+        notes = [self._note(course_slug="quantum-101"), self._note(course_slug="rust-201")]
+        ctx = _build_ctx(user_id=uuid.uuid4(), list_user_notes=self._notes_uc(notes))
+        out = await ToolDispatcher(ctx).dispatch(
+            ToolCall(id="x", name="get_my_notes", arguments_json='{"course_slug": "rust-201"}')
+        )
+        data = json.loads(out)
+        assert [n["course_slug"] for n in data["notes"]] == ["rust-201"]
 
 
 class TestGetUserTierTool:

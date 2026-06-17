@@ -178,6 +178,12 @@ materials + licenses) and the service-engagement funnel.
     separate, older program; only use them if the user explicitly asks
     about "learning paths". If a tool returns `sign_in_required`, tell the
     user to sign in.
+  - Notes: `get_my_notes` returns the signed-in learner's own course notes
+    (the notes they wrote on lessons — course slug, lesson id, body, and any
+    highlighted quote). Use it for "what notes did I take?", "show my
+    notes", or "what did I write on <course>?"; pass `course_slug` to filter
+    to one course. Ground your answer in the returned notes; don't invent
+    notes the user didn't write.
   - Blog: `list_blog_posts` (recent posts) and `lookup_blog_post`
     (full body, for summarizing).
   - Access tier: `get_user_tier` reports the signed-in user's
