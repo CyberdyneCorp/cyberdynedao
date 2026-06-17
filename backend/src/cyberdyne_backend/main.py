@@ -188,6 +188,23 @@ from cyberdyne_backend.adapters.inbound.api.learning.router import (
 from cyberdyne_backend.adapters.inbound.api.learning.router import (
     public_router as learning_public_router,
 )
+from cyberdyne_backend.adapters.inbound.api.lesson_notes.router import (
+    get_delete_note_uc as get_delete_lesson_note_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.lesson_notes.router import (
+    get_list_lesson_notes_uc,
+    get_list_user_notes_uc,
+    get_sync_note_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.lesson_notes.router import (
+    get_update_note_uc as get_update_lesson_note_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.lesson_notes.router import (
+    lesson_router as lesson_notes_lesson_router,
+)
+from cyberdyne_backend.adapters.inbound.api.lesson_notes.router import (
+    notes_router as lesson_notes_notes_router,
+)
 from cyberdyne_backend.adapters.inbound.api.marketplace.router import (
     admin_router as marketplace_admin_router,
 )
@@ -321,6 +338,9 @@ from cyberdyne_backend.adapters.outbound.persistence.leads.repository import (
 from cyberdyne_backend.adapters.outbound.persistence.learning.repository import (
     SqlAlchemyLearningRepository,
 )
+from cyberdyne_backend.adapters.outbound.persistence.lesson_notes.repository import (
+    SqlAlchemyLessonNoteRepository,
+)
 from cyberdyne_backend.adapters.outbound.persistence.marketplace.repository import (
     SqlAlchemyMarketplaceRepository,
 )
@@ -441,6 +461,13 @@ from cyberdyne_backend.application.learning import (
     SetEnrollmentDeadline,
     UpdateModuleProgress,
     VerifyCertificate,
+)
+from cyberdyne_backend.application.lesson_notes import (
+    DeleteLessonNote,
+    ListLessonNotes,
+    ListUserNotes,
+    SyncLessonNote,
+    UpdateLessonNote,
 )
 from cyberdyne_backend.application.marketplace import (
     CreateCheckoutSession,
@@ -1014,6 +1041,27 @@ def create_app() -> FastAPI:
         async with session_scope() as session:
             yield GetMyLearningState(repo=SqlAlchemyLearningRepository(session))
 
+    # Per-user lesson notes (issue #188).
+    async def _sync_lesson_note_dep() -> AsyncIterator[SyncLessonNote]:
+        async with session_scope() as session:
+            yield SyncLessonNote(repo=SqlAlchemyLessonNoteRepository(session))
+
+    async def _list_lesson_notes_dep() -> AsyncIterator[ListLessonNotes]:
+        async with session_scope() as session:
+            yield ListLessonNotes(repo=SqlAlchemyLessonNoteRepository(session))
+
+    async def _list_user_notes_dep() -> AsyncIterator[ListUserNotes]:
+        async with session_scope() as session:
+            yield ListUserNotes(repo=SqlAlchemyLessonNoteRepository(session))
+
+    async def _update_lesson_note_dep() -> AsyncIterator[UpdateLessonNote]:
+        async with session_scope() as session:
+            yield UpdateLessonNote(repo=SqlAlchemyLessonNoteRepository(session))
+
+    async def _delete_lesson_note_dep() -> AsyncIterator[DeleteLessonNote]:
+        async with session_scope() as session:
+            yield DeleteLessonNote(repo=SqlAlchemyLessonNoteRepository(session))
+
     # Favorites/bookmarks + recently-viewed (issue #162).
     async def _list_favorites_dep() -> AsyncIterator[ListFavorites]:
         async with session_scope() as session:
@@ -1291,6 +1339,11 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_list_modules_uc] = _list_modules_dep
     app.dependency_overrides[get_list_paths_uc] = _list_paths_dep
     app.dependency_overrides[get_enroll_uc] = _enroll_dep
+    app.dependency_overrides[get_sync_note_uc] = _sync_lesson_note_dep
+    app.dependency_overrides[get_list_lesson_notes_uc] = _list_lesson_notes_dep
+    app.dependency_overrides[get_list_user_notes_uc] = _list_user_notes_dep
+    app.dependency_overrides[get_update_lesson_note_uc] = _update_lesson_note_dep
+    app.dependency_overrides[get_delete_lesson_note_uc] = _delete_lesson_note_dep
     app.dependency_overrides[get_update_progress_uc] = _update_progress_dep
     app.dependency_overrides[get_my_state_uc] = _my_state_dep
     app.dependency_overrides[get_list_favorites_uc] = _list_favorites_dep
@@ -1338,6 +1391,8 @@ def create_app() -> FastAPI:
     app.include_router(blog_public_router)
     app.include_router(blog_admin_router)
     app.include_router(learning_public_router)
+    app.include_router(lesson_notes_lesson_router)
+    app.include_router(lesson_notes_notes_router)
     app.include_router(learning_admin_router)
     app.include_router(bookmarks_public_router)
     app.include_router(courses_public_router)

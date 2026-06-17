@@ -41,6 +41,9 @@ from cyberdyne_backend.adapters.outbound.persistence.leads import (  # noqa: F40
 from cyberdyne_backend.adapters.outbound.persistence.learning import (  # noqa: F401
     models as _learning_models,
 )
+from cyberdyne_backend.adapters.outbound.persistence.lesson_notes import (  # noqa: F401
+    models as _lesson_notes_models,
+)
 from cyberdyne_backend.adapters.outbound.persistence.marketplace import (  # noqa: F401
     models as _marketplace_models,
 )
