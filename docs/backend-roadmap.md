@@ -101,7 +101,7 @@
 > a title, type (lesson/lab/code/simulation/theory/problem), markdown
 > body, optional `courseSlug`/`lessonId`, and a saved-from-the-Lab
 > payload — `code` + `language` + `runResult` (JSON) + `plotRefs` + tags.
-> Flashcards + spaced-review scheduling are follow-up slices).
+> Flashcards + spaced-review scheduling shipped (see the `notebook` spec).
 > All planned Academy AI phases are now delivered. Per-context detail
 > lives in each bounded
 > context under `backend/src/cyberdyne_backend/`.
@@ -820,6 +820,15 @@ Follow the OrgPilot recipe — **anything baked into the build is `is_build = tr
 - `SENTRY_RELEASE` (computed from commit SHA at build)
 
 **Runtime (`is_runtime`):**
+
+> ⚠️ This table is the **original Phase-0 plan**; several names/defaults
+> diverged in implementation (e.g. `BASE_RPC_URL` not `_PRIMARY/_FALLBACK`,
+> `DAO_TREASURY_ADDRESS` not `TREASURY_ADDRESS`, `EMAIL_PROVIDER=logging|smtp`
+> with `SMTP_HOST`/`SMTP_PORT`/… not `SMTP_URL`, HMAC `CERT_SIGNING_KEY` by
+> default with optional `CERT_SIGNER=ed25519` + `CERT_ED25519_PRIVATE_KEY`).
+> The **authoritative, in-sync inventory of actual env vars** is
+> [`backend-env-vars.md`](backend-env-vars.md) — defer to it for real names
+> and defaults.
 
 | Var | Purpose |
 |---|---|

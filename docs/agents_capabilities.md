@@ -9,8 +9,11 @@ the same application services the REST API uses.
   (`CYBERDYNE_TOOLS` + `ToolDispatcher`).
 - **System prompt / behavior:** `backend/src/cyberdyne_backend/application/ai_chat/use_cases.py`.
 - **Model:** `gpt-4o-mini` (configurable via `OPENAI_MODEL`).
-- **Turn shape:** non-streaming; one POST runs the full tool loop
-  (max 4 tool rounds) and returns the final assistant message.
+- **Turn shape:** one POST runs the full tool loop (max 4 tool rounds).
+  Two transports: `POST .../messages` returns the final assistant message
+  as JSON; `POST .../messages/stream` is an SSE twin that relays answer
+  deltas + tool-round status as they happen (see
+  [`chat-streaming.md`](chat-streaming.md)).
 
 ## Context the agent has
 
@@ -62,6 +65,7 @@ the same application services the REST API uses.
 | `enroll_in_path` | Enroll the signed-in user in a path (idempotent). |
 | `set_module_progress` | Set a module's progress 0–100 (100 = mark complete). |
 | `get_my_learning` | The user's enrollments, per-module progress, and earned certificates. |
+| `get_my_courses` | The user's progress across ALL published courses (title, level, percent, completed) — the canonical "what am I studying / my progress?" answer. |
 | `get_my_course_progress` | The user's progress through one course (by slug): per-lesson completion, completed-lesson count, overall percent, and whether the course is finished. |
 | `get_my_deadlines` | Enrollment deadlines with status (overdue / urgent / upcoming / none) + days remaining. |
 | `get_path_gating` | Per-module lock state in a path (unlocked/locked) and the reason (level / sequential prerequisite). |
@@ -92,6 +96,25 @@ endpoints — `POST/GET /api/v1/courses/{slug}/certificate` + public
 
 Workspace introspection (variables/files) isn't a separate tool — the
 agent uses `matlab_repl('whos')`.
+
+### Python interpreter (sandbox)
+| Tool | What it does |
+|---|---|
+| `python_exec` | Run Python in the RestrictedPython sandbox (per-conversation session, keyed off the user's bearer). Matplotlib figures are auto-captured and render **inline**; other written files are offered as named downloads. |
+| `render_manim` | Render a Manim Community Edition `Scene` to an animation (GIF/MP4) that plays inline — for *animated* explanations of a concept, algorithm, or proof. |
+
+### Meetings (Cyberflies)
+The agent calls these as the signed-in user (their bearer), so it only ever sees that user's recordings.
+| Tool | What it does |
+|---|---|
+| `ask_meetings` | Fuzzy / cross-meeting semantic question over the user's transcripts ("what did we decide about X"). |
+| `list_meetings` | Enumerate the user's recent meetings (id, headline, date). |
+| `get_meeting` | One meeting's full summary + transcript by id — to summarize, extract action items, or draft a follow-up. |
+
+### Documents
+| Tool | What it does |
+|---|---|
+| `create_document` | Produce a downloadable file (`markdown`, `mermaid`, `xmind`, or `pdf`) from full content — for "export / save / download this" requests (summaries, reports, diagrams, mind maps). |
 
 ## Guardrails
 
@@ -140,6 +163,5 @@ so the agent can also run/assist with a lesson's code conversationally.
 - `search_cyberdyne_knowledge` is a stub (needs the CyberRAG MCP client).
 - No marketplace **checkout** tool yet (Stripe flow exists on the
   backend but isn't agent-exposed).
-- Responses are non-streaming.
-- DAO numbers come from the `fake` chain reader until `web3py` is
-  enabled in prod.
+- DAO numbers + `get_user_tier` come from the `fake` chain reader / stub
+  access reader until the `web3py` reader is enabled in prod.
