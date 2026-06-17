@@ -1,11 +1,13 @@
-"""AI chat endpoints — sessions + send-message + history.
+"""AI chat endpoints — sessions + send-message + history + streaming.
 
-The frontend's existing chat terminal posts one message at a time and
-renders the JSON reply. SSE streaming of the *response token deltas*
-is deliberately deferred — the assistant message contains the full
-content already and the frontend can fake-stream it client-side. Phase
-6 follow-up turns this into a real ``text/event-stream`` once the LLM
-client streams.
+Two ways to run a turn share the same persist + tool-call loop:
+
+  - ``POST .../messages`` — buffers the whole turn and returns the final
+    assistant ``ChatMessageResponse`` as JSON.
+  - ``POST .../messages/stream`` — a real ``text/event-stream`` that
+    relays answer-text deltas and tool-round status as they happen,
+    terminated by a ``done`` event carrying the persisted assistant
+    message. See ``docs/chat-streaming.md`` for the wire contract.
 """
 
 from __future__ import annotations
