@@ -499,6 +499,11 @@ _TRANSLATION_WORKERS = 4
 def create_app() -> FastAPI:
     settings = get_settings()
     configure_logging(settings.log_level)
+    # Production guardrail (issue #7): warn — or hard-fail when
+    # ENFORCE_PRODUCTION_ADAPTERS=true — if dev-default mocks are still
+    # active in staging/production. Runs only when the serving app is
+    # built, never during ``alembic upgrade`` / tooling.
+    settings.check_production_adapters(logger)
     container = Container(settings)
     # Shared file-storage adapter (creates the media root if missing).
     file_storage = LocalFileStorage(settings.media_root)
