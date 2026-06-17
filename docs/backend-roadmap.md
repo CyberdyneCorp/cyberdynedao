@@ -93,7 +93,15 @@
 > editor-gated admin CRUD `POST/PUT/DELETE /api/v1/admin/concepts[/{slug}]`.
 > Each card carries title, domain, markdown summary, optional formula and
 > back-links to the lessons/courses that teach it. Authored via the admin
-> API — seeded empty).
+> API — seeded empty),
+> and the **Notebook** (issue #161, part 1 — the `notebook` context
+> persists the learner's per-user "living memory": user-scoped notes CRUD
+> at `/api/v1/notebook/notes` (`POST` / `GET` list+search by `type`/`q`,
+> keyset-paged newest-first / `GET`/`PATCH`/`DELETE` by id). A note holds
+> a title, type (lesson/lab/code/simulation/theory/problem), markdown
+> body, optional `courseSlug`/`lessonId`, and a saved-from-the-Lab
+> payload — `code` + `language` + `runResult` (JSON) + `plotRefs` + tags.
+> Flashcards + spaced-review scheduling are follow-up slices).
 > All planned Academy AI phases are now delivered. Per-context detail
 > lives in each bounded
 > context under `backend/src/cyberdyne_backend/`.
