@@ -29,7 +29,9 @@
 > `GET /api/v1/courses/certificates/{id}/verify`,
 > `GET /api/v1/courses/certificates/{id}/pdf`), and a
 > **learning-aware chat agent**
-> (see [`agents_capabilities.md`](agents_capabilities.md)), and the
+> (see [`agents_capabilities.md`](agents_capabilities.md); the streaming
+> reply SSE contract is documented in
+> [`chat-streaming.md`](chat-streaming.md) — issue #167), and the
 > **code-interpreter lesson type** (`code` lessons run on the MATLAB-LLVM
 > engine via `POST /api/v1/lessons/{id}/code/run`), **AI contextual quiz
 > feedback** (`POST /api/v1/lessons/{id}/quiz/feedback` - LLM-personalized
