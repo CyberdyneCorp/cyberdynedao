@@ -14,13 +14,17 @@ from uuid import UUID
 
 from cyberdyne_backend.domain.ai_chat import ChatLLMPort, ChatMessage, ChatRole
 from cyberdyne_backend.domain.quizzes import (
+    DEFAULT_CATALOG_LIMIT,
     DEFAULT_PASSING_SCORE,
+    MAX_CATALOG_LIMIT,
     GradedAttempt,
     LessonCompleter,
     Question,
     QuestionResult,
     Quiz,
     QuizAttempt,
+    QuizCatalogPage,
+    QuizCatalogReader,
     QuizRepository,
     build_question,
     grade,
@@ -74,6 +78,36 @@ class ListMyAttempts:
     async def execute(self, *, user_id: UUID, lesson_id: UUID) -> list[QuizAttempt]:
         quiz = await self.repo.get_by_lesson(lesson_id)
         return await self.repo.list_attempts(user_id=user_id, quiz_id=quiz.id)
+
+
+@dataclass(slots=True)
+class ListQuizCatalog:
+    """Browse quizzes across lessons/courses (issue #169).
+
+    Discovery surface for the Quizzes nav: lists quizzes from published
+    courses with the learner's most-recent attempt, optionally filtered
+    by course or category, paged via an opaque cursor.
+    """
+
+    reader: QuizCatalogReader
+
+    async def execute(
+        self,
+        *,
+        user_id: UUID,
+        course_slug: str | None = None,
+        category_slug: str | None = None,
+        cursor: str | None = None,
+        limit: int = DEFAULT_CATALOG_LIMIT,
+    ) -> QuizCatalogPage:
+        clamped = max(1, min(limit, MAX_CATALOG_LIMIT))
+        return await self.reader.list_quizzes(
+            user_id=user_id,
+            course_slug=course_slug,
+            category_slug=category_slug,
+            cursor=cursor,
+            limit=clamped,
+        )
 
 
 # ── Admin authoring ───────────────────────────────────────────────────

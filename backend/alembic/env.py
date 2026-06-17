@@ -5,13 +5,20 @@ from __future__ import annotations
 import asyncio
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from cyberdyne_backend.infrastructure.database.base import Base
-from cyberdyne_backend.infrastructure.settings import get_settings
+from alembic import context
+from cyberdyne_backend.adapters.outbound.persistence.academy import (  # noqa: F401
+    models as _academy_models,
+)
+from cyberdyne_backend.adapters.outbound.persistence.activity import (  # noqa: F401
+    models as _activity_models,
+)
+from cyberdyne_backend.adapters.outbound.persistence.ai_chat import (  # noqa: F401
+    models as _ai_chat_models,
+)
 
 # Import every package that defines SQLAlchemy models so they register
 # against Base.metadata before autogenerate runs. Add new modules here
@@ -28,24 +35,23 @@ from cyberdyne_backend.adapters.outbound.persistence.courses import (  # noqa: F
 from cyberdyne_backend.adapters.outbound.persistence.leads import (  # noqa: F401
     models as _leads_models,
 )
-from cyberdyne_backend.adapters.outbound.persistence.uploads import (  # noqa: F401
-    models as _uploads_models,
-)
 from cyberdyne_backend.adapters.outbound.persistence.learning import (  # noqa: F401
     models as _learning_models,
-)
-from cyberdyne_backend.adapters.outbound.persistence.quizzes import (  # noqa: F401
-    models as _quizzes_models,
 )
 from cyberdyne_backend.adapters.outbound.persistence.marketplace import (  # noqa: F401
     models as _marketplace_models,
 )
-from cyberdyne_backend.adapters.outbound.persistence.ai_chat import (  # noqa: F401
-    models as _ai_chat_models,
+from cyberdyne_backend.adapters.outbound.persistence.quizzes import (  # noqa: F401
+    models as _quizzes_models,
 )
-from cyberdyne_backend.adapters.outbound.persistence.academy import (  # noqa: F401
-    models as _academy_models,
+from cyberdyne_backend.adapters.outbound.persistence.uploads import (  # noqa: F401
+    models as _uploads_models,
 )
+from cyberdyne_backend.adapters.outbound.persistence.bookmarks import (  # noqa: F401
+    models as _bookmarks_models,
+)
+from cyberdyne_backend.infrastructure.database.base import Base
+from cyberdyne_backend.infrastructure.settings import get_settings
 
 config = context.config
 
