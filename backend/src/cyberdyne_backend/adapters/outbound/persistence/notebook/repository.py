@@ -62,6 +62,7 @@ def _row_to_note(row: NoteRow) -> Note:
         reviewed_at=_as_utc(row.reviewed_at),
         next_review_at=_as_utc(row.next_review_at),
         review_interval_days=row.review_interval_days,
+        ai_summary=row.ai_summary,
         created_at=_as_utc(row.created_at) or row.created_at,
         updated_at=_as_utc(row.updated_at),
     )
@@ -94,6 +95,7 @@ def _note_to_row(note: Note) -> NoteRow:
         reviewed_at=note.reviewed_at,
         next_review_at=note.next_review_at,
         review_interval_days=note.review_interval_days,
+        ai_summary=note.ai_summary,
         created_at=note.created_at,
         updated_at=note.updated_at,
     )
@@ -189,6 +191,7 @@ class SqlAlchemyNotebookRepository:
         row.reviewed_at = note.reviewed_at
         row.next_review_at = note.next_review_at
         row.review_interval_days = note.review_interval_days
+        row.ai_summary = note.ai_summary
         row.updated_at = note.updated_at
         await self._session.flush()
         return note
