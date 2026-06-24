@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 199
+        assert len(summary) == 202
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -329,6 +329,9 @@ class TestSeedCourses:
             "computational-thinking-basics",
             "computational-thinking-intermediate",
             "computational-thinking-advanced",
+            "technical-english-basics",
+            "technical-english-intermediate",
+            "technical-english-advanced",
         }
         for course in ACADEMY_COURSES:
             assert course.lessons  # non-empty
@@ -650,6 +653,45 @@ class TestSeedCourses:
             assert needle in haystack, f"computational-thinking track missing {needle!r}"
         assert mermaid_blocks >= 6
         assert plot_blocks >= 2
+
+    def test_technical_english_track_is_a_language_course_with_keep_spans(self) -> None:
+        import re
+
+        from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
+        from cyberdyne_backend.application.courses.seed_technical_english import (
+            TECHNICAL_ENGLISH_COURSES,
+        )
+
+        slugs = {c.slug for c in TECHNICAL_ENGLISH_COURSES}
+        assert slugs == {
+            "technical-english-basics",
+            "technical-english-intermediate",
+            "technical-english-advanced",
+        }
+        assert {c.level for c in TECHNICAL_ENGLISH_COURSES} == {
+            "Beginner",
+            "Intermediate",
+            "Advanced",
+        }
+
+        for course in TECHNICAL_ENGLISH_COURSES:
+            kinds = {le.lesson_type for le in course.lessons}
+            assert kinds == {"text"}  # a language course — no code labs
+            body = "\n".join(le.text_body or "" for le in course.lessons)
+            # The taught-English is wrapped in [[keep]]…[[/keep]] do-not-translate
+            # spans, and they're balanced.
+            opens = body.count("[[keep]]")
+            closes = body.count("[[/keep]]")
+            assert opens > 0 and opens == closes, f"{course.slug}: unbalanced keep spans"
+            assert not re.search(r"\[\[keep\]\][^[]*\[\[keep\]\]", body)  # no nesting
+            # Every content lesson has a checkpoint quiz; a final exists.
+            assert course.slug in QUIZ_REGISTRY
+            spec = QUIZ_REGISTRY[course.slug]
+            assert spec.final
+            content_titles = {
+                le.title for le in course.lessons if le.lesson_type in {"text", "code"}
+            }
+            assert set(spec.per_lesson) == content_titles  # a quiz for every lesson
 
     def test_digital_logic_track_focuses_on_sv_vhdl_cocotb(self) -> None:
         import json
