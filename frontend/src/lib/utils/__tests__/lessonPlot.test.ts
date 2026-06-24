@@ -6,7 +6,8 @@ import {
 	resolvePlot,
 	plotIs3d,
 	plotControls,
-	normalizeMathBlocks
+	normalizeMathBlocks,
+	stripKeepMarkers
 } from '../lessonPlot';
 
 // The downstream MarkdownPreview protects display math with this exact regex —
@@ -107,6 +108,20 @@ describe('normalizeMathBlocks (display-math fix)', () => {
 		const already = 'a $x$ b\n\n$$\ny = 2\n$$\n';
 		expect(normalizeMathBlocks(already)).toContain('$$\ny = 2\n$$');
 		expect(normalizeMathBlocks('only inline $a+b$ here')).toBe('only inline $a+b$ here');
+	});
+});
+
+describe('stripKeepMarkers (do-not-translate spans)', () => {
+	it('removes the markers and keeps the inner text', () => {
+		expect(stripKeepMarkers('Diga [[keep]]the pipeline[[/keep]] aqui.')).toBe(
+			'Diga the pipeline aqui.'
+		);
+	});
+	it('handles multiple spans and leaves normal text alone', () => {
+		expect(stripKeepMarkers('[[keep]]push[[/keep]] e [[keep]]deploy[[/keep]]')).toBe(
+			'push e deploy'
+		);
+		expect(stripKeepMarkers('no markers here')).toBe('no markers here');
 	});
 });
 
