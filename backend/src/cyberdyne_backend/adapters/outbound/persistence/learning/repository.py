@@ -7,6 +7,7 @@ from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import InstrumentedAttribute
 
 from cyberdyne_backend.adapters.outbound.persistence.learning.models import (
     CertificateRow,
@@ -141,7 +142,7 @@ class SqlAlchemyLearningRepository:
         return _row_to_module(row)
 
     # ── Catalogue writes (admin) ─────────────────────────────────────
-    async def _next_sort_order(self, column) -> int:
+    async def _next_sort_order(self, column: InstrumentedAttribute[int]) -> int:
         current = (await self._session.execute(select(func.max(column)))).scalar()
         return (current or 0) + 1
 

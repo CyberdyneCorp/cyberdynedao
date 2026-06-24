@@ -190,7 +190,7 @@ def _ctx() -> ssl.SSLContext | None:
     return None
 
 
-def _call(method: str, url: str, token: str, body: dict | None = None) -> tuple[int, Any]:
+def _call(method: str, url: str, token: str, body: dict[str, Any] | None = None) -> tuple[int, Any]:
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(url, data=data, method=method)
     req.add_header("Content-Type", "application/json")
@@ -223,7 +223,8 @@ def _token() -> str:
     )
     req.add_header("Content-Type", "application/json")
     with urllib.request.urlopen(req, context=_ctx()) as r:
-        return json.loads(r.read().decode())["access_token"]
+        access_token: str = json.loads(r.read().decode())["access_token"]
+    return access_token
 
 
 def main() -> int:
