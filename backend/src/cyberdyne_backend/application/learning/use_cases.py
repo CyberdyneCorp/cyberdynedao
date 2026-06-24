@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
 
+from cyberdyne_backend.application.academy import SUPPORTED_LANGUAGES
 from cyberdyne_backend.domain.learning import (
     VALID_LEVELS,
     Certificate,
@@ -20,6 +21,7 @@ from cyberdyne_backend.domain.learning import (
     LearningModule,
     LearningPath,
     LearningRepository,
+    LearningTranslation,
     ModuleGate,
     ModuleProgress,
     compute_path_gates,
@@ -92,16 +94,16 @@ async def _derived_progress_map(
 class ListModules:
     repo: LearningRepository
 
-    async def execute(self) -> list[LearningModule]:
-        return await self.repo.list_modules()
+    async def execute(self, *, locale: str = "en") -> list[LearningModule]:
+        return await self.repo.list_modules(locale=locale)
 
 
 @dataclass(slots=True)
 class ListPaths:
     repo: LearningRepository
 
-    async def execute(self) -> list[LearningPath]:
-        return await self.repo.list_paths()
+    async def execute(self, *, locale: str = "en") -> list[LearningPath]:
+        return await self.repo.list_paths(locale=locale)
 
 
 # ── Admin catalogue CRUD ─────────────────────────────────────────────
@@ -257,6 +259,78 @@ class ReorderPathModules:
     async def execute(self, *, slug: str, module_slugs: tuple[str, ...]) -> LearningPath:
         await _ensure_modules_exist(self.repo, module_slugs)
         return await self.repo.update_path(slug, module_slugs=module_slugs)
+
+
+# ── Translations (admin) ─────────────────────────────────────────────
+
+
+def _validate_language(language: str) -> None:
+    """A translation language must be a supported, non-English tag."""
+    if language == "en" or language not in SUPPORTED_LANGUAGES:
+        allowed = ", ".join(lang for lang in SUPPORTED_LANGUAGES if lang != "en")
+        raise LearningContentValidationError(
+            f"language must be one of {allowed} (got {language!r})"
+        )
+
+
+@dataclass(slots=True)
+class ListModuleTranslations:
+    repo: LearningRepository
+
+    async def execute(self, slug: str) -> list[LearningTranslation]:
+        return await self.repo.list_module_translations(slug)
+
+
+@dataclass(slots=True)
+class UpsertModuleTranslation:
+    repo: LearningRepository
+
+    async def execute(
+        self, *, slug: str, language: str, title: str, description: str
+    ) -> LearningTranslation:
+        _validate_language(language)
+        return await self.repo.upsert_module_translation(
+            slug, language=language, title=title, description=description
+        )
+
+
+@dataclass(slots=True)
+class DeleteModuleTranslation:
+    repo: LearningRepository
+
+    async def execute(self, *, slug: str, language: str) -> None:
+        _validate_language(language)
+        await self.repo.delete_module_translation(slug, language=language)
+
+
+@dataclass(slots=True)
+class ListPathTranslations:
+    repo: LearningRepository
+
+    async def execute(self, slug: str) -> list[LearningTranslation]:
+        return await self.repo.list_path_translations(slug)
+
+
+@dataclass(slots=True)
+class UpsertPathTranslation:
+    repo: LearningRepository
+
+    async def execute(
+        self, *, slug: str, language: str, title: str, description: str
+    ) -> LearningTranslation:
+        _validate_language(language)
+        return await self.repo.upsert_path_translation(
+            slug, language=language, title=title, description=description
+        )
+
+
+@dataclass(slots=True)
+class DeletePathTranslation:
+    repo: LearningRepository
+
+    async def execute(self, *, slug: str, language: str) -> None:
+        _validate_language(language)
+        await self.repo.delete_path_translation(slug, language=language)
 
 
 @dataclass(slots=True)

@@ -5,7 +5,16 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import JSON, DateTime, Integer, String, Text, UniqueConstraint, Uuid
+from sqlalchemy import (
+    JSON,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    Uuid,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from cyberdyne_backend.infrastructure.database.base import Base
@@ -37,6 +46,37 @@ class LearningPathRow(Base):
     estimated_time: Mapped[str] = mapped_column(String(64), nullable=False)
     icon: Mapped[str] = mapped_column(String(16), nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class LearningModuleTranslationRow(Base):
+    """Localized title/description for a module in one (non-English) language.
+    The base ``LearningModuleRow`` is the English source of truth."""
+
+    __tablename__ = "learning_module_translations"
+    __table_args__ = (UniqueConstraint("module_slug", "language", name="uq_learning_module_tr"),)
+
+    id: Mapped[UUID] = mapped_column(Uuid(), primary_key=True)
+    module_slug: Mapped[str] = mapped_column(
+        String(64), ForeignKey("learning_modules.slug", ondelete="CASCADE"), nullable=False
+    )
+    language: Mapped[str] = mapped_column(String(8), nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+
+
+class LearningPathTranslationRow(Base):
+    """Localized title/description for a path in one (non-English) language."""
+
+    __tablename__ = "learning_path_translations"
+    __table_args__ = (UniqueConstraint("path_slug", "language", name="uq_learning_path_tr"),)
+
+    id: Mapped[UUID] = mapped_column(Uuid(), primary_key=True)
+    path_slug: Mapped[str] = mapped_column(
+        String(64), ForeignKey("learning_paths.slug", ondelete="CASCADE"), nullable=False
+    )
+    language: Mapped[str] = mapped_column(String(8), nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
 
 
 class EnrollmentRow(Base):
