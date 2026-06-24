@@ -9,6 +9,7 @@
 		Badge
 	} from '@cyberdynecorp/svelte-ui-core';
 	import { createAdminViewModel, shouldAutoLoad } from '$lib/viewmodels/adminViewModel';
+	import LearningPathsAdmin from '$lib/components/LearningPathsAdmin.svelte';
 	import type { CourseLevel, LessonType } from '$lib/api/coursesApi';
 	import { fetchCourseLanguages, translateCourse, type CourseLanguages } from '$lib/api/adminApi';
 	import { SUPPORTED_LOCALES } from '$lib/i18n';
@@ -889,6 +890,9 @@
 					{/each}
 				</ul>
 			{/if}
+
+			<!-- Learning paths & modules (manages its own view model) -->
+			<LearningPathsAdmin />
 		{/if}
 	{/if}
 </div>

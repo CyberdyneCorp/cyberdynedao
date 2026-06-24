@@ -356,3 +356,110 @@ export interface AdminOverview {
 export function fetchAdminOverview(): Promise<AdminOverview> {
 	return getJson<AdminOverview>('/api/v1/admin/analytics/overview');
 }
+
+// ── Learning paths & modules ──────────────────────────────────────────
+//
+// Standalone learning content (separate from the course catalogue):
+// reusable modules, grouped into ordered learning paths. camelCase JSON;
+// all routes require the `editor` scope, same as the course endpoints.
+
+export interface LearningModule {
+	slug: string;
+	title: string;
+	category: string;
+	description: string;
+	level: CourseLevel;
+	duration: string;
+	icon: string;
+	topics: string[];
+}
+
+export interface LearningPath {
+	slug: string;
+	title: string;
+	description: string;
+	moduleSlugs: string[];
+	estimatedTime: string;
+	icon: string;
+}
+
+export interface CreateModuleInput {
+	slug?: string;
+	title: string;
+	category: string;
+	description: string;
+	level: CourseLevel;
+	duration: string;
+	icon: string;
+	topics: string[];
+}
+
+export interface UpdateModuleInput {
+	title?: string;
+	category?: string;
+	description?: string;
+	level?: CourseLevel;
+	duration?: string;
+	icon?: string;
+	topics?: string[];
+}
+
+export interface CreatePathInput {
+	slug?: string;
+	title: string;
+	description: string;
+	moduleSlugs: string[];
+	estimatedTime: string;
+	icon: string;
+}
+
+export interface UpdatePathInput {
+	title?: string;
+	description?: string;
+	moduleSlugs?: string[];
+	estimatedTime?: string;
+	icon?: string;
+}
+
+export function listLearningModules(): Promise<LearningModule[]> {
+	return getJson<LearningModule[]>('/api/v1/admin/learning/modules');
+}
+
+export function createLearningModule(input: CreateModuleInput): Promise<LearningModule> {
+	return sendJson<LearningModule>('POST', '/api/v1/admin/learning/modules', input);
+}
+
+export function updateLearningModule(
+	slug: string,
+	input: UpdateModuleInput
+): Promise<LearningModule> {
+	return sendJson<LearningModule>('PATCH', `/api/v1/admin/learning/modules/${enc(slug)}`, input);
+}
+
+export function deleteLearningModule(slug: string): Promise<void> {
+	return del(`/api/v1/admin/learning/modules/${enc(slug)}`);
+}
+
+export function listLearningPaths(): Promise<LearningPath[]> {
+	return getJson<LearningPath[]>('/api/v1/admin/learning/paths');
+}
+
+export function createLearningPath(input: CreatePathInput): Promise<LearningPath> {
+	return sendJson<LearningPath>('POST', '/api/v1/admin/learning/paths', input);
+}
+
+export function updateLearningPath(slug: string, input: UpdatePathInput): Promise<LearningPath> {
+	return sendJson<LearningPath>('PATCH', `/api/v1/admin/learning/paths/${enc(slug)}`, input);
+}
+
+export function deleteLearningPath(slug: string): Promise<void> {
+	return del(`/api/v1/admin/learning/paths/${enc(slug)}`);
+}
+
+export function reorderPathModules(slug: string, moduleSlugs: string[]): Promise<LearningPath> {
+	return sendJson<LearningPath>(
+		'POST',
+		`/api/v1/admin/learning/paths/${enc(slug)}/modules/reorder`,
+		{ moduleSlugs }
+	);
+}
