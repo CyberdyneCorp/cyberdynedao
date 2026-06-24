@@ -12,7 +12,7 @@
 	import type { LearningModule } from '$lib/api/adminApi';
 
 	const vm = createLearningAdminViewModel();
-	const { modules, paths, busy, error, notice } = vm;
+	const { modules, paths, courses, busy, error, notice } = vm;
 
 	const levels: CourseLevel[] = ['Beginner', 'Intermediate', 'Advanced'];
 	const levelOptions = levels.map((l) => ({ value: l, label: l }));
@@ -37,6 +37,17 @@
 			.filter((t) => t !== '');
 	}
 
+	// Selected courses, in the course-list order.
+	function selectedCourseSlugs(picks: Record<string, boolean>): string[] {
+		return $courses.filter((c) => picks[c.slug]).map((c) => c.slug);
+	}
+
+	// Resolve a course slug to a display label for the module-list row.
+	function courseLabel(slug: string): string {
+		const c = $courses.find((x) => x.slug === slug);
+		return c ? `${c.title} · ${c.level}` : slug;
+	}
+
 	// ── New-module form ────────────────────────────────────────────────
 	let mTitle = $state('');
 	let mCategory = $state('');
@@ -45,6 +56,7 @@
 	let mIcon = $state('');
 	let mDescription = $state('');
 	let mTopics = $state('');
+	let mCourses = $state<Record<string, boolean>>({});
 
 	const moduleValid = $derived(!!mTitle.trim() && !!mCategory.trim());
 
@@ -57,7 +69,8 @@
 			duration: mDuration.trim(),
 			icon: mIcon.trim(),
 			description: mDescription.trim(),
-			topics: splitTopics(mTopics)
+			topics: splitTopics(mTopics),
+			courseSlugs: selectedCourseSlugs(mCourses)
 		});
 		if (ok) {
 			mTitle = '';
@@ -67,6 +80,7 @@
 			mIcon = '';
 			mDescription = '';
 			mTopics = '';
+			mCourses = {};
 		}
 	}
 
@@ -79,6 +93,7 @@
 	let emIcon = $state('');
 	let emDescription = $state('');
 	let emTopics = $state('');
+	let emCourses = $state<Record<string, boolean>>({});
 	let confirmingModuleDelete = $state<string | null>(null);
 
 	function openModuleEdit(m: LearningModule): void {
@@ -90,6 +105,7 @@
 		emIcon = m.icon;
 		emDescription = m.description;
 		emTopics = m.topics.join(', ');
+		emCourses = Object.fromEntries(m.courseSlugs.map((slug) => [slug, true]));
 	}
 
 	async function saveModuleEdit(): Promise<void> {
@@ -101,7 +117,8 @@
 			duration: emDuration.trim(),
 			icon: emIcon.trim(),
 			description: emDescription.trim(),
-			topics: splitTopics(emTopics)
+			topics: splitTopics(emTopics),
+			courseSlugs: selectedCourseSlugs(emCourses)
 		});
 		if (ok) editingModule = null;
 	}
@@ -215,6 +232,16 @@
 		</div>
 		<Textarea label="Description" rows={2} bind:value={mDescription} />
 		<PixelInput placeholder="Topics (comma-separated)" bind:value={mTopics} ariaLabel="Module topics" />
+		<fieldset class="modules-pick">
+			<legend>Courses in this stage</legend>
+			{#if $courses.length === 0}
+				<p class="hint">No published courses available yet.</p>
+			{:else}
+				{#each $courses as c (c.slug)}
+					<PixelCheckbox bind:checked={mCourses[c.slug]} label={`${c.title} · ${c.level}`} />
+				{/each}
+			{/if}
+		</fieldset>
 		<PixelButton type="submit" variant="solid" disabled={$busy || !moduleValid}>
 			{$busy ? 'Saving…' : 'Create module'}
 		</PixelButton>
@@ -231,6 +258,7 @@
 						<span class="item__title">{m.icon} {m.title}</span>
 						<span class="item__meta">{m.category} · {m.level} · {m.duration}</span>
 						{#if m.topics.length > 0}<span class="item__cat">{m.topics.join(', ')}</span>{/if}
+						{#if m.courseSlugs.length > 0}<span class="item__courses">Courses: {m.courseSlugs.map((s) => courseLabel(s)).join(', ')}</span>{/if}
 					</div>
 					<div class="item__actions">
 						<PixelButton variant="outline" size="sm" disabled={$busy} onclick={() => openModuleEdit(m)}>
@@ -286,6 +314,16 @@
 							</div>
 							<Textarea label="Description" rows={2} bind:value={emDescription} />
 							<PixelInput placeholder="Topics (comma-separated)" bind:value={emTopics} ariaLabel="Module topics" />
+							<fieldset class="modules-pick">
+								<legend>Courses in this stage</legend>
+								{#if $courses.length === 0}
+									<p class="hint">No published courses available yet.</p>
+								{:else}
+									{#each $courses as c (c.slug)}
+										<PixelCheckbox bind:checked={emCourses[c.slug]} label={`${c.title} · ${c.level}`} />
+									{/each}
+								{/if}
+							</fieldset>
 							<div class="row">
 								<PixelButton type="submit" variant="solid" size="sm" disabled={$busy || !emTitle.trim()}>
 									{$busy ? 'Saving…' : 'Save module'}
@@ -520,6 +558,11 @@
 	.item__cat {
 		font-size: 0.72rem;
 		color: #6d28d9;
+		font-weight: 600;
+	}
+	.item__courses {
+		font-size: 0.72rem;
+		color: #1d4ed8;
 		font-weight: 600;
 	}
 	.item__actions {

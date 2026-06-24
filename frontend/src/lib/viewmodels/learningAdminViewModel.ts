@@ -27,6 +27,14 @@ import {
 	type UpdateModuleInput,
 	type UpdatePathInput
 } from '$lib/api/adminApi';
+import { fetchCourses as apiListCourses, type CourseSummary } from '$lib/api/coursesApi';
+
+/** Minimal course shape the picker needs (slug + label fields). */
+export interface CourseOption {
+	slug: string;
+	title: string;
+	level: string;
+}
 
 function message(err: unknown): string {
 	return err instanceof Error ? err.message : String(err);
@@ -61,6 +69,7 @@ export interface AdminLearningViewModelDeps {
 	updatePath: typeof apiUpdatePath;
 	deletePath: typeof apiDeletePath;
 	reorderPathModules: typeof apiReorderPathModules;
+	listCourses: typeof apiListCourses;
 }
 
 const defaultDeps: AdminLearningViewModelDeps = {
@@ -72,12 +81,15 @@ const defaultDeps: AdminLearningViewModelDeps = {
 	createPath: apiCreatePath,
 	updatePath: apiUpdatePath,
 	deletePath: apiDeletePath,
-	reorderPathModules: apiReorderPathModules
+	reorderPathModules: apiReorderPathModules,
+	listCourses: apiListCourses
 };
 
 export interface AdminLearningViewModel {
 	modules: Writable<LearningModule[]>;
 	paths: Writable<LearningPath[]>;
+	/** Published courses available to assign to a stage. */
+	courses: Writable<CourseOption[]>;
 	loading: Writable<boolean>;
 	busy: Writable<boolean>;
 	error: Writable<string | null>;
@@ -99,6 +111,7 @@ export function createLearningAdminViewModel(
 ): AdminLearningViewModel {
 	const modules = writable<LearningModule[]>([]);
 	const paths = writable<LearningPath[]>([]);
+	const courses = writable<CourseOption[]>([]);
 	const loading = writable(false);
 	const busy = writable(false);
 	const error = writable<string | null>(null);
@@ -108,9 +121,14 @@ export function createLearningAdminViewModel(
 		loading.set(true);
 		error.set(null);
 		try {
-			const [moduleList, pathList] = await Promise.all([deps.listModules(), deps.listPaths()]);
+			const [moduleList, pathList, courseList] = await Promise.all([
+				deps.listModules(),
+				deps.listPaths(),
+				deps.listCourses()
+			]);
 			modules.set(moduleList);
 			paths.set(pathList);
+			courses.set(courseList.map((c: CourseSummary) => ({ slug: c.slug, title: c.title, level: c.level })));
 		} catch (err) {
 			error.set(message(err));
 		} finally {
@@ -140,6 +158,7 @@ export function createLearningAdminViewModel(
 	return {
 		modules,
 		paths,
+		courses,
 		loading,
 		busy,
 		error,

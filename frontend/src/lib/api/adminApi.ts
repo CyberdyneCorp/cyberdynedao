@@ -372,6 +372,8 @@ export interface LearningModule {
 	duration: string;
 	icon: string;
 	topics: string[];
+	/** Slugs of the published courses assigned to this stage. */
+	courseSlugs: string[];
 }
 
 export interface LearningPath {
@@ -392,6 +394,8 @@ export interface CreateModuleInput {
 	duration: string;
 	icon: string;
 	topics: string[];
+	/** Published course slugs to assign to this stage. */
+	courseSlugs?: string[];
 }
 
 export interface UpdateModuleInput {
@@ -402,6 +406,8 @@ export interface UpdateModuleInput {
 	duration?: string;
 	icon?: string;
 	topics?: string[];
+	/** Published course slugs to assign to this stage. */
+	courseSlugs?: string[];
 }
 
 export interface CreatePathInput {
