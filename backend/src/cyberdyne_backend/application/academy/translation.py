@@ -61,6 +61,11 @@ class TranslationError(RuntimeError):
 # (fenced blocks before inline). Each becomes a sentinel the model is told
 # to keep verbatim.
 _PROTECT_PATTERNS: tuple[re.Pattern[str], ...] = (
+    # Author-marked do-not-translate spans — e.g. the target-language text in a
+    # *language* course ([[keep]]the deployment pipeline[[/keep]]). Masked first,
+    # whole span incl. markers, so its content survives untouched; renderers
+    # strip the [[keep]]…[[/keep]] markers when displaying.
+    re.compile(r"\[\[keep\]\].*?\[\[/keep\]\]", re.DOTALL),
     re.compile(r"```.*?```", re.DOTALL),  # fenced code / plot / mermaid
     re.compile(r"\$\$.*?\$\$", re.DOTALL),  # block LaTeX
     re.compile(r"`[^`\n]+`"),  # inline code

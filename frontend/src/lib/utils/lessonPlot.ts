@@ -218,6 +218,18 @@ export function normalizeMathBlocks(md: string): string {
 	);
 }
 
+/**
+ * Strip `[[keep]]…[[/keep]]` do-not-translate markers, leaving the inner text.
+ * Authors wrap target-language text (e.g. the English being taught in a language
+ * course) in these so the translation pipeline preserves it verbatim; at render
+ * time the markers are removed and the text shows as normal prose in every
+ * language. (Every client's renderer must apply this — see backend
+ * `application/academy/translation.py`.)
+ */
+export function stripKeepMarkers(md: string): string {
+	return md.replace(/\[\[keep\]\]([\s\S]*?)\[\[\/keep\]\]/g, '$1');
+}
+
 // ── Safe expression evaluator (shunting-yard → RPN; no eval) ─────────────────
 
 type FnDef = { a: number | 'var'; f: (args: number[]) => number };
