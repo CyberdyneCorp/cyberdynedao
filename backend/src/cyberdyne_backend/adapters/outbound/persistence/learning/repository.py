@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cyberdyne_backend.adapters.outbound.persistence.learning.models import (
@@ -20,6 +20,7 @@ from cyberdyne_backend.domain.learning import (
     Enrollment,
     EnrollmentNotFoundError,
     EnrollmentStatus,
+    LearningContentConflictError,
     LearningContentNotFoundError,
     LearningModule,
     LearningPath,
@@ -132,6 +133,123 @@ class SqlAlchemyLearningRepository:
         if row is None:
             raise LearningContentNotFoundError(f"no learning path with slug={slug!r}")
         return _row_to_path(row)
+
+    async def get_module(self, slug: str) -> LearningModule:
+        row = await self._session.get(LearningModuleRow, slug)
+        if row is None:
+            raise LearningContentNotFoundError(f"no learning module with slug={slug!r}")
+        return _row_to_module(row)
+
+    # ── Catalogue writes (admin) ─────────────────────────────────────
+    async def _next_sort_order(self, column) -> int:
+        current = (await self._session.execute(select(func.max(column)))).scalar()
+        return (current or 0) + 1
+
+    async def create_module(self, module: LearningModule) -> LearningModule:
+        if await self._session.get(LearningModuleRow, module.slug) is not None:
+            raise LearningContentConflictError(f"learning module {module.slug!r} already exists")
+        row = LearningModuleRow(
+            slug=module.slug,
+            title=module.title,
+            category=module.category,
+            description=module.description,
+            level=module.level,
+            duration=module.duration,
+            icon=module.icon,
+            topics=list(module.topics),
+            sort_order=await self._next_sort_order(LearningModuleRow.sort_order),
+        )
+        self._session.add(row)
+        await self._session.flush()
+        return _row_to_module(row)
+
+    async def update_module(
+        self,
+        slug: str,
+        *,
+        title: str | None = None,
+        category: str | None = None,
+        description: str | None = None,
+        level: str | None = None,
+        duration: str | None = None,
+        icon: str | None = None,
+        topics: tuple[str, ...] | None = None,
+    ) -> LearningModule:
+        row = await self._session.get(LearningModuleRow, slug)
+        if row is None:
+            raise LearningContentNotFoundError(f"no learning module with slug={slug!r}")
+        if title is not None:
+            row.title = title
+        if category is not None:
+            row.category = category
+        if description is not None:
+            row.description = description
+        if level is not None:
+            row.level = level
+        if duration is not None:
+            row.duration = duration
+        if icon is not None:
+            row.icon = icon
+        if topics is not None:
+            row.topics = list(topics)
+        await self._session.flush()
+        return _row_to_module(row)
+
+    async def delete_module(self, slug: str) -> None:
+        row = await self._session.get(LearningModuleRow, slug)
+        if row is None:
+            raise LearningContentNotFoundError(f"no learning module with slug={slug!r}")
+        await self._session.delete(row)
+        await self._session.flush()
+
+    async def create_path(self, path: LearningPath) -> LearningPath:
+        if await self._session.get(LearningPathRow, path.slug) is not None:
+            raise LearningContentConflictError(f"learning path {path.slug!r} already exists")
+        row = LearningPathRow(
+            slug=path.slug,
+            title=path.title,
+            description=path.description,
+            module_slugs=list(path.module_slugs),
+            estimated_time=path.estimated_time,
+            icon=path.icon,
+            sort_order=await self._next_sort_order(LearningPathRow.sort_order),
+        )
+        self._session.add(row)
+        await self._session.flush()
+        return _row_to_path(row)
+
+    async def update_path(
+        self,
+        slug: str,
+        *,
+        title: str | None = None,
+        description: str | None = None,
+        module_slugs: tuple[str, ...] | None = None,
+        estimated_time: str | None = None,
+        icon: str | None = None,
+    ) -> LearningPath:
+        row = await self._session.get(LearningPathRow, slug)
+        if row is None:
+            raise LearningContentNotFoundError(f"no learning path with slug={slug!r}")
+        if title is not None:
+            row.title = title
+        if description is not None:
+            row.description = description
+        if module_slugs is not None:
+            row.module_slugs = list(module_slugs)
+        if estimated_time is not None:
+            row.estimated_time = estimated_time
+        if icon is not None:
+            row.icon = icon
+        await self._session.flush()
+        return _row_to_path(row)
+
+    async def delete_path(self, slug: str) -> None:
+        row = await self._session.get(LearningPathRow, slug)
+        if row is None:
+            raise LearningContentNotFoundError(f"no learning path with slug={slug!r}")
+        await self._session.delete(row)
+        await self._session.flush()
 
     # ── Enrollments ──────────────────────────────────────────────────
     async def upsert_enrollment(self, enrollment: Enrollment) -> Enrollment:

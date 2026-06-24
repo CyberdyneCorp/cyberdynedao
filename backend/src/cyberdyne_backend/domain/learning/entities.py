@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -12,10 +13,22 @@ from uuid import UUID
 
 from cyberdyne_backend.domain.learning.errors import (
     CertificateNotEligibleError,
+    LearningContentValidationError,
     ProgressOutOfRangeError,
 )
 
-# ── Content catalogue (read-only, seeded) ────────────────────────────
+# Catalogue levels, in increasing order (mirrors the gating module).
+VALID_LEVELS: tuple[str, ...] = ("Beginner", "Intermediate", "Advanced")
+
+_SLUG_RE = re.compile(r"[^a-z0-9]+")
+
+
+def normalize_slug(text: str) -> str:
+    """Lowercase, replace non-alphanumerics with hyphens, trim hyphens."""
+    return _SLUG_RE.sub("-", text.strip().lower()).strip("-")
+
+
+# ── Content catalogue (admin-managed; originally seeded) ──────────────
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,6 +51,61 @@ class LearningPath:
     module_slugs: tuple[str, ...]
     estimated_time: str
     icon: str
+
+
+def new_module(
+    *,
+    title: str,
+    category: str,
+    description: str,
+    level: str,
+    duration: str,
+    icon: str,
+    topics: tuple[str, ...] = (),
+    slug: str | None = None,
+) -> LearningModule:
+    """Build a validated module. ``slug`` is derived from ``title`` when
+    omitted; ``level`` must be one of ``VALID_LEVELS``."""
+    if level not in VALID_LEVELS:
+        raise LearningContentValidationError(f"level must be one of {VALID_LEVELS}, got {level!r}")
+    effective_slug = normalize_slug(slug) if slug else normalize_slug(title)
+    if not effective_slug:
+        raise LearningContentValidationError("module slug/title must be non-empty")
+    return LearningModule(
+        slug=effective_slug,
+        title=title,
+        category=category,
+        description=description,
+        level=level,
+        duration=duration,
+        icon=icon,
+        topics=tuple(topics),
+    )
+
+
+def new_path(
+    *,
+    title: str,
+    description: str,
+    module_slugs: tuple[str, ...],
+    estimated_time: str,
+    icon: str,
+    slug: str | None = None,
+) -> LearningPath:
+    """Build a validated path. ``slug`` is derived from ``title`` when
+    omitted. Referential validation of ``module_slugs`` against the
+    catalogue is the use-case's job (needs the repository)."""
+    effective_slug = normalize_slug(slug) if slug else normalize_slug(title)
+    if not effective_slug:
+        raise LearningContentValidationError("path slug/title must be non-empty")
+    return LearningPath(
+        slug=effective_slug,
+        title=title,
+        description=description,
+        module_slugs=tuple(module_slugs),
+        estimated_time=estimated_time,
+        icon=icon,
+    )
 
 
 # ── Per-user state ───────────────────────────────────────────────────
