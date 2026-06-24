@@ -77,6 +77,9 @@ from cyberdyne_backend.application.courses.seed_software_quality import SOFTWARE
 from cyberdyne_backend.application.courses.seed_statistics import STATISTICS_COURSES
 from cyberdyne_backend.application.courses.seed_systemdesign import SYSTEM_DESIGN_COURSES
 from cyberdyne_backend.application.courses.seed_sysverilog import SYSVERILOG_COURSES
+from cyberdyne_backend.application.courses.seed_technical_english import (
+    TECHNICAL_ENGLISH_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_test_measurement import TEST_MEASUREMENT_COURSES
 from cyberdyne_backend.application.courses.seed_testing import TESTING_COURSES
 from cyberdyne_backend.application.courses.seed_types import (
@@ -1228,6 +1231,7 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *POWER_SYSTEMS_COURSES,
     *SOFTWARE_QUALITY_COURSES,
     *COMPUTATIONAL_THINKING_COURSES,
+    *TECHNICAL_ENGLISH_COURSES,
 )
 
 
