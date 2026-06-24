@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import re
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Protocol, runtime_checkable
@@ -26,6 +26,21 @@ _SLUG_RE = re.compile(r"[^a-z0-9]+")
 def normalize_slug(text: str) -> str:
     """Lowercase, replace non-alphanumerics with hyphens, trim hyphens."""
     return _SLUG_RE.sub("-", text.strip().lower()).strip("-")
+
+
+def with_translation[T](
+    entity: T, *, title: str | None = None, description: str | None = None
+) -> T:
+    """Return a copy of a module/path with translated ``title``/``description``
+    substituted, **per field, only when the translated value is non-empty**
+    (English base value is kept otherwise). Both ``LearningModule`` and
+    ``LearningPath`` are frozen dataclasses carrying those two fields."""
+    updates: dict[str, str] = {}
+    if title:
+        updates["title"] = title
+    if description:
+        updates["description"] = description
+    return replace(entity, **updates) if updates else entity  # type: ignore[type-var]
 
 
 # ── Content catalogue (admin-managed; originally seeded) ──────────────
@@ -55,6 +70,15 @@ class LearningPath:
     module_slugs: tuple[str, ...]
     estimated_time: str
     icon: str
+
+
+@dataclass(frozen=True, slots=True)
+class LearningTranslation:
+    """A localized title/description for a module or path in one language."""
+
+    language: str
+    title: str
+    description: str
 
 
 def new_module(

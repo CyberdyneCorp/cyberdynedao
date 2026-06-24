@@ -117,7 +117,7 @@ class _FakeContentRepo:
 
 
 class _FakeLearningRepo:
-    async def list_modules(self):
+    async def list_modules(self, *, locale: str = "en"):
         return [
             LearningModule(
                 slug="mcp-servers",
@@ -131,7 +131,7 @@ class _FakeLearningRepo:
             )
         ]
 
-    async def list_paths(self):
+    async def list_paths(self, *, locale: str = "en"):
         return [
             LearningPath(
                 slug="cyberdyne-stack",

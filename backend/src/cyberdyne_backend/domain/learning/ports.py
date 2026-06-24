@@ -11,20 +11,46 @@ from cyberdyne_backend.domain.learning.entities import (
     Enrollment,
     LearningModule,
     LearningPath,
+    LearningTranslation,
     ModuleProgress,
 )
 
 
 @runtime_checkable
 class LearningRepository(Protocol):
-    # Catalogue reads
-    async def list_modules(self) -> list[LearningModule]: ...
-    async def list_paths(self) -> list[LearningPath]: ...
-    async def get_path(self, slug: str) -> LearningPath: ...
-    async def get_module(self, slug: str) -> LearningModule:
+    # Catalogue reads. ``locale`` substitutes a translated title/description
+    # (per-field English fallback); ``"en"``/empty uses the base rows.
+    async def list_modules(self, *, locale: str = "en") -> list[LearningModule]: ...
+    async def list_paths(self, *, locale: str = "en") -> list[LearningPath]: ...
+    async def get_path(self, slug: str, *, locale: str = "en") -> LearningPath: ...
+    async def get_module(self, slug: str, *, locale: str = "en") -> LearningModule:
         """Load a module by slug. Raises ``LearningContentNotFoundError``
         if absent."""
         ...
+
+    # Translations (admin). ``language`` is a non-English supported tag.
+    async def list_module_translations(self, slug: str) -> list[LearningTranslation]:
+        """All translations for a module. Raises ``LearningContentNotFoundError``
+        if the module is absent."""
+        ...
+
+    async def upsert_module_translation(
+        self, slug: str, *, language: str, title: str, description: str
+    ) -> LearningTranslation:
+        """Insert/replace a module's translation. Raises
+        ``LearningContentNotFoundError`` if the module is absent."""
+        ...
+
+    async def delete_module_translation(self, slug: str, *, language: str) -> None:
+        """Remove a module translation. Raises ``LearningContentNotFoundError``
+        if no such translation."""
+        ...
+
+    async def list_path_translations(self, slug: str) -> list[LearningTranslation]: ...
+    async def upsert_path_translation(
+        self, slug: str, *, language: str, title: str, description: str
+    ) -> LearningTranslation: ...
+    async def delete_path_translation(self, slug: str, *, language: str) -> None: ...
 
     # Catalogue writes (admin)
     async def create_module(self, module: LearningModule) -> LearningModule:

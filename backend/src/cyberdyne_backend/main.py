@@ -174,12 +174,16 @@ from cyberdyne_backend.adapters.inbound.api.learning.router import (
 from cyberdyne_backend.adapters.inbound.api.learning.router import (
     get_create_module_uc,
     get_create_path_uc,
+    get_delete_module_tr_uc,
     get_delete_module_uc,
+    get_delete_path_tr_uc,
     get_delete_path_uc,
     get_eligibility_uc,
     get_enroll_uc,
     get_issue_certificate_uc,
+    get_list_module_tr_uc,
     get_list_modules_uc,
+    get_list_path_tr_uc,
     get_list_paths_uc,
     get_my_deadlines_uc,
     get_my_state_uc,
@@ -191,6 +195,8 @@ from cyberdyne_backend.adapters.inbound.api.learning.router import (
     get_update_module_uc,
     get_update_path_uc,
     get_update_progress_uc,
+    get_upsert_module_tr_uc,
+    get_upsert_path_tr_uc,
     get_verify_certificate_uc,
 )
 from cyberdyne_backend.adapters.inbound.api.learning.router import (
@@ -480,20 +486,26 @@ from cyberdyne_backend.application.learning import (
     CreateModule,
     CreatePath,
     DeleteModule,
+    DeleteModuleTranslation,
     DeletePath,
+    DeletePathTranslation,
     EnrollInPath,
     GetMyDeadlines,
     GetMyLearningState,
     GetPathGating,
     IssueCertificate,
     ListModules,
+    ListModuleTranslations,
     ListPaths,
+    ListPathTranslations,
     RenderCertificatePdf,
     ReorderPathModules,
     SetEnrollmentDeadline,
     UpdateModule,
     UpdateModuleProgress,
     UpdatePath,
+    UpsertModuleTranslation,
+    UpsertPathTranslation,
     VerifyCertificate,
 )
 from cyberdyne_backend.application.lesson_notes import (
@@ -1108,6 +1120,30 @@ def create_app() -> FastAPI:
         async with session_scope() as session:
             yield ReorderPathModules(repo=SqlAlchemyLearningRepository(session))
 
+    async def _list_module_tr_dep() -> AsyncIterator[ListModuleTranslations]:
+        async with session_scope() as session:
+            yield ListModuleTranslations(repo=SqlAlchemyLearningRepository(session))
+
+    async def _upsert_module_tr_dep() -> AsyncIterator[UpsertModuleTranslation]:
+        async with session_scope() as session:
+            yield UpsertModuleTranslation(repo=SqlAlchemyLearningRepository(session))
+
+    async def _delete_module_tr_dep() -> AsyncIterator[DeleteModuleTranslation]:
+        async with session_scope() as session:
+            yield DeleteModuleTranslation(repo=SqlAlchemyLearningRepository(session))
+
+    async def _list_path_tr_dep() -> AsyncIterator[ListPathTranslations]:
+        async with session_scope() as session:
+            yield ListPathTranslations(repo=SqlAlchemyLearningRepository(session))
+
+    async def _upsert_path_tr_dep() -> AsyncIterator[UpsertPathTranslation]:
+        async with session_scope() as session:
+            yield UpsertPathTranslation(repo=SqlAlchemyLearningRepository(session))
+
+    async def _delete_path_tr_dep() -> AsyncIterator[DeletePathTranslation]:
+        async with session_scope() as session:
+            yield DeletePathTranslation(repo=SqlAlchemyLearningRepository(session))
+
     async def _list_paths_dep() -> AsyncIterator[ListPaths]:
         async with session_scope() as session:
             yield ListPaths(repo=SqlAlchemyLearningRepository(session))
@@ -1466,6 +1502,12 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_update_path_uc] = _update_path_dep
     app.dependency_overrides[get_delete_path_uc] = _delete_path_dep
     app.dependency_overrides[get_reorder_path_modules_uc] = _reorder_path_modules_dep
+    app.dependency_overrides[get_list_module_tr_uc] = _list_module_tr_dep
+    app.dependency_overrides[get_upsert_module_tr_uc] = _upsert_module_tr_dep
+    app.dependency_overrides[get_delete_module_tr_uc] = _delete_module_tr_dep
+    app.dependency_overrides[get_list_path_tr_uc] = _list_path_tr_dep
+    app.dependency_overrides[get_upsert_path_tr_uc] = _upsert_path_tr_dep
+    app.dependency_overrides[get_delete_path_tr_uc] = _delete_path_tr_dep
     app.dependency_overrides[get_enroll_uc] = _enroll_dep
     app.dependency_overrides[get_sync_note_uc] = _sync_lesson_note_dep
     app.dependency_overrides[get_list_lesson_notes_uc] = _list_lesson_notes_dep

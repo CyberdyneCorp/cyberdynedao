@@ -185,3 +185,14 @@ class UpdatePathRequest(_StrictCamelModel):
 
 class ReorderPathModulesRequest(_StrictCamelModel):
     module_slugs: list[str]
+
+
+class TranslationUpsertRequest(_StrictCamelModel):
+    title: str = Field(min_length=1)
+    description: str = ""
+
+
+class TranslationResponse(_CamelModel):
+    language: str
+    title: str
+    description: str
