@@ -19,8 +19,10 @@ const baseURL = `http://localhost:${PORT}`;
 
 export default defineConfig({
 	testDir: './e2e',
-	// Layout assertions are deterministic; a tight timeout keeps the loop fast.
-	timeout: 30_000,
+	// Layout assertions are deterministic; a tight timeout keeps the loop fast
+	// locally. CI gets a roomier budget so the per-test open-retry loops (up to
+	// OPEN_TIMEOUT=30s on the heavier iPad renders, issue #208) fit comfortably.
+	timeout: process.env.CI ? 90_000 : 30_000,
 	expect: { timeout: 7_000 },
 	fullyParallel: true,
 	forbidOnly: !!process.env.CI,
