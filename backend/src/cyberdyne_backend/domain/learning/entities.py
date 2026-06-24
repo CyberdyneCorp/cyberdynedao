@@ -47,6 +47,15 @@ def with_translation[T](
 
 
 @dataclass(frozen=True, slots=True)
+class LinkedCourse:
+    """A course bundled by a stage, resolved for display (locale-aware title)."""
+
+    slug: str
+    title: str
+    level: str
+
+
+@dataclass(frozen=True, slots=True)
 class LearningModule:
     slug: str
     title: str
@@ -60,6 +69,14 @@ class LearningModule:
     # completion is DERIVED from these courses (complete iff all are);
     # empty keeps the legacy self-reported progress behaviour.
     course_slugs: tuple[str, ...] = ()
+    # Resolved course display info for ``course_slugs``, filled on read when a
+    # course catalogue reader is available (slug-only otherwise).
+    courses: tuple[LinkedCourse, ...] = ()
+
+
+def with_courses(module: LearningModule, courses: tuple[LinkedCourse, ...]) -> LearningModule:
+    """Return a copy of ``module`` with its resolved ``courses`` attached."""
+    return replace(module, courses=courses)
 
 
 @dataclass(frozen=True, slots=True)

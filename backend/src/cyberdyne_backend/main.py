@@ -1078,7 +1078,13 @@ def create_app() -> FastAPI:
 
     async def _list_modules_dep() -> AsyncIterator[ListModules]:
         async with session_scope() as session:
-            yield ListModules(repo=SqlAlchemyLearningRepository(session))
+            yield ListModules(
+                repo=SqlAlchemyLearningRepository(session),
+                course_reader=SqlAlchemyCourseLinkReader(
+                    SqlAlchemyCourseRepository(session),
+                    SqlAlchemyCourseProgressRepository(session),
+                ),
+            )
 
     async def _create_module_dep() -> AsyncIterator[CreateModule]:
         async with session_scope() as session:

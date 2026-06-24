@@ -12,6 +12,7 @@ from cyberdyne_backend.domain.learning.entities import (
     LearningModule,
     LearningPath,
     LearningTranslation,
+    LinkedCourse,
     ModuleProgress,
 )
 
@@ -156,6 +157,12 @@ class CourseLinkReader(Protocol):
     async def percent_by_course(self, user_id: UUID) -> dict[str, int]:
         """``{course_slug: percent 0..100}`` for the user; a missing slug
         means 0% (never started)."""
+        ...
+
+    async def course_cards(self, *, locale: str = "en") -> dict[str, LinkedCourse]:
+        """``{course_slug: LinkedCourse}`` for all published courses, titles
+        localized to ``locale`` — so a stage can expose its linked courses for
+        display without N extra calls."""
         ...
 
 

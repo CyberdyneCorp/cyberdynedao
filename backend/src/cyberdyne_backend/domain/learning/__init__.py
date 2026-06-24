@@ -22,6 +22,7 @@ from cyberdyne_backend.domain.learning.entities import (
     LearningModule,
     LearningPath,
     LearningTranslation,
+    LinkedCourse,
     ModuleProgress,
     certificate_eligible,
     derived_module_percent,
@@ -31,6 +32,7 @@ from cyberdyne_backend.domain.learning.entities import (
     new_path,
     new_progress,
     normalize_slug,
+    with_courses,
     with_translation,
 )
 from cyberdyne_backend.domain.learning.errors import (
@@ -78,6 +80,7 @@ __all__ = [
     "LearningPath",
     "LearningRepository",
     "LearningTranslation",
+    "LinkedCourse",
     "ModuleGate",
     "ModuleProgress",
     "ProgressOutOfRangeError",
@@ -95,5 +98,6 @@ __all__ = [
     "new_progress",
     "next_unlocked_module",
     "normalize_slug",
+    "with_courses",
     "with_translation",
 ]

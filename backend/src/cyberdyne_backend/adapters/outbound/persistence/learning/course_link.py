@@ -18,6 +18,7 @@ from cyberdyne_backend.domain.courses import (
     build_course_progress,
 )
 from cyberdyne_backend.domain.courses.progress import LessonProgress
+from cyberdyne_backend.domain.learning import LinkedCourse
 
 
 class SqlAlchemyCourseLinkReader:
@@ -28,6 +29,15 @@ class SqlAlchemyCourseLinkReader:
     async def existing_course_slugs(self) -> set[str]:
         courses = await self._courses.list_courses(include_drafts=False)
         return {course.slug for course in courses}
+
+    async def course_cards(self, *, locale: str = "en") -> dict[str, LinkedCourse]:
+        courses = await self._courses.list_courses(include_drafts=False, locale=locale)
+        return {
+            course.slug: LinkedCourse(
+                slug=course.slug, title=course.title, level=course.level.value
+            )
+            for course in courses
+        }
 
     async def percent_by_course(self, user_id: UUID) -> dict[str, int]:
         courses = await self._courses.list_courses(include_drafts=False)
