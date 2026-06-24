@@ -46,6 +46,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import comparch_basics a
 from cyberdyne_backend.application.courses.seed_quizzes import (
     comparch_intermediate as _comparch_intermediate,
 )
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    computational_thinking_advanced as _computational_thinking_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    computational_thinking_basics as _computational_thinking_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    computational_thinking_intermediate as _computational_thinking_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import control_advanced as _control_advanced
 from cyberdyne_backend.application.courses.seed_quizzes import control_basics as _control_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -236,6 +245,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import signals_basics as
 from cyberdyne_backend.application.courses.seed_quizzes import (
     signals_intermediate as _signals_intermediate,
 )
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    software_quality_advanced as _software_quality_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    software_quality_basics as _software_quality_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    software_quality_intermediate as _software_quality_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import sql_basics as _sql_basics
 from cyberdyne_backend.application.courses.seed_quizzes import sql_intermediate as _sql_intermediate
 from cyberdyne_backend.application.courses.seed_quizzes import statinf_advanced as _statinf_advanced
@@ -305,6 +323,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "comparch-advanced": _comparch_advanced.QUIZ,
     "comparch-basics": _comparch_basics.QUIZ,
     "comparch-intermediate": _comparch_intermediate.QUIZ,
+    "computational-thinking-advanced": _computational_thinking_advanced.QUIZ,
+    "computational-thinking-basics": _computational_thinking_basics.QUIZ,
+    "computational-thinking-intermediate": _computational_thinking_intermediate.QUIZ,
     "control-advanced": _control_advanced.QUIZ,
     "control-basics": _control_basics.QUIZ,
     "control-intermediate": _control_intermediate.QUIZ,
@@ -397,6 +418,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "signals-advanced": _signals_advanced.QUIZ,
     "signals-basics": _signals_basics.QUIZ,
     "signals-intermediate": _signals_intermediate.QUIZ,
+    "software-quality-advanced": _software_quality_advanced.QUIZ,
+    "software-quality-basics": _software_quality_basics.QUIZ,
+    "software-quality-intermediate": _software_quality_intermediate.QUIZ,
     "sql-basics": _sql_basics.QUIZ,
     "sql-intermediate": _sql_intermediate.QUIZ,
     "statinf-advanced": _statinf_advanced.QUIZ,

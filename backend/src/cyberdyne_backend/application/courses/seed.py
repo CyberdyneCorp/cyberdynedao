@@ -29,6 +29,9 @@ from cyberdyne_backend.application.courses.seed_analog_ic import ANALOG_IC_COURS
 from cyberdyne_backend.application.courses.seed_antennas import ANTENNAS_COURSES
 from cyberdyne_backend.application.courses.seed_battery import BATTERY_COURSES
 from cyberdyne_backend.application.courses.seed_comparch import COMPARCH_COURSES
+from cyberdyne_backend.application.courses.seed_computational_thinking import (
+    COMPUTATIONAL_THINKING_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_concurrency import CONCURRENCY_COURSES
 from cyberdyne_backend.application.courses.seed_control import CONTROL_COURSES
 from cyberdyne_backend.application.courses.seed_csharp import CSHARP_COURSES
@@ -70,6 +73,7 @@ from cyberdyne_backend.application.courses.seed_semiconductors import SEMICONDUC
 from cyberdyne_backend.application.courses.seed_sensors import SENSORS_COURSES
 from cyberdyne_backend.application.courses.seed_signal_integrity import SIGNAL_INTEGRITY_COURSES
 from cyberdyne_backend.application.courses.seed_signals import SIGNALS_COURSES
+from cyberdyne_backend.application.courses.seed_software_quality import SOFTWARE_QUALITY_COURSES
 from cyberdyne_backend.application.courses.seed_statistics import STATISTICS_COURSES
 from cyberdyne_backend.application.courses.seed_systemdesign import SYSTEM_DESIGN_COURSES
 from cyberdyne_backend.application.courses.seed_sysverilog import SYSVERILOG_COURSES
@@ -1222,6 +1226,8 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *ESTIMATION_COURSES,
     *FPGA_COURSES,
     *POWER_SYSTEMS_COURSES,
+    *SOFTWARE_QUALITY_COURSES,
+    *COMPUTATIONAL_THINKING_COURSES,
 )
 
 
