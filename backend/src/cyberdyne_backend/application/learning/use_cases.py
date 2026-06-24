@@ -12,6 +12,7 @@ from cyberdyne_backend.domain.learning import (
     CertificateNotFoundError,
     CertificatePdfRenderer,
     CertificateSigner,
+    CourseLinkReader,
     Enrollment,
     EnrollmentDeadline,
     LearningContentNotFoundError,
@@ -24,6 +25,7 @@ from cyberdyne_backend.domain.learning import (
     compute_path_gates,
     days_remaining,
     deadline_status,
+    derived_module_percent,
     new_certificate,
     new_enrollment,
     new_module,
@@ -42,6 +44,48 @@ async def _ensure_modules_exist(repo: LearningRepository, module_slugs: tuple[st
         raise LearningContentValidationError(
             f"path references unknown module slug(s): {', '.join(missing)}"
         )
+
+
+async def _ensure_courses_exist(
+    reader: CourseLinkReader | None, course_slugs: tuple[str, ...]
+) -> None:
+    """Raise ``LearningContentValidationError`` if any slug in ``course_slugs``
+    is not a known course. A ``None`` reader (e.g. in unit tests with no
+    course context wired) skips the check."""
+    if reader is None or not course_slugs:
+        return
+    known = await reader.existing_course_slugs()
+    missing = [s for s in course_slugs if s not in known]
+    if missing:
+        raise LearningContentValidationError(
+            f"module references unknown course slug(s): {', '.join(missing)}"
+        )
+
+
+async def _derived_progress_map(
+    repo: LearningRepository,
+    reader: CourseLinkReader | None,
+    user_id: UUID,
+) -> dict[str, ModuleProgress]:
+    """The user's module-progress map, with course-backed stages overridden
+    by completion DERIVED from their linked courses. Course-less modules keep
+    their self-reported progress. With no course reader, returns the raw map
+    (legacy behaviour)."""
+    raw = await repo.get_progress_map_for_user(user_id)
+    if reader is None:
+        return raw
+    modules = await repo.list_modules()
+    course_backed = [m for m in modules if m.course_slugs]
+    if not course_backed:
+        return raw
+    percents = await reader.percent_by_course(user_id)
+    merged = dict(raw)
+    for module in course_backed:
+        percent = derived_module_percent(module.course_slugs, percents)
+        merged[module.slug] = new_progress(
+            user_id=user_id, module_slug=module.slug, percent=percent
+        )
+    return merged
 
 
 @dataclass(slots=True)
@@ -72,14 +116,18 @@ class CreateModuleCommand:
     duration: str
     icon: str
     topics: tuple[str, ...] = ()
+    course_slugs: tuple[str, ...] = ()
     slug: str | None = None
 
 
 @dataclass(slots=True)
 class CreateModule:
     repo: LearningRepository
+    # Optional read into the courses context, to validate linked courses.
+    course_reader: CourseLinkReader | None = None
 
     async def execute(self, cmd: CreateModuleCommand) -> LearningModule:
+        await _ensure_courses_exist(self.course_reader, cmd.course_slugs)
         module = new_module(
             title=cmd.title,
             category=cmd.category,
@@ -88,6 +136,7 @@ class CreateModule:
             duration=cmd.duration,
             icon=cmd.icon,
             topics=cmd.topics,
+            course_slugs=cmd.course_slugs,
             slug=cmd.slug,
         )
         return await self.repo.create_module(module)
@@ -103,17 +152,21 @@ class UpdateModuleCommand:
     duration: str | None = None
     icon: str | None = None
     topics: tuple[str, ...] | None = None
+    course_slugs: tuple[str, ...] | None = None
 
 
 @dataclass(slots=True)
 class UpdateModule:
     repo: LearningRepository
+    course_reader: CourseLinkReader | None = None
 
     async def execute(self, cmd: UpdateModuleCommand) -> LearningModule:
         if cmd.level is not None and cmd.level not in VALID_LEVELS:
             raise LearningContentValidationError(
                 f"level must be one of {VALID_LEVELS}, got {cmd.level!r}"
             )
+        if cmd.course_slugs is not None:
+            await _ensure_courses_exist(self.course_reader, cmd.course_slugs)
         return await self.repo.update_module(
             cmd.slug,
             title=cmd.title,
@@ -123,6 +176,7 @@ class UpdateModule:
             duration=cmd.duration,
             icon=cmd.icon,
             topics=cmd.topics,
+            course_slugs=cmd.course_slugs,
         )
 
 
@@ -256,10 +310,11 @@ class GetMyLearningState:
     """Bundle endpoint backing the LearnView's authenticated panels."""
 
     repo: LearningRepository
+    course_reader: CourseLinkReader | None = None
 
     async def execute(self, user_id: UUID) -> MyLearningState:
         enrollments = await self.repo.list_enrollments_for_user(user_id)
-        progress = await self.repo.get_progress_map_for_user(user_id)
+        progress = await _derived_progress_map(self.repo, self.course_reader, user_id)
         certificates = []
         for enr in enrollments:
             cert = await self.repo.get_certificate_for_user_and_path(user_id, enr.path_slug)
@@ -279,10 +334,11 @@ class IssueCertificate:
 
     repo: LearningRepository
     signer: CertificateSigner
+    course_reader: CourseLinkReader | None = None
 
     async def execute(self, *, user_id: UUID, path_slug: str) -> Certificate:
         path = await self.repo.get_path(path_slug)
-        progress = await self.repo.get_progress_map_for_user(user_id)
+        progress = await _derived_progress_map(self.repo, self.course_reader, user_id)
         cert = new_certificate(
             user_id=user_id,
             path=path,
@@ -389,13 +445,14 @@ class GetPathGating:
     progress."""
 
     repo: LearningRepository
+    course_reader: CourseLinkReader | None = None
 
     async def execute(self, *, user_id: UUID, path_slug: str) -> list[ModuleGate]:
         # Raises LearningContentNotFoundError if the path is unknown.
         path = await self.repo.get_path(path_slug)
         modules = await self.repo.list_modules()
         modules_by_slug = {m.slug: m for m in modules}
-        progress = await self.repo.get_progress_map_for_user(user_id)
+        progress = await _derived_progress_map(self.repo, self.course_reader, user_id)
         return compute_path_gates(path, modules_by_slug, progress)
 
 
@@ -414,12 +471,13 @@ class CheckEnrollmentEligibility:
     the user is already enrolled and the first module they'd start on."""
 
     repo: LearningRepository
+    course_reader: CourseLinkReader | None = None
 
     async def execute(self, *, user_id: UUID, path_slug: str) -> EligibilityResult:
         path = await self.repo.get_path(path_slug)
         modules = await self.repo.list_modules()
         modules_by_slug = {m.slug: m for m in modules}
-        progress = await self.repo.get_progress_map_for_user(user_id)
+        progress = await _derived_progress_map(self.repo, self.course_reader, user_id)
         gates = compute_path_gates(path, modules_by_slug, progress)
 
         enrollments = await self.repo.list_enrollments_for_user(user_id)

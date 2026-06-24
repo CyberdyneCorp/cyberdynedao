@@ -175,6 +175,7 @@ def _module_response(m: LearningModule) -> LearningModuleResponse:
         duration=m.duration,
         icon=m.icon,
         topics=list(m.topics),
+        course_slugs=list(m.course_slugs),
     )
 
 
@@ -538,6 +539,7 @@ async def admin_create_module(
                 duration=body.duration,
                 icon=body.icon,
                 topics=tuple(body.topics),
+                course_slugs=tuple(body.course_slugs),
                 slug=body.slug,
             )
         )
@@ -570,6 +572,7 @@ async def admin_update_module(
                 duration=body.duration,
                 icon=body.icon,
                 topics=tuple(body.topics) if body.topics is not None else None,
+                course_slugs=(tuple(body.course_slugs) if body.course_slugs is not None else None),
             )
         )
     except LearningContentNotFoundError as exc:

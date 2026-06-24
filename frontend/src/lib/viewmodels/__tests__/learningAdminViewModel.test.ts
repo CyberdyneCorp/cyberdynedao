@@ -6,6 +6,7 @@ import {
 	type AdminLearningViewModelDeps
 } from '../learningAdminViewModel';
 import { AdminApiError, type LearningModule, type LearningPath } from '$lib/api/adminApi';
+import type { CourseSummary } from '$lib/api/coursesApi';
 
 const moduleA: LearningModule = {
 	slug: 'm1',
@@ -15,7 +16,8 @@ const moduleA: LearningModule = {
 	level: 'Beginner',
 	duration: '2h',
 	icon: '🤖',
-	topics: ['intro']
+	topics: ['intro'],
+	courseSlugs: []
 };
 const moduleB: LearningModule = { ...moduleA, slug: 'm2', title: 'Module 2' };
 const moduleC: LearningModule = { ...moduleA, slug: 'm3', title: 'Module 3' };
@@ -29,6 +31,24 @@ const path: LearningPath = {
 	icon: '🛤️'
 };
 
+const courseA = {
+	id: 'c1',
+	slug: 'python-course',
+	title: 'Python Course',
+	description: 'd',
+	level: 'Beginner',
+	status: 'published',
+	mandatory: false,
+	sortOrder: 0,
+	lessonCount: 3,
+	createdAt: '2026-01-01T00:00:00Z',
+	publishedAt: '2026-01-02T00:00:00Z',
+	dueAt: null,
+	deadlineStatus: 'none',
+	daysRemaining: null,
+	category: null
+} as CourseSummary;
+
 function fakeDeps(over: Partial<AdminLearningViewModelDeps> = {}): AdminLearningViewModelDeps {
 	return {
 		listModules: vi.fn().mockResolvedValue([moduleA, moduleB, moduleC]),
@@ -40,6 +60,7 @@ function fakeDeps(over: Partial<AdminLearningViewModelDeps> = {}): AdminLearning
 		updatePath: vi.fn().mockResolvedValue(path),
 		deletePath: vi.fn().mockResolvedValue(undefined),
 		reorderPathModules: vi.fn().mockResolvedValue(path),
+		listCourses: vi.fn().mockResolvedValue([courseA]),
 		...over
 	};
 }
@@ -52,6 +73,9 @@ describe('learningAdminViewModel — load', () => {
 		await vm.load();
 		expect(get(vm.modules)).toEqual([moduleA, moduleB, moduleC]);
 		expect(get(vm.paths)).toEqual([path]);
+		expect(get(vm.courses)).toEqual([
+			{ slug: 'python-course', title: 'Python Course', level: 'Beginner' }
+		]);
 		expect(get(vm.loading)).toBe(false);
 		expect(get(vm.error)).toBeNull();
 	});
@@ -98,6 +122,24 @@ describe('learningAdminViewModel — modules', () => {
 		expect(deps.listModules).toHaveBeenCalled(); // reloaded after mutation
 		expect(get(vm.notice)).toBe('Module created');
 		expect(get(vm.busy)).toBe(false);
+	});
+
+	it('createModule forwards courseSlugs to the dep', async () => {
+		const deps = fakeDeps();
+		const vm = createLearningAdminViewModel(deps);
+		const input = {
+			title: 'Module 1',
+			category: 'Robotics',
+			description: 'd',
+			level: 'Beginner' as const,
+			duration: '2h',
+			icon: '🤖',
+			topics: ['intro'],
+			courseSlugs: ['python-course']
+		};
+		const ok = await vm.createModule(input);
+		expect(ok).toBe(true);
+		expect(deps.createModule).toHaveBeenCalledWith(input);
 	});
 
 	it('a rejected createModule sets the error store and returns false', async () => {
@@ -247,5 +289,6 @@ describe('learningAdminViewModel — defaults', () => {
 		const vm = createLearningAdminViewModel();
 		expect(get(vm.modules)).toEqual([]);
 		expect(get(vm.paths)).toEqual([]);
+		expect(get(vm.courses)).toEqual([]);
 	});
 });

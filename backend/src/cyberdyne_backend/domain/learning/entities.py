@@ -41,6 +41,10 @@ class LearningModule:
     duration: str  # human-readable like '1h 30min'
     icon: str
     topics: tuple[str, ...]
+    # Courses this stage bundles. When non-empty, the module's per-user
+    # completion is DERIVED from these courses (complete iff all are);
+    # empty keeps the legacy self-reported progress behaviour.
+    course_slugs: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,10 +66,13 @@ def new_module(
     duration: str,
     icon: str,
     topics: tuple[str, ...] = (),
+    course_slugs: tuple[str, ...] = (),
     slug: str | None = None,
 ) -> LearningModule:
     """Build a validated module. ``slug`` is derived from ``title`` when
-    omitted; ``level`` must be one of ``VALID_LEVELS``."""
+    omitted; ``level`` must be one of ``VALID_LEVELS``. Referential
+    validation of ``course_slugs`` against the catalogue is the use-case's
+    job (it needs the course reader)."""
     if level not in VALID_LEVELS:
         raise LearningContentValidationError(f"level must be one of {VALID_LEVELS}, got {level!r}")
     effective_slug = normalize_slug(slug) if slug else normalize_slug(title)
@@ -80,6 +87,7 @@ def new_module(
         duration=duration,
         icon=icon,
         topics=tuple(topics),
+        course_slugs=tuple(course_slugs),
     )
 
 
@@ -214,6 +222,18 @@ def new_progress(
         completed_at=completed_at,
         updated_at=moment,
     )
+
+
+def derived_module_percent(course_slugs: tuple[str, ...], percent_by_course: dict[str, int]) -> int:
+    """A course-backed stage's percent = the mean of its courses' percents
+    (a missing course counts as 0). Returns 100 only when EVERY linked
+    course is at 100, so 'stage complete iff all its courses complete'
+    holds. Empty ``course_slugs`` returns 0 (caller falls back to the
+    self-reported percent)."""
+    if not course_slugs:
+        return 0
+    total = sum(max(0, min(100, percent_by_course.get(slug, 0))) for slug in course_slugs)
+    return total // len(course_slugs)
 
 
 def certificate_eligible(
