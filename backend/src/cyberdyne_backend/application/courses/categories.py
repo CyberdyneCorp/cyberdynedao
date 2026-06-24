@@ -120,8 +120,14 @@ def category_slug_for(slug: str) -> str | None:
         return "data-engineering"
     if slug.startswith("concurrency-"):
         return "concurrency-parallelism"
-    if slug.startswith("git-") or slug.startswith("testing-"):
+    if (
+        slug.startswith("git-")
+        or slug.startswith("testing-")
+        or slug.startswith("software-quality-")
+    ):
         return "software-engineering"
+    if slug.startswith("computational-thinking-"):
+        return "foundations"
     if re.match(r"^(c|cpp|swift|go|rust|javascript|typescript)-", slug):
         return "languages"
     if slug in ("sql-basics", "sql-intermediate", "mongodb", "postgresql"):

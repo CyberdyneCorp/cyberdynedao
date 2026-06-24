@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 193
+        assert len(summary) == 199
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -323,6 +323,12 @@ class TestSeedCourses:
             "estimation-basics",
             "estimation-intermediate",
             "estimation-advanced",
+            "software-quality-basics",
+            "software-quality-intermediate",
+            "software-quality-advanced",
+            "computational-thinking-basics",
+            "computational-thinking-intermediate",
+            "computational-thinking-advanced",
         }
         for course in ACADEMY_COURSES:
             assert course.lessons  # non-empty
@@ -532,6 +538,118 @@ class TestSeedCourses:
         ):
             assert needle in all_body, f"control track missing {needle!r}"
         assert plot_blocks >= 6
+
+    def test_software_quality_track_covers_models_and_maturity(self) -> None:
+        import json
+        import re
+
+        from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
+        from cyberdyne_backend.application.courses.seed_software_quality import (
+            SOFTWARE_QUALITY_COURSES,
+        )
+
+        slugs = {c.slug for c in SOFTWARE_QUALITY_COURSES}
+        assert slugs == {
+            "software-quality-basics",
+            "software-quality-intermediate",
+            "software-quality-advanced",
+        }
+        assert {c.level for c in SOFTWARE_QUALITY_COURSES} == {
+            "Beginner",
+            "Intermediate",
+            "Advanced",
+        }
+
+        all_body = ""
+        plot_blocks = 0
+        mermaid_blocks = 0
+        for course in SOFTWARE_QUALITY_COURSES:
+            kinds = {le.lesson_type for le in course.lessons}
+            assert kinds <= {"text", "code"}  # quizzes come from the registry
+            assert any(le.lesson_type == "code" for le in course.lessons)  # a runnable lab
+            body = "\n".join(le.text_body or "" for le in course.lessons)
+            all_body += body
+            mermaid_blocks += body.count("```mermaid")
+            for raw in re.findall(r"```plot\n(.*?)\n```", body, re.S):
+                json.loads(raw)  # valid interactive plot JSON
+                plot_blocks += 1
+            assert course.slug in QUIZ_REGISTRY
+            spec = QUIZ_REGISTRY[course.slug]
+            assert spec.final
+            content_titles = {
+                le.title for le in course.lessons if le.lesson_type in {"text", "code"}
+            }
+            assert set(spec.per_lesson) == content_titles  # a quiz for every lesson
+
+        # Coverage of the source-material concepts (case-insensitive).
+        haystack = all_body.lower()
+        for needle in (
+            "quality assurance",
+            "maintenance",
+            "ISO/IEC 25010",
+            "CMMI",
+            "MPS.BR",
+            "PDCA",
+        ):
+            assert needle.lower() in haystack, f"software-quality track missing {needle!r}"
+        assert mermaid_blocks >= 6  # rich diagrams across the track
+        assert plot_blocks >= 3
+
+    def test_computational_thinking_track_covers_logic_and_python(self) -> None:
+        import json
+        import re
+
+        from cyberdyne_backend.application.courses.seed_computational_thinking import (
+            COMPUTATIONAL_THINKING_COURSES,
+        )
+        from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
+
+        slugs = {c.slug for c in COMPUTATIONAL_THINKING_COURSES}
+        assert slugs == {
+            "computational-thinking-basics",
+            "computational-thinking-intermediate",
+            "computational-thinking-advanced",
+        }
+        assert {c.level for c in COMPUTATIONAL_THINKING_COURSES} == {
+            "Beginner",
+            "Intermediate",
+            "Advanced",
+        }
+
+        all_body = ""
+        plot_blocks = 0
+        mermaid_blocks = 0
+        for course in COMPUTATIONAL_THINKING_COURSES:
+            kinds = {le.lesson_type for le in course.lessons}
+            assert kinds <= {"text", "code"}  # quizzes come from the registry
+            # A programming track: at least three runnable labs per course.
+            assert sum(1 for le in course.lessons if le.lesson_type == "code") >= 3
+            body = "\n".join(le.text_body or "" for le in course.lessons)
+            all_body += body
+            mermaid_blocks += body.count("```mermaid")
+            for raw in re.findall(r"```plot\n(.*?)\n```", body, re.S):
+                json.loads(raw)  # valid interactive plot JSON
+                plot_blocks += 1
+            assert course.slug in QUIZ_REGISTRY
+            spec = QUIZ_REGISTRY[course.slug]
+            assert spec.final
+            content_titles = {
+                le.title for le in course.lessons if le.lesson_type in {"text", "code"}
+            }
+            assert set(spec.per_lesson) == content_titles  # a quiz for every lesson
+
+        haystack = all_body.lower()
+        for needle in (
+            "decomposition",
+            "algorithm",
+            "if",
+            "for",
+            "while",
+            "flowchart",
+        ):
+            assert needle in haystack, f"computational-thinking track missing {needle!r}"
+        assert mermaid_blocks >= 6
+        assert plot_blocks >= 2
 
     def test_digital_logic_track_focuses_on_sv_vhdl_cocotb(self) -> None:
         import json
