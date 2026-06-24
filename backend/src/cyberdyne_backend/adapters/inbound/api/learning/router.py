@@ -11,6 +11,8 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from cyberdyne_backend.adapters.inbound.api.learning.schemas import (
     CertificateResponse,
     CertificateVerificationResponse,
+    CreateModuleRequest,
+    CreatePathRequest,
     EligibilityResponse,
     EnrollmentDeadlineResponse,
     EnrollmentResponse,
@@ -19,8 +21,11 @@ from cyberdyne_backend.adapters.inbound.api.learning.schemas import (
     ModuleGateResponse,
     ModuleProgressResponse,
     MyLearningStateResponse,
+    ReorderPathModulesRequest,
     SetDeadlineRequest,
     SigningKeyResponse,
+    UpdateModuleRequest,
+    UpdatePathRequest,
     UpdateProgressRequest,
 )
 from cyberdyne_backend.adapters.inbound.middleware.auth import (
@@ -30,6 +35,12 @@ from cyberdyne_backend.adapters.inbound.middleware.auth import (
 from cyberdyne_backend.application.learning import (
     CertificateVerification,
     CheckEnrollmentEligibility,
+    CreateModule,
+    CreateModuleCommand,
+    CreatePath,
+    CreatePathCommand,
+    DeleteModule,
+    DeletePath,
     EligibilityResult,
     EnrollInPath,
     GetMyDeadlines,
@@ -39,8 +50,13 @@ from cyberdyne_backend.application.learning import (
     ListModules,
     ListPaths,
     RenderCertificatePdf,
+    ReorderPathModules,
     SetEnrollmentDeadline,
+    UpdateModule,
+    UpdateModuleCommand,
     UpdateModuleProgress,
+    UpdatePath,
+    UpdatePathCommand,
     VerifyCertificate,
 )
 from cyberdyne_backend.domain.auth_identity import UserPrincipal
@@ -51,7 +67,9 @@ from cyberdyne_backend.domain.learning import (
     Enrollment,
     EnrollmentDeadline,
     EnrollmentNotFoundError,
+    LearningContentConflictError,
     LearningContentNotFoundError,
+    LearningContentValidationError,
     LearningModule,
     LearningPath,
     ModuleGate,
@@ -113,6 +131,34 @@ async def get_path_gating_uc() -> GetPathGating:  # pragma: no cover - override 
 
 
 async def get_eligibility_uc() -> CheckEnrollmentEligibility:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_create_module_uc() -> CreateModule:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_update_module_uc() -> UpdateModule:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_delete_module_uc() -> DeleteModule:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_create_path_uc() -> CreatePath:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_update_path_uc() -> UpdatePath:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_delete_path_uc() -> DeletePath:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_reorder_path_modules_uc() -> ReorderPathModules:  # pragma: no cover - override target
     raise NotImplementedError
 
 
@@ -454,6 +500,202 @@ async def set_enrollment_deadline(
     except EnrollmentNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return _enrollment_response(enrollment)
+
+
+# ── Admin catalogue CRUD: modules ────────────────────────────────────
+
+
+@admin_router.get(
+    "/modules",
+    response_model=list[LearningModuleResponse],
+    response_model_by_alias=True,
+)
+async def admin_list_modules(
+    use_case: Annotated[ListModules, Depends(get_list_modules_uc)],
+    _principal: Annotated[UserPrincipal, Depends(require_editor)],
+) -> list[LearningModuleResponse]:
+    return [_module_response(m) for m in await use_case.execute()]
+
+
+@admin_router.post(
+    "/modules",
+    response_model=LearningModuleResponse,
+    response_model_by_alias=True,
+    status_code=201,
+)
+async def admin_create_module(
+    body: CreateModuleRequest,
+    use_case: Annotated[CreateModule, Depends(get_create_module_uc)],
+    _principal: Annotated[UserPrincipal, Depends(require_editor)],
+) -> LearningModuleResponse:
+    try:
+        module = await use_case.execute(
+            CreateModuleCommand(
+                title=body.title,
+                category=body.category,
+                description=body.description,
+                level=body.level,
+                duration=body.duration,
+                icon=body.icon,
+                topics=tuple(body.topics),
+                slug=body.slug,
+            )
+        )
+    except LearningContentConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except LearningContentValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _module_response(module)
+
+
+@admin_router.patch(
+    "/modules/{slug}",
+    response_model=LearningModuleResponse,
+    response_model_by_alias=True,
+)
+async def admin_update_module(
+    slug: str,
+    body: UpdateModuleRequest,
+    use_case: Annotated[UpdateModule, Depends(get_update_module_uc)],
+    _principal: Annotated[UserPrincipal, Depends(require_editor)],
+) -> LearningModuleResponse:
+    try:
+        module = await use_case.execute(
+            UpdateModuleCommand(
+                slug=slug,
+                title=body.title,
+                category=body.category,
+                description=body.description,
+                level=body.level,
+                duration=body.duration,
+                icon=body.icon,
+                topics=tuple(body.topics) if body.topics is not None else None,
+            )
+        )
+    except LearningContentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except LearningContentValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _module_response(module)
+
+
+@admin_router.delete("/modules/{slug}", status_code=204)
+async def admin_delete_module(
+    slug: str,
+    use_case: Annotated[DeleteModule, Depends(get_delete_module_uc)],
+    _principal: Annotated[UserPrincipal, Depends(require_editor)],
+) -> Response:
+    try:
+        await use_case.execute(slug)
+    except LearningContentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return Response(status_code=204)
+
+
+# ── Admin catalogue CRUD: paths ──────────────────────────────────────
+
+
+@admin_router.get(
+    "/paths",
+    response_model=list[LearningPathResponse],
+    response_model_by_alias=True,
+)
+async def admin_list_paths(
+    use_case: Annotated[ListPaths, Depends(get_list_paths_uc)],
+    _principal: Annotated[UserPrincipal, Depends(require_editor)],
+) -> list[LearningPathResponse]:
+    return [_path_response(p) for p in await use_case.execute()]
+
+
+@admin_router.post(
+    "/paths",
+    response_model=LearningPathResponse,
+    response_model_by_alias=True,
+    status_code=201,
+)
+async def admin_create_path(
+    body: CreatePathRequest,
+    use_case: Annotated[CreatePath, Depends(get_create_path_uc)],
+    _principal: Annotated[UserPrincipal, Depends(require_editor)],
+) -> LearningPathResponse:
+    try:
+        path = await use_case.execute(
+            CreatePathCommand(
+                title=body.title,
+                description=body.description,
+                module_slugs=tuple(body.module_slugs),
+                estimated_time=body.estimated_time,
+                icon=body.icon,
+                slug=body.slug,
+            )
+        )
+    except LearningContentConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except LearningContentValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _path_response(path)
+
+
+@admin_router.patch(
+    "/paths/{slug}",
+    response_model=LearningPathResponse,
+    response_model_by_alias=True,
+)
+async def admin_update_path(
+    slug: str,
+    body: UpdatePathRequest,
+    use_case: Annotated[UpdatePath, Depends(get_update_path_uc)],
+    _principal: Annotated[UserPrincipal, Depends(require_editor)],
+) -> LearningPathResponse:
+    try:
+        path = await use_case.execute(
+            UpdatePathCommand(
+                slug=slug,
+                title=body.title,
+                description=body.description,
+                module_slugs=(tuple(body.module_slugs) if body.module_slugs is not None else None),
+                estimated_time=body.estimated_time,
+                icon=body.icon,
+            )
+        )
+    except LearningContentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except LearningContentValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _path_response(path)
+
+
+@admin_router.delete("/paths/{slug}", status_code=204)
+async def admin_delete_path(
+    slug: str,
+    use_case: Annotated[DeletePath, Depends(get_delete_path_uc)],
+    _principal: Annotated[UserPrincipal, Depends(require_editor)],
+) -> Response:
+    try:
+        await use_case.execute(slug)
+    except LearningContentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return Response(status_code=204)
+
+
+@admin_router.post(
+    "/paths/{slug}/modules/reorder",
+    response_model=LearningPathResponse,
+    response_model_by_alias=True,
+)
+async def admin_reorder_path_modules(
+    slug: str,
+    body: ReorderPathModulesRequest,
+    use_case: Annotated[ReorderPathModules, Depends(get_reorder_path_modules_uc)],
+    _principal: Annotated[UserPrincipal, Depends(require_editor)],
+) -> LearningPathResponse:
+    try:
+        path = await use_case.execute(slug=slug, module_slugs=tuple(body.module_slugs))
+    except LearningContentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except LearningContentValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _path_response(path)
 
 
 __all__ = ["admin_router", "public_router"]

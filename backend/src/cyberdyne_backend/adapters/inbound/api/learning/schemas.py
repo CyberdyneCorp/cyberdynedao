@@ -126,3 +126,58 @@ class EligibilityResponse(_CamelModel):
     already_enrolled: bool
     next_module: str | None = None
     reason: str | None = None
+
+
+# ── Admin catalogue CRUD request schemas ─────────────────────────────
+
+LevelLiteral = Literal["Beginner", "Intermediate", "Advanced"]
+
+
+class _StrictCamelModel(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        extra="forbid",
+    )
+
+
+class CreateModuleRequest(_StrictCamelModel):
+    title: str = Field(min_length=1)
+    category: str = Field(min_length=1)
+    description: str
+    level: LevelLiteral
+    duration: str = Field(min_length=1)
+    icon: str = Field(min_length=1)
+    topics: list[str] = Field(default_factory=list)
+    slug: str | None = None
+
+
+class UpdateModuleRequest(_StrictCamelModel):
+    title: str | None = None
+    category: str | None = None
+    description: str | None = None
+    level: LevelLiteral | None = None
+    duration: str | None = None
+    icon: str | None = None
+    topics: list[str] | None = None
+
+
+class CreatePathRequest(_StrictCamelModel):
+    title: str = Field(min_length=1)
+    description: str
+    module_slugs: list[str] = Field(default_factory=list)
+    estimated_time: str = Field(min_length=1)
+    icon: str = Field(min_length=1)
+    slug: str | None = None
+
+
+class UpdatePathRequest(_StrictCamelModel):
+    title: str | None = None
+    description: str | None = None
+    module_slugs: list[str] | None = None
+    estimated_time: str | None = None
+    icon: str | None = None
+
+
+class ReorderPathModulesRequest(_StrictCamelModel):
+    module_slugs: list[str]

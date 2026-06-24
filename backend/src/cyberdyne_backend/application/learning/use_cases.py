@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from cyberdyne_backend.domain.learning import (
+    VALID_LEVELS,
     Certificate,
     CertificateNotFoundError,
     CertificatePdfRenderer,
@@ -14,6 +15,7 @@ from cyberdyne_backend.domain.learning import (
     Enrollment,
     EnrollmentDeadline,
     LearningContentNotFoundError,
+    LearningContentValidationError,
     LearningModule,
     LearningPath,
     LearningRepository,
@@ -24,9 +26,22 @@ from cyberdyne_backend.domain.learning import (
     deadline_status,
     new_certificate,
     new_enrollment,
+    new_module,
+    new_path,
     new_progress,
     next_unlocked_module,
 )
+
+
+async def _ensure_modules_exist(repo: LearningRepository, module_slugs: tuple[str, ...]) -> None:
+    """Raise ``LearningContentValidationError`` if any slug in
+    ``module_slugs`` is not a known module."""
+    known = {m.slug for m in await repo.list_modules()}
+    missing = [s for s in module_slugs if s not in known]
+    if missing:
+        raise LearningContentValidationError(
+            f"path references unknown module slug(s): {', '.join(missing)}"
+        )
 
 
 @dataclass(slots=True)
@@ -43,6 +58,151 @@ class ListPaths:
 
     async def execute(self) -> list[LearningPath]:
         return await self.repo.list_paths()
+
+
+# ── Admin catalogue CRUD ─────────────────────────────────────────────
+
+
+@dataclass(slots=True)
+class CreateModuleCommand:
+    title: str
+    category: str
+    description: str
+    level: str
+    duration: str
+    icon: str
+    topics: tuple[str, ...] = ()
+    slug: str | None = None
+
+
+@dataclass(slots=True)
+class CreateModule:
+    repo: LearningRepository
+
+    async def execute(self, cmd: CreateModuleCommand) -> LearningModule:
+        module = new_module(
+            title=cmd.title,
+            category=cmd.category,
+            description=cmd.description,
+            level=cmd.level,
+            duration=cmd.duration,
+            icon=cmd.icon,
+            topics=cmd.topics,
+            slug=cmd.slug,
+        )
+        return await self.repo.create_module(module)
+
+
+@dataclass(slots=True)
+class UpdateModuleCommand:
+    slug: str
+    title: str | None = None
+    category: str | None = None
+    description: str | None = None
+    level: str | None = None
+    duration: str | None = None
+    icon: str | None = None
+    topics: tuple[str, ...] | None = None
+
+
+@dataclass(slots=True)
+class UpdateModule:
+    repo: LearningRepository
+
+    async def execute(self, cmd: UpdateModuleCommand) -> LearningModule:
+        if cmd.level is not None and cmd.level not in VALID_LEVELS:
+            raise LearningContentValidationError(
+                f"level must be one of {VALID_LEVELS}, got {cmd.level!r}"
+            )
+        return await self.repo.update_module(
+            cmd.slug,
+            title=cmd.title,
+            category=cmd.category,
+            description=cmd.description,
+            level=cmd.level,
+            duration=cmd.duration,
+            icon=cmd.icon,
+            topics=cmd.topics,
+        )
+
+
+@dataclass(slots=True)
+class DeleteModule:
+    repo: LearningRepository
+
+    async def execute(self, slug: str) -> None:
+        await self.repo.delete_module(slug)
+
+
+@dataclass(slots=True)
+class CreatePathCommand:
+    title: str
+    description: str
+    module_slugs: tuple[str, ...]
+    estimated_time: str
+    icon: str
+    slug: str | None = None
+
+
+@dataclass(slots=True)
+class CreatePath:
+    repo: LearningRepository
+
+    async def execute(self, cmd: CreatePathCommand) -> LearningPath:
+        await _ensure_modules_exist(self.repo, cmd.module_slugs)
+        path = new_path(
+            title=cmd.title,
+            description=cmd.description,
+            module_slugs=cmd.module_slugs,
+            estimated_time=cmd.estimated_time,
+            icon=cmd.icon,
+            slug=cmd.slug,
+        )
+        return await self.repo.create_path(path)
+
+
+@dataclass(slots=True)
+class UpdatePathCommand:
+    slug: str
+    title: str | None = None
+    description: str | None = None
+    module_slugs: tuple[str, ...] | None = None
+    estimated_time: str | None = None
+    icon: str | None = None
+
+
+@dataclass(slots=True)
+class UpdatePath:
+    repo: LearningRepository
+
+    async def execute(self, cmd: UpdatePathCommand) -> LearningPath:
+        if cmd.module_slugs is not None:
+            await _ensure_modules_exist(self.repo, cmd.module_slugs)
+        return await self.repo.update_path(
+            cmd.slug,
+            title=cmd.title,
+            description=cmd.description,
+            module_slugs=cmd.module_slugs,
+            estimated_time=cmd.estimated_time,
+            icon=cmd.icon,
+        )
+
+
+@dataclass(slots=True)
+class DeletePath:
+    repo: LearningRepository
+
+    async def execute(self, slug: str) -> None:
+        await self.repo.delete_path(slug)
+
+
+@dataclass(slots=True)
+class ReorderPathModules:
+    repo: LearningRepository
+
+    async def execute(self, *, slug: str, module_slugs: tuple[str, ...]) -> LearningPath:
+        await _ensure_modules_exist(self.repo, module_slugs)
+        return await self.repo.update_path(slug, module_slugs=module_slugs)
 
 
 @dataclass(slots=True)

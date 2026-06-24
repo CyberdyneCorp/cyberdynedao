@@ -172,6 +172,10 @@ from cyberdyne_backend.adapters.inbound.api.learning.router import (
     admin_router as learning_admin_router,
 )
 from cyberdyne_backend.adapters.inbound.api.learning.router import (
+    get_create_module_uc,
+    get_create_path_uc,
+    get_delete_module_uc,
+    get_delete_path_uc,
     get_eligibility_uc,
     get_enroll_uc,
     get_issue_certificate_uc,
@@ -181,8 +185,11 @@ from cyberdyne_backend.adapters.inbound.api.learning.router import (
     get_my_state_uc,
     get_path_gating_uc,
     get_render_pdf_uc,
+    get_reorder_path_modules_uc,
     get_set_deadline_uc,
     get_signing_key_info,
+    get_update_module_uc,
+    get_update_path_uc,
     get_update_progress_uc,
     get_verify_certificate_uc,
 )
@@ -467,6 +474,10 @@ from cyberdyne_backend.application.leads import (
 )
 from cyberdyne_backend.application.learning import (
     CheckEnrollmentEligibility,
+    CreateModule,
+    CreatePath,
+    DeleteModule,
+    DeletePath,
     EnrollInPath,
     GetMyDeadlines,
     GetMyLearningState,
@@ -475,8 +486,11 @@ from cyberdyne_backend.application.learning import (
     ListModules,
     ListPaths,
     RenderCertificatePdf,
+    ReorderPathModules,
     SetEnrollmentDeadline,
+    UpdateModule,
     UpdateModuleProgress,
+    UpdatePath,
     VerifyCertificate,
 )
 from cyberdyne_backend.application.lesson_notes import (
@@ -1051,6 +1065,34 @@ def create_app() -> FastAPI:
         async with session_scope() as session:
             yield ListModules(repo=SqlAlchemyLearningRepository(session))
 
+    async def _create_module_dep() -> AsyncIterator[CreateModule]:
+        async with session_scope() as session:
+            yield CreateModule(repo=SqlAlchemyLearningRepository(session))
+
+    async def _update_module_dep() -> AsyncIterator[UpdateModule]:
+        async with session_scope() as session:
+            yield UpdateModule(repo=SqlAlchemyLearningRepository(session))
+
+    async def _delete_module_dep() -> AsyncIterator[DeleteModule]:
+        async with session_scope() as session:
+            yield DeleteModule(repo=SqlAlchemyLearningRepository(session))
+
+    async def _create_path_dep() -> AsyncIterator[CreatePath]:
+        async with session_scope() as session:
+            yield CreatePath(repo=SqlAlchemyLearningRepository(session))
+
+    async def _update_path_dep() -> AsyncIterator[UpdatePath]:
+        async with session_scope() as session:
+            yield UpdatePath(repo=SqlAlchemyLearningRepository(session))
+
+    async def _delete_path_dep() -> AsyncIterator[DeletePath]:
+        async with session_scope() as session:
+            yield DeletePath(repo=SqlAlchemyLearningRepository(session))
+
+    async def _reorder_path_modules_dep() -> AsyncIterator[ReorderPathModules]:
+        async with session_scope() as session:
+            yield ReorderPathModules(repo=SqlAlchemyLearningRepository(session))
+
     async def _list_paths_dep() -> AsyncIterator[ListPaths]:
         async with session_scope() as session:
             yield ListPaths(repo=SqlAlchemyLearningRepository(session))
@@ -1380,6 +1422,13 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_upload_uc] = _get_upload_dep
     app.dependency_overrides[get_list_modules_uc] = _list_modules_dep
     app.dependency_overrides[get_list_paths_uc] = _list_paths_dep
+    app.dependency_overrides[get_create_module_uc] = _create_module_dep
+    app.dependency_overrides[get_update_module_uc] = _update_module_dep
+    app.dependency_overrides[get_delete_module_uc] = _delete_module_dep
+    app.dependency_overrides[get_create_path_uc] = _create_path_dep
+    app.dependency_overrides[get_update_path_uc] = _update_path_dep
+    app.dependency_overrides[get_delete_path_uc] = _delete_path_dep
+    app.dependency_overrides[get_reorder_path_modules_uc] = _reorder_path_modules_dep
     app.dependency_overrides[get_enroll_uc] = _enroll_dep
     app.dependency_overrides[get_sync_note_uc] = _sync_lesson_note_dep
     app.dependency_overrides[get_list_lesson_notes_uc] = _list_lesson_notes_dep

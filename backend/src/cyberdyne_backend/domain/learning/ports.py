@@ -17,10 +17,65 @@ from cyberdyne_backend.domain.learning.entities import (
 
 @runtime_checkable
 class LearningRepository(Protocol):
-    # Catalogue (read-only, seeded)
+    # Catalogue reads
     async def list_modules(self) -> list[LearningModule]: ...
     async def list_paths(self) -> list[LearningPath]: ...
     async def get_path(self, slug: str) -> LearningPath: ...
+    async def get_module(self, slug: str) -> LearningModule:
+        """Load a module by slug. Raises ``LearningContentNotFoundError``
+        if absent."""
+        ...
+
+    # Catalogue writes (admin)
+    async def create_module(self, module: LearningModule) -> LearningModule:
+        """Insert a new module. Raises ``LearningContentConflictError`` if
+        a module with that slug already exists."""
+        ...
+
+    async def update_module(
+        self,
+        slug: str,
+        *,
+        title: str | None = None,
+        category: str | None = None,
+        description: str | None = None,
+        level: str | None = None,
+        duration: str | None = None,
+        icon: str | None = None,
+        topics: tuple[str, ...] | None = None,
+    ) -> LearningModule:
+        """Partially update a module (``None`` leaves a field unchanged).
+        Raises ``LearningContentNotFoundError`` if the slug is absent."""
+        ...
+
+    async def delete_module(self, slug: str) -> None:
+        """Delete a module. Raises ``LearningContentNotFoundError`` if the
+        slug is absent."""
+        ...
+
+    async def create_path(self, path: LearningPath) -> LearningPath:
+        """Insert a new path. Raises ``LearningContentConflictError`` if a
+        path with that slug already exists."""
+        ...
+
+    async def update_path(
+        self,
+        slug: str,
+        *,
+        title: str | None = None,
+        description: str | None = None,
+        module_slugs: tuple[str, ...] | None = None,
+        estimated_time: str | None = None,
+        icon: str | None = None,
+    ) -> LearningPath:
+        """Partially update a path (``None`` leaves a field unchanged).
+        Raises ``LearningContentNotFoundError`` if the slug is absent."""
+        ...
+
+    async def delete_path(self, slug: str) -> None:
+        """Delete a path. Raises ``LearningContentNotFoundError`` if the
+        slug is absent."""
+        ...
 
     # Per-user state
     async def upsert_enrollment(self, enrollment: Enrollment) -> Enrollment:

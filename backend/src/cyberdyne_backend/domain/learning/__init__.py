@@ -15,6 +15,7 @@ from cyberdyne_backend.domain.learning.deadlines import (
     deadline_status,
 )
 from cyberdyne_backend.domain.learning.entities import (
+    VALID_LEVELS,
     Certificate,
     Enrollment,
     EnrollmentStatus,
@@ -24,13 +25,18 @@ from cyberdyne_backend.domain.learning.entities import (
     certificate_eligible,
     new_certificate,
     new_enrollment,
+    new_module,
+    new_path,
     new_progress,
+    normalize_slug,
 )
 from cyberdyne_backend.domain.learning.errors import (
     CertificateNotEligibleError,
     CertificateNotFoundError,
     EnrollmentNotFoundError,
+    LearningContentConflictError,
     LearningContentNotFoundError,
+    LearningContentValidationError,
     ProgressOutOfRangeError,
 )
 from cyberdyne_backend.domain.learning.gating import (
@@ -49,6 +55,7 @@ from cyberdyne_backend.domain.learning.ports import (
 
 __all__ = [
     "LEVEL_ORDER",
+    "VALID_LEVELS",
     "Certificate",
     "CertificateNotEligibleError",
     "CertificateNotFoundError",
@@ -59,7 +66,9 @@ __all__ = [
     "EnrollmentDeadline",
     "EnrollmentNotFoundError",
     "EnrollmentStatus",
+    "LearningContentConflictError",
     "LearningContentNotFoundError",
+    "LearningContentValidationError",
     "LearningModule",
     "LearningPath",
     "LearningRepository",
@@ -74,6 +83,9 @@ __all__ = [
     "level_rank",
     "new_certificate",
     "new_enrollment",
+    "new_module",
+    "new_path",
     "new_progress",
     "next_unlocked_module",
+    "normalize_slug",
 ]

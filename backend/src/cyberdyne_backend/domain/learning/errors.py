@@ -7,6 +7,15 @@ class LearningContentNotFoundError(LookupError):
     """Module / path with that slug doesn't exist."""
 
 
+class LearningContentConflictError(Exception):
+    """A module / path with that slug already exists."""
+
+
+class LearningContentValidationError(ValueError):
+    """Invalid catalogue content — an unknown level, or a path referencing
+    a module slug that doesn't exist."""
+
+
 class EnrollmentNotFoundError(LookupError):
     """User isn't enrolled in this path."""
 
