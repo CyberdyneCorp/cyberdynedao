@@ -43,6 +43,7 @@ class LearningRepository(Protocol):
         duration: str | None = None,
         icon: str | None = None,
         topics: tuple[str, ...] | None = None,
+        course_slugs: tuple[str, ...] | None = None,
     ) -> LearningModule:
         """Partially update a module (``None`` leaves a field unchanged).
         Raises ``LearningContentNotFoundError`` if the slug is absent."""
@@ -113,6 +114,22 @@ class LearningRepository(Protocol):
     async def get_certificate_by_id(self, certificate_id: UUID) -> Certificate | None:
         """Load a certificate by its id, for public verification. None if
         no such certificate."""
+        ...
+
+
+@runtime_checkable
+class CourseLinkReader(Protocol):
+    """Read side into the *courses* context, so a course-backed module can
+    validate its linked courses and derive completion from them. Kept as a
+    narrow port owned by the learning context (courses code stays untouched)."""
+
+    async def existing_course_slugs(self) -> set[str]:
+        """Slugs of all published courses — for validating a module's links."""
+        ...
+
+    async def percent_by_course(self, user_id: UUID) -> dict[str, int]:
+        """``{course_slug: percent 0..100}`` for the user; a missing slug
+        means 0% (never started)."""
         ...
 
 

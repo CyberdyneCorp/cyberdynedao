@@ -355,6 +355,9 @@ from cyberdyne_backend.adapters.outbound.persistence.courses.repository import (
 from cyberdyne_backend.adapters.outbound.persistence.leads.repository import (
     SqlAlchemyAskRepository,
 )
+from cyberdyne_backend.adapters.outbound.persistence.learning.course_link import (
+    SqlAlchemyCourseLinkReader,
+)
 from cyberdyne_backend.adapters.outbound.persistence.learning.repository import (
     SqlAlchemyLearningRepository,
 )
@@ -1067,11 +1070,23 @@ def create_app() -> FastAPI:
 
     async def _create_module_dep() -> AsyncIterator[CreateModule]:
         async with session_scope() as session:
-            yield CreateModule(repo=SqlAlchemyLearningRepository(session))
+            yield CreateModule(
+                repo=SqlAlchemyLearningRepository(session),
+                course_reader=SqlAlchemyCourseLinkReader(
+                    SqlAlchemyCourseRepository(session),
+                    SqlAlchemyCourseProgressRepository(session),
+                ),
+            )
 
     async def _update_module_dep() -> AsyncIterator[UpdateModule]:
         async with session_scope() as session:
-            yield UpdateModule(repo=SqlAlchemyLearningRepository(session))
+            yield UpdateModule(
+                repo=SqlAlchemyLearningRepository(session),
+                course_reader=SqlAlchemyCourseLinkReader(
+                    SqlAlchemyCourseRepository(session),
+                    SqlAlchemyCourseProgressRepository(session),
+                ),
+            )
 
     async def _delete_module_dep() -> AsyncIterator[DeleteModule]:
         async with session_scope() as session:
@@ -1107,7 +1122,13 @@ def create_app() -> FastAPI:
 
     async def _my_state_dep() -> AsyncIterator[GetMyLearningState]:
         async with session_scope() as session:
-            yield GetMyLearningState(repo=SqlAlchemyLearningRepository(session))
+            yield GetMyLearningState(
+                repo=SqlAlchemyLearningRepository(session),
+                course_reader=SqlAlchemyCourseLinkReader(
+                    SqlAlchemyCourseRepository(session),
+                    SqlAlchemyCourseProgressRepository(session),
+                ),
+            )
 
     # Per-user lesson notes (issue #188).
     async def _sync_lesson_note_dep() -> AsyncIterator[SyncLessonNote]:
@@ -1153,17 +1174,33 @@ def create_app() -> FastAPI:
 
     async def _path_gating_dep() -> AsyncIterator[GetPathGating]:
         async with session_scope() as session:
-            yield GetPathGating(repo=SqlAlchemyLearningRepository(session))
+            yield GetPathGating(
+                repo=SqlAlchemyLearningRepository(session),
+                course_reader=SqlAlchemyCourseLinkReader(
+                    SqlAlchemyCourseRepository(session),
+                    SqlAlchemyCourseProgressRepository(session),
+                ),
+            )
 
     async def _eligibility_dep() -> AsyncIterator[CheckEnrollmentEligibility]:
         async with session_scope() as session:
-            yield CheckEnrollmentEligibility(repo=SqlAlchemyLearningRepository(session))
+            yield CheckEnrollmentEligibility(
+                repo=SqlAlchemyLearningRepository(session),
+                course_reader=SqlAlchemyCourseLinkReader(
+                    SqlAlchemyCourseRepository(session),
+                    SqlAlchemyCourseProgressRepository(session),
+                ),
+            )
 
     async def _issue_certificate_dep() -> AsyncIterator[IssueCertificate]:
         async with session_scope() as session:
             yield IssueCertificate(
                 repo=SqlAlchemyLearningRepository(session),
                 signer=container.certificate_signer,
+                course_reader=SqlAlchemyCourseLinkReader(
+                    SqlAlchemyCourseRepository(session),
+                    SqlAlchemyCourseProgressRepository(session),
+                ),
             )
 
     async def _verify_certificate_dep() -> AsyncIterator[VerifyCertificate]:

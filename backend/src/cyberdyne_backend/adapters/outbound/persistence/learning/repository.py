@@ -39,6 +39,7 @@ def _row_to_module(row: LearningModuleRow) -> LearningModule:
         duration=row.duration,
         icon=row.icon,
         topics=tuple(row.topics),
+        course_slugs=tuple(row.course_slugs or ()),
     )
 
 
@@ -158,6 +159,7 @@ class SqlAlchemyLearningRepository:
             duration=module.duration,
             icon=module.icon,
             topics=list(module.topics),
+            course_slugs=list(module.course_slugs),
             sort_order=await self._next_sort_order(LearningModuleRow.sort_order),
         )
         self._session.add(row)
@@ -175,6 +177,7 @@ class SqlAlchemyLearningRepository:
         duration: str | None = None,
         icon: str | None = None,
         topics: tuple[str, ...] | None = None,
+        course_slugs: tuple[str, ...] | None = None,
     ) -> LearningModule:
         row = await self._session.get(LearningModuleRow, slug)
         if row is None:
@@ -193,6 +196,8 @@ class SqlAlchemyLearningRepository:
             row.icon = icon
         if topics is not None:
             row.topics = list(topics)
+        if course_slugs is not None:
+            row.course_slugs = list(course_slugs)
         await self._session.flush()
         return _row_to_module(row)
 

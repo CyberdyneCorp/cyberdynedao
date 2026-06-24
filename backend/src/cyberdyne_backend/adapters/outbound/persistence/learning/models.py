@@ -22,6 +22,8 @@ class LearningModuleRow(Base):
     duration: Mapped[str] = mapped_column(String(32), nullable=False)
     icon: Mapped[str] = mapped_column(String(16), nullable=False)
     topics: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    # Courses this stage bundles (slugs). Empty = legacy self-reported module.
+    course_slugs: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 

@@ -23,6 +23,7 @@ from cyberdyne_backend.domain.learning.entities import (
     LearningPath,
     ModuleProgress,
     certificate_eligible,
+    derived_module_percent,
     new_certificate,
     new_enrollment,
     new_module,
@@ -50,6 +51,7 @@ from cyberdyne_backend.domain.learning.gating import (
 from cyberdyne_backend.domain.learning.ports import (
     CertificatePdfRenderer,
     CertificateSigner,
+    CourseLinkReader,
     LearningRepository,
 )
 
@@ -61,6 +63,7 @@ __all__ = [
     "CertificateNotFoundError",
     "CertificatePdfRenderer",
     "CertificateSigner",
+    "CourseLinkReader",
     "DeadlineStatus",
     "Enrollment",
     "EnrollmentDeadline",
@@ -79,6 +82,7 @@ __all__ = [
     "compute_path_gates",
     "days_remaining",
     "deadline_status",
+    "derived_module_percent",
     "is_module_unlocked",
     "level_rank",
     "new_certificate",

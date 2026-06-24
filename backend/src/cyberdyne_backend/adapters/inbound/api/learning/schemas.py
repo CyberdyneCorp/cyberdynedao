@@ -26,6 +26,8 @@ class LearningModuleResponse(_CamelModel):
     duration: str
     icon: str
     topics: list[str]
+    # Courses this stage bundles (empty for legacy self-reported modules).
+    course_slugs: list[str] = []
 
 
 class LearningPathResponse(_CamelModel):
@@ -149,6 +151,7 @@ class CreateModuleRequest(_StrictCamelModel):
     duration: str = Field(min_length=1)
     icon: str = Field(min_length=1)
     topics: list[str] = Field(default_factory=list)
+    course_slugs: list[str] = Field(default_factory=list)
     slug: str | None = None
 
 
@@ -160,6 +163,7 @@ class UpdateModuleRequest(_StrictCamelModel):
     duration: str | None = None
     icon: str | None = None
     topics: list[str] | None = None
+    course_slugs: list[str] | None = None
 
 
 class CreatePathRequest(_StrictCamelModel):
