@@ -18,6 +18,7 @@ from cyberdyne_backend.adapters.inbound.api.learning.schemas import (
     EnrollmentResponse,
     LearningModuleResponse,
     LearningPathResponse,
+    LinkedCourseResponse,
     ModuleGateResponse,
     ModuleProgressResponse,
     MyLearningStateResponse,
@@ -214,6 +215,9 @@ def _module_response(m: LearningModule) -> LearningModuleResponse:
         icon=m.icon,
         topics=list(m.topics),
         course_slugs=list(m.course_slugs),
+        courses=[
+            LinkedCourseResponse(slug=c.slug, title=c.title, level=c.level) for c in m.courses
+        ],
     )
 
 

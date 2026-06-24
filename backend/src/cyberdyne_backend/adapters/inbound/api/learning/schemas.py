@@ -17,6 +17,12 @@ class _CamelModel(BaseModel):
     )
 
 
+class LinkedCourseResponse(_CamelModel):
+    slug: str
+    title: str
+    level: str
+
+
 class LearningModuleResponse(_CamelModel):
     slug: str
     title: str
@@ -28,6 +34,9 @@ class LearningModuleResponse(_CamelModel):
     topics: list[str]
     # Courses this stage bundles (empty for legacy self-reported modules).
     course_slugs: list[str] = []
+    # Resolved course display cards for course_slugs (slug/title/level),
+    # locale-aware; empty when no catalogue reader resolved them.
+    courses: list[LinkedCourseResponse] = []
 
 
 class LearningPathResponse(_CamelModel):

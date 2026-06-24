@@ -34,6 +34,7 @@ from cyberdyne_backend.domain.learning import (
     new_path,
     new_progress,
     next_unlocked_module,
+    with_courses,
 )
 
 
@@ -93,9 +94,22 @@ async def _derived_progress_map(
 @dataclass(slots=True)
 class ListModules:
     repo: LearningRepository
+    # Optional courses reader: when present, each stage's ``course_slugs`` are
+    # resolved to ``LinkedCourse`` display cards (locale-aware) so the catalogue
+    # can render the courses in a module without N extra calls.
+    course_reader: CourseLinkReader | None = None
 
     async def execute(self, *, locale: str = "en") -> list[LearningModule]:
-        return await self.repo.list_modules(locale=locale)
+        modules = await self.repo.list_modules(locale=locale)
+        if self.course_reader is None:
+            return modules
+        cards = await self.course_reader.course_cards(locale=locale)
+        return [
+            with_courses(m, tuple(cards[s] for s in m.course_slugs if s in cards))
+            if m.course_slugs
+            else m
+            for m in modules
+        ]
 
 
 @dataclass(slots=True)

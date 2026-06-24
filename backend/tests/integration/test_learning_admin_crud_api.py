@@ -204,9 +204,13 @@ def test_module_can_link_real_courses(admin_client: TestClient) -> None:
     assert resp.status_code == 201, resp.text
     assert resp.json()["courseSlugs"] == [course_slug]
 
-    # Public catalogue exposes the linkage.
+    # Public catalogue exposes the linkage AND the resolved course cards
+    # (slug/title/level) so the app can render the courses in a stage.
     public = {m["slug"]: m for m in admin_client.get("/api/v1/learning/modules").json()}
     assert public["stage-1"]["courseSlugs"] == [course_slug]
+    assert public["stage-1"]["courses"] == [
+        {"slug": course_slug, "title": "Linkable Course", "level": "Beginner"}
+    ]
 
 
 def test_module_linking_unknown_course_rejected(admin_client: TestClient) -> None:
