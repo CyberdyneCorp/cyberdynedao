@@ -118,6 +118,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import embedded_basics a
 from cyberdyne_backend.application.courses.seed_quizzes import (
     embedded_intermediate as _embedded_intermediate,
 )
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    english_brazil_advanced as _english_brazil_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    english_brazil_basics as _english_brazil_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    english_brazil_intermediate as _english_brazil_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import fpga_advanced as _fpga_advanced
 from cyberdyne_backend.application.courses.seed_quizzes import fpga_basics as _fpga_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -364,6 +373,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "embedded-advanced": _embedded_advanced.QUIZ,
     "embedded-basics": _embedded_basics.QUIZ,
     "embedded-intermediate": _embedded_intermediate.QUIZ,
+    "english-br-advanced": _english_brazil_advanced.QUIZ,
+    "english-br-basics": _english_brazil_basics.QUIZ,
+    "english-br-intermediate": _english_brazil_intermediate.QUIZ,
     "fpga-advanced": _fpga_advanced.QUIZ,
     "fpga-basics": _fpga_basics.QUIZ,
     "fpga-intermediate": _fpga_intermediate.QUIZ,

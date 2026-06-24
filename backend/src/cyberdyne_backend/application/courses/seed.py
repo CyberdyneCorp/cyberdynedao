@@ -46,6 +46,7 @@ from cyberdyne_backend.application.courses.seed_electromagnetics import ELECTROM
 from cyberdyne_backend.application.courses.seed_electronics import ELECTRONICS_COURSES
 from cyberdyne_backend.application.courses.seed_embedded import EMBEDDED_COURSES
 from cyberdyne_backend.application.courses.seed_emc import EMC_COURSES
+from cyberdyne_backend.application.courses.seed_english_brazil import ENGLISH_BRAZIL_COURSES
 from cyberdyne_backend.application.courses.seed_estimation import ESTIMATION_COURSES
 from cyberdyne_backend.application.courses.seed_fpga import FPGA_COURSES
 from cyberdyne_backend.application.courses.seed_git import GIT_COURSES
@@ -1232,6 +1233,7 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *SOFTWARE_QUALITY_COURSES,
     *COMPUTATIONAL_THINKING_COURSES,
     *TECHNICAL_ENGLISH_COURSES,
+    *ENGLISH_BRAZIL_COURSES,
 )
 
 

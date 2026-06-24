@@ -151,7 +151,11 @@ def category_slug_for(slug: str) -> str | None:
         return "algorithms"
     if _EE_RE.match(slug):
         return "electronic-engineering"
-    if slug in ("matlab-basics", "python-course") or slug.startswith("technical-english-"):
+    if (
+        slug in ("matlab-basics", "python-course")
+        or slug.startswith("technical-english-")
+        or slug.startswith("english-br-")
+    ):
         return "foundations"
     return None
 
