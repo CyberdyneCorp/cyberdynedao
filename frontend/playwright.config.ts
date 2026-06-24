@@ -24,7 +24,13 @@ export default defineConfig({
 	expect: { timeout: 7_000 },
 	fullyParallel: true,
 	forbidOnly: !!process.env.CI,
-	retries: process.env.CI ? 1 : 0,
+	// Cap CI concurrency: on the shared runner, too many parallel WebKit contexts
+	// starve the CPU and the heaviest renders (the larger iPad projects) blow the
+	// 10s interaction timeout — a contention flake, not a real layout bug (issue
+	// #208; the same specs pass locally with more cores). Two workers keeps the
+	// runner from saturating while staying reasonably fast.
+	workers: process.env.CI ? 2 : undefined,
+	retries: process.env.CI ? 2 : 0,
 	reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : [['list'], ['html', { open: 'never' }]],
 	use: {
 		baseURL,
