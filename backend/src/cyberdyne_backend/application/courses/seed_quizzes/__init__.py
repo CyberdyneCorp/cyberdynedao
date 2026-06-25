@@ -15,6 +15,9 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
     algorithms_intermediate as _algorithms_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    algorithms_logic_computing as _algorithms_logic_computing,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     analog_ic_advanced as _analog_ic_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import analog_ic_basics as _analog_ic_basics
@@ -344,6 +347,7 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "algorithms-advanced": _algorithms_advanced.QUIZ,
     "algorithms-basics": _algorithms_basics.QUIZ,
     "algorithms-intermediate": _algorithms_intermediate.QUIZ,
+    "algorithms-logic-computing": _algorithms_logic_computing.QUIZ,
     "analog-ic-advanced": _analog_ic_advanced.QUIZ,
     "analog-ic-basics": _analog_ic_basics.QUIZ,
     "analog-ic-intermediate": _analog_ic_intermediate.QUIZ,

@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 214
+        assert len(summary) == 215
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -344,6 +344,7 @@ class TestSeedCourses:
             "software-architecture-basics",
             "software-architecture-intermediate",
             "software-architecture-advanced",
+            "algorithms-logic-computing",
         }
         for course in ACADEMY_COURSES:
             assert course.lessons  # non-empty
@@ -754,6 +755,38 @@ class TestSeedCourses:
         )
         for needle in ("empurrar", "puxar", "biblioteca", "falso"):
             assert needle in basics_body, f"english-br-basics missing pt marker {needle!r}"
+
+    def test_computing_foundations_is_a_single_undecidability_course(self) -> None:
+        from cyberdyne_backend.application.courses.seed_computing_foundations import (
+            COMPUTING_FOUNDATIONS_COURSES,
+        )
+        from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
+
+        # A SINGLE course (no Basics/Intermediate/Advanced split).
+        assert len(COMPUTING_FOUNDATIONS_COURSES) == 1
+        course = COMPUTING_FOUNDATIONS_COURSES[0]
+        assert course.slug == "algorithms-logic-computing"
+        assert course.level == "Beginner"
+        assert {le.lesson_type for le in course.lessons} == {"text"}
+        body = "\n".join(le.text_body or "" for le in course.lessons)
+        assert body.count("```mermaid") >= 5  # diagram-driven interactivity
+        assert "[[keep]]" not in body  # translatable technical course
+        # The commissioned themes are covered.
+        for needle in (
+            "Entscheidungsproblem",
+            "Halting Problem",
+            "Turing machine",
+            "Rice's theorem",
+            "Busy Beaver",
+            "undecidable",
+        ):
+            assert needle in body, f"computing-foundations missing {needle!r}"
+        # A checkpoint quiz for every lesson + a final.
+        assert course.slug in QUIZ_REGISTRY
+        spec = QUIZ_REGISTRY[course.slug]
+        assert spec.final
+        content_titles = {le.title for le in course.lessons if le.lesson_type == "text"}
+        assert set(spec.per_lesson) == content_titles
 
     def test_software_architecture_track_is_uml_and_diagram_driven(self) -> None:
         from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY

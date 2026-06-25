@@ -32,6 +32,9 @@ from cyberdyne_backend.application.courses.seed_comparch import COMPARCH_COURSES
 from cyberdyne_backend.application.courses.seed_computational_thinking import (
     COMPUTATIONAL_THINKING_COURSES,
 )
+from cyberdyne_backend.application.courses.seed_computing_foundations import (
+    COMPUTING_FOUNDATIONS_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_concurrency import CONCURRENCY_COURSES
 from cyberdyne_backend.application.courses.seed_control import CONTROL_COURSES
 from cyberdyne_backend.application.courses.seed_csharp import CSHARP_COURSES
@@ -1238,6 +1241,7 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *SOFTWARE_ARCHITECTURE_COURSES,
     *SOFTWARE_QUALITY_COURSES,
     *COMPUTATIONAL_THINKING_COURSES,
+    *COMPUTING_FOUNDATIONS_COURSES,
     *TECHNICAL_ENGLISH_COURSES,
     *ENGLISH_BRAZIL_COURSES,
     *DJANGO_COURSES,
