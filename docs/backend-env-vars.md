@@ -34,10 +34,14 @@ dev-only adapters** that must be replaced before a real go-live (see
 
 | Env var | Default | Notes |
 |---------|---------|-------|
-| `CYBERDYNE_AUTH_BASE_URL` | `https://auth.backend.coolify.cyberdynecorp.ai` | Upstream auth root (RFC 7662 introspection + profile). |
-| `CYBERDYNE_AUTH_INTROSPECTION_TTL_S` | `30` | Introspection cache TTL. |
+| `CYBERDYNE_AUTH_BASE_URL` | `https://auth.backend.coolify.cyberdynecorp.ai` | Upstream auth root (JWKS + `/users/me` profile). |
+| `CYBERDYNE_AUTH_JWKS_PATH` | `/.well-known/jwks.json` | Path (under base URL) of the public signing keys used to verify RS256 access tokens. |
+| `CYBERDYNE_AUTH_ACCEPTED_ISSUERS` | `cyberdyne-auth https://auth.backend.coolify.cyberdynecorp.ai` | Space-separated `iss` values trusted on access tokens. Two are accepted while CyberdyneAuth's token `iss` and OIDC discovery issuer are being aligned (CyberdyneAuth#47). |
+| `CYBERDYNE_AUTH_TOKEN_LEEWAY_S` | `60` | Clock-skew tolerance for `exp`/`iat`/`nbf`. |
+| `CYBERDYNE_AUTH_JWKS_MIN_REFRESH_S` | `10.0` | Minimum seconds between JWKS re-fetches triggered by an unknown `kid`. |
+| `CYBERDYNE_AUTH_INTROSPECTION_TTL_S` | `30` | Verified-token cache TTL (token → principal). |
 | `CYBERDYNE_AUTH_PROFILE_TTL_S` | `60` | `/users/me` profile cache TTL. |
-| `CYBERDYNE_AUTH_REQUEST_TIMEOUT_S` | `5.0` | |
+| `CYBERDYNE_AUTH_REQUEST_TIMEOUT_S` | `5.0` | Timeout for the JWKS / profile HTTP calls. |
 | `CYBERDYNE_AUTH_CLIENT_ID` | _(unset)_ | Client-credentials for this backend's own outbound calls (chat → CyberRAG, NFT-tier). |
 | `CYBERDYNE_AUTH_CLIENT_SECRET` | _(unset)_ | 🔒 secret. |
 | `CYBERDYNE_AUTH_OAUTH_SCOPES` | `""` | |

@@ -66,9 +66,18 @@ class AuthMiddleware(BaseHTTPMiddleware):
     """Resolves a principal per request and stashes it on ``request.state``.
 
     On a *valid* token: ``request.state.principal`` is the resolved
-    principal. On *missing* token: ``request.state.principal`` is None
-    (route decides whether to allow). On an *invalid* token: returns
-    401 directly. On an *unavailable upstream*: returns 503.
+    principal. On *missing* or *invalid* token: ``request.state.principal``
+    is None and the request proceeds — the route's guard decides whether
+    to allow it. On an *unavailable upstream* (JWKS unreachable with no
+    cached key): returns 503.
+
+    The middleware *resolves*, it doesn't *enforce*. An invalid token is
+    treated like no token rather than a hard 401 so that public endpoints
+    keep working when a stale token rides along (e.g. the SvelteKit course
+    catalogue auto-attaches the bearer to every request). Protected routes
+    still reject anonymous callers via ``require_principal`` (401), which
+    is what the iOS client keys its token-refresh on — so the refresh flow
+    is preserved while public reads no longer break on a stale token.
     """
 
     def __init__(self, app: object, auth_port: AuthPort) -> None:
@@ -86,12 +95,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
         try:
             principal = await self._auth_port.introspect(token)
-        except InvalidTokenError:
-            return Response(
-                content='{"detail":"invalid token"}',
-                status_code=401,
-                media_type="application/json",
-            )
+        except InvalidTokenError as exc:
+            logger.debug("ignoring invalid token, proceeding anonymously: %s", exc)
+            request.state.principal = None
+            return await call_next(request)
         except AuthServiceUnavailableError as exc:
             logger.warning("auth upstream unavailable: %s", exc)
             return Response(
