@@ -43,6 +43,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 from cyberdyne_backend.application.courses.seed_quizzes import c_basics as _c_basics
 from cyberdyne_backend.application.courses.seed_quizzes import c_intermediate as _c_intermediate
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    circuit_analysis_advanced as _circuit_analysis_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    circuit_analysis_basics as _circuit_analysis_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    circuit_analysis_intermediate as _circuit_analysis_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     comparch_advanced as _comparch_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import comparch_basics as _comparch_basics
@@ -69,6 +78,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import csharp_advanced a
 from cyberdyne_backend.application.courses.seed_quizzes import csharp_basics as _csharp_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
     csharp_intermediate as _csharp_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    data_converters_advanced as _data_converters_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    data_converters_basics as _data_converters_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    data_converters_intermediate as _data_converters_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     digital_comms_advanced as _digital_comms_advanced,
@@ -134,6 +152,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     english_brazil_intermediate as _english_brazil_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    filter_design_advanced as _filter_design_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    filter_design_basics as _filter_design_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    filter_design_intermediate as _filter_design_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import fpga_advanced as _fpga_advanced
 from cyberdyne_backend.application.courses.seed_quizzes import fpga_basics as _fpga_basics
@@ -245,6 +272,11 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 from cyberdyne_backend.application.courses.seed_quizzes import rf_comms_basics as _rf_comms_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
     rf_comms_intermediate as _rf_comms_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import rfic_advanced as _rfic_advanced
+from cyberdyne_backend.application.courses.seed_quizzes import rfic_basics as _rfic_basics
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    rfic_intermediate as _rfic_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     robotics_advanced as _robotics_advanced,
@@ -370,6 +402,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "blockchain-beyond-basics": _blockchain_beyond_basics.QUIZ,
     "c-basics": _c_basics.QUIZ,
     "c-intermediate": _c_intermediate.QUIZ,
+    "circuit-analysis-advanced": _circuit_analysis_advanced.QUIZ,
+    "circuit-analysis-basics": _circuit_analysis_basics.QUIZ,
+    "circuit-analysis-intermediate": _circuit_analysis_intermediate.QUIZ,
     "comparch-advanced": _comparch_advanced.QUIZ,
     "comparch-basics": _comparch_basics.QUIZ,
     "comparch-intermediate": _comparch_intermediate.QUIZ,
@@ -384,6 +419,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "csharp-advanced": _csharp_advanced.QUIZ,
     "csharp-basics": _csharp_basics.QUIZ,
     "csharp-intermediate": _csharp_intermediate.QUIZ,
+    "data-converters-advanced": _data_converters_advanced.QUIZ,
+    "data-converters-basics": _data_converters_basics.QUIZ,
+    "data-converters-intermediate": _data_converters_intermediate.QUIZ,
     "digital-comms-advanced": _digital_comms_advanced.QUIZ,
     "digital-comms-basics": _digital_comms_basics.QUIZ,
     "digital-comms-intermediate": _digital_comms_intermediate.QUIZ,
@@ -411,6 +449,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "english-br-advanced": _english_brazil_advanced.QUIZ,
     "english-br-basics": _english_brazil_basics.QUIZ,
     "english-br-intermediate": _english_brazil_intermediate.QUIZ,
+    "filter-design-advanced": _filter_design_advanced.QUIZ,
+    "filter-design-basics": _filter_design_basics.QUIZ,
+    "filter-design-intermediate": _filter_design_intermediate.QUIZ,
     "fpga-advanced": _fpga_advanced.QUIZ,
     "fpga-basics": _fpga_basics.QUIZ,
     "fpga-intermediate": _fpga_intermediate.QUIZ,
@@ -463,6 +504,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "rails-advanced": _rails_advanced.QUIZ,
     "rails-basics": _rails_basics.QUIZ,
     "rails-intermediate": _rails_intermediate.QUIZ,
+    "rfic-advanced": _rfic_advanced.QUIZ,
+    "rfic-basics": _rfic_basics.QUIZ,
+    "rfic-intermediate": _rfic_intermediate.QUIZ,
     "rf-comms-advanced": _rf_comms_advanced.QUIZ,
     "rf-comms-basics": _rf_comms_basics.QUIZ,
     "rf-comms-intermediate": _rf_comms_intermediate.QUIZ,
