@@ -41,6 +41,7 @@ from cyberdyne_backend.application.courses.seed_devops import DEVOPS_COURSES
 from cyberdyne_backend.application.courses.seed_digital_comms import DIGITAL_COMMS_COURSES
 from cyberdyne_backend.application.courses.seed_digital_logic import DIGITAL_LOGIC_COURSES
 from cyberdyne_backend.application.courses.seed_distributed import DISTRIBUTED_COURSES
+from cyberdyne_backend.application.courses.seed_django import DJANGO_COURSES
 from cyberdyne_backend.application.courses.seed_dsp import DSP_COURSES
 from cyberdyne_backend.application.courses.seed_electromagnetics import ELECTROMAGNETICS_COURSES
 from cyberdyne_backend.application.courses.seed_electronics import ELECTRONICS_COURSES
@@ -67,6 +68,7 @@ from cyberdyne_backend.application.courses.seed_physics import PHYSICS_COURSES
 from cyberdyne_backend.application.courses.seed_power_electronics import POWER_ELECTRONICS_COURSES
 from cyberdyne_backend.application.courses.seed_power_systems import POWER_SYSTEMS_COURSES
 from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
+from cyberdyne_backend.application.courses.seed_rails import RAILS_COURSES
 from cyberdyne_backend.application.courses.seed_rf_comms import RF_COMMS_COURSES
 from cyberdyne_backend.application.courses.seed_robotics import ROBOTICS_COURSES
 from cyberdyne_backend.application.courses.seed_security import SECURITY_COURSES
@@ -1234,6 +1236,8 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *COMPUTATIONAL_THINKING_COURSES,
     *TECHNICAL_ENGLISH_COURSES,
     *ENGLISH_BRAZIL_COURSES,
+    *DJANGO_COURSES,
+    *RAILS_COURSES,
 )
 
 
