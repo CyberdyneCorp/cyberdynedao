@@ -125,9 +125,7 @@ class Container:
             # JWKS. Introspection now requires the caller to authenticate,
             # so local verification is both correct and cheaper than a
             # per-request upstream round-trip (issue #222).
-            accepted_issuers = frozenset(
-                self._settings.cyberdyne_auth_accepted_issuers.split()
-            )
+            accepted_issuers = frozenset(self._settings.cyberdyne_auth_accepted_issuers.split())
             inner = JwksTokenVerifier(
                 base_url=str(self._settings.cyberdyne_auth_base_url),
                 http_client=self.http_client,

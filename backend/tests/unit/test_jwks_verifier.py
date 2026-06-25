@@ -109,9 +109,7 @@ class TestHappyPath:
     async def test_service_token_resolves_service_principal(self) -> None:
         key = _keypair()
         verifier, _ = _verifier([_jwk(key)])
-        token = _sign(
-            key, type="service", sub="cyb_chat_x", client_id="cyb_chat_x"
-        )
+        token = _sign(key, type="service", sub="cyb_chat_x", client_id="cyb_chat_x")
         principal = await verifier.introspect(token)
         assert isinstance(principal, ServicePrincipal)
         assert principal.client_id == "cyb_chat_x"

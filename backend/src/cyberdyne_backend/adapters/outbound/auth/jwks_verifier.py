@@ -145,9 +145,7 @@ class JwksTokenVerifier:
             self._fail_or_keep_cache(f"transport error fetching JWKS: {exc}", exc)
             return
         if response.status_code != 200:
-            self._fail_or_keep_cache(
-                f"JWKS endpoint returned {response.status_code}", None
-            )
+            self._fail_or_keep_cache(f"JWKS endpoint returned {response.status_code}", None)
             return
 
         try:
