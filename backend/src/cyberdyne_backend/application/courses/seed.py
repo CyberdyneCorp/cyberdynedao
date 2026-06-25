@@ -28,6 +28,7 @@ from cyberdyne_backend.application.courses.seed_algorithms import ALGORITHMS_COU
 from cyberdyne_backend.application.courses.seed_analog_ic import ANALOG_IC_COURSES
 from cyberdyne_backend.application.courses.seed_antennas import ANTENNAS_COURSES
 from cyberdyne_backend.application.courses.seed_battery import BATTERY_COURSES
+from cyberdyne_backend.application.courses.seed_circuit_analysis import CIRCUIT_ANALYSIS_COURSES
 from cyberdyne_backend.application.courses.seed_comparch import COMPARCH_COURSES
 from cyberdyne_backend.application.courses.seed_computational_thinking import (
     COMPUTATIONAL_THINKING_COURSES,
@@ -38,6 +39,7 @@ from cyberdyne_backend.application.courses.seed_computing_foundations import (
 from cyberdyne_backend.application.courses.seed_concurrency import CONCURRENCY_COURSES
 from cyberdyne_backend.application.courses.seed_control import CONTROL_COURSES
 from cyberdyne_backend.application.courses.seed_csharp import CSHARP_COURSES
+from cyberdyne_backend.application.courses.seed_data_converters import DATA_CONVERTERS_COURSES
 from cyberdyne_backend.application.courses.seed_databases import DATABASE_COURSES
 from cyberdyne_backend.application.courses.seed_dataeng import DATAENG_COURSES
 from cyberdyne_backend.application.courses.seed_devops import DEVOPS_COURSES
@@ -52,6 +54,7 @@ from cyberdyne_backend.application.courses.seed_embedded import EMBEDDED_COURSES
 from cyberdyne_backend.application.courses.seed_emc import EMC_COURSES
 from cyberdyne_backend.application.courses.seed_english_brazil import ENGLISH_BRAZIL_COURSES
 from cyberdyne_backend.application.courses.seed_estimation import ESTIMATION_COURSES
+from cyberdyne_backend.application.courses.seed_filter_design import FILTER_DESIGN_COURSES
 from cyberdyne_backend.application.courses.seed_fpga import FPGA_COURSES
 from cyberdyne_backend.application.courses.seed_git import GIT_COURSES
 from cyberdyne_backend.application.courses.seed_hwverification import HW_VERIFICATION_COURSES
@@ -76,6 +79,7 @@ from cyberdyne_backend.application.courses.seed_prob_stats_python import (
 from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
 from cyberdyne_backend.application.courses.seed_rails import RAILS_COURSES
 from cyberdyne_backend.application.courses.seed_rf_comms import RF_COMMS_COURSES
+from cyberdyne_backend.application.courses.seed_rfic import RFIC_COURSES
 from cyberdyne_backend.application.courses.seed_robotics import ROBOTICS_COURSES
 from cyberdyne_backend.application.courses.seed_security import SECURITY_COURSES
 from cyberdyne_backend.application.courses.seed_semiconductors import SEMICONDUCTOR_COURSES
@@ -1242,6 +1246,10 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *FPGA_COURSES,
     *POWER_SYSTEMS_COURSES,
     *PROB_STATS_PYTHON_COURSES,
+    *CIRCUIT_ANALYSIS_COURSES,
+    *FILTER_DESIGN_COURSES,
+    *DATA_CONVERTERS_COURSES,
+    *RFIC_COURSES,
     *SOFTWARE_ARCHITECTURE_COURSES,
     *SOFTWARE_QUALITY_COURSES,
     *COMPUTATIONAL_THINKING_COURSES,
