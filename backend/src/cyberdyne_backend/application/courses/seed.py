@@ -70,6 +70,9 @@ from cyberdyne_backend.application.courses.seed_photonics import PHOTONICS_COURS
 from cyberdyne_backend.application.courses.seed_physics import PHYSICS_COURSES
 from cyberdyne_backend.application.courses.seed_power_electronics import POWER_ELECTRONICS_COURSES
 from cyberdyne_backend.application.courses.seed_power_systems import POWER_SYSTEMS_COURSES
+from cyberdyne_backend.application.courses.seed_prob_stats_python import (
+    PROB_STATS_PYTHON_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
 from cyberdyne_backend.application.courses.seed_rails import RAILS_COURSES
 from cyberdyne_backend.application.courses.seed_rf_comms import RF_COMMS_COURSES
@@ -1238,6 +1241,7 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *ESTIMATION_COURSES,
     *FPGA_COURSES,
     *POWER_SYSTEMS_COURSES,
+    *PROB_STATS_PYTHON_COURSES,
     *SOFTWARE_ARCHITECTURE_COURSES,
     *SOFTWARE_QUALITY_COURSES,
     *COMPUTATIONAL_THINKING_COURSES,

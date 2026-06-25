@@ -224,6 +224,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 from cyberdyne_backend.application.courses.seed_quizzes import (
     power_systems_intermediate as _power_systems_intermediate,
 )
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    prob_stats_python_advanced as _prob_stats_python_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    prob_stats_python_basics as _prob_stats_python_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    prob_stats_python_intermediate as _prob_stats_python_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import python_course as _python_course
 from cyberdyne_backend.application.courses.seed_quizzes import rails_advanced as _rails_advanced
 from cyberdyne_backend.application.courses.seed_quizzes import rails_basics as _rails_basics
@@ -447,6 +456,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "power-systems-advanced": _power_systems_advanced.QUIZ,
     "power-systems-basics": _power_systems_basics.QUIZ,
     "power-systems-intermediate": _power_systems_intermediate.QUIZ,
+    "prob-stats-python-advanced": _prob_stats_python_advanced.QUIZ,
+    "prob-stats-python-basics": _prob_stats_python_basics.QUIZ,
+    "prob-stats-python-intermediate": _prob_stats_python_intermediate.QUIZ,
     "python-course": _python_course.QUIZ,
     "rails-advanced": _rails_advanced.QUIZ,
     "rails-basics": _rails_basics.QUIZ,
