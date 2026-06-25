@@ -112,7 +112,7 @@ QUIZ = CourseQuiz(
             q(
                 "What does a low-shelf filter do?",
                 (
-                    opt("Boosts or cuts everything below a corner frequency"),
+                    opt("Boosts or cuts everything below a corner frequency", correct=True),
                     opt("Removes a single narrow frequency"),
                     opt("Boosts a band around a centre frequency only"),
                     opt("Inverts the entire spectrum"),

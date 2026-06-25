@@ -212,7 +212,7 @@ QUIZ = CourseQuiz(
             q(
                 "Why is the torque (current) loop placed inside the speed loop?",
                 (
-                    opt("Because torque responds faster than speed"),
+                    opt("Because torque responds faster than speed", correct=True),
                     opt("Because torque is slower than speed"),
                     opt("Because the speed loop protects the switches"),
                     opt("Because the inverter requires it physically"),

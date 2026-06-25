@@ -127,6 +127,25 @@ class TestSeedCourses:
         assert intro_quiz.lesson_type.value == "quiz"  # untouched
         assert intro_quiz.text_body is None
 
+    def test_every_registry_quiz_question_has_exactly_one_correct_option(self) -> None:
+        # Regression: a quiz question with zero (or >1) correct options passes the
+        # in-memory seed path but fails the domain validator (new_quiz) at real-DB
+        # seed time, which aborts seed_academy and silently blocks every later
+        # course from seeding. Guard the whole registry here.
+        from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
+
+        offenders: list[str] = []
+        for slug, quiz in QUIZ_REGISTRY.items():
+            groups = [*quiz.per_lesson.items(), ("<final>", quiz.final)]
+            for lesson, questions in groups:
+                for idx, question in enumerate(questions):
+                    n_correct = sum(1 for o in question.options if o.is_correct)
+                    if n_correct != 1:
+                        offenders.append(f"{slug}/{lesson}/q{idx}: {n_correct} correct")
+                    if len(question.options) < 2:
+                        offenders.append(f"{slug}/{lesson}/q{idx}: <2 options")
+        assert not offenders, "invalid quiz questions:\n" + "\n".join(offenders)
+
     def test_curated_content_covers_all_courses(self) -> None:
         slugs = {c.slug for c in ACADEMY_COURSES}
         assert slugs == {
