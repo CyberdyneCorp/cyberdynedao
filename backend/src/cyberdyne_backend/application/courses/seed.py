@@ -24,6 +24,7 @@ from datetime import datetime
 from uuid import UUID
 
 from cyberdyne_backend.application.courses.seed_adaptive_dsp import ADAPTIVE_DSP_COURSES
+from cyberdyne_backend.application.courses.seed_advanced_control import ADVANCED_CONTROL_COURSES
 from cyberdyne_backend.application.courses.seed_aerial import AERIAL_COURSES
 from cyberdyne_backend.application.courses.seed_algorithms import ALGORITHMS_COURSES
 from cyberdyne_backend.application.courses.seed_analog_comms import ANALOG_COMMS_COURSES
@@ -52,6 +53,7 @@ from cyberdyne_backend.application.courses.seed_digital_logic import DIGITAL_LOG
 from cyberdyne_backend.application.courses.seed_distributed import DISTRIBUTED_COURSES
 from cyberdyne_backend.application.courses.seed_django import DJANGO_COURSES
 from cyberdyne_backend.application.courses.seed_dsp import DSP_COURSES
+from cyberdyne_backend.application.courses.seed_electric_drives import ELECTRIC_DRIVES_COURSES
 from cyberdyne_backend.application.courses.seed_electromagnetics import ELECTROMAGNETICS_COURSES
 from cyberdyne_backend.application.courses.seed_electronics import ELECTRONICS_COURSES
 from cyberdyne_backend.application.courses.seed_embedded import EMBEDDED_COURSES
@@ -62,6 +64,7 @@ from cyberdyne_backend.application.courses.seed_fiber_optics import FIBER_OPTICS
 from cyberdyne_backend.application.courses.seed_filter_design import FILTER_DESIGN_COURSES
 from cyberdyne_backend.application.courses.seed_fpga import FPGA_COURSES
 from cyberdyne_backend.application.courses.seed_git import GIT_COURSES
+from cyberdyne_backend.application.courses.seed_high_voltage import HIGH_VOLTAGE_COURSES
 from cyberdyne_backend.application.courses.seed_hwverification import HW_VERIFICATION_COURSES
 from cyberdyne_backend.application.courses.seed_iac import IAC_COURSES
 from cyberdyne_backend.application.courses.seed_image_processing import IMAGE_PROCESSING_COURSES
@@ -78,6 +81,7 @@ from cyberdyne_backend.application.courses.seed_pcb import PCB_COURSES
 from cyberdyne_backend.application.courses.seed_photonics import PHOTONICS_COURSES
 from cyberdyne_backend.application.courses.seed_physics import PHYSICS_COURSES
 from cyberdyne_backend.application.courses.seed_power_electronics import POWER_ELECTRONICS_COURSES
+from cyberdyne_backend.application.courses.seed_power_protection import POWER_PROTECTION_COURSES
 from cyberdyne_backend.application.courses.seed_power_systems import POWER_SYSTEMS_COURSES
 from cyberdyne_backend.application.courses.seed_prob_stats_python import (
     PROB_STATS_PYTHON_COURSES,
@@ -85,6 +89,7 @@ from cyberdyne_backend.application.courses.seed_prob_stats_python import (
 from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
 from cyberdyne_backend.application.courses.seed_radar import RADAR_COURSES
 from cyberdyne_backend.application.courses.seed_rails import RAILS_COURSES
+from cyberdyne_backend.application.courses.seed_renewable_ev import RENEWABLE_EV_COURSES
 from cyberdyne_backend.application.courses.seed_rf_comms import RF_COMMS_COURSES
 from cyberdyne_backend.application.courses.seed_rfic import RFIC_COURSES
 from cyberdyne_backend.application.courses.seed_robotics import ROBOTICS_COURSES
@@ -93,6 +98,7 @@ from cyberdyne_backend.application.courses.seed_semiconductors import SEMICONDUC
 from cyberdyne_backend.application.courses.seed_sensors import SENSORS_COURSES
 from cyberdyne_backend.application.courses.seed_signal_integrity import SIGNAL_INTEGRITY_COURSES
 from cyberdyne_backend.application.courses.seed_signals import SIGNALS_COURSES
+from cyberdyne_backend.application.courses.seed_smart_grid import SMART_GRID_COURSES
 from cyberdyne_backend.application.courses.seed_software_architecture import (
     SOFTWARE_ARCHITECTURE_COURSES,
 )
@@ -1270,6 +1276,12 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *IMAGE_PROCESSING_COURSES,
     *AUDIO_PROCESSING_COURSES,
     *ADAPTIVE_DSP_COURSES,
+    *ADVANCED_CONTROL_COURSES,
+    *ELECTRIC_DRIVES_COURSES,
+    *HIGH_VOLTAGE_COURSES,
+    *POWER_PROTECTION_COURSES,
+    *SMART_GRID_COURSES,
+    *RENEWABLE_EV_COURSES,
     *SOFTWARE_ARCHITECTURE_COURSES,
     *SOFTWARE_QUALITY_COURSES,
     *COMPUTATIONAL_THINKING_COURSES,
