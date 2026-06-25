@@ -100,6 +100,10 @@ _EE_RE = re.compile(
 def category_slug_for(slug: str) -> str | None:
     """The default category slug for a course slug (mirror of the frontend
     ``courseTopic``), or ``None`` for the 'Other' bucket."""
+    # Foundational CS-theory course (computability/logic) — placed under
+    # Foundations, ahead of the generic ``algorithms`` prefix match below.
+    if slug == "algorithms-logic-computing":
+        return "foundations"
     if slug.startswith("comparch-") or slug.startswith("sysverilog-"):
         return "computer-architecture"
     if slug.startswith("ml-") or slug.startswith("transformers"):
