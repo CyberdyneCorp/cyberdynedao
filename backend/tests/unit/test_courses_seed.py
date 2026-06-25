@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 211
+        assert len(summary) == 214
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -341,6 +341,9 @@ class TestSeedCourses:
             "rails-basics",
             "rails-intermediate",
             "rails-advanced",
+            "software-architecture-basics",
+            "software-architecture-intermediate",
+            "software-architecture-advanced",
         }
         for course in ACADEMY_COURSES:
             assert course.lessons  # non-empty
@@ -751,6 +754,41 @@ class TestSeedCourses:
         )
         for needle in ("empurrar", "puxar", "biblioteca", "falso"):
             assert needle in basics_body, f"english-br-basics missing pt marker {needle!r}"
+
+    def test_software_architecture_track_is_uml_and_diagram_driven(self) -> None:
+        from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
+        from cyberdyne_backend.application.courses.seed_software_architecture import (
+            SOFTWARE_ARCHITECTURE_COURSES,
+        )
+
+        slugs = {c.slug for c in SOFTWARE_ARCHITECTURE_COURSES}
+        assert slugs == {
+            "software-architecture-basics",
+            "software-architecture-intermediate",
+            "software-architecture-advanced",
+        }
+        assert {c.level for c in SOFTWARE_ARCHITECTURE_COURSES} == {
+            "Beginner",
+            "Intermediate",
+            "Advanced",
+        }
+        all_body = ""
+        for course in SOFTWARE_ARCHITECTURE_COURSES:
+            assert {le.lesson_type for le in course.lessons} == {"text"}
+            assert len(course.lessons) == 6
+            body = "\n".join(le.text_body or "" for le in course.lessons)
+            all_body += body
+            # Diagram-driven subject: many Mermaid diagrams, including UML types.
+            assert body.count("```mermaid") >= 5, f"{course.slug}: too few diagrams"
+            assert "[[keep]]" not in body  # translatable technical course
+            assert course.slug in QUIZ_REGISTRY
+            spec = QUIZ_REGISTRY[course.slug]
+            assert spec.final
+            content_titles = {le.title for le in course.lessons if le.lesson_type == "text"}
+            assert set(spec.per_lesson) == content_titles
+        # The topics the course was commissioned to cover are present.
+        for needle in ("classDiagram", "sequenceDiagram", "MVC", "MVVM", "Hexagonal", "SOLID"):
+            assert needle in all_body, f"software-architecture track missing {needle!r}"
 
     def test_web_framework_tracks_have_code_mermaid_and_quizzes(self) -> None:
         from cyberdyne_backend.application.courses.seed_django import DJANGO_COURSES

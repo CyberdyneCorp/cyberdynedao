@@ -265,6 +265,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
     signals_intermediate as _signals_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    software_architecture_advanced as _software_architecture_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    software_architecture_basics as _software_architecture_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    software_architecture_intermediate as _software_architecture_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     software_quality_advanced as _software_quality_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -455,6 +464,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "signals-advanced": _signals_advanced.QUIZ,
     "signals-basics": _signals_basics.QUIZ,
     "signals-intermediate": _signals_intermediate.QUIZ,
+    "software-architecture-advanced": _software_architecture_advanced.QUIZ,
+    "software-architecture-basics": _software_architecture_basics.QUIZ,
+    "software-architecture-intermediate": _software_architecture_intermediate.QUIZ,
     "software-quality-advanced": _software_quality_advanced.QUIZ,
     "software-quality-basics": _software_quality_basics.QUIZ,
     "software-quality-intermediate": _software_quality_intermediate.QUIZ,

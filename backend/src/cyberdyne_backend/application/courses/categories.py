@@ -124,6 +124,7 @@ def category_slug_for(slug: str) -> str | None:
         slug.startswith("git-")
         or slug.startswith("testing-")
         or slug.startswith("software-quality-")
+        or slug.startswith("software-architecture-")
     ):
         return "software-engineering"
     if slug.startswith("computational-thinking-"):
