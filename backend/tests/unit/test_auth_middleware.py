@@ -67,6 +67,10 @@ def _app(port: FakeAuthPort) -> TestClient:
     def guarded(principal: Annotated[Principal, Depends(require_principal)]) -> dict[str, str]:
         return {"ok": "yes"}
 
+    @app.get("/public")
+    def public() -> dict[str, str]:
+        return {"ok": "public"}
+
     return TestClient(app, raise_server_exceptions=False)
 
 
@@ -95,11 +99,22 @@ def test_cookie_token_is_accepted() -> None:
     assert port.calls == 1
 
 
-def test_invalid_token_is_401() -> None:
+def test_invalid_token_on_guarded_route_is_401() -> None:
+    # An invalid token degrades to anonymous; the guard then 401s.
     port = FakeAuthPort(error=InvalidTokenError("nope"))
     client = _app(port)
     resp = client.get("/guarded", headers={"Authorization": "Bearer bad"})
     assert resp.status_code == 401
+
+
+def test_invalid_token_on_public_route_proceeds_anonymously() -> None:
+    # Regression for issue #222 / "Load failed": a stale/invalid bearer
+    # riding along on a public request must NOT break the endpoint.
+    port = FakeAuthPort(error=InvalidTokenError("nope"))
+    client = _app(port)
+    resp = client.get("/public", headers={"Authorization": "Bearer stale"})
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": "public"}
 
 
 def test_upstream_unavailable_is_503() -> None:

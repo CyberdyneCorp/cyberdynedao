@@ -79,6 +79,26 @@ class Settings(BaseSettings):
     cyberdyne_auth_profile_ttl_s: int = 60
     cyberdyne_auth_request_timeout_s: float = 5.0
 
+    # ── Access-token verification (JWKS) ──────────────────────────────
+    # CyberdyneAuth issues RS256 access tokens and publishes its public
+    # keys via JWKS. We verify tokens locally against those keys (looked
+    # up by ``kid``) instead of calling the introspection endpoint, which
+    # now requires the caller to authenticate. The key set is cached and
+    # re-fetched on an unknown ``kid`` so key rotation doesn't break us.
+    cyberdyne_auth_jwks_path: str = "/.well-known/jwks.json"
+    # Issuers we trust on the ``iss`` claim. CyberdyneAuth currently signs
+    # access tokens with ``iss="cyberdyne-auth"`` while its OIDC discovery
+    # advertises the base URL — accept both so we tolerate either until
+    # the two are aligned upstream (CyberdyneAuth#47).
+    cyberdyne_auth_accepted_issuers: str = (
+        "cyberdyne-auth https://auth.backend.coolify.cyberdynecorp.ai"
+    )
+    # Clock-skew tolerance (seconds) applied to exp/iat/nbf checks.
+    cyberdyne_auth_token_leeway_s: int = 60
+    # Minimum seconds between JWKS re-fetches triggered by an unknown
+    # ``kid`` — a cheap guard against a bad token hammering the endpoint.
+    cyberdyne_auth_jwks_min_refresh_s: float = 10.0
+
     # Client-credentials for this backend's own outbound calls.
     # Optional in v1 because Phase 1 endpoints are public reads; future
     # phases (chat agent calling CyberRAG, NFT-tier lookups) require them.

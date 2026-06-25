@@ -20,6 +20,7 @@ from cyberdyne_backend.domain.auth_identity import (
 )
 from cyberdyne_backend.domain.auth_identity.entities import (
     _parse_scopes,
+    principal_from_access_token,
     principal_from_introspection,
 )
 
@@ -181,6 +182,90 @@ class TestRejection:
     def test_exp_not_an_int_returns_none(self) -> None:
         principal = principal_from_introspection(_base_introspect(exp="never"))
         assert principal is None
+
+
+# ── principal_from_access_token (JWKS-verified JWT claims) ───────────
+
+
+def _access_claims(**overrides: object) -> dict[str, object]:
+    """A decoded RS256 access-token claim set that tests extend.
+
+    Shape mirrors the live CyberdyneAuth access token (issue #222):
+    ``iss="cyberdyne-auth"``, ``type="access"``, ``sub=<user uuid>``,
+    no ``aud``.
+    """
+    claims: dict[str, object] = {
+        "iss": "cyberdyne-auth",
+        "type": "access",
+        "sub": USER_ID,
+        "scope": "content:read",
+        "exp": 4102444800,
+        "iat": 4102441200,
+    }
+    claims.update(overrides)
+    return claims
+
+
+class TestAccessTokenUserMapping:
+    def test_user_token_maps_to_user_principal(self) -> None:
+        principal = principal_from_access_token(_access_claims())
+        assert isinstance(principal, UserPrincipal)
+        assert principal.user_id == UUID(USER_ID)
+        assert principal.scopes == frozenset({"content:read"})
+        assert principal.audience is None
+        assert principal.expires_at == datetime.fromtimestamp(4102444800, tz=UTC)
+
+    def test_scope_as_list_is_accepted(self) -> None:
+        principal = principal_from_access_token(_access_claims(scope=["a", "b"]))
+        assert isinstance(principal, UserPrincipal)
+        assert principal.scopes == frozenset({"a", "b"})
+
+    def test_no_scope_claim_is_empty(self) -> None:
+        claims = _access_claims()
+        del claims["scope"]
+        principal = principal_from_access_token(claims)
+        assert isinstance(principal, UserPrincipal)
+        assert principal.scopes == frozenset()
+
+    def test_username_from_email_claim(self) -> None:
+        principal = principal_from_access_token(_access_claims(email="alice@x.io"))
+        assert isinstance(principal, UserPrincipal)
+        assert principal.username == "alice@x.io"
+
+    @pytest.mark.parametrize("flag_key", ["is_superuser", "is_admin", "is_staff"])
+    def test_admin_flag_sets_is_admin(self, flag_key: str) -> None:
+        principal = principal_from_access_token(_access_claims(**{flag_key: True}))
+        assert isinstance(principal, UserPrincipal)
+        assert principal.is_admin is True
+
+    def test_missing_exp_returns_none(self) -> None:
+        claims = _access_claims()
+        del claims["exp"]
+        assert principal_from_access_token(claims) is None
+
+    def test_non_uuid_sub_returns_none(self) -> None:
+        assert principal_from_access_token(_access_claims(sub="alice")) is None
+
+
+class TestAccessTokenServiceMapping:
+    def test_client_credentials_token_maps_to_service_principal(self) -> None:
+        principal = principal_from_access_token(
+            _access_claims(
+                type="service",
+                sub="cyb_chat_xxxx",
+                client_id="cyb_chat_xxxx",
+                scope="cyberrag:query",
+            )
+        )
+        assert isinstance(principal, ServicePrincipal)
+        assert principal.client_id == "cyb_chat_xxxx"
+        assert principal.scopes == frozenset({"cyberrag:query"})
+
+    def test_client_id_without_username_and_non_uuid_sub_is_service(self) -> None:
+        principal = principal_from_access_token(
+            _access_claims(type=None, sub="cyb_chat_xxxx", client_id="cyb_chat_xxxx")
+        )
+        assert isinstance(principal, ServicePrincipal)
 
 
 # ── Principal union convenience ──────────────────────────────────────

@@ -20,6 +20,8 @@ dependencies = [
     "reportlab>=4.5.1",
     # Ed25519 certificate signing (keypair — for external verifiers).
     "cryptography>=43.0.0",
+    # Local RS256 access-token verification against CyberdyneAuth's JWKS.
+    "pyjwt[crypto]>=2.9.0",
 ]
 
 [project.optional-dependencies]

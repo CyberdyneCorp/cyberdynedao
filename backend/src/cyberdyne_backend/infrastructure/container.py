@@ -11,7 +11,7 @@ import httpx
 
 from cyberdyne_backend.adapters.outbound.access.fake_reader import FakeAccessReader
 from cyberdyne_backend.adapters.outbound.auth.caching_auth_port import CachingAuthPort
-from cyberdyne_backend.adapters.outbound.auth.introspection_client import IntrospectionClient
+from cyberdyne_backend.adapters.outbound.auth.jwks_verifier import JwksTokenVerifier
 from cyberdyne_backend.adapters.outbound.auth.profile_client import CyberdyneAuthProfileClient
 from cyberdyne_backend.adapters.outbound.auth.service_token_provider import ServiceTokenProvider
 from cyberdyne_backend.adapters.outbound.captcha.providers import (
@@ -121,9 +121,18 @@ class Container:
     @property
     def auth_port(self) -> AuthPort:
         if self._auth_port is None:
-            inner = IntrospectionClient(
+            # Verify RS256 access tokens locally against CyberdyneAuth's
+            # JWKS. Introspection now requires the caller to authenticate,
+            # so local verification is both correct and cheaper than a
+            # per-request upstream round-trip (issue #222).
+            accepted_issuers = frozenset(self._settings.cyberdyne_auth_accepted_issuers.split())
+            inner = JwksTokenVerifier(
                 base_url=str(self._settings.cyberdyne_auth_base_url),
                 http_client=self.http_client,
+                accepted_issuers=accepted_issuers,
+                jwks_path=self._settings.cyberdyne_auth_jwks_path,
+                leeway_s=self._settings.cyberdyne_auth_token_leeway_s,
+                jwks_min_refresh_s=self._settings.cyberdyne_auth_jwks_min_refresh_s,
                 timeout_s=self._settings.cyberdyne_auth_request_timeout_s,
             )
             self._auth_port = CachingAuthPort(

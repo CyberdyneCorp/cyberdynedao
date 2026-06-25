@@ -119,6 +119,85 @@ def _parse_scopes(raw: str | None) -> frozenset[str]:
     return frozenset(s for s in raw.split() if s)
 
 
+def _scopes_from_claim(raw: Any) -> frozenset[str]:
+    """Normalize a JWT ``scope`` claim, which may be a space-delimited
+    string (OAuth 2.0) or a JSON array of strings."""
+    if isinstance(raw, str):
+        return _parse_scopes(raw)
+    if isinstance(raw, (list, tuple)):
+        return frozenset(s for s in raw if isinstance(s, str) and s)
+    return frozenset()
+
+
+def principal_from_access_token(claims: dict[str, Any]) -> Principal | None:
+    """Map verified RS256 access-token claims to a domain principal.
+
+    Used by the JWKS verifier, which has already checked the signature,
+    expiry, and issuer — this only translates claims into a principal.
+    Mirrors :func:`principal_from_introspection`: a token with a client
+    identity but no human subject becomes a ``ServicePrincipal``; a token
+    whose ``sub`` is a user UUID becomes a ``UserPrincipal``.
+
+    Returns ``None`` when the claims don't identify either kind (callers
+    turn that into 401).
+    """
+    exp = claims.get("exp")
+    if not isinstance(exp, int):
+        return None
+    expires_at = datetime.fromtimestamp(exp, tz=UTC)
+
+    scopes = _scopes_from_claim(claims.get("scope"))
+    aud = claims.get("aud")
+    audience = aud if isinstance(aud, str) else None
+
+    sub = claims.get("sub")
+    client_id = claims.get("client_id") or claims.get("azp")
+    username = claims.get("username") or claims.get("preferred_username") or claims.get("email")
+    token_type = claims.get("type") or claims.get("token_type")
+
+    # Machine token (client-credentials grant): a client identity and no
+    # human handle, or an explicit non-"access" type. Its ``sub`` is the
+    # client id rather than a user UUID.
+    is_service = bool(client_id) and not username and not _looks_like_uuid(sub)
+    if token_type in {"service", "client"}:
+        is_service = True
+    if is_service:
+        resolved_client_id = client_id if isinstance(client_id, str) else sub
+        if not isinstance(resolved_client_id, str) or not resolved_client_id:
+            return None
+        return ServicePrincipal(
+            client_id=resolved_client_id,
+            scopes=scopes,
+            audience=audience,
+            expires_at=expires_at,
+        )
+
+    if not isinstance(sub, str):
+        return None
+    try:
+        user_id = UUID(sub)
+    except ValueError:
+        return None
+    return UserPrincipal(
+        user_id=user_id,
+        username=username if isinstance(username, str) else None,
+        scopes=scopes,
+        audience=audience,
+        expires_at=expires_at,
+        is_admin=_parse_admin_flag(claims),
+    )
+
+
+def _looks_like_uuid(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        UUID(value)
+    except ValueError:
+        return False
+    return True
+
+
 def principal_from_introspection(payload: dict[str, Any]) -> Principal | None:
     """Map an RFC 7662 ``IntrospectionResponse`` to a domain principal.
 
