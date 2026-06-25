@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 205
+        assert len(summary) == 211
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -335,6 +335,12 @@ class TestSeedCourses:
             "english-br-basics",
             "english-br-intermediate",
             "english-br-advanced",
+            "django-basics",
+            "django-intermediate",
+            "django-advanced",
+            "rails-basics",
+            "rails-intermediate",
+            "rails-advanced",
         }
         for course in ACADEMY_COURSES:
             assert course.lessons  # non-empty
@@ -745,6 +751,35 @@ class TestSeedCourses:
         )
         for needle in ("empurrar", "puxar", "biblioteca", "falso"):
             assert needle in basics_body, f"english-br-basics missing pt marker {needle!r}"
+
+    def test_web_framework_tracks_have_code_mermaid_and_quizzes(self) -> None:
+        from cyberdyne_backend.application.courses.seed_django import DJANGO_COURSES
+        from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
+        from cyberdyne_backend.application.courses.seed_rails import RAILS_COURSES
+
+        tracks = {
+            "django": (DJANGO_COURSES, "```python"),
+            "rails": (RAILS_COURSES, "```ruby"),
+        }
+        for name, (courses, code_fence) in tracks.items():
+            slugs = {c.slug for c in courses}
+            assert slugs == {f"{name}-basics", f"{name}-intermediate", f"{name}-advanced"}
+            assert {c.level for c in courses} == {"Beginner", "Intermediate", "Advanced"}
+            for course in courses:
+                # Standard technical course: text lessons with illustrative code.
+                assert {le.lesson_type for le in course.lessons} == {"text"}
+                assert len(course.lessons) == 6
+                body = "\n".join(le.text_body or "" for le in course.lessons)
+                assert code_fence in body, f"{course.slug}: no {code_fence} block"
+                assert "```mermaid" in body, f"{course.slug}: no mermaid diagram"
+                # Not a language course — must NOT carry do-not-translate markers.
+                assert "[[keep]]" not in body, f"{course.slug}: unexpected keep span"
+                # A checkpoint quiz for every lesson + a final.
+                assert course.slug in QUIZ_REGISTRY
+                spec = QUIZ_REGISTRY[course.slug]
+                assert spec.final
+                content_titles = {le.title for le in course.lessons if le.lesson_type == "text"}
+                assert set(spec.per_lesson) == content_titles
 
     def test_digital_logic_track_focuses_on_sv_vhdl_cocotb(self) -> None:
         import json

@@ -114,7 +114,7 @@ def category_slug_for(slug: str) -> str | None:
         return "system-design"
     if slug.startswith("distributed-"):
         return "distributed-systems"
-    if slug.startswith("webdev-"):
+    if slug.startswith("webdev-") or slug.startswith("django-") or slug.startswith("rails-"):
         return "web-development"
     if slug.startswith("dataeng-"):
         return "data-engineering"
