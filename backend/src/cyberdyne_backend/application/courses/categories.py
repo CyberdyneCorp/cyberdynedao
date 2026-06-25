@@ -143,7 +143,12 @@ def category_slug_for(slug: str) -> str | None:
         return "blockchain"
     if slug.startswith("physics"):
         return "physics"
-    if slug.startswith("vectorcalc") or slug.startswith("statinf") or slug.startswith("math"):
+    if (
+        slug.startswith("vectorcalc")
+        or slug.startswith("statinf")
+        or slug.startswith("math")
+        or slug.startswith("prob-stats-python-")
+    ):
         return "mathematics"
     if (
         slug.startswith("robotics")

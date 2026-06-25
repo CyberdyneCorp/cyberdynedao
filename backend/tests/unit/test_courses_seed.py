@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 215
+        assert len(summary) == 218
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -345,6 +345,9 @@ class TestSeedCourses:
             "software-architecture-intermediate",
             "software-architecture-advanced",
             "algorithms-logic-computing",
+            "prob-stats-python-basics",
+            "prob-stats-python-intermediate",
+            "prob-stats-python-advanced",
         }
         for course in ACADEMY_COURSES:
             assert course.lessons  # non-empty
@@ -755,6 +758,49 @@ class TestSeedCourses:
         )
         for needle in ("empurrar", "puxar", "biblioteca", "falso"):
             assert needle in basics_body, f"english-br-basics missing pt marker {needle!r}"
+
+    def test_prob_stats_python_track_uses_numpy_scipy_pandas_with_plots(self) -> None:
+        import json
+        import re
+
+        from cyberdyne_backend.application.courses.seed_prob_stats_python import (
+            PROB_STATS_PYTHON_COURSES,
+        )
+        from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
+
+        slugs = {c.slug for c in PROB_STATS_PYTHON_COURSES}
+        assert slugs == {
+            "prob-stats-python-basics",
+            "prob-stats-python-intermediate",
+            "prob-stats-python-advanced",
+        }
+        assert {c.level for c in PROB_STATS_PYTHON_COURSES} == {
+            "Beginner",
+            "Intermediate",
+            "Advanced",
+        }
+        all_body = ""
+        for course in PROB_STATS_PYTHON_COURSES:
+            assert {le.lesson_type for le in course.lessons} == {"text"}
+            assert len(course.lessons) == 6
+            body = "\n".join(le.text_body or "" for le in course.lessons)
+            all_body += body
+            assert "```python" in body, f"{course.slug}: no python code"
+            # Interactive graphs (the ```plot engine) and concept diagrams.
+            plots = re.findall(r"```plot\n(.*?)\n```", body, re.S)
+            assert len(plots) >= 3, f"{course.slug}: too few interactive plots"
+            for raw in plots:
+                json.loads(raw)  # valid plot JSON
+            assert "```mermaid" in body, f"{course.slug}: no mermaid diagram"
+            assert "[[keep]]" not in body  # translatable technical course
+            assert course.slug in QUIZ_REGISTRY
+            spec = QUIZ_REGISTRY[course.slug]
+            assert spec.final
+            content_titles = {le.title for le in course.lessons if le.lesson_type == "text"}
+            assert set(spec.per_lesson) == content_titles
+        # The Python data stack is actually taught.
+        for needle in ("numpy", "scipy", "pandas"):
+            assert needle in all_body, f"prob-stats-python missing {needle!r}"
 
     def test_computing_foundations_is_a_single_undecidability_course(self) -> None:
         from cyberdyne_backend.application.courses.seed_computing_foundations import (
