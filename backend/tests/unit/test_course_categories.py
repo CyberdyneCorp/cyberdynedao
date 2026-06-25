@@ -100,6 +100,12 @@ def test_category_slug_for_mirrors_frontend_mapping() -> None:
     assert category_slug_for("filter-design-advanced") == "electronic-engineering"
     assert category_slug_for("data-converters-intermediate") == "electronic-engineering"
     assert category_slug_for("rfic-basics") == "electronic-engineering"
+    assert category_slug_for("stochastic-processes-basics") == "mathematics"
+    assert category_slug_for("coding-theory-advanced") == "electronic-engineering"
+    assert category_slug_for("wireless-comms-basics") == "electronic-engineering"
+    assert category_slug_for("radar-intermediate") == "electronic-engineering"
+    assert category_slug_for("audio-processing-basics") == "electronic-engineering"
+    assert category_slug_for("adaptive-dsp-advanced") == "electronic-engineering"
     # Unmapped slugs fall to the "Other" bucket (None) — parity with the frontend.
     assert category_slug_for("csharp-basics") is None
     assert category_slug_for("linux-basics") is None
