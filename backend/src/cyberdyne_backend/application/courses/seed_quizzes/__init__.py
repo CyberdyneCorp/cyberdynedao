@@ -15,6 +15,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
     adaptive_dsp_intermediate as _adaptive_dsp_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    advanced_control_advanced as _advanced_control_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    advanced_control_basics as _advanced_control_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    advanced_control_intermediate as _advanced_control_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     algorithms_advanced as _algorithms_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -156,6 +165,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import dsp_advanced as _
 from cyberdyne_backend.application.courses.seed_quizzes import dsp_basics as _dsp_basics
 from cyberdyne_backend.application.courses.seed_quizzes import dsp_intermediate as _dsp_intermediate
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    electric_drives_advanced as _electric_drives_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    electric_drives_basics as _electric_drives_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    electric_drives_intermediate as _electric_drives_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     electromagnetics_advanced as _electromagnetics_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -214,6 +232,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 )
 from cyberdyne_backend.application.courses.seed_quizzes import go_basics as _go_basics
 from cyberdyne_backend.application.courses.seed_quizzes import go_intermediate as _go_intermediate
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    high_voltage_advanced as _high_voltage_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    high_voltage_basics as _high_voltage_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    high_voltage_intermediate as _high_voltage_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import (
     image_processing_advanced as _image_processing_advanced,
 )
@@ -297,6 +324,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
     power_electronics_intermediate as _power_electronics_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    power_protection_advanced as _power_protection_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    power_protection_basics as _power_protection_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    power_protection_intermediate as _power_protection_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     power_systems_advanced as _power_systems_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -324,6 +360,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import rails_advanced as
 from cyberdyne_backend.application.courses.seed_quizzes import rails_basics as _rails_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
     rails_intermediate as _rails_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    renewable_ev_advanced as _renewable_ev_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    renewable_ev_basics as _renewable_ev_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    renewable_ev_intermediate as _renewable_ev_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     rf_comms_advanced as _rf_comms_advanced,
@@ -366,6 +411,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import signals_advanced 
 from cyberdyne_backend.application.courses.seed_quizzes import signals_basics as _signals_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
     signals_intermediate as _signals_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    smart_grid_advanced as _smart_grid_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    smart_grid_basics as _smart_grid_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    smart_grid_intermediate as _smart_grid_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     software_architecture_advanced as _software_architecture_advanced,
@@ -462,6 +516,24 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 from cyberdyne_backend.application.courses.seed_types import CourseQuiz
 
 QUIZ_REGISTRY: dict[str, CourseQuiz] = {
+    "advanced-control-advanced": _advanced_control_advanced.QUIZ,
+    "advanced-control-basics": _advanced_control_basics.QUIZ,
+    "advanced-control-intermediate": _advanced_control_intermediate.QUIZ,
+    "electric-drives-advanced": _electric_drives_advanced.QUIZ,
+    "electric-drives-basics": _electric_drives_basics.QUIZ,
+    "electric-drives-intermediate": _electric_drives_intermediate.QUIZ,
+    "high-voltage-advanced": _high_voltage_advanced.QUIZ,
+    "high-voltage-basics": _high_voltage_basics.QUIZ,
+    "high-voltage-intermediate": _high_voltage_intermediate.QUIZ,
+    "power-protection-advanced": _power_protection_advanced.QUIZ,
+    "power-protection-basics": _power_protection_basics.QUIZ,
+    "power-protection-intermediate": _power_protection_intermediate.QUIZ,
+    "renewable-ev-advanced": _renewable_ev_advanced.QUIZ,
+    "renewable-ev-basics": _renewable_ev_basics.QUIZ,
+    "renewable-ev-intermediate": _renewable_ev_intermediate.QUIZ,
+    "smart-grid-advanced": _smart_grid_advanced.QUIZ,
+    "smart-grid-basics": _smart_grid_basics.QUIZ,
+    "smart-grid-intermediate": _smart_grid_intermediate.QUIZ,
     "adaptive-dsp-advanced": _adaptive_dsp_advanced.QUIZ,
     "adaptive-dsp-basics": _adaptive_dsp_basics.QUIZ,
     "adaptive-dsp-intermediate": _adaptive_dsp_intermediate.QUIZ,

@@ -174,6 +174,12 @@ def category_slug_for(slug: str) -> str | None:
             "image-processing-",
             "audio-processing-",
             "adaptive-dsp-",
+            "advanced-control-",
+            "electric-drives-",
+            "high-voltage-",
+            "power-protection-",
+            "smart-grid-",
+            "renewable-ev-",
         )
     ):
         return "electronic-engineering"
