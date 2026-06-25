@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 230
+        assert len(summary) == 257
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -360,6 +360,33 @@ class TestSeedCourses:
             "rfic-basics",
             "rfic-intermediate",
             "rfic-advanced",
+            "stochastic-processes-basics",
+            "stochastic-processes-intermediate",
+            "stochastic-processes-advanced",
+            "coding-theory-basics",
+            "coding-theory-intermediate",
+            "coding-theory-advanced",
+            "analog-comms-basics",
+            "analog-comms-intermediate",
+            "analog-comms-advanced",
+            "wireless-comms-basics",
+            "wireless-comms-intermediate",
+            "wireless-comms-advanced",
+            "fiber-optics-basics",
+            "fiber-optics-intermediate",
+            "fiber-optics-advanced",
+            "radar-basics",
+            "radar-intermediate",
+            "radar-advanced",
+            "image-processing-basics",
+            "image-processing-intermediate",
+            "image-processing-advanced",
+            "audio-processing-basics",
+            "audio-processing-intermediate",
+            "audio-processing-advanced",
+            "adaptive-dsp-basics",
+            "adaptive-dsp-intermediate",
+            "adaptive-dsp-advanced",
         }
         for course in ACADEMY_COURSES:
             assert course.lessons  # non-empty

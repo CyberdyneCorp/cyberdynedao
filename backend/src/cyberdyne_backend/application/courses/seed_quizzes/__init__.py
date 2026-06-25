@@ -6,6 +6,15 @@ workflow; one entry per course module in this package."""
 from __future__ import annotations
 
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    adaptive_dsp_advanced as _adaptive_dsp_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    adaptive_dsp_basics as _adaptive_dsp_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    adaptive_dsp_intermediate as _adaptive_dsp_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     algorithms_advanced as _algorithms_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -18,6 +27,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
     algorithms_logic_computing as _algorithms_logic_computing,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    analog_comms_advanced as _analog_comms_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    analog_comms_basics as _analog_comms_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    analog_comms_intermediate as _analog_comms_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     analog_ic_advanced as _analog_ic_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import analog_ic_basics as _analog_ic_basics
@@ -28,6 +46,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import ansible_advanced 
 from cyberdyne_backend.application.courses.seed_quizzes import ansible_basics as _ansible_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
     ansible_intermediate as _ansible_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    audio_processing_advanced as _audio_processing_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    audio_processing_basics as _audio_processing_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    audio_processing_intermediate as _audio_processing_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import battery_advanced as _battery_advanced
 from cyberdyne_backend.application.courses.seed_quizzes import battery_basics as _battery_basics
@@ -50,6 +77,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     circuit_analysis_intermediate as _circuit_analysis_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    coding_theory_advanced as _coding_theory_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    coding_theory_basics as _coding_theory_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    coding_theory_intermediate as _coding_theory_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     comparch_advanced as _comparch_advanced,
@@ -154,6 +190,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
     english_brazil_intermediate as _english_brazil_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    fiber_optics_advanced as _fiber_optics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    fiber_optics_basics as _fiber_optics_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    fiber_optics_intermediate as _fiber_optics_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     filter_design_advanced as _filter_design_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -169,6 +214,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 )
 from cyberdyne_backend.application.courses.seed_quizzes import go_basics as _go_basics
 from cyberdyne_backend.application.courses.seed_quizzes import go_intermediate as _go_intermediate
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    image_processing_advanced as _image_processing_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    image_processing_basics as _image_processing_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    image_processing_intermediate as _image_processing_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import (
     javascript_basics as _javascript_basics,
 )
@@ -261,6 +315,11 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
     prob_stats_python_intermediate as _prob_stats_python_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import python_course as _python_course
+from cyberdyne_backend.application.courses.seed_quizzes import radar_advanced as _radar_advanced
+from cyberdyne_backend.application.courses.seed_quizzes import radar_basics as _radar_basics
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    radar_intermediate as _radar_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import rails_advanced as _rails_advanced
 from cyberdyne_backend.application.courses.seed_quizzes import rails_basics as _rails_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -333,6 +392,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import statinf_basics as
 from cyberdyne_backend.application.courses.seed_quizzes import (
     statinf_intermediate as _statinf_intermediate,
 )
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    stochastic_processes_advanced as _stochastic_processes_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    stochastic_processes_basics as _stochastic_processes_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    stochastic_processes_intermediate as _stochastic_processes_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import swift_basics as _swift_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
     swift_intermediate as _swift_intermediate,
@@ -382,9 +450,45 @@ from cyberdyne_backend.application.courses.seed_quizzes import vlsi_basics as _v
 from cyberdyne_backend.application.courses.seed_quizzes import (
     vlsi_intermediate as _vlsi_intermediate,
 )
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    wireless_comms_advanced as _wireless_comms_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    wireless_comms_basics as _wireless_comms_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    wireless_comms_intermediate as _wireless_comms_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_types import CourseQuiz
 
 QUIZ_REGISTRY: dict[str, CourseQuiz] = {
+    "adaptive-dsp-advanced": _adaptive_dsp_advanced.QUIZ,
+    "adaptive-dsp-basics": _adaptive_dsp_basics.QUIZ,
+    "adaptive-dsp-intermediate": _adaptive_dsp_intermediate.QUIZ,
+    "analog-comms-advanced": _analog_comms_advanced.QUIZ,
+    "analog-comms-basics": _analog_comms_basics.QUIZ,
+    "analog-comms-intermediate": _analog_comms_intermediate.QUIZ,
+    "audio-processing-advanced": _audio_processing_advanced.QUIZ,
+    "audio-processing-basics": _audio_processing_basics.QUIZ,
+    "audio-processing-intermediate": _audio_processing_intermediate.QUIZ,
+    "coding-theory-advanced": _coding_theory_advanced.QUIZ,
+    "coding-theory-basics": _coding_theory_basics.QUIZ,
+    "coding-theory-intermediate": _coding_theory_intermediate.QUIZ,
+    "fiber-optics-advanced": _fiber_optics_advanced.QUIZ,
+    "fiber-optics-basics": _fiber_optics_basics.QUIZ,
+    "fiber-optics-intermediate": _fiber_optics_intermediate.QUIZ,
+    "image-processing-advanced": _image_processing_advanced.QUIZ,
+    "image-processing-basics": _image_processing_basics.QUIZ,
+    "image-processing-intermediate": _image_processing_intermediate.QUIZ,
+    "radar-advanced": _radar_advanced.QUIZ,
+    "radar-basics": _radar_basics.QUIZ,
+    "radar-intermediate": _radar_intermediate.QUIZ,
+    "stochastic-processes-advanced": _stochastic_processes_advanced.QUIZ,
+    "stochastic-processes-basics": _stochastic_processes_basics.QUIZ,
+    "stochastic-processes-intermediate": _stochastic_processes_intermediate.QUIZ,
+    "wireless-comms-advanced": _wireless_comms_advanced.QUIZ,
+    "wireless-comms-basics": _wireless_comms_basics.QUIZ,
+    "wireless-comms-intermediate": _wireless_comms_intermediate.QUIZ,
     "algorithms-advanced": _algorithms_advanced.QUIZ,
     "algorithms-basics": _algorithms_basics.QUIZ,
     "algorithms-intermediate": _algorithms_intermediate.QUIZ,

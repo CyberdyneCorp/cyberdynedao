@@ -148,6 +148,7 @@ def category_slug_for(slug: str) -> str | None:
         or slug.startswith("statinf")
         or slug.startswith("math")
         or slug.startswith("prob-stats-python-")
+        or slug.startswith("stochastic-processes-")
     ):
         return "mathematics"
     if (
@@ -160,7 +161,20 @@ def category_slug_for(slug: str) -> str | None:
     if slug.startswith("algorithms"):
         return "algorithms"
     if _EE_RE.match(slug) or slug.startswith(
-        ("circuit-analysis-", "filter-design-", "data-converters-", "rfic-")
+        (
+            "circuit-analysis-",
+            "filter-design-",
+            "data-converters-",
+            "rfic-",
+            "coding-theory-",
+            "analog-comms-",
+            "wireless-comms-",
+            "fiber-optics-",
+            "radar-",
+            "image-processing-",
+            "audio-processing-",
+            "adaptive-dsp-",
+        )
     ):
         return "electronic-engineering"
     if (

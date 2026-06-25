@@ -23,12 +23,16 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
+from cyberdyne_backend.application.courses.seed_adaptive_dsp import ADAPTIVE_DSP_COURSES
 from cyberdyne_backend.application.courses.seed_aerial import AERIAL_COURSES
 from cyberdyne_backend.application.courses.seed_algorithms import ALGORITHMS_COURSES
+from cyberdyne_backend.application.courses.seed_analog_comms import ANALOG_COMMS_COURSES
 from cyberdyne_backend.application.courses.seed_analog_ic import ANALOG_IC_COURSES
 from cyberdyne_backend.application.courses.seed_antennas import ANTENNAS_COURSES
+from cyberdyne_backend.application.courses.seed_audio_processing import AUDIO_PROCESSING_COURSES
 from cyberdyne_backend.application.courses.seed_battery import BATTERY_COURSES
 from cyberdyne_backend.application.courses.seed_circuit_analysis import CIRCUIT_ANALYSIS_COURSES
+from cyberdyne_backend.application.courses.seed_coding_theory import CODING_THEORY_COURSES
 from cyberdyne_backend.application.courses.seed_comparch import COMPARCH_COURSES
 from cyberdyne_backend.application.courses.seed_computational_thinking import (
     COMPUTATIONAL_THINKING_COURSES,
@@ -54,11 +58,13 @@ from cyberdyne_backend.application.courses.seed_embedded import EMBEDDED_COURSES
 from cyberdyne_backend.application.courses.seed_emc import EMC_COURSES
 from cyberdyne_backend.application.courses.seed_english_brazil import ENGLISH_BRAZIL_COURSES
 from cyberdyne_backend.application.courses.seed_estimation import ESTIMATION_COURSES
+from cyberdyne_backend.application.courses.seed_fiber_optics import FIBER_OPTICS_COURSES
 from cyberdyne_backend.application.courses.seed_filter_design import FILTER_DESIGN_COURSES
 from cyberdyne_backend.application.courses.seed_fpga import FPGA_COURSES
 from cyberdyne_backend.application.courses.seed_git import GIT_COURSES
 from cyberdyne_backend.application.courses.seed_hwverification import HW_VERIFICATION_COURSES
 from cyberdyne_backend.application.courses.seed_iac import IAC_COURSES
+from cyberdyne_backend.application.courses.seed_image_processing import IMAGE_PROCESSING_COURSES
 from cyberdyne_backend.application.courses.seed_languages import LANGUAGE_COURSES
 from cyberdyne_backend.application.courses.seed_linux import LINUX_COURSES
 from cyberdyne_backend.application.courses.seed_machines import MACHINES_COURSES
@@ -77,6 +83,7 @@ from cyberdyne_backend.application.courses.seed_prob_stats_python import (
     PROB_STATS_PYTHON_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
+from cyberdyne_backend.application.courses.seed_radar import RADAR_COURSES
 from cyberdyne_backend.application.courses.seed_rails import RAILS_COURSES
 from cyberdyne_backend.application.courses.seed_rf_comms import RF_COMMS_COURSES
 from cyberdyne_backend.application.courses.seed_rfic import RFIC_COURSES
@@ -91,6 +98,9 @@ from cyberdyne_backend.application.courses.seed_software_architecture import (
 )
 from cyberdyne_backend.application.courses.seed_software_quality import SOFTWARE_QUALITY_COURSES
 from cyberdyne_backend.application.courses.seed_statistics import STATISTICS_COURSES
+from cyberdyne_backend.application.courses.seed_stochastic_processes import (
+    STOCHASTIC_PROCESSES_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_systemdesign import SYSTEM_DESIGN_COURSES
 from cyberdyne_backend.application.courses.seed_sysverilog import SYSVERILOG_COURSES
 from cyberdyne_backend.application.courses.seed_technical_english import (
@@ -106,6 +116,7 @@ from cyberdyne_backend.application.courses.seed_types import (
 from cyberdyne_backend.application.courses.seed_vectorcalc import VECTORCALC_COURSES
 from cyberdyne_backend.application.courses.seed_vlsi import VLSI_COURSES
 from cyberdyne_backend.application.courses.seed_webdev import WEBDEV_COURSES
+from cyberdyne_backend.application.courses.seed_wireless_comms import WIRELESS_COMMS_COURSES
 from cyberdyne_backend.application.quizzes.use_cases import (
     OptionInput,
     QuestionInput,
@@ -1250,6 +1261,15 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *FILTER_DESIGN_COURSES,
     *DATA_CONVERTERS_COURSES,
     *RFIC_COURSES,
+    *STOCHASTIC_PROCESSES_COURSES,
+    *CODING_THEORY_COURSES,
+    *ANALOG_COMMS_COURSES,
+    *WIRELESS_COMMS_COURSES,
+    *FIBER_OPTICS_COURSES,
+    *RADAR_COURSES,
+    *IMAGE_PROCESSING_COURSES,
+    *AUDIO_PROCESSING_COURSES,
+    *ADAPTIVE_DSP_COURSES,
     *SOFTWARE_ARCHITECTURE_COURSES,
     *SOFTWARE_QUALITY_COURSES,
     *COMPUTATIONAL_THINKING_COURSES,
