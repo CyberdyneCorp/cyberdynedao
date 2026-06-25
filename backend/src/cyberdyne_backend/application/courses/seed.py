@@ -41,11 +41,13 @@ from cyberdyne_backend.application.courses.seed_devops import DEVOPS_COURSES
 from cyberdyne_backend.application.courses.seed_digital_comms import DIGITAL_COMMS_COURSES
 from cyberdyne_backend.application.courses.seed_digital_logic import DIGITAL_LOGIC_COURSES
 from cyberdyne_backend.application.courses.seed_distributed import DISTRIBUTED_COURSES
+from cyberdyne_backend.application.courses.seed_django import DJANGO_COURSES
 from cyberdyne_backend.application.courses.seed_dsp import DSP_COURSES
 from cyberdyne_backend.application.courses.seed_electromagnetics import ELECTROMAGNETICS_COURSES
 from cyberdyne_backend.application.courses.seed_electronics import ELECTRONICS_COURSES
 from cyberdyne_backend.application.courses.seed_embedded import EMBEDDED_COURSES
 from cyberdyne_backend.application.courses.seed_emc import EMC_COURSES
+from cyberdyne_backend.application.courses.seed_english_brazil import ENGLISH_BRAZIL_COURSES
 from cyberdyne_backend.application.courses.seed_estimation import ESTIMATION_COURSES
 from cyberdyne_backend.application.courses.seed_fpga import FPGA_COURSES
 from cyberdyne_backend.application.courses.seed_git import GIT_COURSES
@@ -66,6 +68,7 @@ from cyberdyne_backend.application.courses.seed_physics import PHYSICS_COURSES
 from cyberdyne_backend.application.courses.seed_power_electronics import POWER_ELECTRONICS_COURSES
 from cyberdyne_backend.application.courses.seed_power_systems import POWER_SYSTEMS_COURSES
 from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
+from cyberdyne_backend.application.courses.seed_rails import RAILS_COURSES
 from cyberdyne_backend.application.courses.seed_rf_comms import RF_COMMS_COURSES
 from cyberdyne_backend.application.courses.seed_robotics import ROBOTICS_COURSES
 from cyberdyne_backend.application.courses.seed_security import SECURITY_COURSES
@@ -77,6 +80,9 @@ from cyberdyne_backend.application.courses.seed_software_quality import SOFTWARE
 from cyberdyne_backend.application.courses.seed_statistics import STATISTICS_COURSES
 from cyberdyne_backend.application.courses.seed_systemdesign import SYSTEM_DESIGN_COURSES
 from cyberdyne_backend.application.courses.seed_sysverilog import SYSVERILOG_COURSES
+from cyberdyne_backend.application.courses.seed_technical_english import (
+    TECHNICAL_ENGLISH_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_test_measurement import TEST_MEASUREMENT_COURSES
 from cyberdyne_backend.application.courses.seed_testing import TESTING_COURSES
 from cyberdyne_backend.application.courses.seed_types import (
@@ -1228,6 +1234,10 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *POWER_SYSTEMS_COURSES,
     *SOFTWARE_QUALITY_COURSES,
     *COMPUTATIONAL_THINKING_COURSES,
+    *TECHNICAL_ENGLISH_COURSES,
+    *ENGLISH_BRAZIL_COURSES,
+    *DJANGO_COURSES,
+    *RAILS_COURSES,
 )
 
 

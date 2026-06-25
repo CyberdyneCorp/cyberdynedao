@@ -11,20 +11,47 @@ from cyberdyne_backend.domain.learning.entities import (
     Enrollment,
     LearningModule,
     LearningPath,
+    LearningTranslation,
+    LinkedCourse,
     ModuleProgress,
 )
 
 
 @runtime_checkable
 class LearningRepository(Protocol):
-    # Catalogue reads
-    async def list_modules(self) -> list[LearningModule]: ...
-    async def list_paths(self) -> list[LearningPath]: ...
-    async def get_path(self, slug: str) -> LearningPath: ...
-    async def get_module(self, slug: str) -> LearningModule:
+    # Catalogue reads. ``locale`` substitutes a translated title/description
+    # (per-field English fallback); ``"en"``/empty uses the base rows.
+    async def list_modules(self, *, locale: str = "en") -> list[LearningModule]: ...
+    async def list_paths(self, *, locale: str = "en") -> list[LearningPath]: ...
+    async def get_path(self, slug: str, *, locale: str = "en") -> LearningPath: ...
+    async def get_module(self, slug: str, *, locale: str = "en") -> LearningModule:
         """Load a module by slug. Raises ``LearningContentNotFoundError``
         if absent."""
         ...
+
+    # Translations (admin). ``language`` is a non-English supported tag.
+    async def list_module_translations(self, slug: str) -> list[LearningTranslation]:
+        """All translations for a module. Raises ``LearningContentNotFoundError``
+        if the module is absent."""
+        ...
+
+    async def upsert_module_translation(
+        self, slug: str, *, language: str, title: str, description: str
+    ) -> LearningTranslation:
+        """Insert/replace a module's translation. Raises
+        ``LearningContentNotFoundError`` if the module is absent."""
+        ...
+
+    async def delete_module_translation(self, slug: str, *, language: str) -> None:
+        """Remove a module translation. Raises ``LearningContentNotFoundError``
+        if no such translation."""
+        ...
+
+    async def list_path_translations(self, slug: str) -> list[LearningTranslation]: ...
+    async def upsert_path_translation(
+        self, slug: str, *, language: str, title: str, description: str
+    ) -> LearningTranslation: ...
+    async def delete_path_translation(self, slug: str, *, language: str) -> None: ...
 
     # Catalogue writes (admin)
     async def create_module(self, module: LearningModule) -> LearningModule:
@@ -43,6 +70,7 @@ class LearningRepository(Protocol):
         duration: str | None = None,
         icon: str | None = None,
         topics: tuple[str, ...] | None = None,
+        course_slugs: tuple[str, ...] | None = None,
     ) -> LearningModule:
         """Partially update a module (``None`` leaves a field unchanged).
         Raises ``LearningContentNotFoundError`` if the slug is absent."""
@@ -113,6 +141,28 @@ class LearningRepository(Protocol):
     async def get_certificate_by_id(self, certificate_id: UUID) -> Certificate | None:
         """Load a certificate by its id, for public verification. None if
         no such certificate."""
+        ...
+
+
+@runtime_checkable
+class CourseLinkReader(Protocol):
+    """Read side into the *courses* context, so a course-backed module can
+    validate its linked courses and derive completion from them. Kept as a
+    narrow port owned by the learning context (courses code stays untouched)."""
+
+    async def existing_course_slugs(self) -> set[str]:
+        """Slugs of all published courses — for validating a module's links."""
+        ...
+
+    async def percent_by_course(self, user_id: UUID) -> dict[str, int]:
+        """``{course_slug: percent 0..100}`` for the user; a missing slug
+        means 0% (never started)."""
+        ...
+
+    async def course_cards(self, *, locale: str = "en") -> dict[str, LinkedCourse]:
+        """``{course_slug: LinkedCourse}`` for all published courses, titles
+        localized to ``locale`` — so a stage can expose its linked courses for
+        display without N extra calls."""
         ...
 
 

@@ -34,10 +34,10 @@ class _FakeRepo:
         self.progress: dict[tuple[uuid.UUID, str], ModuleProgress] = {}
         self.certs: dict[tuple[uuid.UUID, str], Certificate] = {}
 
-    async def list_modules(self) -> list[LearningModule]:
+    async def list_modules(self, *, locale: str = "en") -> list[LearningModule]:
         return list(self.modules)
 
-    async def list_paths(self) -> list[LearningPath]:
+    async def list_paths(self, *, locale: str = "en") -> list[LearningPath]:
         return list(self.paths.values())
 
     async def get_path(self, slug: str) -> LearningPath:

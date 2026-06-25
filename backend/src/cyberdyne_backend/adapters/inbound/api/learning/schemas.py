@@ -17,6 +17,12 @@ class _CamelModel(BaseModel):
     )
 
 
+class LinkedCourseResponse(_CamelModel):
+    slug: str
+    title: str
+    level: str
+
+
 class LearningModuleResponse(_CamelModel):
     slug: str
     title: str
@@ -26,6 +32,11 @@ class LearningModuleResponse(_CamelModel):
     duration: str
     icon: str
     topics: list[str]
+    # Courses this stage bundles (empty for legacy self-reported modules).
+    course_slugs: list[str] = []
+    # Resolved course display cards for course_slugs (slug/title/level),
+    # locale-aware; empty when no catalogue reader resolved them.
+    courses: list[LinkedCourseResponse] = []
 
 
 class LearningPathResponse(_CamelModel):
@@ -149,6 +160,7 @@ class CreateModuleRequest(_StrictCamelModel):
     duration: str = Field(min_length=1)
     icon: str = Field(min_length=1)
     topics: list[str] = Field(default_factory=list)
+    course_slugs: list[str] = Field(default_factory=list)
     slug: str | None = None
 
 
@@ -160,6 +172,7 @@ class UpdateModuleRequest(_StrictCamelModel):
     duration: str | None = None
     icon: str | None = None
     topics: list[str] | None = None
+    course_slugs: list[str] | None = None
 
 
 class CreatePathRequest(_StrictCamelModel):
@@ -181,3 +194,14 @@ class UpdatePathRequest(_StrictCamelModel):
 
 class ReorderPathModulesRequest(_StrictCamelModel):
     module_slugs: list[str]
+
+
+class TranslationUpsertRequest(_StrictCamelModel):
+    title: str = Field(min_length=1)
+    description: str = ""
+
+
+class TranslationResponse(_CamelModel):
+    language: str
+    title: str
+    description: str

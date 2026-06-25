@@ -21,14 +21,19 @@ from cyberdyne_backend.domain.learning.entities import (
     EnrollmentStatus,
     LearningModule,
     LearningPath,
+    LearningTranslation,
+    LinkedCourse,
     ModuleProgress,
     certificate_eligible,
+    derived_module_percent,
     new_certificate,
     new_enrollment,
     new_module,
     new_path,
     new_progress,
     normalize_slug,
+    with_courses,
+    with_translation,
 )
 from cyberdyne_backend.domain.learning.errors import (
     CertificateNotEligibleError,
@@ -50,6 +55,7 @@ from cyberdyne_backend.domain.learning.gating import (
 from cyberdyne_backend.domain.learning.ports import (
     CertificatePdfRenderer,
     CertificateSigner,
+    CourseLinkReader,
     LearningRepository,
 )
 
@@ -61,6 +67,7 @@ __all__ = [
     "CertificateNotFoundError",
     "CertificatePdfRenderer",
     "CertificateSigner",
+    "CourseLinkReader",
     "DeadlineStatus",
     "Enrollment",
     "EnrollmentDeadline",
@@ -72,6 +79,8 @@ __all__ = [
     "LearningModule",
     "LearningPath",
     "LearningRepository",
+    "LearningTranslation",
+    "LinkedCourse",
     "ModuleGate",
     "ModuleProgress",
     "ProgressOutOfRangeError",
@@ -79,6 +88,7 @@ __all__ = [
     "compute_path_gates",
     "days_remaining",
     "deadline_status",
+    "derived_module_percent",
     "is_module_unlocked",
     "level_rank",
     "new_certificate",
@@ -88,4 +98,6 @@ __all__ = [
     "new_progress",
     "next_unlocked_module",
     "normalize_slug",
+    "with_courses",
+    "with_translation",
 ]

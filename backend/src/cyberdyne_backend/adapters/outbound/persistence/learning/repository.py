@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -13,7 +14,9 @@ from cyberdyne_backend.adapters.outbound.persistence.learning.models import (
     CertificateRow,
     EnrollmentRow,
     LearningModuleRow,
+    LearningModuleTranslationRow,
     LearningPathRow,
+    LearningPathTranslationRow,
     ModuleProgressRow,
 )
 from cyberdyne_backend.domain.learning import (
@@ -25,8 +28,15 @@ from cyberdyne_backend.domain.learning import (
     LearningContentNotFoundError,
     LearningModule,
     LearningPath,
+    LearningTranslation,
     ModuleProgress,
+    with_translation,
 )
+
+
+def _is_base_locale(locale: str) -> bool:
+    """English is stored in the base rows — no translation join needed."""
+    return locale == "en" or not locale
 
 
 def _row_to_module(row: LearningModuleRow) -> LearningModule:
@@ -39,6 +49,7 @@ def _row_to_module(row: LearningModuleRow) -> LearningModule:
         duration=row.duration,
         icon=row.icon,
         topics=tuple(row.topics),
+        course_slugs=tuple(row.course_slugs or ()),
     )
 
 
@@ -101,7 +112,45 @@ class SqlAlchemyLearningRepository:
         self._session = session
 
     # ── Catalogue ────────────────────────────────────────────────────
-    async def list_modules(self) -> list[LearningModule]:
+    async def _module_translations(
+        self, slugs: list[str], locale: str
+    ) -> dict[str, LearningModuleTranslationRow]:
+        if not slugs:
+            return {}
+        rows = (
+            (
+                await self._session.execute(
+                    select(LearningModuleTranslationRow).where(
+                        LearningModuleTranslationRow.module_slug.in_(slugs),
+                        LearningModuleTranslationRow.language == locale,
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        return {r.module_slug: r for r in rows}
+
+    async def _path_translations(
+        self, slugs: list[str], locale: str
+    ) -> dict[str, LearningPathTranslationRow]:
+        if not slugs:
+            return {}
+        rows = (
+            (
+                await self._session.execute(
+                    select(LearningPathTranslationRow).where(
+                        LearningPathTranslationRow.path_slug.in_(slugs),
+                        LearningPathTranslationRow.language == locale,
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        return {r.path_slug: r for r in rows}
+
+    async def list_modules(self, *, locale: str = "en") -> list[LearningModule]:
         rows = (
             (
                 await self._session.execute(
@@ -113,9 +162,18 @@ class SqlAlchemyLearningRepository:
             .scalars()
             .all()
         )
-        return [_row_to_module(r) for r in rows]
+        modules = [_row_to_module(r) for r in rows]
+        if _is_base_locale(locale):
+            return modules
+        tr = await self._module_translations([m.slug for m in modules], locale)
+        return [
+            with_translation(m, title=t.title, description=t.description)
+            if (t := tr.get(m.slug))
+            else m
+            for m in modules
+        ]
 
-    async def list_paths(self) -> list[LearningPath]:
+    async def list_paths(self, *, locale: str = "en") -> list[LearningPath]:
         rows = (
             (
                 await self._session.execute(
@@ -127,19 +185,153 @@ class SqlAlchemyLearningRepository:
             .scalars()
             .all()
         )
-        return [_row_to_path(r) for r in rows]
+        paths = [_row_to_path(r) for r in rows]
+        if _is_base_locale(locale):
+            return paths
+        tr = await self._path_translations([p.slug for p in paths], locale)
+        return [
+            with_translation(p, title=t.title, description=t.description)
+            if (t := tr.get(p.slug))
+            else p
+            for p in paths
+        ]
 
-    async def get_path(self, slug: str) -> LearningPath:
+    async def get_path(self, slug: str, *, locale: str = "en") -> LearningPath:
         row = await self._session.get(LearningPathRow, slug)
         if row is None:
             raise LearningContentNotFoundError(f"no learning path with slug={slug!r}")
-        return _row_to_path(row)
+        path = _row_to_path(row)
+        if _is_base_locale(locale):
+            return path
+        t = (await self._path_translations([slug], locale)).get(slug)
+        return with_translation(path, title=t.title, description=t.description) if t else path
 
-    async def get_module(self, slug: str) -> LearningModule:
+    async def get_module(self, slug: str, *, locale: str = "en") -> LearningModule:
         row = await self._session.get(LearningModuleRow, slug)
         if row is None:
             raise LearningContentNotFoundError(f"no learning module with slug={slug!r}")
-        return _row_to_module(row)
+        module = _row_to_module(row)
+        if _is_base_locale(locale):
+            return module
+        t = (await self._module_translations([slug], locale)).get(slug)
+        return with_translation(module, title=t.title, description=t.description) if t else module
+
+    # ── Translations (admin) ─────────────────────────────────────────
+    async def list_module_translations(self, slug: str) -> list[LearningTranslation]:
+        if await self._session.get(LearningModuleRow, slug) is None:
+            raise LearningContentNotFoundError(f"no learning module with slug={slug!r}")
+        rows = (
+            (
+                await self._session.execute(
+                    select(LearningModuleTranslationRow)
+                    .where(LearningModuleTranslationRow.module_slug == slug)
+                    .order_by(LearningModuleTranslationRow.language)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        return [LearningTranslation(r.language, r.title, r.description) for r in rows]
+
+    async def upsert_module_translation(
+        self, slug: str, *, language: str, title: str, description: str
+    ) -> LearningTranslation:
+        if await self._session.get(LearningModuleRow, slug) is None:
+            raise LearningContentNotFoundError(f"no learning module with slug={slug!r}")
+        row = (
+            await self._session.execute(
+                select(LearningModuleTranslationRow).where(
+                    LearningModuleTranslationRow.module_slug == slug,
+                    LearningModuleTranslationRow.language == language,
+                )
+            )
+        ).scalar_one_or_none()
+        if row is None:
+            row = LearningModuleTranslationRow(
+                id=uuid.uuid4(),
+                module_slug=slug,
+                language=language,
+                title=title,
+                description=description,
+            )
+            self._session.add(row)
+        else:
+            row.title = title
+            row.description = description
+        await self._session.flush()
+        return LearningTranslation(language, title, description)
+
+    async def delete_module_translation(self, slug: str, *, language: str) -> None:
+        row = (
+            await self._session.execute(
+                select(LearningModuleTranslationRow).where(
+                    LearningModuleTranslationRow.module_slug == slug,
+                    LearningModuleTranslationRow.language == language,
+                )
+            )
+        ).scalar_one_or_none()
+        if row is None:
+            raise LearningContentNotFoundError(f"no {language!r} translation for module {slug!r}")
+        await self._session.delete(row)
+        await self._session.flush()
+
+    async def list_path_translations(self, slug: str) -> list[LearningTranslation]:
+        if await self._session.get(LearningPathRow, slug) is None:
+            raise LearningContentNotFoundError(f"no learning path with slug={slug!r}")
+        rows = (
+            (
+                await self._session.execute(
+                    select(LearningPathTranslationRow)
+                    .where(LearningPathTranslationRow.path_slug == slug)
+                    .order_by(LearningPathTranslationRow.language)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        return [LearningTranslation(r.language, r.title, r.description) for r in rows]
+
+    async def upsert_path_translation(
+        self, slug: str, *, language: str, title: str, description: str
+    ) -> LearningTranslation:
+        if await self._session.get(LearningPathRow, slug) is None:
+            raise LearningContentNotFoundError(f"no learning path with slug={slug!r}")
+        row = (
+            await self._session.execute(
+                select(LearningPathTranslationRow).where(
+                    LearningPathTranslationRow.path_slug == slug,
+                    LearningPathTranslationRow.language == language,
+                )
+            )
+        ).scalar_one_or_none()
+        if row is None:
+            row = LearningPathTranslationRow(
+                id=uuid.uuid4(),
+                path_slug=slug,
+                language=language,
+                title=title,
+                description=description,
+            )
+            self._session.add(row)
+        else:
+            row.title = title
+            row.description = description
+        await self._session.flush()
+        return LearningTranslation(language, title, description)
+
+    async def delete_path_translation(self, slug: str, *, language: str) -> None:
+        row = (
+            await self._session.execute(
+                select(LearningPathTranslationRow).where(
+                    LearningPathTranslationRow.path_slug == slug,
+                    LearningPathTranslationRow.language == language,
+                )
+            )
+        ).scalar_one_or_none()
+        if row is None:
+            raise LearningContentNotFoundError(f"no {language!r} translation for path {slug!r}")
+        await self._session.delete(row)
+        await self._session.flush()
 
     # ── Catalogue writes (admin) ─────────────────────────────────────
     async def _next_sort_order(self, column: InstrumentedAttribute[int]) -> int:
@@ -158,6 +350,7 @@ class SqlAlchemyLearningRepository:
             duration=module.duration,
             icon=module.icon,
             topics=list(module.topics),
+            course_slugs=list(module.course_slugs),
             sort_order=await self._next_sort_order(LearningModuleRow.sort_order),
         )
         self._session.add(row)
@@ -175,6 +368,7 @@ class SqlAlchemyLearningRepository:
         duration: str | None = None,
         icon: str | None = None,
         topics: tuple[str, ...] | None = None,
+        course_slugs: tuple[str, ...] | None = None,
     ) -> LearningModule:
         row = await self._session.get(LearningModuleRow, slug)
         if row is None:
@@ -193,6 +387,8 @@ class SqlAlchemyLearningRepository:
             row.icon = icon
         if topics is not None:
             row.topics = list(topics)
+        if course_slugs is not None:
+            row.course_slugs = list(course_slugs)
         await self._session.flush()
         return _row_to_module(row)
 

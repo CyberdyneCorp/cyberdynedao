@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import re
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Protocol, runtime_checkable
@@ -28,7 +28,31 @@ def normalize_slug(text: str) -> str:
     return _SLUG_RE.sub("-", text.strip().lower()).strip("-")
 
 
+def with_translation[T](
+    entity: T, *, title: str | None = None, description: str | None = None
+) -> T:
+    """Return a copy of a module/path with translated ``title``/``description``
+    substituted, **per field, only when the translated value is non-empty**
+    (English base value is kept otherwise). Both ``LearningModule`` and
+    ``LearningPath`` are frozen dataclasses carrying those two fields."""
+    updates: dict[str, str] = {}
+    if title:
+        updates["title"] = title
+    if description:
+        updates["description"] = description
+    return replace(entity, **updates) if updates else entity  # type: ignore[type-var]
+
+
 # ── Content catalogue (admin-managed; originally seeded) ──────────────
+
+
+@dataclass(frozen=True, slots=True)
+class LinkedCourse:
+    """A course bundled by a stage, resolved for display (locale-aware title)."""
+
+    slug: str
+    title: str
+    level: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,6 +65,18 @@ class LearningModule:
     duration: str  # human-readable like '1h 30min'
     icon: str
     topics: tuple[str, ...]
+    # Courses this stage bundles. When non-empty, the module's per-user
+    # completion is DERIVED from these courses (complete iff all are);
+    # empty keeps the legacy self-reported progress behaviour.
+    course_slugs: tuple[str, ...] = ()
+    # Resolved course display info for ``course_slugs``, filled on read when a
+    # course catalogue reader is available (slug-only otherwise).
+    courses: tuple[LinkedCourse, ...] = ()
+
+
+def with_courses(module: LearningModule, courses: tuple[LinkedCourse, ...]) -> LearningModule:
+    """Return a copy of ``module`` with its resolved ``courses`` attached."""
+    return replace(module, courses=courses)
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,6 +89,15 @@ class LearningPath:
     icon: str
 
 
+@dataclass(frozen=True, slots=True)
+class LearningTranslation:
+    """A localized title/description for a module or path in one language."""
+
+    language: str
+    title: str
+    description: str
+
+
 def new_module(
     *,
     title: str,
@@ -62,10 +107,13 @@ def new_module(
     duration: str,
     icon: str,
     topics: tuple[str, ...] = (),
+    course_slugs: tuple[str, ...] = (),
     slug: str | None = None,
 ) -> LearningModule:
     """Build a validated module. ``slug`` is derived from ``title`` when
-    omitted; ``level`` must be one of ``VALID_LEVELS``."""
+    omitted; ``level`` must be one of ``VALID_LEVELS``. Referential
+    validation of ``course_slugs`` against the catalogue is the use-case's
+    job (it needs the course reader)."""
     if level not in VALID_LEVELS:
         raise LearningContentValidationError(f"level must be one of {VALID_LEVELS}, got {level!r}")
     effective_slug = normalize_slug(slug) if slug else normalize_slug(title)
@@ -80,6 +128,7 @@ def new_module(
         duration=duration,
         icon=icon,
         topics=tuple(topics),
+        course_slugs=tuple(course_slugs),
     )
 
 
@@ -214,6 +263,18 @@ def new_progress(
         completed_at=completed_at,
         updated_at=moment,
     )
+
+
+def derived_module_percent(course_slugs: tuple[str, ...], percent_by_course: dict[str, int]) -> int:
+    """A course-backed stage's percent = the mean of its courses' percents
+    (a missing course counts as 0). Returns 100 only when EVERY linked
+    course is at 100, so 'stage complete iff all its courses complete'
+    holds. Empty ``course_slugs`` returns 0 (caller falls back to the
+    self-reported percent)."""
+    if not course_slugs:
+        return 0
+    total = sum(max(0, min(100, percent_by_course.get(slug, 0))) for slug in course_slugs)
+    return total // len(course_slugs)
 
 
 def certificate_eligible(

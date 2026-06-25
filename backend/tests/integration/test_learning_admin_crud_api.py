@@ -185,3 +185,38 @@ def test_admin_routes_require_editor(client: TestClient) -> None:
     # No auth overrides on this client → the editor guard rejects.
     resp = client.post("/api/v1/admin/learning/modules", json=_MODULE)
     assert resp.status_code in (401, 403), resp.text
+
+
+def test_module_can_link_real_courses(admin_client: TestClient) -> None:
+    # Create + publish a real course, then bundle it into a stage.
+    created = admin_client.post(
+        "/api/v1/admin/courses",
+        json={"title": "Linkable Course", "description": "d", "level": "Beginner"},
+    )
+    assert created.status_code in (200, 201), created.text
+    course_slug = created.json()["slug"]
+    assert admin_client.post(f"/api/v1/admin/courses/{course_slug}/publish").status_code == 200
+
+    resp = admin_client.post(
+        "/api/v1/admin/learning/modules",
+        json={**_MODULE, "slug": "stage-1", "courseSlugs": [course_slug]},
+    )
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["courseSlugs"] == [course_slug]
+
+    # Public catalogue exposes the linkage AND the resolved course cards
+    # (slug/title/level) so the app can render the courses in a stage.
+    public = {m["slug"]: m for m in admin_client.get("/api/v1/learning/modules").json()}
+    assert public["stage-1"]["courseSlugs"] == [course_slug]
+    assert public["stage-1"]["courses"] == [
+        {"slug": course_slug, "title": "Linkable Course", "level": "Beginner"}
+    ]
+
+
+def test_module_linking_unknown_course_rejected(admin_client: TestClient) -> None:
+    resp = admin_client.post(
+        "/api/v1/admin/learning/modules",
+        json={**_MODULE, "slug": "stage-x", "courseSlugs": ["no-such-course"]},
+    )
+    assert resp.status_code == 422, resp.text
+    assert admin_client.get("/api/v1/learning/modules").json() == []

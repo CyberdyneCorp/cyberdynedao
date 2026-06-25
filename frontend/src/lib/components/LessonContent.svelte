@@ -10,7 +10,12 @@
 	import Plot from './Plot.svelte';
 	import { t } from '$lib/i18n';
 	import { highlightElement } from '$lib/utils/highlight';
-	import { splitPlotSegments, parsePlot, normalizeMathBlocks } from '$lib/utils/lessonPlot';
+	import {
+		splitPlotSegments,
+		parsePlot,
+		normalizeMathBlocks,
+		stripKeepMarkers
+	} from '$lib/utils/lessonPlot';
 
 	let { lesson, language = 'matlab' }: { lesson: CourseLesson; language?: CodeLanguage } =
 		$props();
@@ -88,7 +93,7 @@
 						<Plot spec={parsed} />
 					{/if}
 				{:else}
-					<MarkdownPreview content={normalizeMathBlocks(seg.content)} />
+					<MarkdownPreview content={normalizeMathBlocks(stripKeepMarkers(seg.content))} />
 				{/if}
 			{/each}
 		</div>

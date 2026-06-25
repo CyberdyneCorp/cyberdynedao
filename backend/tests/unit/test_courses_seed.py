@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 199
+        assert len(summary) == 211
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -329,6 +329,18 @@ class TestSeedCourses:
             "computational-thinking-basics",
             "computational-thinking-intermediate",
             "computational-thinking-advanced",
+            "technical-english-basics",
+            "technical-english-intermediate",
+            "technical-english-advanced",
+            "english-br-basics",
+            "english-br-intermediate",
+            "english-br-advanced",
+            "django-basics",
+            "django-intermediate",
+            "django-advanced",
+            "rails-basics",
+            "rails-intermediate",
+            "rails-advanced",
         }
         for course in ACADEMY_COURSES:
             assert course.lessons  # non-empty
@@ -650,6 +662,124 @@ class TestSeedCourses:
             assert needle in haystack, f"computational-thinking track missing {needle!r}"
         assert mermaid_blocks >= 6
         assert plot_blocks >= 2
+
+    def test_technical_english_track_is_a_language_course_with_keep_spans(self) -> None:
+        import re
+
+        from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
+        from cyberdyne_backend.application.courses.seed_technical_english import (
+            TECHNICAL_ENGLISH_COURSES,
+        )
+
+        slugs = {c.slug for c in TECHNICAL_ENGLISH_COURSES}
+        assert slugs == {
+            "technical-english-basics",
+            "technical-english-intermediate",
+            "technical-english-advanced",
+        }
+        assert {c.level for c in TECHNICAL_ENGLISH_COURSES} == {
+            "Beginner",
+            "Intermediate",
+            "Advanced",
+        }
+
+        for course in TECHNICAL_ENGLISH_COURSES:
+            kinds = {le.lesson_type for le in course.lessons}
+            assert kinds == {"text"}  # a language course — no code labs
+            body = "\n".join(le.text_body or "" for le in course.lessons)
+            # The taught-English is wrapped in [[keep]]…[[/keep]] do-not-translate
+            # spans, and they're balanced.
+            opens = body.count("[[keep]]")
+            closes = body.count("[[/keep]]")
+            assert opens > 0 and opens == closes, f"{course.slug}: unbalanced keep spans"
+            assert not re.search(r"\[\[keep\]\][^[]*\[\[keep\]\]", body)  # no nesting
+            # Every content lesson has a checkpoint quiz; a final exists.
+            assert course.slug in QUIZ_REGISTRY
+            spec = QUIZ_REGISTRY[course.slug]
+            assert spec.final
+            content_titles = {
+                le.title for le in course.lessons if le.lesson_type in {"text", "code"}
+            }
+            assert set(spec.per_lesson) == content_titles  # a quiz for every lesson
+
+    def test_english_brazil_track_is_a_brazilian_language_course(self) -> None:
+        import re
+
+        from cyberdyne_backend.application.courses.seed_english_brazil import (
+            ENGLISH_BRAZIL_COURSES,
+        )
+        from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
+
+        slugs = {c.slug for c in ENGLISH_BRAZIL_COURSES}
+        assert slugs == {
+            "english-br-basics",
+            "english-br-intermediate",
+            "english-br-advanced",
+        }
+        assert {c.level for c in ENGLISH_BRAZIL_COURSES} == {
+            "Beginner",
+            "Intermediate",
+            "Advanced",
+        }
+
+        for course in ENGLISH_BRAZIL_COURSES:
+            kinds = {le.lesson_type for le in course.lessons}
+            assert kinds == {"text"}  # a language course — no code labs
+            body = "\n".join(le.text_body or "" for le in course.lessons)
+            # The taught-English (and named Portuguese words) are wrapped in
+            # [[keep]]…[[/keep]] do-not-translate spans, balanced and not nested.
+            opens = body.count("[[keep]]")
+            closes = body.count("[[/keep]]")
+            assert opens > 0 and opens == closes, f"{course.slug}: unbalanced keep spans"
+            assert not re.search(r"\[\[keep\]\][^[]*\[\[keep\]\]", body)  # no nesting
+            # Mermaid diagrams are present in every level (explicitly requested).
+            assert "```mermaid" in body, f"{course.slug}: no mermaid diagram"
+            # Every content lesson has a checkpoint quiz; a final exists.
+            assert course.slug in QUIZ_REGISTRY
+            spec = QUIZ_REGISTRY[course.slug]
+            assert spec.final
+            content_titles = {le.title for le in course.lessons if le.lesson_type == "text"}
+            assert set(spec.per_lesson) == content_titles  # a quiz for every lesson
+
+        # It is Brazil-specific: the false-cognate vocabulary names Portuguese
+        # words (e.g. the classic push/puxar/empurrar trap).
+        basics_body = "\n".join(
+            le.text_body or ""
+            for c in ENGLISH_BRAZIL_COURSES
+            if c.slug == "english-br-basics"
+            for le in c.lessons
+        )
+        for needle in ("empurrar", "puxar", "biblioteca", "falso"):
+            assert needle in basics_body, f"english-br-basics missing pt marker {needle!r}"
+
+    def test_web_framework_tracks_have_code_mermaid_and_quizzes(self) -> None:
+        from cyberdyne_backend.application.courses.seed_django import DJANGO_COURSES
+        from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
+        from cyberdyne_backend.application.courses.seed_rails import RAILS_COURSES
+
+        tracks = {
+            "django": (DJANGO_COURSES, "```python"),
+            "rails": (RAILS_COURSES, "```ruby"),
+        }
+        for name, (courses, code_fence) in tracks.items():
+            slugs = {c.slug for c in courses}
+            assert slugs == {f"{name}-basics", f"{name}-intermediate", f"{name}-advanced"}
+            assert {c.level for c in courses} == {"Beginner", "Intermediate", "Advanced"}
+            for course in courses:
+                # Standard technical course: text lessons with illustrative code.
+                assert {le.lesson_type for le in course.lessons} == {"text"}
+                assert len(course.lessons) == 6
+                body = "\n".join(le.text_body or "" for le in course.lessons)
+                assert code_fence in body, f"{course.slug}: no {code_fence} block"
+                assert "```mermaid" in body, f"{course.slug}: no mermaid diagram"
+                # Not a language course — must NOT carry do-not-translate markers.
+                assert "[[keep]]" not in body, f"{course.slug}: unexpected keep span"
+                # A checkpoint quiz for every lesson + a final.
+                assert course.slug in QUIZ_REGISTRY
+                spec = QUIZ_REGISTRY[course.slug]
+                assert spec.final
+                content_titles = {le.title for le in course.lessons if le.lesson_type == "text"}
+                assert set(spec.per_lesson) == content_titles
 
     def test_digital_logic_track_focuses_on_sv_vhdl_cocotb(self) -> None:
         import json

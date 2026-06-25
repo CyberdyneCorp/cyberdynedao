@@ -91,6 +91,16 @@ async def test_preserves_code_math_and_plot_blocks() -> None:
     assert "[[KEEP" not in out
 
 
+async def test_preserves_keep_marked_spans() -> None:
+    # A language course wraps the target-language text in [[keep]]…[[/keep]];
+    # it must survive translation byte-for-byte (markers included).
+    translator = MarkdownAwareTranslator(llm=EchoLLM())
+    src = "En inglés se dice [[keep]]the deployment pipeline[[/keep]] para esto."
+    out = await translator.translate(src, language="es")
+    assert "[[keep]]the deployment pipeline[[/keep]]" in out
+    assert "[[KEEP" not in out  # internal sentinels fully restored
+
+
 async def test_blank_text_is_returned_unchanged() -> None:
     translator = MarkdownAwareTranslator(llm=EchoLLM())
     assert await translator.translate("", language="fr") == ""

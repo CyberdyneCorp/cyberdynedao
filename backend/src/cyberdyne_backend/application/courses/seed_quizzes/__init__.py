@@ -85,6 +85,11 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 from cyberdyne_backend.application.courses.seed_quizzes import (
     digital_logic_intermediate as _digital_logic_intermediate,
 )
+from cyberdyne_backend.application.courses.seed_quizzes import django_advanced as _django_advanced
+from cyberdyne_backend.application.courses.seed_quizzes import django_basics as _django_basics
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    django_intermediate as _django_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import docker_advanced as _docker_advanced
 from cyberdyne_backend.application.courses.seed_quizzes import docker_basics as _docker_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -117,6 +122,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 from cyberdyne_backend.application.courses.seed_quizzes import embedded_basics as _embedded_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
     embedded_intermediate as _embedded_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    english_brazil_advanced as _english_brazil_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    english_brazil_basics as _english_brazil_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    english_brazil_intermediate as _english_brazil_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import fpga_advanced as _fpga_advanced
 from cyberdyne_backend.application.courses.seed_quizzes import fpga_basics as _fpga_basics
@@ -208,6 +222,11 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
     power_systems_intermediate as _power_systems_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import python_course as _python_course
+from cyberdyne_backend.application.courses.seed_quizzes import rails_advanced as _rails_advanced
+from cyberdyne_backend.application.courses.seed_quizzes import rails_basics as _rails_basics
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    rails_intermediate as _rails_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import (
     rf_comms_advanced as _rf_comms_advanced,
 )
@@ -275,6 +294,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
     sysverilog_intermediate as _sysverilog_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    technical_english_advanced as _technical_english_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    technical_english_basics as _technical_english_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    technical_english_intermediate as _technical_english_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     terraform_advanced as _terraform_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import terraform_basics as _terraform_basics
@@ -340,6 +368,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "digital-logic-advanced": _digital_logic_advanced.QUIZ,
     "digital-logic-basics": _digital_logic_basics.QUIZ,
     "digital-logic-intermediate": _digital_logic_intermediate.QUIZ,
+    "django-advanced": _django_advanced.QUIZ,
+    "django-basics": _django_basics.QUIZ,
+    "django-intermediate": _django_intermediate.QUIZ,
     "docker-advanced": _docker_advanced.QUIZ,
     "docker-basics": _docker_basics.QUIZ,
     "docker-intermediate": _docker_intermediate.QUIZ,
@@ -355,6 +386,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "embedded-advanced": _embedded_advanced.QUIZ,
     "embedded-basics": _embedded_basics.QUIZ,
     "embedded-intermediate": _embedded_intermediate.QUIZ,
+    "english-br-advanced": _english_brazil_advanced.QUIZ,
+    "english-br-basics": _english_brazil_basics.QUIZ,
+    "english-br-intermediate": _english_brazil_intermediate.QUIZ,
     "fpga-advanced": _fpga_advanced.QUIZ,
     "fpga-basics": _fpga_basics.QUIZ,
     "fpga-intermediate": _fpga_intermediate.QUIZ,
@@ -401,6 +435,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "power-systems-basics": _power_systems_basics.QUIZ,
     "power-systems-intermediate": _power_systems_intermediate.QUIZ,
     "python-course": _python_course.QUIZ,
+    "rails-advanced": _rails_advanced.QUIZ,
+    "rails-basics": _rails_basics.QUIZ,
+    "rails-intermediate": _rails_intermediate.QUIZ,
     "rf-comms-advanced": _rf_comms_advanced.QUIZ,
     "rf-comms-basics": _rf_comms_basics.QUIZ,
     "rf-comms-intermediate": _rf_comms_intermediate.QUIZ,
@@ -431,6 +468,9 @@ QUIZ_REGISTRY: dict[str, CourseQuiz] = {
     "sysverilog-advanced": _sysverilog_advanced.QUIZ,
     "sysverilog-basics": _sysverilog_basics.QUIZ,
     "sysverilog-intermediate": _sysverilog_intermediate.QUIZ,
+    "technical-english-advanced": _technical_english_advanced.QUIZ,
+    "technical-english-basics": _technical_english_basics.QUIZ,
+    "technical-english-intermediate": _technical_english_intermediate.QUIZ,
     "terraform-advanced": _terraform_advanced.QUIZ,
     "terraform-basics": _terraform_basics.QUIZ,
     "terraform-intermediate": _terraform_intermediate.QUIZ,

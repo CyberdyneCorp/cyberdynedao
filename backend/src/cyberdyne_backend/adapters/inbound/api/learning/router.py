@@ -18,16 +18,20 @@ from cyberdyne_backend.adapters.inbound.api.learning.schemas import (
     EnrollmentResponse,
     LearningModuleResponse,
     LearningPathResponse,
+    LinkedCourseResponse,
     ModuleGateResponse,
     ModuleProgressResponse,
     MyLearningStateResponse,
     ReorderPathModulesRequest,
     SetDeadlineRequest,
     SigningKeyResponse,
+    TranslationResponse,
+    TranslationUpsertRequest,
     UpdateModuleRequest,
     UpdatePathRequest,
     UpdateProgressRequest,
 )
+from cyberdyne_backend.adapters.inbound.api.locale import resolve_locale
 from cyberdyne_backend.adapters.inbound.middleware.auth import (
     require_editor,
     require_principal,
@@ -40,7 +44,9 @@ from cyberdyne_backend.application.learning import (
     CreatePath,
     CreatePathCommand,
     DeleteModule,
+    DeleteModuleTranslation,
     DeletePath,
+    DeletePathTranslation,
     EligibilityResult,
     EnrollInPath,
     GetMyDeadlines,
@@ -48,7 +54,9 @@ from cyberdyne_backend.application.learning import (
     GetPathGating,
     IssueCertificate,
     ListModules,
+    ListModuleTranslations,
     ListPaths,
+    ListPathTranslations,
     RenderCertificatePdf,
     ReorderPathModules,
     SetEnrollmentDeadline,
@@ -57,6 +65,8 @@ from cyberdyne_backend.application.learning import (
     UpdateModuleProgress,
     UpdatePath,
     UpdatePathCommand,
+    UpsertModuleTranslation,
+    UpsertPathTranslation,
     VerifyCertificate,
 )
 from cyberdyne_backend.domain.auth_identity import UserPrincipal
@@ -72,6 +82,7 @@ from cyberdyne_backend.domain.learning import (
     LearningContentValidationError,
     LearningModule,
     LearningPath,
+    LearningTranslation,
     ModuleGate,
     ModuleProgress,
     ProgressOutOfRangeError,
@@ -162,6 +173,34 @@ async def get_reorder_path_modules_uc() -> ReorderPathModules:  # pragma: no cov
     raise NotImplementedError
 
 
+async def get_list_module_tr_uc() -> ListModuleTranslations:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_upsert_module_tr_uc() -> (
+    UpsertModuleTranslation
+):  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_delete_module_tr_uc() -> (
+    DeleteModuleTranslation
+):  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_list_path_tr_uc() -> ListPathTranslations:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_upsert_path_tr_uc() -> UpsertPathTranslation:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
+async def get_delete_path_tr_uc() -> DeletePathTranslation:  # pragma: no cover - override target
+    raise NotImplementedError
+
+
 # ── Response builders ────────────────────────────────────────────────
 
 
@@ -175,6 +214,10 @@ def _module_response(m: LearningModule) -> LearningModuleResponse:
         duration=m.duration,
         icon=m.icon,
         topics=list(m.topics),
+        course_slugs=list(m.course_slugs),
+        courses=[
+            LinkedCourseResponse(slug=c.slug, title=c.title, level=c.level) for c in m.courses
+        ],
     )
 
 
@@ -246,8 +289,9 @@ def _verification_response(v: CertificateVerification) -> CertificateVerificatio
 )
 async def list_modules(
     use_case: Annotated[ListModules, Depends(get_list_modules_uc)],
+    locale: Annotated[str, Depends(resolve_locale)],
 ) -> list[LearningModuleResponse]:
-    modules = await use_case.execute()
+    modules = await use_case.execute(locale=locale)
     return [_module_response(m) for m in modules]
 
 
@@ -258,8 +302,9 @@ async def list_modules(
 )
 async def list_paths(
     use_case: Annotated[ListPaths, Depends(get_list_paths_uc)],
+    locale: Annotated[str, Depends(resolve_locale)],
 ) -> list[LearningPathResponse]:
-    paths = await use_case.execute()
+    paths = await use_case.execute(locale=locale)
     return [_path_response(p) for p in paths]
 
 
@@ -538,6 +583,7 @@ async def admin_create_module(
                 duration=body.duration,
                 icon=body.icon,
                 topics=tuple(body.topics),
+                course_slugs=tuple(body.course_slugs),
                 slug=body.slug,
             )
         )
@@ -570,6 +616,7 @@ async def admin_update_module(
                 duration=body.duration,
                 icon=body.icon,
                 topics=tuple(body.topics) if body.topics is not None else None,
+                course_slugs=(tuple(body.course_slugs) if body.course_slugs is not None else None),
             )
         )
     except LearningContentNotFoundError as exc:
@@ -696,6 +743,123 @@ async def admin_reorder_path_modules(
     except LearningContentValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _path_response(path)
+
+
+# ── Admin translations (modules + paths) ─────────────────────────────
+
+
+def _tr_response(t: LearningTranslation) -> TranslationResponse:
+    return TranslationResponse(language=t.language, title=t.title, description=t.description)
+
+
+@admin_router.get(
+    "/modules/{slug}/translations",
+    response_model=list[TranslationResponse],
+    response_model_by_alias=True,
+)
+async def admin_list_module_translations(
+    slug: str,
+    use_case: Annotated[ListModuleTranslations, Depends(get_list_module_tr_uc)],
+    _principal: Annotated[UserPrincipal, Depends(require_editor)],
+) -> list[TranslationResponse]:
+    try:
+        return [_tr_response(t) for t in await use_case.execute(slug)]
+    except LearningContentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@admin_router.put(
+    "/modules/{slug}/translations/{language}",
+    response_model=TranslationResponse,
+    response_model_by_alias=True,
+)
+async def admin_upsert_module_translation(
+    slug: str,
+    language: str,
+    body: TranslationUpsertRequest,
+    use_case: Annotated[UpsertModuleTranslation, Depends(get_upsert_module_tr_uc)],
+    _principal: Annotated[UserPrincipal, Depends(require_editor)],
+) -> TranslationResponse:
+    try:
+        tr = await use_case.execute(
+            slug=slug, language=language, title=body.title, description=body.description
+        )
+    except LearningContentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except LearningContentValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _tr_response(tr)
+
+
+@admin_router.delete("/modules/{slug}/translations/{language}", status_code=204)
+async def admin_delete_module_translation(
+    slug: str,
+    language: str,
+    use_case: Annotated[DeleteModuleTranslation, Depends(get_delete_module_tr_uc)],
+    _principal: Annotated[UserPrincipal, Depends(require_editor)],
+) -> Response:
+    try:
+        await use_case.execute(slug=slug, language=language)
+    except LearningContentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except LearningContentValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return Response(status_code=204)
+
+
+@admin_router.get(
+    "/paths/{slug}/translations",
+    response_model=list[TranslationResponse],
+    response_model_by_alias=True,
+)
+async def admin_list_path_translations(
+    slug: str,
+    use_case: Annotated[ListPathTranslations, Depends(get_list_path_tr_uc)],
+    _principal: Annotated[UserPrincipal, Depends(require_editor)],
+) -> list[TranslationResponse]:
+    try:
+        return [_tr_response(t) for t in await use_case.execute(slug)]
+    except LearningContentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@admin_router.put(
+    "/paths/{slug}/translations/{language}",
+    response_model=TranslationResponse,
+    response_model_by_alias=True,
+)
+async def admin_upsert_path_translation(
+    slug: str,
+    language: str,
+    body: TranslationUpsertRequest,
+    use_case: Annotated[UpsertPathTranslation, Depends(get_upsert_path_tr_uc)],
+    _principal: Annotated[UserPrincipal, Depends(require_editor)],
+) -> TranslationResponse:
+    try:
+        tr = await use_case.execute(
+            slug=slug, language=language, title=body.title, description=body.description
+        )
+    except LearningContentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except LearningContentValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _tr_response(tr)
+
+
+@admin_router.delete("/paths/{slug}/translations/{language}", status_code=204)
+async def admin_delete_path_translation(
+    slug: str,
+    language: str,
+    use_case: Annotated[DeletePathTranslation, Depends(get_delete_path_tr_uc)],
+    _principal: Annotated[UserPrincipal, Depends(require_editor)],
+) -> Response:
+    try:
+        await use_case.execute(slug=slug, language=language)
+    except LearningContentNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except LearningContentValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return Response(status_code=204)
 
 
 __all__ = ["admin_router", "public_router"]
