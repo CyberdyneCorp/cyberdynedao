@@ -24,6 +24,7 @@ class RequestSource(StrEnum):
 
     TYPED = "typed"  # learner typed "Request a course/topic"
     SCAN = "scan"  # Scan-to-Learn photo found no matching course
+    AGENT = "agent"  # Global Agent Chat answered an out-of-catalog topic (issue #234)
 
 
 def parse_request_source(raw: str) -> RequestSource:
