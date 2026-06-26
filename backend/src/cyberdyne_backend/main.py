@@ -116,6 +116,12 @@ from cyberdyne_backend.adapters.inbound.api.course_demand.router import (
 from cyberdyne_backend.adapters.inbound.api.course_demand.router import (
     public_router as course_demand_public_router,
 )
+from cyberdyne_backend.adapters.inbound.api.course_finder.router import (
+    get_scan_to_learn_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.course_finder.router import (
+    public_router as course_finder_public_router,
+)
 from cyberdyne_backend.adapters.inbound.api.courses.router import (
     admin_router as courses_admin_router,
 )
@@ -337,6 +343,12 @@ from cyberdyne_backend.adapters.outbound.attachments import UploadAttachmentInge
 from cyberdyne_backend.adapters.outbound.certificates.signer import (
     Ed25519CertificateSigner,
 )
+from cyberdyne_backend.adapters.outbound.course_finder.catalog_source import (
+    CourseCatalogTextSource,
+)
+from cyberdyne_backend.adapters.outbound.llm.vision_question_reader import (
+    VisionQuestionReader,
+)
 from cyberdyne_backend.adapters.outbound.persistence.academy.job_store import (
     SqlAlchemyTranslationJobStore,
 )
@@ -480,6 +492,10 @@ from cyberdyne_backend.application.course_demand import (
     ListCourseRequestClusters,
     SubmitCourseRequest,
 )
+from cyberdyne_backend.application.course_finder import (
+    CatalogSearchIndex,
+    ScanToLearn,
+)
 from cyberdyne_backend.application.courses import (
     AddLesson,
     AwardCourseCertificate,
@@ -594,6 +610,7 @@ from cyberdyne_backend.application.uploads import (
     SaveUploads,
 )
 from cyberdyne_backend.domain.auth_identity import UserPrincipal, UserProfile
+from cyberdyne_backend.domain.course_finder import CatalogEntry
 from cyberdyne_backend.infrastructure.container import Container
 from cyberdyne_backend.infrastructure.database.engine import (
     dispose_engine,
@@ -1279,6 +1296,34 @@ def create_app() -> FastAPI:
         async with session_scope() as session:
             yield EnforceQuota(repo=SqlAlchemyUsageCounterRepository(session))
 
+    # Scan-to-Learn (issue #231). The catalog index is built once per process
+    # and cached on the container, so the catalog is embedded a single time
+    # rather than on every scan. Its text source opens its own short-lived
+    # session when the index builds lazily on the first scan (mirroring the
+    # translation worker's own-session pattern). The vision reader + embedder
+    # come from the container (real OpenAI when keyed, static fallbacks else).
+    class _SessionScopedCatalogSource:
+        """``CatalogTextSource`` that opens a fresh committed session each call
+        so the one-time index build never holds a request-scoped session."""
+
+        async def entries(self) -> list[CatalogEntry]:
+            async with session_scope() as session:
+                return await CourseCatalogTextSource(
+                    courses=SqlAlchemyCourseRepository(session)
+                ).entries()
+
+    def _build_catalog_index() -> CatalogSearchIndex:
+        return CatalogSearchIndex(
+            source=_SessionScopedCatalogSource(),
+            embedder=container.embedding,
+        )
+
+    async def _scan_to_learn_dep() -> ScanToLearn:
+        return ScanToLearn(
+            reader=VisionQuestionReader(vision=container.vision),
+            index=container.catalog_index(_build_catalog_index),
+        )
+
     async def _path_gating_dep() -> AsyncIterator[GetPathGating]:
         async with session_scope() as session:
             yield GetPathGating(
@@ -1610,6 +1655,7 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_submit_course_request_uc] = _submit_course_request_dep
     app.dependency_overrides[get_list_clusters_uc] = _list_clusters_dep
     app.dependency_overrides[get_enforce_quota_uc] = _enforce_quota_dep
+    app.dependency_overrides[get_scan_to_learn_uc] = _scan_to_learn_dep
     app.dependency_overrides[get_path_gating_uc] = _path_gating_dep
     app.dependency_overrides[get_eligibility_uc] = _eligibility_dep
     app.dependency_overrides[get_issue_certificate_uc] = _issue_certificate_dep
@@ -1660,6 +1706,7 @@ def create_app() -> FastAPI:
     app.include_router(feedback_admin_router)
     app.include_router(course_demand_public_router)
     app.include_router(course_demand_admin_router)
+    app.include_router(course_finder_public_router)
     app.include_router(courses_public_router)
     app.include_router(courses_admin_router)
     app.include_router(category_public_router)
