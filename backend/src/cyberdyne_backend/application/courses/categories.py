@@ -23,6 +23,10 @@ from cyberdyne_backend.domain.courses import (
 # its sort_order orders it among the groups. Values reproduce the exact order the
 # frontend topicGroups/topicOrder used to hardcode.
 BUILTIN_CATEGORIES: tuple[tuple[str, str, str, int], ...] = (
+    # Life Sciences (Biology -> AI Drug Design)
+    ("biology-foundations", "Biology Foundations", "🧫", 0),
+    ("bioinformatics-omics", "Bioinformatics & Omics", "🧪", 1),
+    ("drug-design-ai", "Drug Design & AI", "💊", 2),
     # Programming
     ("foundations", "Foundations", "🎯", 0),
     ("languages", "Languages", "💻", 1),
@@ -57,6 +61,7 @@ BUILTIN_CATEGORIES: tuple[tuple[str, str, str, int], ...] = (
 # Built-in parent groups: (slug, name, icon, sort_order). sort_order places the
 # group among the top-level items (mathematics, a top-level leaf, sits at 3).
 BUILTIN_GROUPS: tuple[tuple[str, str, str, int], ...] = (
+    ("life-sciences", "Life Sciences", "🧬", 6),
     ("programming", "Programming", "🧑‍💻", 0),
     ("software-systems", "Software & Systems", "🧰", 1),
     ("ai-data", "AI & Data", "🧠", 2),
@@ -67,6 +72,9 @@ BUILTIN_GROUPS: tuple[tuple[str, str, str, int], ...] = (
 # Which parent group each built-in (leaf) category belongs to. A leaf not listed
 # here stays top-level (e.g. Mathematics renders as its own row, as today).
 CATEGORY_PARENT: dict[str, str] = {
+    "biology-foundations": "life-sciences",
+    "bioinformatics-omics": "life-sciences",
+    "drug-design-ai": "life-sciences",
     "foundations": "programming",
     "languages": "programming",
     "web-development": "programming",
@@ -89,6 +97,61 @@ CATEGORY_PARENT: dict[str, str] = {
     "blockchain": "web3",
 }
 
+# Biology → AI Drug Design tracks: course-slug prefix -> leaf category.
+_LIFE_SCIENCES_CATS: dict[str, str] = {
+    "math-life-sciences": "biology-foundations",
+    "biostatistics": "biology-foundations",
+    "physics-life-sciences": "biology-foundations",
+    "scientific-computing": "biology-foundations",
+    "general-chemistry": "biology-foundations",
+    "organic-chemistry": "biology-foundations",
+    "physical-chemistry": "biology-foundations",
+    "analytical-chemistry": "biology-foundations",
+    "cell-biology": "biology-foundations",
+    "biochemistry": "biology-foundations",
+    "molecular-biology": "biology-foundations",
+    "genetics": "biology-foundations",
+    "microbiology": "biology-foundations",
+    "physiology": "biology-foundations",
+    "immunology": "biology-foundations",
+    "evolution-ecology": "biology-foundations",
+    "programming-biology-python": "biology-foundations",
+    "r-data-analysis": "biology-foundations",
+    "bio-databases": "biology-foundations",
+    "data-visualization-bio": "biology-foundations",
+    "structural-biology": "bioinformatics-omics",
+    "protein-science": "bioinformatics-omics",
+    "genomics": "bioinformatics-omics",
+    "pharmacology": "bioinformatics-omics",
+    "medicinal-chemistry": "bioinformatics-omics",
+    "bioinformatics": "bioinformatics-omics",
+    "sequence-analysis": "bioinformatics-omics",
+    "phylogenetics": "bioinformatics-omics",
+    "ngs-analysis": "bioinformatics-omics",
+    "transcriptomics": "bioinformatics-omics",
+    "proteomics-metabolomics": "bioinformatics-omics",
+    "systems-biology": "bioinformatics-omics",
+    "single-cell-omics": "bioinformatics-omics",
+    "molecular-modeling": "drug-design-ai",
+    "molecular-dynamics": "drug-design-ai",
+    "protein-structure-prediction": "drug-design-ai",
+    "cheminformatics": "drug-design-ai",
+    "computer-aided-drug-design": "drug-design-ai",
+    "docking-virtual-screening": "drug-design-ai",
+    "qsar-modeling": "drug-design-ai",
+    "ml-life-sciences": "drug-design-ai",
+    "deep-learning-biology": "drug-design-ai",
+    "ai-drug-discovery": "drug-design-ai",
+    "generative-molecular-design": "drug-design-ai",
+    "target-identification": "drug-design-ai",
+    "admet-prediction": "drug-design-ai",
+    "protein-ligand-binding": "drug-design-ai",
+    "drug-development-regulatory": "drug-design-ai",
+    "reproducible-research": "drug-design-ai",
+    "capstone-ai-drug-design": "drug-design-ai",
+}
+
+
 _EE_RE = re.compile(
     r"^(electronics|analog-ic|antennas|power-electronics|pcb|semiconductor|embedded|signals|"
     r"signal-integrity|control|dsp|rf-comms|microwave|digital-comms|digital-logic|fpga|"
@@ -100,6 +163,11 @@ _EE_RE = re.compile(
 def category_slug_for(slug: str) -> str | None:
     """The default category slug for a course slug (mirror of the frontend
     ``courseTopic``), or ``None`` for the 'Other' bucket."""
+    # Life-sciences tracks take precedence over the generic math-/physics-/
+    # ml- prefix rules below (e.g. math-life-sciences, ml-life-sciences).
+    for _p, _leaf in _LIFE_SCIENCES_CATS.items():
+        if slug == _p or slug.startswith(_p + "-"):
+            return _leaf
     # Foundational CS-theory course (computability/logic) — placed under
     # Foundations, ahead of the generic ``algorithms`` prefix match below.
     if slug == "algorithms-logic-computing":

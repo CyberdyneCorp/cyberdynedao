@@ -29,9 +29,17 @@ from cyberdyne_backend.application.courses.seed_aerial import AERIAL_COURSES
 from cyberdyne_backend.application.courses.seed_algorithms import ALGORITHMS_COURSES
 from cyberdyne_backend.application.courses.seed_analog_comms import ANALOG_COMMS_COURSES
 from cyberdyne_backend.application.courses.seed_analog_ic import ANALOG_IC_COURSES
+from cyberdyne_backend.application.courses.seed_analytical_chemistry import (
+    ANALYTICAL_CHEMISTRY_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_antennas import ANTENNAS_COURSES
 from cyberdyne_backend.application.courses.seed_audio_processing import AUDIO_PROCESSING_COURSES
 from cyberdyne_backend.application.courses.seed_battery import BATTERY_COURSES
+from cyberdyne_backend.application.courses.seed_bio_databases import BIO_DATABASES_COURSES
+from cyberdyne_backend.application.courses.seed_biochemistry import BIOCHEMISTRY_COURSES
+from cyberdyne_backend.application.courses.seed_bioinformatics import BIOINFORMATICS_COURSES
+from cyberdyne_backend.application.courses.seed_biostatistics import BIOSTATISTICS_COURSES
+from cyberdyne_backend.application.courses.seed_cell_biology import CELL_BIOLOGY_COURSES
 from cyberdyne_backend.application.courses.seed_circuit_analysis import CIRCUIT_ANALYSIS_COURSES
 from cyberdyne_backend.application.courses.seed_coding_theory import CODING_THEORY_COURSES
 from cyberdyne_backend.application.courses.seed_comparch import COMPARCH_COURSES
@@ -45,6 +53,9 @@ from cyberdyne_backend.application.courses.seed_concurrency import CONCURRENCY_C
 from cyberdyne_backend.application.courses.seed_control import CONTROL_COURSES
 from cyberdyne_backend.application.courses.seed_csharp import CSHARP_COURSES
 from cyberdyne_backend.application.courses.seed_data_converters import DATA_CONVERTERS_COURSES
+from cyberdyne_backend.application.courses.seed_data_visualization_bio import (
+    DATA_VISUALIZATION_BIO_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_databases import DATABASE_COURSES
 from cyberdyne_backend.application.courses.seed_dataeng import DATAENG_COURSES
 from cyberdyne_backend.application.courses.seed_devops import DEVOPS_COURSES
@@ -60,39 +71,62 @@ from cyberdyne_backend.application.courses.seed_embedded import EMBEDDED_COURSES
 from cyberdyne_backend.application.courses.seed_emc import EMC_COURSES
 from cyberdyne_backend.application.courses.seed_english_brazil import ENGLISH_BRAZIL_COURSES
 from cyberdyne_backend.application.courses.seed_estimation import ESTIMATION_COURSES
+from cyberdyne_backend.application.courses.seed_evolution_ecology import EVOLUTION_ECOLOGY_COURSES
 from cyberdyne_backend.application.courses.seed_fiber_optics import FIBER_OPTICS_COURSES
 from cyberdyne_backend.application.courses.seed_filter_design import FILTER_DESIGN_COURSES
 from cyberdyne_backend.application.courses.seed_fpga import FPGA_COURSES
+from cyberdyne_backend.application.courses.seed_general_chemistry import GENERAL_CHEMISTRY_COURSES
+from cyberdyne_backend.application.courses.seed_genetics import GENETICS_COURSES
+from cyberdyne_backend.application.courses.seed_genomics import GENOMICS_COURSES
 from cyberdyne_backend.application.courses.seed_git import GIT_COURSES
 from cyberdyne_backend.application.courses.seed_high_voltage import HIGH_VOLTAGE_COURSES
 from cyberdyne_backend.application.courses.seed_hwverification import HW_VERIFICATION_COURSES
 from cyberdyne_backend.application.courses.seed_iac import IAC_COURSES
 from cyberdyne_backend.application.courses.seed_image_processing import IMAGE_PROCESSING_COURSES
+from cyberdyne_backend.application.courses.seed_immunology import IMMUNOLOGY_COURSES
 from cyberdyne_backend.application.courses.seed_languages import LANGUAGE_COURSES
 from cyberdyne_backend.application.courses.seed_linux import LINUX_COURSES
 from cyberdyne_backend.application.courses.seed_machines import MACHINES_COURSES
 from cyberdyne_backend.application.courses.seed_math import MATH_COURSES
+from cyberdyne_backend.application.courses.seed_math_life_sciences import MATH_LIFE_SCIENCES_COURSES
+from cyberdyne_backend.application.courses.seed_microbiology import MICROBIOLOGY_COURSES
 from cyberdyne_backend.application.courses.seed_microwave import MICROWAVE_COURSES
 from cyberdyne_backend.application.courses.seed_ml import ML_COURSES
 from cyberdyne_backend.application.courses.seed_mobilerobotics import MOBILE_ROBOTICS_COURSES
+from cyberdyne_backend.application.courses.seed_molecular_biology import MOLECULAR_BIOLOGY_COURSES
 from cyberdyne_backend.application.courses.seed_networking import NETWORKING_COURSES
+from cyberdyne_backend.application.courses.seed_organic_chemistry import ORGANIC_CHEMISTRY_COURSES
 from cyberdyne_backend.application.courses.seed_os import OS_COURSES
 from cyberdyne_backend.application.courses.seed_pcb import PCB_COURSES
+from cyberdyne_backend.application.courses.seed_pharmacology import PHARMACOLOGY_COURSES
 from cyberdyne_backend.application.courses.seed_photonics import PHOTONICS_COURSES
+from cyberdyne_backend.application.courses.seed_physical_chemistry import PHYSICAL_CHEMISTRY_COURSES
 from cyberdyne_backend.application.courses.seed_physics import PHYSICS_COURSES
+from cyberdyne_backend.application.courses.seed_physics_life_sciences import (
+    PHYSICS_LIFE_SCIENCES_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_physiology import PHYSIOLOGY_COURSES
 from cyberdyne_backend.application.courses.seed_power_electronics import POWER_ELECTRONICS_COURSES
 from cyberdyne_backend.application.courses.seed_power_protection import POWER_PROTECTION_COURSES
 from cyberdyne_backend.application.courses.seed_power_systems import POWER_SYSTEMS_COURSES
 from cyberdyne_backend.application.courses.seed_prob_stats_python import (
     PROB_STATS_PYTHON_COURSES,
 )
+from cyberdyne_backend.application.courses.seed_programming_biology_python import (
+    PROGRAMMING_BIOLOGY_PYTHON_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_protein_science import PROTEIN_SCIENCE_COURSES
 from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
+from cyberdyne_backend.application.courses.seed_r_data_analysis import R_DATA_ANALYSIS_COURSES
 from cyberdyne_backend.application.courses.seed_radar import RADAR_COURSES
 from cyberdyne_backend.application.courses.seed_rails import RAILS_COURSES
 from cyberdyne_backend.application.courses.seed_renewable_ev import RENEWABLE_EV_COURSES
 from cyberdyne_backend.application.courses.seed_rf_comms import RF_COMMS_COURSES
 from cyberdyne_backend.application.courses.seed_rfic import RFIC_COURSES
 from cyberdyne_backend.application.courses.seed_robotics import ROBOTICS_COURSES
+from cyberdyne_backend.application.courses.seed_scientific_computing import (
+    SCIENTIFIC_COMPUTING_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_security import SECURITY_COURSES
 from cyberdyne_backend.application.courses.seed_semiconductors import SEMICONDUCTOR_COURSES
 from cyberdyne_backend.application.courses.seed_sensors import SENSORS_COURSES
@@ -107,6 +141,7 @@ from cyberdyne_backend.application.courses.seed_statistics import STATISTICS_COU
 from cyberdyne_backend.application.courses.seed_stochastic_processes import (
     STOCHASTIC_PROCESSES_COURSES,
 )
+from cyberdyne_backend.application.courses.seed_structural_biology import STRUCTURAL_BIOLOGY_COURSES
 from cyberdyne_backend.application.courses.seed_systemdesign import SYSTEM_DESIGN_COURSES
 from cyberdyne_backend.application.courses.seed_sysverilog import SYSVERILOG_COURSES
 from cyberdyne_backend.application.courses.seed_technical_english import (
@@ -1289,6 +1324,31 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *TECHNICAL_ENGLISH_COURSES,
     *ENGLISH_BRAZIL_COURSES,
     *DJANGO_COURSES,
+    *ANALYTICAL_CHEMISTRY_COURSES,
+    *BIO_DATABASES_COURSES,
+    *BIOCHEMISTRY_COURSES,
+    *BIOINFORMATICS_COURSES,
+    *BIOSTATISTICS_COURSES,
+    *CELL_BIOLOGY_COURSES,
+    *DATA_VISUALIZATION_BIO_COURSES,
+    *EVOLUTION_ECOLOGY_COURSES,
+    *GENERAL_CHEMISTRY_COURSES,
+    *GENETICS_COURSES,
+    *GENOMICS_COURSES,
+    *IMMUNOLOGY_COURSES,
+    *MATH_LIFE_SCIENCES_COURSES,
+    *MICROBIOLOGY_COURSES,
+    *MOLECULAR_BIOLOGY_COURSES,
+    *ORGANIC_CHEMISTRY_COURSES,
+    *PHARMACOLOGY_COURSES,
+    *PHYSICAL_CHEMISTRY_COURSES,
+    *PHYSICS_LIFE_SCIENCES_COURSES,
+    *PHYSIOLOGY_COURSES,
+    *PROGRAMMING_BIOLOGY_PYTHON_COURSES,
+    *PROTEIN_SCIENCE_COURSES,
+    *R_DATA_ANALYSIS_COURSES,
+    *SCIENTIFIC_COMPUTING_COURSES,
+    *STRUCTURAL_BIOLOGY_COURSES,
     *RAILS_COURSES,
 )
 
