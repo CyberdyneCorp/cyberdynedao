@@ -24,6 +24,9 @@ from datetime import datetime
 from uuid import UUID
 
 from cyberdyne_backend.application.courses.seed_adaptive_dsp import ADAPTIVE_DSP_COURSES
+from cyberdyne_backend.application.courses.seed_additive_manufacturing import (
+    ADDITIVE_MANUFACTURING_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_admet_prediction import ADMET_PREDICTION_COURSES
 from cyberdyne_backend.application.courses.seed_advanced_control import ADVANCED_CONTROL_COURSES
 from cyberdyne_backend.application.courses.seed_aerial import AERIAL_COURSES
@@ -87,11 +90,24 @@ from cyberdyne_backend.application.courses.seed_electromagnetics import ELECTROM
 from cyberdyne_backend.application.courses.seed_electronics import ELECTRONICS_COURSES
 from cyberdyne_backend.application.courses.seed_embedded import EMBEDDED_COURSES
 from cyberdyne_backend.application.courses.seed_emc import EMC_COURSES
+from cyberdyne_backend.application.courses.seed_engineering_dynamics import (
+    ENGINEERING_DYNAMICS_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_engineering_graphics_cad import (
+    ENGINEERING_GRAPHICS_CAD_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_engineering_statics import (
+    ENGINEERING_STATICS_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_engineering_thermodynamics import (
+    ENGINEERING_THERMODYNAMICS_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_english_brazil import ENGLISH_BRAZIL_COURSES
 from cyberdyne_backend.application.courses.seed_estimation import ESTIMATION_COURSES
 from cyberdyne_backend.application.courses.seed_evolution_ecology import EVOLUTION_ECOLOGY_COURSES
 from cyberdyne_backend.application.courses.seed_fiber_optics import FIBER_OPTICS_COURSES
 from cyberdyne_backend.application.courses.seed_filter_design import FILTER_DESIGN_COURSES
+from cyberdyne_backend.application.courses.seed_fluid_mechanics import FLUID_MECHANICS_COURSES
 from cyberdyne_backend.application.courses.seed_fpga import FPGA_COURSES
 from cyberdyne_backend.application.courses.seed_general_chemistry import GENERAL_CHEMISTRY_COURSES
 from cyberdyne_backend.application.courses.seed_generative_molecular_design import (
@@ -100,6 +116,7 @@ from cyberdyne_backend.application.courses.seed_generative_molecular_design impo
 from cyberdyne_backend.application.courses.seed_genetics import GENETICS_COURSES
 from cyberdyne_backend.application.courses.seed_genomics import GENOMICS_COURSES
 from cyberdyne_backend.application.courses.seed_git import GIT_COURSES
+from cyberdyne_backend.application.courses.seed_heat_transfer import HEAT_TRANSFER_COURSES
 from cyberdyne_backend.application.courses.seed_high_voltage import HIGH_VOLTAGE_COURSES
 from cyberdyne_backend.application.courses.seed_hwverification import HW_VERIFICATION_COURSES
 from cyberdyne_backend.application.courses.seed_iac import IAC_COURSES
@@ -108,8 +125,15 @@ from cyberdyne_backend.application.courses.seed_immunology import IMMUNOLOGY_COU
 from cyberdyne_backend.application.courses.seed_languages import LANGUAGE_COURSES
 from cyberdyne_backend.application.courses.seed_linux import LINUX_COURSES
 from cyberdyne_backend.application.courses.seed_machines import MACHINES_COURSES
+from cyberdyne_backend.application.courses.seed_manufacturing_processes import (
+    MANUFACTURING_PROCESSES_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_materials_science import MATERIALS_SCIENCE_COURSES
 from cyberdyne_backend.application.courses.seed_math import MATH_COURSES
 from cyberdyne_backend.application.courses.seed_math_life_sciences import MATH_LIFE_SCIENCES_COURSES
+from cyberdyne_backend.application.courses.seed_mechanics_of_materials import (
+    MECHANICS_OF_MATERIALS_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_medicinal_chemistry import (
     MEDICINAL_CHEMISTRY_COURSES,
 )
@@ -1423,6 +1447,16 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *SYSTEMS_BIOLOGY_COURSES,
     *TARGET_IDENTIFICATION_COURSES,
     *TRANSCRIPTOMICS_COURSES,
+    *ADDITIVE_MANUFACTURING_COURSES,
+    *ENGINEERING_DYNAMICS_COURSES,
+    *ENGINEERING_GRAPHICS_CAD_COURSES,
+    *ENGINEERING_STATICS_COURSES,
+    *ENGINEERING_THERMODYNAMICS_COURSES,
+    *FLUID_MECHANICS_COURSES,
+    *HEAT_TRANSFER_COURSES,
+    *MANUFACTURING_PROCESSES_COURSES,
+    *MATERIALS_SCIENCE_COURSES,
+    *MECHANICS_OF_MATERIALS_COURSES,
     *RAILS_COURSES,
 )
 

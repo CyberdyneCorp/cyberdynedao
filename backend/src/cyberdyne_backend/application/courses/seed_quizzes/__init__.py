@@ -15,6 +15,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
     adaptive_dsp_intermediate as _adaptive_dsp_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    additive_manufacturing_advanced as _additive_manufacturing_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    additive_manufacturing_basics as _additive_manufacturing_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    additive_manufacturing_intermediate as _additive_manufacturing_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     admet_prediction_advanced as _admet_prediction_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -334,6 +343,42 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
     embedded_intermediate as _embedded_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    engineering_dynamics_advanced as _engineering_dynamics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    engineering_dynamics_basics as _engineering_dynamics_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    engineering_dynamics_intermediate as _engineering_dynamics_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    engineering_graphics_cad_advanced as _engineering_graphics_cad_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    engineering_graphics_cad_basics as _engineering_graphics_cad_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    engineering_graphics_cad_intermediate as _engineering_graphics_cad_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    engineering_statics_advanced as _engineering_statics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    engineering_statics_basics as _engineering_statics_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    engineering_statics_intermediate as _engineering_statics_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    engineering_thermodynamics_advanced as _engineering_thermodynamics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    engineering_thermodynamics_basics as _engineering_thermodynamics_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    engineering_thermodynamics_intermediate as _engineering_thermodynamics_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     english_brazil_advanced as _english_brazil_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -368,6 +413,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     filter_design_intermediate as _filter_design_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    fluid_mechanics_advanced as _fluid_mechanics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    fluid_mechanics_basics as _fluid_mechanics_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    fluid_mechanics_intermediate as _fluid_mechanics_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import fpga_advanced as _fpga_advanced
 from cyberdyne_backend.application.courses.seed_quizzes import fpga_basics as _fpga_basics
@@ -408,6 +462,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 )
 from cyberdyne_backend.application.courses.seed_quizzes import go_basics as _go_basics
 from cyberdyne_backend.application.courses.seed_quizzes import go_intermediate as _go_intermediate
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    heat_transfer_advanced as _heat_transfer_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    heat_transfer_basics as _heat_transfer_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    heat_transfer_intermediate as _heat_transfer_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import (
     high_voltage_advanced as _high_voltage_advanced,
 )
@@ -457,6 +520,24 @@ from cyberdyne_backend.application.courses.seed_quizzes import machines_basics a
 from cyberdyne_backend.application.courses.seed_quizzes import (
     machines_intermediate as _machines_intermediate,
 )
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    manufacturing_processes_advanced as _manufacturing_processes_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    manufacturing_processes_basics as _manufacturing_processes_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    manufacturing_processes_intermediate as _manufacturing_processes_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    materials_science_advanced as _materials_science_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    materials_science_basics as _materials_science_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    materials_science_intermediate as _materials_science_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import math_advanced as _math_advanced
 from cyberdyne_backend.application.courses.seed_quizzes import math_basics as _math_basics
 from cyberdyne_backend.application.courses.seed_quizzes import math_complex as _math_complex
@@ -482,6 +563,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 )
 from cyberdyne_backend.application.courses.seed_quizzes import math_probability as _math_probability
 from cyberdyne_backend.application.courses.seed_quizzes import matlab_basics as _matlab_basics
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    mechanics_of_materials_advanced as _mechanics_of_materials_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    mechanics_of_materials_basics as _mechanics_of_materials_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    mechanics_of_materials_intermediate as _mechanics_of_materials_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import (
     medicinal_chemistry_advanced as _medicinal_chemistry_advanced,
 )
@@ -962,6 +1052,36 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 from cyberdyne_backend.application.courses.seed_types import CourseQuiz
 
 QUIZ_REGISTRY: dict[str, CourseQuiz] = {
+    "additive-manufacturing-basics": _additive_manufacturing_basics.QUIZ,
+    "additive-manufacturing-intermediate": _additive_manufacturing_intermediate.QUIZ,
+    "additive-manufacturing-advanced": _additive_manufacturing_advanced.QUIZ,
+    "engineering-dynamics-basics": _engineering_dynamics_basics.QUIZ,
+    "engineering-dynamics-intermediate": _engineering_dynamics_intermediate.QUIZ,
+    "engineering-dynamics-advanced": _engineering_dynamics_advanced.QUIZ,
+    "engineering-graphics-cad-basics": _engineering_graphics_cad_basics.QUIZ,
+    "engineering-graphics-cad-intermediate": _engineering_graphics_cad_intermediate.QUIZ,
+    "engineering-graphics-cad-advanced": _engineering_graphics_cad_advanced.QUIZ,
+    "engineering-statics-basics": _engineering_statics_basics.QUIZ,
+    "engineering-statics-intermediate": _engineering_statics_intermediate.QUIZ,
+    "engineering-statics-advanced": _engineering_statics_advanced.QUIZ,
+    "engineering-thermodynamics-basics": _engineering_thermodynamics_basics.QUIZ,
+    "engineering-thermodynamics-intermediate": _engineering_thermodynamics_intermediate.QUIZ,
+    "engineering-thermodynamics-advanced": _engineering_thermodynamics_advanced.QUIZ,
+    "fluid-mechanics-basics": _fluid_mechanics_basics.QUIZ,
+    "fluid-mechanics-intermediate": _fluid_mechanics_intermediate.QUIZ,
+    "fluid-mechanics-advanced": _fluid_mechanics_advanced.QUIZ,
+    "heat-transfer-basics": _heat_transfer_basics.QUIZ,
+    "heat-transfer-intermediate": _heat_transfer_intermediate.QUIZ,
+    "heat-transfer-advanced": _heat_transfer_advanced.QUIZ,
+    "manufacturing-processes-basics": _manufacturing_processes_basics.QUIZ,
+    "manufacturing-processes-intermediate": _manufacturing_processes_intermediate.QUIZ,
+    "manufacturing-processes-advanced": _manufacturing_processes_advanced.QUIZ,
+    "materials-science-basics": _materials_science_basics.QUIZ,
+    "materials-science-intermediate": _materials_science_intermediate.QUIZ,
+    "materials-science-advanced": _materials_science_advanced.QUIZ,
+    "mechanics-of-materials-basics": _mechanics_of_materials_basics.QUIZ,
+    "mechanics-of-materials-intermediate": _mechanics_of_materials_intermediate.QUIZ,
+    "mechanics-of-materials-advanced": _mechanics_of_materials_advanced.QUIZ,
     "admet-prediction-basics": _admet_prediction_basics.QUIZ,
     "admet-prediction-intermediate": _admet_prediction_intermediate.QUIZ,
     "admet-prediction-advanced": _admet_prediction_advanced.QUIZ,

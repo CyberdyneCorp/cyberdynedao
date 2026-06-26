@@ -23,6 +23,10 @@ from cyberdyne_backend.domain.courses import (
 # its sort_order orders it among the groups. Values reproduce the exact order the
 # frontend topicGroups/topicOrder used to hardcode.
 BUILTIN_CATEGORIES: tuple[tuple[str, str, str, int], ...] = (
+    # Mechanical Engineering -> Generative Design
+    ("mechanical-foundations", "Mechanical Foundations", "📐", 0),
+    ("mechatronics-robotics", "Mechatronics & Robotics", "🤖", 1),
+    ("generative-design-ai", "Generative Design & AI", "✨", 2),
     # Life Sciences (Biology -> AI Drug Design)
     ("biology-foundations", "Biology Foundations", "🧫", 0),
     ("bioinformatics-omics", "Bioinformatics & Omics", "🧪", 1),
@@ -61,6 +65,7 @@ BUILTIN_CATEGORIES: tuple[tuple[str, str, str, int], ...] = (
 # Built-in parent groups: (slug, name, icon, sort_order). sort_order places the
 # group among the top-level items (mathematics, a top-level leaf, sits at 3).
 BUILTIN_GROUPS: tuple[tuple[str, str, str, int], ...] = (
+    ("mechanical-engineering", "Mechanical Engineering", "⚙️", 7),
     ("life-sciences", "Life Sciences", "🧬", 6),
     ("programming", "Programming", "🧑‍💻", 0),
     ("software-systems", "Software & Systems", "🧰", 1),
@@ -72,6 +77,9 @@ BUILTIN_GROUPS: tuple[tuple[str, str, str, int], ...] = (
 # Which parent group each built-in (leaf) category belongs to. A leaf not listed
 # here stays top-level (e.g. Mathematics renders as its own row, as today).
 CATEGORY_PARENT: dict[str, str] = {
+    "mechanical-foundations": "mechanical-engineering",
+    "mechatronics-robotics": "mechanical-engineering",
+    "generative-design-ai": "mechanical-engineering",
     "biology-foundations": "life-sciences",
     "bioinformatics-omics": "life-sciences",
     "drug-design-ai": "life-sciences",
@@ -152,6 +160,38 @@ _LIFE_SCIENCES_CATS: dict[str, str] = {
 }
 
 
+# Mechanical Engineering -> Generative Design: course-slug prefix -> leaf.
+_MECH_CATS: dict[str, str] = {
+    "engineering-statics": "mechanical-foundations",
+    "engineering-dynamics": "mechanical-foundations",
+    "mechanics-of-materials": "mechanical-foundations",
+    "engineering-graphics-cad": "mechanical-foundations",
+    "engineering-thermodynamics": "mechanical-foundations",
+    "fluid-mechanics": "mechanical-foundations",
+    "heat-transfer": "mechanical-foundations",
+    "materials-science": "mechanical-foundations",
+    "manufacturing-processes": "mechanical-foundations",
+    "additive-manufacturing": "mechanical-foundations",
+    "machine-design": "mechanical-foundations",
+    "kinematics-of-machinery": "mechanical-foundations",
+    "mechanical-vibrations": "mechanical-foundations",
+    "finite-element-analysis": "mechatronics-robotics",
+    "computational-fluid-dynamics": "mechatronics-robotics",
+    "multibody-dynamics": "mechatronics-robotics",
+    "cad-cae-parametric": "mechatronics-robotics",
+    "mechatronics": "mechatronics-robotics",
+    "actuators-motion-systems": "mechatronics-robotics",
+    "hydraulics-pneumatics": "mechatronics-robotics",
+    "robot-manipulators": "mechatronics-robotics",
+    "design-optimization": "generative-design-ai",
+    "topology-optimization": "generative-design-ai",
+    "ml-for-engineering": "generative-design-ai",
+    "generative-design": "generative-design-ai",
+    "ai-organic-shapes": "generative-design-ai",
+    "capstone-generative-mechanical-design": "generative-design-ai",
+}
+
+
 _EE_RE = re.compile(
     r"^(electronics|analog-ic|antennas|power-electronics|pcb|semiconductor|embedded|signals|"
     r"signal-integrity|control|dsp|rf-comms|microwave|digital-comms|digital-logic|fpga|"
@@ -166,6 +206,11 @@ def category_slug_for(slug: str) -> str | None:
     # Life-sciences tracks take precedence over the generic math-/physics-/
     # ml- prefix rules below (e.g. math-life-sciences, ml-life-sciences).
     for _p, _leaf in _LIFE_SCIENCES_CATS.items():
+        if slug == _p or slug.startswith(_p + "-"):
+            return _leaf
+    # Mechanical-engineering tracks take precedence over generic prefix
+    # rules below (e.g. ml-for-engineering, machine-design).
+    for _p, _leaf in _MECH_CATS.items():
         if slug == _p or slug.startswith(_p + "-"):
             return _leaf
     # Foundational CS-theory course (computability/logic) — placed under

@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 425
+        assert len(summary) == 455
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -149,6 +149,36 @@ class TestSeedCourses:
     def test_curated_content_covers_all_courses(self) -> None:
         slugs = {c.slug for c in ACADEMY_COURSES}
         assert slugs == {
+            "additive-manufacturing-basics",
+            "additive-manufacturing-intermediate",
+            "additive-manufacturing-advanced",
+            "engineering-dynamics-basics",
+            "engineering-dynamics-intermediate",
+            "engineering-dynamics-advanced",
+            "engineering-graphics-cad-basics",
+            "engineering-graphics-cad-intermediate",
+            "engineering-graphics-cad-advanced",
+            "engineering-statics-basics",
+            "engineering-statics-intermediate",
+            "engineering-statics-advanced",
+            "engineering-thermodynamics-basics",
+            "engineering-thermodynamics-intermediate",
+            "engineering-thermodynamics-advanced",
+            "fluid-mechanics-basics",
+            "fluid-mechanics-intermediate",
+            "fluid-mechanics-advanced",
+            "heat-transfer-basics",
+            "heat-transfer-intermediate",
+            "heat-transfer-advanced",
+            "manufacturing-processes-basics",
+            "manufacturing-processes-intermediate",
+            "manufacturing-processes-advanced",
+            "materials-science-basics",
+            "materials-science-intermediate",
+            "materials-science-advanced",
+            "mechanics-of-materials-basics",
+            "mechanics-of-materials-intermediate",
+            "mechanics-of-materials-advanced",
             "molecular-modeling-basics",
             "molecular-modeling-intermediate",
             "molecular-modeling-advanced",
