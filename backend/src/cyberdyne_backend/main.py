@@ -157,6 +157,16 @@ from cyberdyne_backend.adapters.inbound.api.dao.router import (
 from cyberdyne_backend.adapters.inbound.api.dao.router import (
     router as dao_router,
 )
+from cyberdyne_backend.adapters.inbound.api.feedback.router import (
+    admin_router as feedback_admin_router,
+)
+from cyberdyne_backend.adapters.inbound.api.feedback.router import (
+    get_list_feedback_uc,
+    get_submit_feedback_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.feedback.router import (
+    public_router as feedback_public_router,
+)
 from cyberdyne_backend.adapters.inbound.api.leads.router import (
     admin_router as leads_admin_router,
 )
@@ -358,6 +368,9 @@ from cyberdyne_backend.adapters.outbound.persistence.courses.repository import (
     SqlAlchemyCategoryRepository,
     SqlAlchemyCourseRepository,
 )
+from cyberdyne_backend.adapters.outbound.persistence.feedback.repository import (
+    SqlAlchemyFeedbackRepository,
+)
 from cyberdyne_backend.adapters.outbound.persistence.leads.repository import (
     SqlAlchemyAskRepository,
 )
@@ -477,6 +490,7 @@ from cyberdyne_backend.application.dao_treasury import (
     GetDaoOverview,
     TreasurySnapshotPrewarmer,
 )
+from cyberdyne_backend.application.feedback import ListFeedback, SubmitFeedback
 from cyberdyne_backend.application.leads import (
     AdminListAsks,
     AdminUpdateAsk,
@@ -1219,6 +1233,15 @@ def create_app() -> FastAPI:
         async with session_scope() as session:
             yield ListRecent(repo=SqlAlchemyBookmarkRepository(session))
 
+    # Learner-feedback channel (issue #233).
+    async def _submit_feedback_dep() -> AsyncIterator[SubmitFeedback]:
+        async with session_scope() as session:
+            yield SubmitFeedback(repo=SqlAlchemyFeedbackRepository(session))
+
+    async def _list_feedback_dep() -> AsyncIterator[ListFeedback]:
+        async with session_scope() as session:
+            yield ListFeedback(repo=SqlAlchemyFeedbackRepository(session))
+
     async def _path_gating_dep() -> AsyncIterator[GetPathGating]:
         async with session_scope() as session:
             yield GetPathGating(
@@ -1532,6 +1555,8 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_remove_favorite_uc] = _remove_favorite_dep
     app.dependency_overrides[get_record_recent_uc] = _record_recent_dep
     app.dependency_overrides[get_list_recent_uc] = _list_recent_dep
+    app.dependency_overrides[get_submit_feedback_uc] = _submit_feedback_dep
+    app.dependency_overrides[get_list_feedback_uc] = _list_feedback_dep
     app.dependency_overrides[get_path_gating_uc] = _path_gating_dep
     app.dependency_overrides[get_eligibility_uc] = _eligibility_dep
     app.dependency_overrides[get_issue_certificate_uc] = _issue_certificate_dep
@@ -1578,6 +1603,8 @@ def create_app() -> FastAPI:
     app.include_router(lesson_notes_notes_router)
     app.include_router(learning_admin_router)
     app.include_router(bookmarks_public_router)
+    app.include_router(feedback_public_router)
+    app.include_router(feedback_admin_router)
     app.include_router(courses_public_router)
     app.include_router(courses_admin_router)
     app.include_router(category_public_router)
