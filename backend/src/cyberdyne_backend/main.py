@@ -106,6 +106,16 @@ from cyberdyne_backend.adapters.inbound.api.content.router import (
 from cyberdyne_backend.adapters.inbound.api.content.router import (
     router as content_router,
 )
+from cyberdyne_backend.adapters.inbound.api.course_demand.router import (
+    admin_router as course_demand_admin_router,
+)
+from cyberdyne_backend.adapters.inbound.api.course_demand.router import (
+    get_list_clusters_uc,
+    get_submit_course_request_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.course_demand.router import (
+    public_router as course_demand_public_router,
+)
 from cyberdyne_backend.adapters.inbound.api.courses.router import (
     admin_router as courses_admin_router,
 )
@@ -358,6 +368,9 @@ from cyberdyne_backend.adapters.outbound.persistence.concepts.repository import 
 from cyberdyne_backend.adapters.outbound.persistence.content.repository import (
     SqlAlchemyContentRepository,
 )
+from cyberdyne_backend.adapters.outbound.persistence.course_demand.repository import (
+    SqlAlchemyCourseRequestRepository,
+)
 from cyberdyne_backend.adapters.outbound.persistence.courses.certificate_repository import (
     SqlAlchemyCourseCertificateRepository,
 )
@@ -457,6 +470,10 @@ from cyberdyne_backend.application.content.use_cases import (
     ListProjects,
     ListResourceGroups,
     ListTeam,
+)
+from cyberdyne_backend.application.course_demand import (
+    ListCourseRequestClusters,
+    SubmitCourseRequest,
 )
 from cyberdyne_backend.application.courses import (
     AddLesson,
@@ -1242,6 +1259,15 @@ def create_app() -> FastAPI:
         async with session_scope() as session:
             yield ListFeedback(repo=SqlAlchemyFeedbackRepository(session))
 
+    # Course/topic demand registry (issue #232).
+    async def _submit_course_request_dep() -> AsyncIterator[SubmitCourseRequest]:
+        async with session_scope() as session:
+            yield SubmitCourseRequest(repo=SqlAlchemyCourseRequestRepository(session))
+
+    async def _list_clusters_dep() -> AsyncIterator[ListCourseRequestClusters]:
+        async with session_scope() as session:
+            yield ListCourseRequestClusters(repo=SqlAlchemyCourseRequestRepository(session))
+
     async def _path_gating_dep() -> AsyncIterator[GetPathGating]:
         async with session_scope() as session:
             yield GetPathGating(
@@ -1557,6 +1583,8 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_list_recent_uc] = _list_recent_dep
     app.dependency_overrides[get_submit_feedback_uc] = _submit_feedback_dep
     app.dependency_overrides[get_list_feedback_uc] = _list_feedback_dep
+    app.dependency_overrides[get_submit_course_request_uc] = _submit_course_request_dep
+    app.dependency_overrides[get_list_clusters_uc] = _list_clusters_dep
     app.dependency_overrides[get_path_gating_uc] = _path_gating_dep
     app.dependency_overrides[get_eligibility_uc] = _eligibility_dep
     app.dependency_overrides[get_issue_certificate_uc] = _issue_certificate_dep
@@ -1605,6 +1633,8 @@ def create_app() -> FastAPI:
     app.include_router(bookmarks_public_router)
     app.include_router(feedback_public_router)
     app.include_router(feedback_admin_router)
+    app.include_router(course_demand_public_router)
+    app.include_router(course_demand_admin_router)
     app.include_router(courses_public_router)
     app.include_router(courses_admin_router)
     app.include_router(category_public_router)
