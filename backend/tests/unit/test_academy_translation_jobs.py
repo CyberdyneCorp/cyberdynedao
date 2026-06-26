@@ -17,9 +17,11 @@ import pytest
 
 from cyberdyne_backend.application.academy import (
     MAX_ATTEMPTS,
+    TranslationFailure,
     TranslationJob,
     TranslationStats,
     TranslationWorker,
+    summarize_failures,
 )
 
 pytestmark = pytest.mark.unit
@@ -90,11 +92,14 @@ class FakeJobStore:
 class FakeTranslateCourse:
     calls: list[tuple[str, str]] = field(default_factory=list)
     raise_on: tuple[str, str] | None = None
+    stats: TranslationStats | None = None
 
     async def execute(self, slug: str, language: str) -> TranslationStats:
         self.calls.append((slug, language))
         if self.raise_on == (slug, language):
             raise RuntimeError("boom")
+        if self.stats is not None:
+            return self.stats
         return TranslationStats(translated=3, skipped=1, failed=0)
 
 
@@ -236,3 +241,47 @@ async def test_worker_gives_up_after_max_attempts() -> None:
 
     assert store.rows[0].attempts == MAX_ATTEMPTS
     assert store.rows[0].status == "failed"
+
+
+# ── Field-level failure recording (issue #235) ──────────────────────────
+
+
+def _lesson_failure() -> TranslationFailure:
+    return TranslationFailure(
+        kind="lesson",
+        ref_id=uuid4(),
+        language="pt-BR",
+        label="Machine learning on omics with tidymodels",
+        error="translation dropped 1 protected span(s) for pt-BR",
+    )
+
+
+async def test_worker_records_field_failures_and_retries() -> None:
+    # A job that completes but leaves a field untranslated must NOT be marked
+    # done (the language would never reach 'available'); it retries with a
+    # diagnosable error naming the broken field.
+    store = FakeJobStore()
+    await store.enqueue("r-data-analysis-advanced", "pt-BR")
+    failure = _lesson_failure()
+    translate = FakeTranslateCourse(
+        stats=TranslationStats(translated=10, skipped=0, failed=1, failures=[failure])
+    )
+    worker = TranslationWorker(store=store, translate_course_factory=_factory(translate))
+
+    processed = await worker.run_once()
+
+    assert processed is True
+    assert store.rows[0].status == "pending"  # under the cap → retry
+    assert store.rows[0].attempts == 1
+    assert store.rows[0].error is not None
+    assert failure.label in store.rows[0].error
+    assert str(failure.ref_id) in store.rows[0].error
+
+
+def test_summarize_failures_caps_and_counts() -> None:
+    failures = [_lesson_failure() for _ in range(8)]
+    stats = TranslationStats(translated=0, failed=8, failures=failures)
+    summary = summarize_failures(stats)
+    assert summary.startswith("8 field(s) failed to translate:")
+    # Only the first few are named; the rest are summarized as a count.
+    assert "… and 3 more" in summary

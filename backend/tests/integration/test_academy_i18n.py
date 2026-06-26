@@ -242,6 +242,52 @@ def test_get_course_languages_endpoint(app: FastAPI) -> None:
     assert body["available"] == ["en"]
     assert set(body["supported"]) == {"en", "pt-BR", "es", "fr"}
     assert body["canTranslate"] is True
+    # No job recorded yet for this course.
+    assert body["jobs"] == []
+
+
+@pytest.mark.usefixtures("_prepared_schema")
+async def test_get_languages_surfaces_failed_job_error(
+    app: FastAPI, db_session: AsyncSession
+) -> None:
+    """Issue #235: a course whose pt-BR job keeps failing on one lesson must be
+    diagnosable from the API — the per-language job state + the error naming
+    the broken field are surfaced under ``jobs``."""
+    from cyberdyne_backend.adapters.inbound.api.courses.router import translation_available
+    from cyberdyne_backend.adapters.outbound.persistence.academy.job_store import (
+        SqlAlchemyTranslationJobStore,
+    )
+    from cyberdyne_backend.application.academy import MAX_ATTEMPTS
+
+    course = new_course(title="R Data Analysis", description="d", level="Advanced", slug="r-data")
+    course.status = CourseStatus.PUBLISHED
+    await SqlAlchemyCourseRepository(db_session).save(course)
+
+    store = SqlAlchemyTranslationJobStore(db_session)
+    await store.enqueue("r-data", "pt-BR")
+    job = await store.claim_next()
+    assert job is not None
+    error = (
+        'lesson "Machine learning on omics with tidymodels" '
+        f"({uuid.uuid4()}): translation dropped 1 protected span(s) for pt-BR"
+    )
+    for _ in range(MAX_ATTEMPTS):  # drive the job to its terminal ``failed`` state
+        await store.mark_failed(job.id, error)
+    await db_session.commit()
+
+    app.dependency_overrides[require_editor] = _editor
+    app.dependency_overrides[translation_available] = lambda: True
+    client = TestClient(app)
+
+    body = client.get("/api/v1/admin/courses/r-data/translations").json()
+    assert body["available"] == ["en"]  # one lesson untranslated → not available
+    assert len(body["jobs"]) == 1
+    job_status = body["jobs"][0]
+    assert job_status["language"] == "pt-BR"
+    assert job_status["status"] == "failed"
+    assert job_status["attempts"] == MAX_ATTEMPTS
+    assert "Machine learning on omics" in job_status["error"]
+    assert job_status["updatedAt"]
 
 
 @pytest.mark.usefixtures("_prepared_schema")

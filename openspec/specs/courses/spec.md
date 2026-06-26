@@ -130,8 +130,26 @@ editor enqueue an async translation job
 (`POST /api/v1/admin/courses/{slug}/translations/{language}`) — rejecting an
 unsupported/English language with `422` and an unconfigured LLM with `503`.
 
+A language SHALL count as `available` (`GET /api/v1/admin/courses/{slug}/translations`)
+only when the course title/description and every lesson and quiz question are
+translated. To keep a never-completing language diagnosable, that endpoint
+SHALL also surface the per-language translation-job state (`jobs[]` with
+`status`/`attempts`/`error`), where `error` names the specific field(s) that
+failed. A long, code-heavy lesson body SHALL be translated in bounded chunks
+so the model does not truncate its output and drop protected spans; a field
+that still fails SHALL be recorded (not silently skipped) and retried, and the
+job SHALL settle as `failed` with a diagnosable error after the attempt cap
+rather than reporting `done` while a field is missing.
+
 #### Scenario: Fallback to English
 
 - GIVEN a course with no French translation
 - WHEN it is read with locale `fr`
 - THEN the English title/description are returned
+
+#### Scenario: Failing lesson is diagnosable, not silent
+
+- GIVEN a course whose translation job keeps failing on one lesson body
+- WHEN the editor reads `GET /api/v1/admin/courses/{slug}/translations`
+- THEN the language is absent from `available` AND `jobs[]` reports that
+  language as `failed` with an `error` naming the failing lesson

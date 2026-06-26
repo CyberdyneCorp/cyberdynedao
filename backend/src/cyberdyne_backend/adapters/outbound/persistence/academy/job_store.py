@@ -18,7 +18,11 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cyberdyne_backend.adapters.outbound.persistence.academy.models import TranslationJobRow
-from cyberdyne_backend.application.academy import MAX_ATTEMPTS, TranslationJob
+from cyberdyne_backend.application.academy import (
+    MAX_ATTEMPTS,
+    TranslationJob,
+    TranslationJobView,
+)
 
 
 def _now() -> datetime:
@@ -115,3 +119,22 @@ class SqlAlchemyTranslationJobStore:
         await self._session.flush()
         # ``rowcount`` exists on the CursorResult of an UPDATE.
         return int(getattr(result, "rowcount", 0) or 0)
+
+    async def list_jobs(self, course_slug: str) -> list[TranslationJobView]:
+        rows = (
+            await self._session.execute(
+                select(TranslationJobRow)
+                .where(TranslationJobRow.course_slug == course_slug)
+                .order_by(TranslationJobRow.language)
+            )
+        ).scalars()
+        return [
+            TranslationJobView(
+                language=row.language,
+                status=row.status,
+                attempts=row.attempts,
+                error=row.error,
+                updated_at=row.updated_at,
+            )
+            for row in rows
+        ]

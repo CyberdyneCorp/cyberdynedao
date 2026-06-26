@@ -394,6 +394,7 @@ from cyberdyne_backend.application.academy import (
     MarkdownAwareTranslator,
     TranslateCourse,
     TranslationJob,
+    TranslationJobView,
     TranslationWorker,
 )
 from cyberdyne_backend.application.access import GetWalletAccess
@@ -614,6 +615,10 @@ def create_app() -> FastAPI:
         async def requeue_running(self) -> int:
             async with session_scope() as session:
                 return await SqlAlchemyTranslationJobStore(session).requeue_running()
+
+        async def list_jobs(self, course_slug: str) -> list[TranslationJobView]:
+            async with session_scope() as session:
+                return await SqlAlchemyTranslationJobStore(session).list_jobs(course_slug)
 
     @asynccontextmanager
     async def _translate_course_scope() -> AsyncIterator[TranslateCourse]:

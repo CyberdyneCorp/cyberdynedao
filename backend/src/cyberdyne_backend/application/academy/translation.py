@@ -24,7 +24,7 @@ import hashlib
 import re
 import uuid
 from collections.abc import Awaitable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
 from uuid import UUID
 
@@ -73,6 +73,15 @@ _PROTECT_PATTERNS: tuple[re.Pattern[str], ...] = (
 )
 
 
+# Max characters of masked Markdown to send in a single rich-body LLM call.
+# A long, code-heavy lesson body otherwise yields an output the model
+# truncates, silently dropping the trailing [[KEEPn]] sentinels — the
+# deterministic failure behind a course that never reaches 100% translated
+# (issue #235). Splitting the body into bounded chunks keeps each call's
+# output well within limits and lowers the sentinel count per call.
+_RICH_CHUNK_BUDGET = 6000
+
+
 def _sentinel(index: int) -> str:
     # Bracketed, upper-case, no spaces — survives translation reliably and is
     # easy to validate. The model is explicitly told to preserve these.
@@ -98,6 +107,26 @@ def _restore(text: str, tokens: dict[str, str]) -> str:
     for token, original in tokens.items():
         restored = restored.replace(token, original)
     return restored
+
+
+def _split_chunks(masked: str, budget: int) -> list[str]:
+    """Split masked Markdown into chunks no larger than ``budget`` characters,
+    breaking only on blank-line (paragraph) boundaries so a sentence — or a
+    ``[[KEEPn]]`` sentinel — is never cut in half. A single paragraph larger
+    than the budget is kept whole (we never split mid-paragraph). Chunks
+    rejoin with ``\\n\\n``."""
+    chunks: list[str] = []
+    current = ""
+    for para in masked.split("\n\n"):
+        candidate = f"{current}\n\n{para}" if current else para
+        if current and len(candidate) > budget:
+            chunks.append(current)
+            current = para
+        else:
+            current = candidate
+    if current:
+        chunks.append(current)
+    return chunks
 
 
 # Rich prompt for full Markdown bodies (lesson content): preserve structure.
@@ -145,15 +174,43 @@ class MarkdownAwareTranslator:
         if not text or not text.strip():
             return text or ""
         masked, tokens = _protect(text)
+        language_name = LANGUAGE_NAMES.get(language, language)
+        system_prompt = (_SYSTEM_PROMPT_RICH if rich else _SYSTEM_PROMPT_PLAIN).format(
+            language=language_name
+        )
+        # Long rich bodies are translated in bounded chunks so the model never
+        # truncates its output and drops trailing sentinels (issue #235). Short
+        # fields and short bodies take the single-call path unchanged.
+        if rich and len(masked) > _RICH_CHUNK_BUDGET:
+            translated_segments: list[str] = []
+            for segment in _split_chunks(masked, _RICH_CHUNK_BUDGET):
+                translated_segments.append(
+                    await self._complete(
+                        segment,
+                        expected={tok for tok in tokens if tok in segment},
+                        system_prompt=system_prompt,
+                        language=language,
+                    )
+                )
+            out = "\n\n".join(translated_segments)
+        else:
+            out = await self._complete(
+                masked, expected=set(tokens), system_prompt=system_prompt, language=language
+            )
+        return _restore(out, tokens)
+
+    async def _complete(
+        self, masked: str, *, expected: set[str], system_prompt: str, language: str
+    ) -> str:
+        """One LLM call over ``masked``, validating that every sentinel in
+        ``expected`` survived. Raises :class:`TranslationError` on a dropped
+        placeholder — better to retry than to silently lose a code/math
+        block."""
         message = ChatMessage(
             id=uuid.uuid4(),
             session_id=uuid.uuid4(),
             role=ChatRole.USER,
             content=masked,
-        )
-        language_name = LANGUAGE_NAMES.get(language, language)
-        system_prompt = (_SYSTEM_PROMPT_RICH if rich else _SYSTEM_PROMPT_PLAIN).format(
-            language=language_name
         )
         response = await self.llm.complete(
             messages=[message],
@@ -161,14 +218,12 @@ class MarkdownAwareTranslator:
             system_prompt=system_prompt,
         )
         out = response.content
-        # Guard against placeholder corruption — better to retry than to
-        # silently lose a code/math block.
-        missing = [tok for tok in tokens if tok not in out]
+        missing = [tok for tok in expected if tok not in out]
         if missing:
             raise TranslationError(
                 f"translation dropped {len(missing)} protected span(s) for {language}"
             )
-        return _restore(out, tokens)
+        return out
 
 
 @runtime_checkable
@@ -232,15 +287,37 @@ class TranslationRepository(Protocol):
 
 
 @dataclass(slots=True)
+class TranslationFailure:
+    """A single field that failed to translate, captured so the worker can
+    record *which* lesson/question broke and why — making the failure
+    diagnosable through the job's ``error`` instead of only the logs."""
+
+    kind: str  # "course" | "lesson" | "question" | "option"
+    ref_id: UUID
+    language: str
+    label: str
+    error: str
+
+
+def _label(text: str, *, limit: int = 80) -> str:
+    """A short, single-line identifier for a translated field (its title or
+    the head of its prompt) for failure messages."""
+    flat = " ".join(text.split())
+    return flat if len(flat) <= limit else f"{flat[:limit]}…"
+
+
+@dataclass(slots=True)
 class TranslationStats:
     translated: int = 0
     skipped: int = 0
     failed: int = 0
+    failures: list[TranslationFailure] = field(default_factory=list)
 
     def merge(self, other: TranslationStats) -> None:
         self.translated += other.translated
         self.skipped += other.skipped
         self.failed += other.failed
+        self.failures.extend(other.failures)
 
 
 @dataclass(slots=True)
@@ -277,7 +354,11 @@ class TranslateAcademy:
             if course_hashes.get(course.id) != src:
                 await self._guard(
                     stats,
-                    self._translate_course(course, language, src),
+                    kind="course",
+                    ref_id=course.id,
+                    language=language,
+                    label=_label(course.title),
+                    coro=self._translate_course(course, language, src),
                 )
             else:
                 stats.skipped += 1
@@ -286,7 +367,11 @@ class TranslateAcademy:
                 if lesson_hashes.get(lesson.id) != lsrc:
                     await self._guard(
                         stats,
-                        self._translate_lesson(lesson, language, lsrc),
+                        kind="lesson",
+                        ref_id=lesson.id,
+                        language=language,
+                        label=_label(lesson.title),
+                        coro=self._translate_lesson(lesson, language, lsrc),
                     )
                 else:
                     stats.skipped += 1
@@ -297,7 +382,11 @@ class TranslateAcademy:
                 if question_hashes.get(question.id) != qsrc:
                     await self._guard(
                         stats,
-                        self._translate_question(question, language, qsrc),
+                        kind="question",
+                        ref_id=question.id,
+                        language=language,
+                        label=_label(question.prompt),
+                        coro=self._translate_question(question, language, qsrc),
                     )
                 else:
                     stats.skipped += 1
@@ -306,18 +395,40 @@ class TranslateAcademy:
                     if option_hashes.get(option.id) != osrc:
                         await self._guard(
                             stats,
-                            self._translate_option(option, language, osrc),
+                            kind="option",
+                            ref_id=option.id,
+                            language=language,
+                            label=_label(option.text),
+                            coro=self._translate_option(option, language, osrc),
                         )
                     else:
                         stats.skipped += 1
         return stats
 
-    async def _guard(self, stats: TranslationStats, coro: Awaitable[None]) -> None:
+    async def _guard(
+        self,
+        stats: TranslationStats,
+        *,
+        kind: str,
+        ref_id: UUID,
+        language: str,
+        label: str,
+        coro: Awaitable[None],
+    ) -> None:
         try:
             await coro
             stats.translated += 1
-        except TranslationError:
+        except TranslationError as exc:
             stats.failed += 1
+            stats.failures.append(
+                TranslationFailure(
+                    kind=kind,
+                    ref_id=ref_id,
+                    language=language,
+                    label=label,
+                    error=str(exc),
+                )
+            )
 
     async def _translate_course(self, course: Course, language: str, src: str) -> None:
         title = await self.translator.translate(course.title, language=language, rich=False)
@@ -374,6 +485,7 @@ __all__ = [
     "MarkdownAwareTranslator",
     "TranslateAcademy",
     "TranslationError",
+    "TranslationFailure",
     "TranslationRepository",
     "TranslationStats",
     "content_hash",

@@ -34,13 +34,28 @@ DeadlineStatusLiteral = Literal["none", "upcoming", "urgent", "overdue"]
 # ── Responses ─────────────────────────────────────────────────────────
 
 
+class TranslationJobStatusResponse(_CamelModel):
+    """Recorded state of a per-language translation job. ``error`` names the
+    specific lesson/question fields that failed (issue #235) so a stuck
+    course is diagnosable from the API alone."""
+
+    language: str
+    status: Literal["pending", "running", "done", "failed"]
+    attempts: int
+    error: str | None = None
+    updated_at: datetime
+
+
 class CourseLanguagesResponse(_CamelModel):
     """Which languages a course is available in, plus the full supported set
-    and whether translation can currently run (OpenAI configured)."""
+    and whether translation can currently run (OpenAI configured). ``jobs``
+    exposes the per-language translation-job state so a language that never
+    becomes ``available`` can be diagnosed without DB/log access."""
 
     available: list[str]
     supported: list[str]
     can_translate: bool
+    jobs: list[TranslationJobStatusResponse] = Field(default_factory=list)
 
 
 class CourseTranslationStartedResponse(_CamelModel):

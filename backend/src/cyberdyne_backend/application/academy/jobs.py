@@ -29,9 +29,11 @@ import logging
 from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Protocol, runtime_checkable
 from uuid import UUID
 
+from cyberdyne_backend.application.academy.translation import TranslationStats
 from cyberdyne_backend.application.academy.use_cases import TranslateCourse
 
 logger = logging.getLogger("cyberdyne_backend.academy.jobs")
@@ -39,6 +41,10 @@ logger = logging.getLogger("cyberdyne_backend.academy.jobs")
 # A job that has failed this many times is left ``failed`` and not retried,
 # so a permanently-broken course can't spin the worker forever.
 MAX_ATTEMPTS = 5
+
+# Cap how many failing fields are named in a job's error so a course with many
+# broken lessons can't blow up the ``error`` column.
+_MAX_FAILURES_IN_ERROR = 5
 
 
 @dataclass(slots=True)
@@ -49,6 +55,30 @@ class TranslationJob:
     course_slug: str
     language: str
     attempts: int
+
+
+@dataclass(slots=True)
+class TranslationJobView:
+    """Read-only view of a recorded translation job, for surfacing progress
+    and per-field failures through the admin API (issue #235)."""
+
+    language: str
+    status: str  # pending | running | done | failed
+    attempts: int
+    error: str | None
+    updated_at: datetime
+
+
+def summarize_failures(stats: TranslationStats) -> str:
+    """A compact, human-readable summary of the fields that failed to
+    translate — recorded as the job's ``error`` so an admin can see *which*
+    lesson/question broke and why without DB or log access."""
+    shown = stats.failures[:_MAX_FAILURES_IN_ERROR]
+    parts = [f'{f.kind} "{f.label}" ({f.ref_id}): {f.error}' for f in shown]
+    extra = len(stats.failures) - len(shown)
+    if extra > 0:
+        parts.append(f"… and {extra} more")
+    return f"{stats.failed} field(s) failed to translate: " + "; ".join(parts)
 
 
 @runtime_checkable
@@ -83,6 +113,12 @@ class TranslationJobStore(Protocol):
         """Reset every ``running`` job back to ``pending`` (called on
         startup so jobs interrupted by a restart resume). Returns the
         number of jobs requeued."""
+        ...
+
+    async def list_jobs(self, course_slug: str) -> list[TranslationJobView]:
+        """Every translation job recorded for a course (one per language),
+        with status/attempts/error — lets the admin API surface translation
+        progress and per-field failures without DB access."""
         ...
 
 
@@ -128,6 +164,23 @@ class TranslationWorker:
             )
             await self.store.mark_failed(job.id, str(exc))
             return True
+        # A field-level failure (e.g. a code-heavy lesson the model keeps
+        # dropping a sentinel on) leaves that field untranslated, so the
+        # course never reaches 100% and the language stays unavailable.
+        # Record which fields broke and retry; after MAX_ATTEMPTS the job
+        # settles as ``failed`` with a diagnosable error rather than silently
+        # "done" forever (issue #235).
+        if stats.failed > 0:
+            error = summarize_failures(stats)
+            logger.warning(
+                "translation job incomplete — %s [%s] (attempt %d): %s",
+                job.course_slug,
+                job.language,
+                job.attempts + 1,
+                error,
+            )
+            await self.store.mark_failed(job.id, error)
+            return True
         await self.store.mark_done(job.id)
         logger.info(
             "translation job done — %s [%s]: +%d translated, %d skipped, %d failed",
@@ -163,5 +216,7 @@ __all__ = [
     "TranslateCourseScope",
     "TranslationJob",
     "TranslationJobStore",
+    "TranslationJobView",
     "TranslationWorker",
+    "summarize_failures",
 ]

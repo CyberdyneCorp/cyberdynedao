@@ -12,6 +12,7 @@ import uuid
 import pytest
 
 from cyberdyne_backend.application.academy.translation import (
+    _RICH_CHUNK_BUDGET,
     MarkdownAwareTranslator,
     TranslateAcademy,
     TranslationError,
@@ -124,6 +125,84 @@ async def test_dropped_placeholder_raises_rather_than_corrupt() -> None:
     translator = MarkdownAwareTranslator(llm=DroppingLLM())
     with pytest.raises(TranslationError):
         await translator.translate(LESSON_MD, language="es")
+
+
+# ── Chunking of long, code-heavy bodies (issue #235) ─────────────────
+
+
+class SizeSensitiveDroppingLLM:
+    """Models output truncation: a single oversized prompt comes back with
+    every sentinel dropped (as a too-long generation loses its tail), while a
+    prompt within ``limit`` echoes faithfully. Records the call count so a
+    test can prove the body was split."""
+
+    def __init__(self, limit: int) -> None:
+        self.limit = limit
+        self.calls = 0
+
+    async def complete(self, *, messages, tools, system_prompt) -> LLMResponse:
+        content = messages[-1].content
+        self.calls += 1
+        if len(content) > self.limit:
+            for token in [f"[[KEEP{i}]]" for i in range(500)]:
+                content = content.replace(token, "")
+        return LLMResponse(content=content)
+
+
+def _long_code_heavy_body() -> str:
+    # Many prose paragraphs, each carrying an inline-code span (a sentinel),
+    # so the masked body comfortably exceeds the chunk budget — the shape that
+    # made the real pt-BR jobs never finish.
+    paragraphs = [
+        f"## Section {i}\n\nThis paragraph {i} explains a concept and uses `value_{i}` inline."
+        for i in range(200)
+    ]
+    return "\n\n".join(paragraphs)
+
+
+async def test_long_rich_body_is_chunked_and_survives_truncation() -> None:
+    body = _long_code_heavy_body()
+    assert len(body) > _RICH_CHUNK_BUDGET  # guard: the body must actually be long
+    llm = SizeSensitiveDroppingLLM(limit=_RICH_CHUNK_BUDGET)
+    out = await MarkdownAwareTranslator(llm=llm).translate(body, language="pt-BR", rich=True)
+    # Split into several bounded calls, none oversized → no sentinel dropped.
+    assert llm.calls > 1
+    assert "[[KEEP" not in out
+    # Every protected span is restored verbatim, including the first and last.
+    assert "`value_0`" in out
+    assert "`value_199`" in out
+
+
+async def test_short_body_takes_single_call_path() -> None:
+    # Below the budget the body is translated in one call — unchanged behavior.
+    llm = SizeSensitiveDroppingLLM(limit=_RICH_CHUNK_BUDGET)
+    await MarkdownAwareTranslator(llm=llm).translate(LESSON_MD, language="pt-BR", rich=True)
+    assert llm.calls == 1
+
+
+async def test_failures_capture_field_context() -> None:
+    # A dropped sentinel records WHICH field failed and why, so the worker can
+    # surface it (issue #235) instead of a silent counter bump.
+    repo = FakeTranslationRepo()
+    orch = TranslateAcademy(translator=MarkdownAwareTranslator(llm=DroppingLLM()), repo=repo)
+    course = new_course(title="T", description="d", level="Beginner", slug="t")
+    lesson = new_lesson(
+        course_id=course.id,
+        title="Machine learning on omics",
+        lesson_type="text",
+        text_body="prose `code` and $x$ more",
+    )
+    course.lessons.append(lesson)
+
+    stats = await orch.run(courses=[course], quizzes=[], languages=["pt-BR"])
+
+    lesson_failures = [f for f in stats.failures if f.kind == "lesson"]
+    assert len(lesson_failures) == 1
+    failure = lesson_failures[0]
+    assert failure.ref_id == lesson.id
+    assert failure.language == "pt-BR"
+    assert failure.label == "Machine learning on omics"
+    assert "protected span" in failure.error
 
 
 # ── TranslateAcademy orchestration ───────────────────────────────────
