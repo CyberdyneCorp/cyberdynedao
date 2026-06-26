@@ -15,6 +15,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
     adaptive_dsp_intermediate as _adaptive_dsp_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    admet_prediction_advanced as _admet_prediction_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    admet_prediction_basics as _admet_prediction_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    admet_prediction_intermediate as _admet_prediction_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     advanced_control_advanced as _advanced_control_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -22,6 +31,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     advanced_control_intermediate as _advanced_control_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    ai_drug_discovery_advanced as _ai_drug_discovery_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    ai_drug_discovery_basics as _ai_drug_discovery_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    ai_drug_discovery_intermediate as _ai_drug_discovery_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     algorithms_advanced as _algorithms_advanced,
@@ -51,6 +69,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import analog_ic_basics 
 from cyberdyne_backend.application.courses.seed_quizzes import (
     analog_ic_intermediate as _analog_ic_intermediate,
 )
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    analytical_chemistry_advanced as _analytical_chemistry_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    analytical_chemistry_basics as _analytical_chemistry_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    analytical_chemistry_intermediate as _analytical_chemistry_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import ansible_advanced as _ansible_advanced
 from cyberdyne_backend.application.courses.seed_quizzes import ansible_basics as _ansible_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -71,6 +98,42 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
     battery_intermediate as _battery_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    bio_databases_advanced as _bio_databases_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    bio_databases_basics as _bio_databases_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    bio_databases_intermediate as _bio_databases_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    biochemistry_advanced as _biochemistry_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    biochemistry_basics as _biochemistry_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    biochemistry_intermediate as _biochemistry_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    bioinformatics_advanced as _bioinformatics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    bioinformatics_basics as _bioinformatics_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    bioinformatics_intermediate as _bioinformatics_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    biostatistics_advanced as _biostatistics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    biostatistics_basics as _biostatistics_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    biostatistics_intermediate as _biostatistics_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     blockchain_basics as _blockchain_basics,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -78,6 +141,33 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 )
 from cyberdyne_backend.application.courses.seed_quizzes import c_basics as _c_basics
 from cyberdyne_backend.application.courses.seed_quizzes import c_intermediate as _c_intermediate
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    capstone_ai_drug_design_advanced as _capstone_ai_drug_design_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    capstone_ai_drug_design_basics as _capstone_ai_drug_design_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    capstone_ai_drug_design_intermediate as _capstone_ai_drug_design_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    cell_biology_advanced as _cell_biology_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    cell_biology_basics as _cell_biology_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    cell_biology_intermediate as _cell_biology_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    cheminformatics_advanced as _cheminformatics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    cheminformatics_basics as _cheminformatics_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    cheminformatics_intermediate as _cheminformatics_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import (
     circuit_analysis_advanced as _circuit_analysis_advanced,
 )
@@ -112,6 +202,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 from cyberdyne_backend.application.courses.seed_quizzes import (
     computational_thinking_intermediate as _computational_thinking_intermediate,
 )
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    computer_aided_drug_design_advanced as _computer_aided_drug_design_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    computer_aided_drug_design_basics as _computer_aided_drug_design_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    computer_aided_drug_design_intermediate as _computer_aided_drug_design_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import control_advanced as _control_advanced
 from cyberdyne_backend.application.courses.seed_quizzes import control_basics as _control_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -132,6 +231,24 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     data_converters_intermediate as _data_converters_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    data_visualization_bio_advanced as _data_visualization_bio_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    data_visualization_bio_basics as _data_visualization_bio_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    data_visualization_bio_intermediate as _data_visualization_bio_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    deep_learning_biology_advanced as _deep_learning_biology_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    deep_learning_biology_basics as _deep_learning_biology_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    deep_learning_biology_intermediate as _deep_learning_biology_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     digital_comms_advanced as _digital_comms_advanced,
@@ -160,6 +277,24 @@ from cyberdyne_backend.application.courses.seed_quizzes import docker_advanced a
 from cyberdyne_backend.application.courses.seed_quizzes import docker_basics as _docker_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
     docker_intermediate as _docker_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    docking_virtual_screening_advanced as _docking_virtual_screening_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    docking_virtual_screening_basics as _docking_virtual_screening_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    docking_virtual_screening_intermediate as _docking_virtual_screening_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    drug_development_regulatory_advanced as _drug_development_regulatory_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    drug_development_regulatory_basics as _drug_development_regulatory_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    drug_development_regulatory_intermediate as _drug_development_regulatory_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import dsp_advanced as _dsp_advanced
 from cyberdyne_backend.application.courses.seed_quizzes import dsp_basics as _dsp_basics
@@ -208,6 +343,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
     english_brazil_intermediate as _english_brazil_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    evolution_ecology_advanced as _evolution_ecology_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    evolution_ecology_basics as _evolution_ecology_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    evolution_ecology_intermediate as _evolution_ecology_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     fiber_optics_advanced as _fiber_optics_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -230,6 +374,38 @@ from cyberdyne_backend.application.courses.seed_quizzes import fpga_basics as _f
 from cyberdyne_backend.application.courses.seed_quizzes import (
     fpga_intermediate as _fpga_intermediate,
 )
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    general_chemistry_advanced as _general_chemistry_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    general_chemistry_basics as _general_chemistry_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    general_chemistry_intermediate as _general_chemistry_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    generative_molecular_design_advanced as _generative_molecular_design_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    generative_molecular_design_basics as _generative_molecular_design_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    generative_molecular_design_intermediate as _generative_molecular_design_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    genetics_advanced as _genetics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import genetics_basics as _genetics_basics
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    genetics_intermediate as _genetics_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    genomics_advanced as _genomics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import genomics_basics as _genomics_basics
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    genomics_intermediate as _genomics_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import go_basics as _go_basics
 from cyberdyne_backend.application.courses.seed_quizzes import go_intermediate as _go_intermediate
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -249,6 +425,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     image_processing_intermediate as _image_processing_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    immunology_advanced as _immunology_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    immunology_basics as _immunology_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    immunology_intermediate as _immunology_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     javascript_basics as _javascript_basics,
@@ -281,6 +466,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import math_information 
 from cyberdyne_backend.application.courses.seed_quizzes import (
     math_intermediate as _math_intermediate,
 )
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    math_life_sciences_advanced as _math_life_sciences_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    math_life_sciences_basics as _math_life_sciences_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    math_life_sciences_intermediate as _math_life_sciences_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import math_matrices as _math_matrices
 from cyberdyne_backend.application.courses.seed_quizzes import math_numerical as _math_numerical
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -289,16 +483,97 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 from cyberdyne_backend.application.courses.seed_quizzes import math_probability as _math_probability
 from cyberdyne_backend.application.courses.seed_quizzes import matlab_basics as _matlab_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    medicinal_chemistry_advanced as _medicinal_chemistry_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    medicinal_chemistry_basics as _medicinal_chemistry_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    medicinal_chemistry_intermediate as _medicinal_chemistry_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    microbiology_advanced as _microbiology_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    microbiology_basics as _microbiology_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    microbiology_intermediate as _microbiology_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     microwave_advanced as _microwave_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import microwave_basics as _microwave_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
     microwave_intermediate as _microwave_intermediate,
 )
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    ml_life_sciences_advanced as _ml_life_sciences_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    ml_life_sciences_basics as _ml_life_sciences_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    ml_life_sciences_intermediate as _ml_life_sciences_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    molecular_biology_advanced as _molecular_biology_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    molecular_biology_basics as _molecular_biology_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    molecular_biology_intermediate as _molecular_biology_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    molecular_dynamics_advanced as _molecular_dynamics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    molecular_dynamics_basics as _molecular_dynamics_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    molecular_dynamics_intermediate as _molecular_dynamics_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    molecular_modeling_advanced as _molecular_modeling_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    molecular_modeling_basics as _molecular_modeling_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    molecular_modeling_intermediate as _molecular_modeling_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import mongodb as _mongodb
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    ngs_analysis_advanced as _ngs_analysis_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    ngs_analysis_basics as _ngs_analysis_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    ngs_analysis_intermediate as _ngs_analysis_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    organic_chemistry_advanced as _organic_chemistry_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    organic_chemistry_basics as _organic_chemistry_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    organic_chemistry_intermediate as _organic_chemistry_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import pcb_advanced as _pcb_advanced
 from cyberdyne_backend.application.courses.seed_quizzes import pcb_basics as _pcb_basics
 from cyberdyne_backend.application.courses.seed_quizzes import pcb_intermediate as _pcb_intermediate
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    pharmacology_advanced as _pharmacology_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    pharmacology_basics as _pharmacology_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    pharmacology_intermediate as _pharmacology_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import (
     photonics_advanced as _photonics_advanced,
 )
@@ -306,12 +581,48 @@ from cyberdyne_backend.application.courses.seed_quizzes import photonics_basics 
 from cyberdyne_backend.application.courses.seed_quizzes import (
     photonics_intermediate as _photonics_intermediate,
 )
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    phylogenetics_advanced as _phylogenetics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    phylogenetics_basics as _phylogenetics_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    phylogenetics_intermediate as _phylogenetics_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    physical_chemistry_advanced as _physical_chemistry_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    physical_chemistry_basics as _physical_chemistry_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    physical_chemistry_intermediate as _physical_chemistry_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import physics_basics as _physics_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
     physics_intermediate as _physics_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    physics_life_sciences_advanced as _physics_life_sciences_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    physics_life_sciences_basics as _physics_life_sciences_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    physics_life_sciences_intermediate as _physics_life_sciences_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     physics_quadrotor_dynamics as _physics_quadrotor_dynamics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    physiology_advanced as _physiology_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    physiology_basics as _physiology_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    physiology_intermediate as _physiology_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import postgresql as _postgresql
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -350,7 +661,70 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 from cyberdyne_backend.application.courses.seed_quizzes import (
     prob_stats_python_intermediate as _prob_stats_python_intermediate,
 )
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    programming_biology_python_advanced as _programming_biology_python_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    programming_biology_python_basics as _programming_biology_python_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    programming_biology_python_intermediate as _programming_biology_python_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    protein_ligand_binding_advanced as _protein_ligand_binding_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    protein_ligand_binding_basics as _protein_ligand_binding_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    protein_ligand_binding_intermediate as _protein_ligand_binding_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    protein_science_advanced as _protein_science_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    protein_science_basics as _protein_science_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    protein_science_intermediate as _protein_science_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    protein_structure_prediction_advanced as _protein_structure_prediction_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    protein_structure_prediction_basics as _protein_structure_prediction_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    protein_structure_prediction_intermediate as _protein_structure_prediction_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    proteomics_metabolomics_advanced as _proteomics_metabolomics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    proteomics_metabolomics_basics as _proteomics_metabolomics_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    proteomics_metabolomics_intermediate as _proteomics_metabolomics_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import python_course as _python_course
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    qsar_modeling_advanced as _qsar_modeling_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    qsar_modeling_basics as _qsar_modeling_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    qsar_modeling_intermediate as _qsar_modeling_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    r_data_analysis_advanced as _r_data_analysis_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    r_data_analysis_basics as _r_data_analysis_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    r_data_analysis_intermediate as _r_data_analysis_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import radar_advanced as _radar_advanced
 from cyberdyne_backend.application.courses.seed_quizzes import radar_basics as _radar_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -369,6 +743,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     renewable_ev_intermediate as _renewable_ev_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    reproducible_research_advanced as _reproducible_research_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    reproducible_research_basics as _reproducible_research_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    reproducible_research_intermediate as _reproducible_research_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     rf_comms_advanced as _rf_comms_advanced,
@@ -394,6 +777,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
     rust_intermediate as _rust_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    scientific_computing_advanced as _scientific_computing_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    scientific_computing_basics as _scientific_computing_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    scientific_computing_intermediate as _scientific_computing_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     semiconductor_advanced as _semiconductor_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -407,10 +799,28 @@ from cyberdyne_backend.application.courses.seed_quizzes import sensors_basics as
 from cyberdyne_backend.application.courses.seed_quizzes import (
     sensors_intermediate as _sensors_intermediate,
 )
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    sequence_analysis_advanced as _sequence_analysis_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    sequence_analysis_basics as _sequence_analysis_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    sequence_analysis_intermediate as _sequence_analysis_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import signals_advanced as _signals_advanced
 from cyberdyne_backend.application.courses.seed_quizzes import signals_basics as _signals_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
     signals_intermediate as _signals_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    single_cell_omics_advanced as _single_cell_omics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    single_cell_omics_basics as _single_cell_omics_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    single_cell_omics_intermediate as _single_cell_omics_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     smart_grid_advanced as _smart_grid_advanced,
@@ -455,9 +865,27 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 from cyberdyne_backend.application.courses.seed_quizzes import (
     stochastic_processes_intermediate as _stochastic_processes_intermediate,
 )
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    structural_biology_advanced as _structural_biology_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    structural_biology_basics as _structural_biology_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    structural_biology_intermediate as _structural_biology_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import swift_basics as _swift_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
     swift_intermediate as _swift_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    systems_biology_advanced as _systems_biology_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    systems_biology_basics as _systems_biology_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    systems_biology_intermediate as _systems_biology_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     sysverilog_advanced as _sysverilog_advanced,
@@ -467,6 +895,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     sysverilog_intermediate as _sysverilog_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    target_identification_advanced as _target_identification_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    target_identification_basics as _target_identification_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    target_identification_intermediate as _target_identification_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     technical_english_advanced as _technical_english_advanced,
@@ -483,6 +920,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 from cyberdyne_backend.application.courses.seed_quizzes import terraform_basics as _terraform_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
     terraform_intermediate as _terraform_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    transcriptomics_advanced as _transcriptomics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    transcriptomics_basics as _transcriptomics_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    transcriptomics_intermediate as _transcriptomics_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     typescript_basics as _typescript_basics,
@@ -516,6 +962,156 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 from cyberdyne_backend.application.courses.seed_types import CourseQuiz
 
 QUIZ_REGISTRY: dict[str, CourseQuiz] = {
+    "admet-prediction-basics": _admet_prediction_basics.QUIZ,
+    "admet-prediction-intermediate": _admet_prediction_intermediate.QUIZ,
+    "admet-prediction-advanced": _admet_prediction_advanced.QUIZ,
+    "ai-drug-discovery-basics": _ai_drug_discovery_basics.QUIZ,
+    "ai-drug-discovery-intermediate": _ai_drug_discovery_intermediate.QUIZ,
+    "ai-drug-discovery-advanced": _ai_drug_discovery_advanced.QUIZ,
+    "capstone-ai-drug-design-basics": _capstone_ai_drug_design_basics.QUIZ,
+    "capstone-ai-drug-design-intermediate": _capstone_ai_drug_design_intermediate.QUIZ,
+    "capstone-ai-drug-design-advanced": _capstone_ai_drug_design_advanced.QUIZ,
+    "cheminformatics-basics": _cheminformatics_basics.QUIZ,
+    "cheminformatics-intermediate": _cheminformatics_intermediate.QUIZ,
+    "cheminformatics-advanced": _cheminformatics_advanced.QUIZ,
+    "computer-aided-drug-design-basics": _computer_aided_drug_design_basics.QUIZ,
+    "computer-aided-drug-design-intermediate": _computer_aided_drug_design_intermediate.QUIZ,
+    "computer-aided-drug-design-advanced": _computer_aided_drug_design_advanced.QUIZ,
+    "deep-learning-biology-basics": _deep_learning_biology_basics.QUIZ,
+    "deep-learning-biology-intermediate": _deep_learning_biology_intermediate.QUIZ,
+    "deep-learning-biology-advanced": _deep_learning_biology_advanced.QUIZ,
+    "docking-virtual-screening-basics": _docking_virtual_screening_basics.QUIZ,
+    "docking-virtual-screening-intermediate": _docking_virtual_screening_intermediate.QUIZ,
+    "docking-virtual-screening-advanced": _docking_virtual_screening_advanced.QUIZ,
+    "drug-development-regulatory-basics": _drug_development_regulatory_basics.QUIZ,
+    "drug-development-regulatory-intermediate": _drug_development_regulatory_intermediate.QUIZ,
+    "drug-development-regulatory-advanced": _drug_development_regulatory_advanced.QUIZ,
+    "generative-molecular-design-basics": _generative_molecular_design_basics.QUIZ,
+    "generative-molecular-design-intermediate": _generative_molecular_design_intermediate.QUIZ,
+    "generative-molecular-design-advanced": _generative_molecular_design_advanced.QUIZ,
+    "medicinal-chemistry-basics": _medicinal_chemistry_basics.QUIZ,
+    "medicinal-chemistry-intermediate": _medicinal_chemistry_intermediate.QUIZ,
+    "medicinal-chemistry-advanced": _medicinal_chemistry_advanced.QUIZ,
+    "ml-life-sciences-basics": _ml_life_sciences_basics.QUIZ,
+    "ml-life-sciences-intermediate": _ml_life_sciences_intermediate.QUIZ,
+    "ml-life-sciences-advanced": _ml_life_sciences_advanced.QUIZ,
+    "molecular-dynamics-basics": _molecular_dynamics_basics.QUIZ,
+    "molecular-dynamics-intermediate": _molecular_dynamics_intermediate.QUIZ,
+    "molecular-dynamics-advanced": _molecular_dynamics_advanced.QUIZ,
+    "molecular-modeling-basics": _molecular_modeling_basics.QUIZ,
+    "molecular-modeling-intermediate": _molecular_modeling_intermediate.QUIZ,
+    "molecular-modeling-advanced": _molecular_modeling_advanced.QUIZ,
+    "ngs-analysis-basics": _ngs_analysis_basics.QUIZ,
+    "ngs-analysis-intermediate": _ngs_analysis_intermediate.QUIZ,
+    "ngs-analysis-advanced": _ngs_analysis_advanced.QUIZ,
+    "phylogenetics-basics": _phylogenetics_basics.QUIZ,
+    "phylogenetics-intermediate": _phylogenetics_intermediate.QUIZ,
+    "phylogenetics-advanced": _phylogenetics_advanced.QUIZ,
+    "protein-ligand-binding-basics": _protein_ligand_binding_basics.QUIZ,
+    "protein-ligand-binding-intermediate": _protein_ligand_binding_intermediate.QUIZ,
+    "protein-ligand-binding-advanced": _protein_ligand_binding_advanced.QUIZ,
+    "protein-structure-prediction-basics": _protein_structure_prediction_basics.QUIZ,
+    "protein-structure-prediction-intermediate": _protein_structure_prediction_intermediate.QUIZ,
+    "protein-structure-prediction-advanced": _protein_structure_prediction_advanced.QUIZ,
+    "proteomics-metabolomics-basics": _proteomics_metabolomics_basics.QUIZ,
+    "proteomics-metabolomics-intermediate": _proteomics_metabolomics_intermediate.QUIZ,
+    "proteomics-metabolomics-advanced": _proteomics_metabolomics_advanced.QUIZ,
+    "qsar-modeling-basics": _qsar_modeling_basics.QUIZ,
+    "qsar-modeling-intermediate": _qsar_modeling_intermediate.QUIZ,
+    "qsar-modeling-advanced": _qsar_modeling_advanced.QUIZ,
+    "reproducible-research-basics": _reproducible_research_basics.QUIZ,
+    "reproducible-research-intermediate": _reproducible_research_intermediate.QUIZ,
+    "reproducible-research-advanced": _reproducible_research_advanced.QUIZ,
+    "sequence-analysis-basics": _sequence_analysis_basics.QUIZ,
+    "sequence-analysis-intermediate": _sequence_analysis_intermediate.QUIZ,
+    "sequence-analysis-advanced": _sequence_analysis_advanced.QUIZ,
+    "single-cell-omics-basics": _single_cell_omics_basics.QUIZ,
+    "single-cell-omics-intermediate": _single_cell_omics_intermediate.QUIZ,
+    "single-cell-omics-advanced": _single_cell_omics_advanced.QUIZ,
+    "systems-biology-basics": _systems_biology_basics.QUIZ,
+    "systems-biology-intermediate": _systems_biology_intermediate.QUIZ,
+    "systems-biology-advanced": _systems_biology_advanced.QUIZ,
+    "target-identification-basics": _target_identification_basics.QUIZ,
+    "target-identification-intermediate": _target_identification_intermediate.QUIZ,
+    "target-identification-advanced": _target_identification_advanced.QUIZ,
+    "transcriptomics-basics": _transcriptomics_basics.QUIZ,
+    "transcriptomics-intermediate": _transcriptomics_intermediate.QUIZ,
+    "transcriptomics-advanced": _transcriptomics_advanced.QUIZ,
+    "analytical-chemistry-basics": _analytical_chemistry_basics.QUIZ,
+    "analytical-chemistry-intermediate": _analytical_chemistry_intermediate.QUIZ,
+    "analytical-chemistry-advanced": _analytical_chemistry_advanced.QUIZ,
+    "bio-databases-basics": _bio_databases_basics.QUIZ,
+    "bio-databases-intermediate": _bio_databases_intermediate.QUIZ,
+    "bio-databases-advanced": _bio_databases_advanced.QUIZ,
+    "biochemistry-basics": _biochemistry_basics.QUIZ,
+    "biochemistry-intermediate": _biochemistry_intermediate.QUIZ,
+    "biochemistry-advanced": _biochemistry_advanced.QUIZ,
+    "bioinformatics-basics": _bioinformatics_basics.QUIZ,
+    "bioinformatics-intermediate": _bioinformatics_intermediate.QUIZ,
+    "bioinformatics-advanced": _bioinformatics_advanced.QUIZ,
+    "biostatistics-basics": _biostatistics_basics.QUIZ,
+    "biostatistics-intermediate": _biostatistics_intermediate.QUIZ,
+    "biostatistics-advanced": _biostatistics_advanced.QUIZ,
+    "cell-biology-basics": _cell_biology_basics.QUIZ,
+    "cell-biology-intermediate": _cell_biology_intermediate.QUIZ,
+    "cell-biology-advanced": _cell_biology_advanced.QUIZ,
+    "data-visualization-bio-basics": _data_visualization_bio_basics.QUIZ,
+    "data-visualization-bio-intermediate": _data_visualization_bio_intermediate.QUIZ,
+    "data-visualization-bio-advanced": _data_visualization_bio_advanced.QUIZ,
+    "evolution-ecology-basics": _evolution_ecology_basics.QUIZ,
+    "evolution-ecology-intermediate": _evolution_ecology_intermediate.QUIZ,
+    "evolution-ecology-advanced": _evolution_ecology_advanced.QUIZ,
+    "general-chemistry-basics": _general_chemistry_basics.QUIZ,
+    "general-chemistry-intermediate": _general_chemistry_intermediate.QUIZ,
+    "general-chemistry-advanced": _general_chemistry_advanced.QUIZ,
+    "genetics-basics": _genetics_basics.QUIZ,
+    "genetics-intermediate": _genetics_intermediate.QUIZ,
+    "genetics-advanced": _genetics_advanced.QUIZ,
+    "genomics-basics": _genomics_basics.QUIZ,
+    "genomics-intermediate": _genomics_intermediate.QUIZ,
+    "genomics-advanced": _genomics_advanced.QUIZ,
+    "immunology-basics": _immunology_basics.QUIZ,
+    "immunology-intermediate": _immunology_intermediate.QUIZ,
+    "immunology-advanced": _immunology_advanced.QUIZ,
+    "math-life-sciences-basics": _math_life_sciences_basics.QUIZ,
+    "math-life-sciences-intermediate": _math_life_sciences_intermediate.QUIZ,
+    "math-life-sciences-advanced": _math_life_sciences_advanced.QUIZ,
+    "microbiology-basics": _microbiology_basics.QUIZ,
+    "microbiology-intermediate": _microbiology_intermediate.QUIZ,
+    "microbiology-advanced": _microbiology_advanced.QUIZ,
+    "molecular-biology-basics": _molecular_biology_basics.QUIZ,
+    "molecular-biology-intermediate": _molecular_biology_intermediate.QUIZ,
+    "molecular-biology-advanced": _molecular_biology_advanced.QUIZ,
+    "organic-chemistry-basics": _organic_chemistry_basics.QUIZ,
+    "organic-chemistry-intermediate": _organic_chemistry_intermediate.QUIZ,
+    "organic-chemistry-advanced": _organic_chemistry_advanced.QUIZ,
+    "pharmacology-basics": _pharmacology_basics.QUIZ,
+    "pharmacology-intermediate": _pharmacology_intermediate.QUIZ,
+    "pharmacology-advanced": _pharmacology_advanced.QUIZ,
+    "physical-chemistry-basics": _physical_chemistry_basics.QUIZ,
+    "physical-chemistry-intermediate": _physical_chemistry_intermediate.QUIZ,
+    "physical-chemistry-advanced": _physical_chemistry_advanced.QUIZ,
+    "physics-life-sciences-basics": _physics_life_sciences_basics.QUIZ,
+    "physics-life-sciences-intermediate": _physics_life_sciences_intermediate.QUIZ,
+    "physics-life-sciences-advanced": _physics_life_sciences_advanced.QUIZ,
+    "physiology-basics": _physiology_basics.QUIZ,
+    "physiology-intermediate": _physiology_intermediate.QUIZ,
+    "physiology-advanced": _physiology_advanced.QUIZ,
+    "programming-biology-python-basics": _programming_biology_python_basics.QUIZ,
+    "programming-biology-python-intermediate": _programming_biology_python_intermediate.QUIZ,
+    "programming-biology-python-advanced": _programming_biology_python_advanced.QUIZ,
+    "protein-science-basics": _protein_science_basics.QUIZ,
+    "protein-science-intermediate": _protein_science_intermediate.QUIZ,
+    "protein-science-advanced": _protein_science_advanced.QUIZ,
+    "r-data-analysis-basics": _r_data_analysis_basics.QUIZ,
+    "r-data-analysis-intermediate": _r_data_analysis_intermediate.QUIZ,
+    "r-data-analysis-advanced": _r_data_analysis_advanced.QUIZ,
+    "scientific-computing-basics": _scientific_computing_basics.QUIZ,
+    "scientific-computing-intermediate": _scientific_computing_intermediate.QUIZ,
+    "scientific-computing-advanced": _scientific_computing_advanced.QUIZ,
+    "structural-biology-basics": _structural_biology_basics.QUIZ,
+    "structural-biology-intermediate": _structural_biology_intermediate.QUIZ,
+    "structural-biology-advanced": _structural_biology_advanced.QUIZ,
     "advanced-control-advanced": _advanced_control_advanced.QUIZ,
     "advanced-control-basics": _advanced_control_basics.QUIZ,
     "advanced-control-intermediate": _advanced_control_intermediate.QUIZ,
