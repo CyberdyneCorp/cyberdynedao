@@ -22,6 +22,11 @@ _DEFAULT_BASE_URL = "https://api.openai.com/v1"
 _TOKEN_RE = re.compile(r"[a-z0-9]+")
 _STATIC_DIM = 256
 
+# OpenAI's embeddings endpoint caps ``input`` at 2048 array elements per
+# request. A grown catalog (hundreds of courses + lessons) exceeds that in a
+# single call, which 400s, so we batch below the cap with margin (issue #244).
+_MAX_EMBED_BATCH = 1000
+
 # Common connective words carry no topical signal but, counted, dilute the
 # cosine between a short query and a longer catalog text. Dropping them sharpens
 # the keyword-overlap signal the static embedder approximates.
@@ -76,7 +81,16 @@ class OpenAIEmbeddingClient:
     async def embed(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
-        body: dict[str, object] = {"model": self._model, "input": texts}
+        # Batch under OpenAI's 2048-element ``input`` cap and concatenate the
+        # vectors in order (issue #244). Each batch preserves order via
+        # ``_vectors_from``, and batches are appended in slice order.
+        vectors: list[list[float]] = []
+        for start in range(0, len(texts), _MAX_EMBED_BATCH):
+            vectors.extend(await self._embed_batch(texts[start : start + _MAX_EMBED_BATCH]))
+        return vectors
+
+    async def _embed_batch(self, batch: list[str]) -> list[list[float]]:
+        body: dict[str, object] = {"model": self._model, "input": batch}
         try:
             response = await self._http.post(
                 f"{self._base_url}/embeddings",
