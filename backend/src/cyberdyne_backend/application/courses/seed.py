@@ -23,6 +23,9 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
+from cyberdyne_backend.application.courses.seed_actuators_motion_systems import (
+    ACTUATORS_MOTION_SYSTEMS_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_adaptive_dsp import ADAPTIVE_DSP_COURSES
 from cyberdyne_backend.application.courses.seed_additive_manufacturing import (
     ADDITIVE_MANUFACTURING_COURSES,
@@ -31,6 +34,7 @@ from cyberdyne_backend.application.courses.seed_admet_prediction import ADMET_PR
 from cyberdyne_backend.application.courses.seed_advanced_control import ADVANCED_CONTROL_COURSES
 from cyberdyne_backend.application.courses.seed_aerial import AERIAL_COURSES
 from cyberdyne_backend.application.courses.seed_ai_drug_discovery import AI_DRUG_DISCOVERY_COURSES
+from cyberdyne_backend.application.courses.seed_ai_organic_shapes import AI_ORGANIC_SHAPES_COURSES
 from cyberdyne_backend.application.courses.seed_algorithms import ALGORITHMS_COURSES
 from cyberdyne_backend.application.courses.seed_analog_comms import ANALOG_COMMS_COURSES
 from cyberdyne_backend.application.courses.seed_analog_ic import ANALOG_IC_COURSES
@@ -44,14 +48,21 @@ from cyberdyne_backend.application.courses.seed_bio_databases import BIO_DATABAS
 from cyberdyne_backend.application.courses.seed_biochemistry import BIOCHEMISTRY_COURSES
 from cyberdyne_backend.application.courses.seed_bioinformatics import BIOINFORMATICS_COURSES
 from cyberdyne_backend.application.courses.seed_biostatistics import BIOSTATISTICS_COURSES
+from cyberdyne_backend.application.courses.seed_cad_cae_parametric import CAD_CAE_PARAMETRIC_COURSES
 from cyberdyne_backend.application.courses.seed_capstone_ai_drug_design import (
     CAPSTONE_AI_DRUG_DESIGN_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_capstone_generative_mechanical_design import (
+    CAPSTONE_GENERATIVE_MECHANICAL_DESIGN_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_cell_biology import CELL_BIOLOGY_COURSES
 from cyberdyne_backend.application.courses.seed_cheminformatics import CHEMINFORMATICS_COURSES
 from cyberdyne_backend.application.courses.seed_circuit_analysis import CIRCUIT_ANALYSIS_COURSES
 from cyberdyne_backend.application.courses.seed_coding_theory import CODING_THEORY_COURSES
 from cyberdyne_backend.application.courses.seed_comparch import COMPARCH_COURSES
+from cyberdyne_backend.application.courses.seed_computational_fluid_dynamics import (
+    COMPUTATIONAL_FLUID_DYNAMICS_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_computational_thinking import (
     COMPUTATIONAL_THINKING_COURSES,
 )
@@ -72,6 +83,9 @@ from cyberdyne_backend.application.courses.seed_databases import DATABASE_COURSE
 from cyberdyne_backend.application.courses.seed_dataeng import DATAENG_COURSES
 from cyberdyne_backend.application.courses.seed_deep_learning_biology import (
     DEEP_LEARNING_BIOLOGY_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_design_optimization import (
+    DESIGN_OPTIMIZATION_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_devops import DEVOPS_COURSES
 from cyberdyne_backend.application.courses.seed_digital_comms import DIGITAL_COMMS_COURSES
@@ -107,9 +121,13 @@ from cyberdyne_backend.application.courses.seed_estimation import ESTIMATION_COU
 from cyberdyne_backend.application.courses.seed_evolution_ecology import EVOLUTION_ECOLOGY_COURSES
 from cyberdyne_backend.application.courses.seed_fiber_optics import FIBER_OPTICS_COURSES
 from cyberdyne_backend.application.courses.seed_filter_design import FILTER_DESIGN_COURSES
+from cyberdyne_backend.application.courses.seed_finite_element_analysis import (
+    FINITE_ELEMENT_ANALYSIS_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_fluid_mechanics import FLUID_MECHANICS_COURSES
 from cyberdyne_backend.application.courses.seed_fpga import FPGA_COURSES
 from cyberdyne_backend.application.courses.seed_general_chemistry import GENERAL_CHEMISTRY_COURSES
+from cyberdyne_backend.application.courses.seed_generative_design import GENERATIVE_DESIGN_COURSES
 from cyberdyne_backend.application.courses.seed_generative_molecular_design import (
     GENERATIVE_MOLECULAR_DESIGN_COURSES,
 )
@@ -119,11 +137,18 @@ from cyberdyne_backend.application.courses.seed_git import GIT_COURSES
 from cyberdyne_backend.application.courses.seed_heat_transfer import HEAT_TRANSFER_COURSES
 from cyberdyne_backend.application.courses.seed_high_voltage import HIGH_VOLTAGE_COURSES
 from cyberdyne_backend.application.courses.seed_hwverification import HW_VERIFICATION_COURSES
+from cyberdyne_backend.application.courses.seed_hydraulics_pneumatics import (
+    HYDRAULICS_PNEUMATICS_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_iac import IAC_COURSES
 from cyberdyne_backend.application.courses.seed_image_processing import IMAGE_PROCESSING_COURSES
 from cyberdyne_backend.application.courses.seed_immunology import IMMUNOLOGY_COURSES
+from cyberdyne_backend.application.courses.seed_kinematics_of_machinery import (
+    KINEMATICS_OF_MACHINERY_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_languages import LANGUAGE_COURSES
 from cyberdyne_backend.application.courses.seed_linux import LINUX_COURSES
+from cyberdyne_backend.application.courses.seed_machine_design import MACHINE_DESIGN_COURSES
 from cyberdyne_backend.application.courses.seed_machines import MACHINES_COURSES
 from cyberdyne_backend.application.courses.seed_manufacturing_processes import (
     MANUFACTURING_PROCESSES_COURSES,
@@ -131,20 +156,26 @@ from cyberdyne_backend.application.courses.seed_manufacturing_processes import (
 from cyberdyne_backend.application.courses.seed_materials_science import MATERIALS_SCIENCE_COURSES
 from cyberdyne_backend.application.courses.seed_math import MATH_COURSES
 from cyberdyne_backend.application.courses.seed_math_life_sciences import MATH_LIFE_SCIENCES_COURSES
+from cyberdyne_backend.application.courses.seed_mechanical_vibrations import (
+    MECHANICAL_VIBRATIONS_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_mechanics_of_materials import (
     MECHANICS_OF_MATERIALS_COURSES,
 )
+from cyberdyne_backend.application.courses.seed_mechatronics import MECHATRONICS_COURSES
 from cyberdyne_backend.application.courses.seed_medicinal_chemistry import (
     MEDICINAL_CHEMISTRY_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_microbiology import MICROBIOLOGY_COURSES
 from cyberdyne_backend.application.courses.seed_microwave import MICROWAVE_COURSES
 from cyberdyne_backend.application.courses.seed_ml import ML_COURSES
+from cyberdyne_backend.application.courses.seed_ml_for_engineering import ML_FOR_ENGINEERING_COURSES
 from cyberdyne_backend.application.courses.seed_ml_life_sciences import ML_LIFE_SCIENCES_COURSES
 from cyberdyne_backend.application.courses.seed_mobilerobotics import MOBILE_ROBOTICS_COURSES
 from cyberdyne_backend.application.courses.seed_molecular_biology import MOLECULAR_BIOLOGY_COURSES
 from cyberdyne_backend.application.courses.seed_molecular_dynamics import MOLECULAR_DYNAMICS_COURSES
 from cyberdyne_backend.application.courses.seed_molecular_modeling import MOLECULAR_MODELING_COURSES
+from cyberdyne_backend.application.courses.seed_multibody_dynamics import MULTIBODY_DYNAMICS_COURSES
 from cyberdyne_backend.application.courses.seed_networking import NETWORKING_COURSES
 from cyberdyne_backend.application.courses.seed_ngs_analysis import NGS_ANALYSIS_COURSES
 from cyberdyne_backend.application.courses.seed_organic_chemistry import ORGANIC_CHEMISTRY_COURSES
@@ -189,6 +220,7 @@ from cyberdyne_backend.application.courses.seed_reproducible_research import (
 )
 from cyberdyne_backend.application.courses.seed_rf_comms import RF_COMMS_COURSES
 from cyberdyne_backend.application.courses.seed_rfic import RFIC_COURSES
+from cyberdyne_backend.application.courses.seed_robot_manipulators import ROBOT_MANIPULATORS_COURSES
 from cyberdyne_backend.application.courses.seed_robotics import ROBOTICS_COURSES
 from cyberdyne_backend.application.courses.seed_scientific_computing import (
     SCIENTIFIC_COMPUTING_COURSES,
@@ -221,6 +253,9 @@ from cyberdyne_backend.application.courses.seed_technical_english import (
 )
 from cyberdyne_backend.application.courses.seed_test_measurement import TEST_MEASUREMENT_COURSES
 from cyberdyne_backend.application.courses.seed_testing import TESTING_COURSES
+from cyberdyne_backend.application.courses.seed_topology_optimization import (
+    TOPOLOGY_OPTIMIZATION_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_transcriptomics import TRANSCRIPTOMICS_COURSES
 from cyberdyne_backend.application.courses.seed_types import (
     SeedCourse,
@@ -1457,6 +1492,23 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *MANUFACTURING_PROCESSES_COURSES,
     *MATERIALS_SCIENCE_COURSES,
     *MECHANICS_OF_MATERIALS_COURSES,
+    *ACTUATORS_MOTION_SYSTEMS_COURSES,
+    *AI_ORGANIC_SHAPES_COURSES,
+    *CAD_CAE_PARAMETRIC_COURSES,
+    *CAPSTONE_GENERATIVE_MECHANICAL_DESIGN_COURSES,
+    *COMPUTATIONAL_FLUID_DYNAMICS_COURSES,
+    *DESIGN_OPTIMIZATION_COURSES,
+    *FINITE_ELEMENT_ANALYSIS_COURSES,
+    *GENERATIVE_DESIGN_COURSES,
+    *HYDRAULICS_PNEUMATICS_COURSES,
+    *KINEMATICS_OF_MACHINERY_COURSES,
+    *MACHINE_DESIGN_COURSES,
+    *MECHANICAL_VIBRATIONS_COURSES,
+    *MECHATRONICS_COURSES,
+    *ML_FOR_ENGINEERING_COURSES,
+    *MULTIBODY_DYNAMICS_COURSES,
+    *ROBOT_MANIPULATORS_COURSES,
+    *TOPOLOGY_OPTIMIZATION_COURSES,
     *RAILS_COURSES,
 )
 
