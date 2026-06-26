@@ -27,6 +27,8 @@ _LEARNER = UserPrincipal(
     scopes=frozenset(),
     audience=None,
     expires_at=datetime(2999, 1, 1, tzinfo=UTC),
+    # Certificate issuance is Pro-only (issue #230).
+    entitlements=frozenset({"pro"}),
 )
 
 

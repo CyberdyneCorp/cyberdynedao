@@ -11,6 +11,7 @@ from cyberdyne_backend.domain.auth_identity.entities import (
     ServicePrincipal,
     UserPrincipal,
     UserProfile,
+    has_pro_entitlement,
     principal_from_access_token,
     profile_from_users_me,
 )
@@ -32,6 +33,7 @@ __all__ = [
     "UserPrincipal",
     "UserProfile",
     "UserProfilePort",
+    "has_pro_entitlement",
     "principal_from_access_token",
     "profile_from_users_me",
 ]

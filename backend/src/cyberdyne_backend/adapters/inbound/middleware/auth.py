@@ -131,6 +131,15 @@ def require_principal(
     return principal
 
 
+def optional_principal(request: Request) -> UserPrincipal | None:
+    """The authenticated user, if any — never raises. Used by guards that
+    apply only to signed-in users (e.g. per-user quota) while still allowing
+    anonymous access (chat sessions). Returns ``None`` for anonymous callers
+    and for service tokens."""
+    principal: Principal | None = getattr(request.state, "principal", None)
+    return principal if isinstance(principal, UserPrincipal) else None
+
+
 def get_user_profile_port() -> UserProfilePort | None:
     """Provider seam for the ``/users/me`` profile port.
 

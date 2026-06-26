@@ -14,11 +14,16 @@ from cyberdyne_backend.adapters.inbound.api.code.schemas import (
     RunCodeRequest,
     RunCodeResponse,
 )
+from cyberdyne_backend.adapters.inbound.api.quota.dependencies import QuotaGuard
 from cyberdyne_backend.adapters.inbound.middleware.auth import extract_token, require_principal
 from cyberdyne_backend.application.code import RunLessonCode
 from cyberdyne_backend.domain.auth_identity import UserPrincipal
+from cyberdyne_backend.domain.quota import QuotaMeter
 
 player_router = APIRouter(prefix="/api/v1/lessons", tags=["code"])
+
+# Per-user free-tier cap (20/day) + Pro fair-use on code execution (issue #230).
+_code_run_quota = QuotaGuard(QuotaMeter.CODE_RUNS)
 
 
 # Dependency stub — overridden in main.py.
@@ -30,6 +35,7 @@ async def get_run_code_uc() -> RunLessonCode:  # pragma: no cover - override tar
     "/{lesson_id}/code/run",
     response_model=RunCodeResponse,
     response_model_by_alias=True,
+    dependencies=[Depends(_code_run_quota)],
 )
 async def run_lesson_code(
     lesson_id: UUID,
