@@ -28,6 +28,9 @@ class ChatMessageRow(Base):
     role: Mapped[str] = mapped_column(String(16), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False, default="")
     tool_calls: Mapped[list[dict[str, object]]] = mapped_column(JSON, nullable=False, default=list)
+    # Learner-attached files on a user turn (issue #220): list of
+    # {id, filename, contentType}. Nullable for rows written before #220.
+    attachments: Mapped[list[dict[str, object]] | None] = mapped_column(JSON, nullable=True)
     tool_call_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     tokens_in: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     tokens_out: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

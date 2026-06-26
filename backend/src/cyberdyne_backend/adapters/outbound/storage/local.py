@@ -14,7 +14,7 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
-from cyberdyne_backend.domain.uploads import UploadCategory
+from cyberdyne_backend.domain.uploads import UploadCategory, UploadNotFoundError
 
 
 class LocalFileStorage:
@@ -49,3 +49,18 @@ class LocalFileStorage:
             target.unlink(missing_ok=True)
 
         await asyncio.to_thread(_unlink)
+
+    async def read(self, relative_path: str) -> bytes:
+        # relative_path is "<category>/<stored_filename>".
+        parts = relative_path.split("/", 1)
+        if len(parts) != 2:
+            raise UploadNotFoundError(f"malformed storage path: {relative_path}")
+        target = self._resolve_within_root(parts[0], parts[1])
+
+        def _read() -> bytes:
+            try:
+                return target.read_bytes()
+            except FileNotFoundError as exc:
+                raise UploadNotFoundError(f"no stored object at {relative_path}") from exc
+
+        return await asyncio.to_thread(_read)

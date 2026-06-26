@@ -36,6 +36,11 @@ class FakeStorage:
     async def delete(self, relative_path: str) -> None:
         self.saved.pop(relative_path, None)
 
+    async def read(self, relative_path: str) -> bytes:
+        if relative_path not in self.saved:
+            raise UploadNotFoundError(relative_path)
+        return self.saved[relative_path]
+
 
 class FakeUploadRepo:
     def __init__(self) -> None:

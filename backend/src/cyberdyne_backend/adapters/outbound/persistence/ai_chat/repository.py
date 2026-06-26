@@ -12,6 +12,7 @@ from cyberdyne_backend.adapters.outbound.persistence.ai_chat.models import (
     ChatSessionRow,
 )
 from cyberdyne_backend.domain.ai_chat import (
+    AttachmentRef,
     ChatMessage,
     ChatRole,
     ChatSession,
@@ -38,6 +39,14 @@ def _row_to_message(row: ChatMessageRow) -> ChatMessage:
         )
         for tc in row.tool_calls or []
     )
+    attachments = tuple(
+        AttachmentRef(
+            id=UUID(str(a.get("id"))),
+            filename=str(a.get("filename", "")),
+            content_type=str(a.get("contentType", "")),
+        )
+        for a in row.attachments or []
+    )
     return ChatMessage(
         id=row.id,
         session_id=row.session_id,
@@ -48,6 +57,7 @@ def _row_to_message(row: ChatMessageRow) -> ChatMessage:
         tokens_in=row.tokens_in,
         tokens_out=row.tokens_out,
         model=row.model,
+        attachments=attachments,
         created_at=row.created_at,
     )
 
@@ -92,6 +102,15 @@ class SqlAlchemyChatRepository:
                     }
                     for tc in message.tool_calls
                 ],
+                attachments=[
+                    {
+                        "id": str(a.id),
+                        "filename": a.filename,
+                        "contentType": a.content_type,
+                    }
+                    for a in message.attachments
+                ]
+                or None,
                 tool_call_id=message.tool_call_id,
                 tokens_in=message.tokens_in,
                 tokens_out=message.tokens_out,

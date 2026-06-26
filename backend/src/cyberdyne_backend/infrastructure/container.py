@@ -10,6 +10,7 @@ from __future__ import annotations
 import httpx
 
 from cyberdyne_backend.adapters.outbound.access.fake_reader import FakeAccessReader
+from cyberdyne_backend.adapters.outbound.attachments import MultiFormatTextExtractor
 from cyberdyne_backend.adapters.outbound.auth.caching_auth_port import CachingAuthPort
 from cyberdyne_backend.adapters.outbound.auth.jwks_verifier import JwksTokenVerifier
 from cyberdyne_backend.adapters.outbound.auth.profile_client import CyberdyneAuthProfileClient
@@ -46,6 +47,10 @@ from cyberdyne_backend.adapters.outbound.llm.openai_client import (
     StaticChatClient,
     StubKnowledgeSearch,
 )
+from cyberdyne_backend.adapters.outbound.llm.vision_client import (
+    OpenAIVisionClient,
+    StaticVisionClient,
+)
 from cyberdyne_backend.adapters.outbound.matlab.client import MatlabBackendClient
 from cyberdyne_backend.adapters.outbound.python_interpreter.client import (
     PythonInterpreterClient,
@@ -66,6 +71,8 @@ from cyberdyne_backend.domain.ai_chat import (
     KnowledgeSearchPort,
     MatlabPort,
     PythonInterpreterPort,
+    TextExtractorPort,
+    VisionPort,
 )
 from cyberdyne_backend.domain.auth_identity import AuthPort, UserProfilePort
 from cyberdyne_backend.domain.dao_treasury import ChainReaderPort
@@ -99,6 +106,8 @@ class Container:
         self._stripe_webhook_verifier: StripeWebhookVerifierPort | None = None
         self._license_email_notifier: LicenseEmailNotifierPort | None = None
         self._chat_llm: ChatLLMPort | None = None
+        self._vision: VisionPort | None = None
+        self._text_extractor: TextExtractorPort | None = None
         self._knowledge_search: KnowledgeSearchPort | None = None
         self._matlab: MatlabPort | None = None
         self._python: PythonInterpreterPort | None = None
@@ -340,6 +349,29 @@ class Container:
         else:
             self._chat_llm = StaticChatClient()
         return self._chat_llm
+
+    @property
+    def vision(self) -> VisionPort:
+        """OpenAI vision client when a key is configured; the static fallback
+        otherwise (mirrors ``chat_llm``)."""
+        if self._vision is not None:
+            return self._vision
+        key = self._settings.openai_api_key
+        if key is not None:
+            self._vision = OpenAIVisionClient(
+                api_key=key.get_secret_value(),
+                http_client=self.http_client,
+                model=self._settings.openai_vision_model,
+            )
+        else:
+            self._vision = StaticVisionClient()
+        return self._vision
+
+    @property
+    def text_extractor(self) -> TextExtractorPort:
+        if self._text_extractor is None:
+            self._text_extractor = MultiFormatTextExtractor()
+        return self._text_extractor
 
     @property
     def matlab(self) -> MatlabPort:

@@ -27,6 +27,9 @@ class UploadResponse(_CamelModel):
     url: str
     uploaded_by: UUID | None = None
     created_at: datetime
+    # Always "stored" today — the upload is durably persisted before the
+    # response is returned. Reserved for future async/virus-scan states.
+    status: str = "stored"
 
 
 class UploadListResponse(_CamelModel):

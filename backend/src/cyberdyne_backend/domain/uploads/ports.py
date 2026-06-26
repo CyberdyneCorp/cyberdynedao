@@ -20,6 +20,12 @@ class FileStorage(Protocol):
         """Remove a stored object. No-op if it doesn't exist."""
         ...
 
+    async def read(self, relative_path: str) -> bytes:
+        """Return the bytes of a stored object addressed by its
+        ``<category>/<stored_filename>`` relative path. Raises
+        ``UploadNotFoundError`` if the object is missing."""
+        ...
+
 
 @runtime_checkable
 class UploadRepository(Protocol):

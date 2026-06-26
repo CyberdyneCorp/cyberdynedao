@@ -37,11 +37,24 @@ and returns the final assistant message. An upstream LLM failure SHALL return
 `interpreterSessionId` + `attachments` SHALL thread into tool dispatch; the
 caller's bearer SHALL be forwarded to tools.
 
+An `attachments` entry that is an upload id (`POST /api/v1/uploads`, issue
+#220) SHALL be resolved and the turn grounded in its contents — text extracted
+for PDF/DOCX/CSV/XLSX, a vision description for images — while an entry that is
+an interpreter-workspace filename SHALL keep the existing read-in-workspace
+behavior. The resolved attachments (id, filename, contentType) SHALL be echoed
+on the message in history so the client can render attachment chips.
+
 #### Scenario: Tool round then final answer
 
 - GIVEN the LLM requests a tool then answers
 - WHEN a turn runs
 - THEN the tool is dispatched, results persisted, and the final assistant message returned
+
+#### Scenario: Attachment grounds the reply
+
+- GIVEN a learner uploads a PDF and sends a message with its `uploadId` in `attachments`
+- WHEN the turn runs
+- THEN the extracted text is inlined into the prompt and the message in history echoes the attachment metadata
 
 #### Scenario: Tool-round cap
 

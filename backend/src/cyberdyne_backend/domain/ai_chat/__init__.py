@@ -11,6 +11,7 @@ without CyberRAG. Hooking up real CyberRAG is a follow-up adapter swap.
 """
 
 from cyberdyne_backend.domain.ai_chat.entities import (
+    AttachmentRef,
     ChatMessage,
     ChatRole,
     ChatSession,
@@ -25,12 +26,14 @@ from cyberdyne_backend.domain.ai_chat.errors import (
     ChatSessionNotFoundError,
 )
 from cyberdyne_backend.domain.ai_chat.ports import (
+    AttachmentIngestorPort,
     ChatLLMPort,
     ChatRepository,
     CodeRunResult,
     CodeVariable,
     CyberfliesPort,
     DocumentRendererPort,
+    IngestedAttachment,
     KnowledgeSearchPort,
     LLMResponse,
     LLMStreamChunk,
@@ -45,10 +48,14 @@ from cyberdyne_backend.domain.ai_chat.ports import (
     PythonExecResult,
     PythonInterpreterPort,
     RichOutput,
+    TextExtractorPort,
     ToolSchema,
+    VisionPort,
 )
 
 __all__ = [
+    "AttachmentIngestorPort",
+    "AttachmentRef",
     "ChatLLMPort",
     "ChatMessage",
     "ChatProviderError",
@@ -60,6 +67,7 @@ __all__ = [
     "CodeVariable",
     "CyberfliesPort",
     "DocumentRendererPort",
+    "IngestedAttachment",
     "KnowledgeSearchPort",
     "LLMResponse",
     "LLMStreamChunk",
@@ -74,8 +82,10 @@ __all__ = [
     "PythonExecResult",
     "PythonInterpreterPort",
     "RichOutput",
+    "TextExtractorPort",
     "ToolCall",
     "ToolSchema",
+    "VisionPort",
     "new_assistant_message",
     "new_session",
     "new_tool_message",

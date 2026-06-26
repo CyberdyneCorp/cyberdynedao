@@ -44,6 +44,21 @@ all-or-nothing.
 - WHEN it is uploaded
 - THEN the system SHALL respond `413`
 
+### Requirement: Learner uploads
+
+The system SHALL accept `POST /api/v1/uploads` (multipart) from any signed-in
+learner, storing the file as theirs (`uploadedBy = user`) under the same
+MIME/size rules as admin uploads. The learner-facing allow-list SHALL include
+PDF, DOCX, CSV, XLSX, and images. The response SHALL carry the `uploadId`,
+filename, content type, size, and `status`. A non-user caller SHALL be refused
+(`401`/`403`); an unsupported type SHALL return `415`.
+
+#### Scenario: Learner uploads a document
+
+- GIVEN a signed-in learner and a small PDF
+- WHEN they POST it to `/api/v1/uploads`
+- THEN it is stored and an `uploadId` is returned
+
 ### Requirement: Public read-only serving
 
 The system SHALL expose upload metadata at `GET /api/v1/uploads/{id}` (404 if

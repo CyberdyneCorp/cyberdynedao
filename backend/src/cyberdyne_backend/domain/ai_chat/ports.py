@@ -7,7 +7,12 @@ from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
 from uuid import UUID
 
-from cyberdyne_backend.domain.ai_chat.entities import ChatMessage, ChatSession, ToolCall
+from cyberdyne_backend.domain.ai_chat.entities import (
+    AttachmentRef,
+    ChatMessage,
+    ChatSession,
+    ToolCall,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -326,3 +331,39 @@ class ChatRepository(Protocol):
     async def get_session(self, session_id: UUID) -> ChatSession: ...
     async def append_message(self, message: ChatMessage) -> None: ...
     async def list_messages(self, session_id: UUID) -> list[ChatMessage]: ...
+
+
+# ── Attachment ingestion (issue #220) ────────────────────────────────
+
+
+@dataclass(frozen=True, slots=True)
+class IngestedAttachment:
+    """One resolved attachment, ready to ground the tutor: the display
+    ``ref`` plus the usable ``text`` (extracted document text, or — for
+    images — a vision description / OCR transcript)."""
+
+    ref: AttachmentRef
+    text: str
+
+
+@runtime_checkable
+class AttachmentIngestorPort(Protocol):
+    async def ingest(self, upload_ids: tuple[UUID, ...]) -> tuple[IngestedAttachment, ...]:
+        """Resolve each upload id to its content. Returns one entry per
+        resolved id (ids that don't resolve are skipped, not raised)."""
+        ...
+
+
+@runtime_checkable
+class VisionPort(Protocol):
+    async def describe_image(
+        self, *, image_bytes: bytes, content_type: str, prompt: str
+    ) -> str: ...
+
+
+@runtime_checkable
+class TextExtractorPort(Protocol):
+    async def extract(self, *, data: bytes, content_type: str) -> str:
+        """Extract readable text from document bytes by MIME type.
+        Returns "" for types it can't extract."""
+        ...

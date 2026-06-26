@@ -333,6 +333,7 @@ from cyberdyne_backend.adapters.inbound.middleware.auth import (
     extract_token,
     get_user_profile_port,
 )
+from cyberdyne_backend.adapters.outbound.attachments import UploadAttachmentIngestor
 from cyberdyne_backend.adapters.outbound.certificates.signer import (
     Ed25519CertificateSigner,
 )
@@ -1466,6 +1467,17 @@ def create_app() -> FastAPI:
             user_id=profile.user_id if profile else None,
         )
 
+    def _attachment_ingestor(session: AsyncSession) -> UploadAttachmentIngestor:
+        # Resolves learner-attached uploads to grounding text/vision (issue
+        # #220); shares the request session's UploadRepository + the process
+        # file storage and vision/extractor adapters.
+        return UploadAttachmentIngestor(
+            repo=SqlAlchemyUploadRepository(session),
+            storage=file_storage,
+            extractor=container.text_extractor,
+            vision=container.vision,
+        )
+
     async def _run_turn_dep(request: Request) -> AsyncIterator[RunChatTurn]:
         profile = await _chat_profile(request)
         async with session_scope() as session:
@@ -1474,6 +1486,7 @@ def create_app() -> FastAPI:
                 llm=container.chat_llm,
                 dispatcher=ToolDispatcher(_chat_tools_ctx(request, session, profile)),
                 user=profile,
+                ingestor=_attachment_ingestor(session),
             )
 
     async def _stream_turn_dep(request: Request) -> AsyncIterator[StreamChatTurn]:
@@ -1487,6 +1500,7 @@ def create_app() -> FastAPI:
                 llm=container.chat_llm,
                 dispatcher=ToolDispatcher(_chat_tools_ctx(request, session, profile)),
                 user=profile,
+                ingestor=_attachment_ingestor(session),
             )
 
     app.dependency_overrides[get_list_team_uc] = _list_team_dep
