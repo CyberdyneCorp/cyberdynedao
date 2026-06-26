@@ -6,6 +6,15 @@ workflow; one entry per course module in this package."""
 from __future__ import annotations
 
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    actuators_motion_systems_advanced as _actuators_motion_systems_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    actuators_motion_systems_basics as _actuators_motion_systems_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    actuators_motion_systems_intermediate as _actuators_motion_systems_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     adaptive_dsp_advanced as _adaptive_dsp_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -13,6 +22,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     adaptive_dsp_intermediate as _adaptive_dsp_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    additive_manufacturing_advanced as _additive_manufacturing_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    additive_manufacturing_basics as _additive_manufacturing_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    additive_manufacturing_intermediate as _additive_manufacturing_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     admet_prediction_advanced as _admet_prediction_advanced,
@@ -40,6 +58,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     ai_drug_discovery_intermediate as _ai_drug_discovery_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    ai_organic_shapes_advanced as _ai_organic_shapes_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    ai_organic_shapes_basics as _ai_organic_shapes_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    ai_organic_shapes_intermediate as _ai_organic_shapes_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     algorithms_advanced as _algorithms_advanced,
@@ -142,6 +169,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 from cyberdyne_backend.application.courses.seed_quizzes import c_basics as _c_basics
 from cyberdyne_backend.application.courses.seed_quizzes import c_intermediate as _c_intermediate
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    cad_cae_parametric_advanced as _cad_cae_parametric_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    cad_cae_parametric_basics as _cad_cae_parametric_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    cad_cae_parametric_intermediate as _cad_cae_parametric_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     capstone_ai_drug_design_advanced as _capstone_ai_drug_design_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -149,6 +185,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     capstone_ai_drug_design_intermediate as _capstone_ai_drug_design_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    capstone_generative_mechanical_design_advanced as _capstone_generative_mechanical_design_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    capstone_generative_mechanical_design_basics as _capstone_generative_mechanical_design_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    capstone_generative_mechanical_design_intermediate as _capstone_generative_mechanical_design_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     cell_biology_advanced as _cell_biology_advanced,
@@ -192,6 +237,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 from cyberdyne_backend.application.courses.seed_quizzes import comparch_basics as _comparch_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
     comparch_intermediate as _comparch_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    computational_fluid_dynamics_advanced as _computational_fluid_dynamics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    computational_fluid_dynamics_basics as _computational_fluid_dynamics_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    computational_fluid_dynamics_intermediate as _computational_fluid_dynamics_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     computational_thinking_advanced as _computational_thinking_advanced,
@@ -249,6 +303,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     deep_learning_biology_intermediate as _deep_learning_biology_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    design_optimization_advanced as _design_optimization_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    design_optimization_basics as _design_optimization_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    design_optimization_intermediate as _design_optimization_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     digital_comms_advanced as _digital_comms_advanced,
@@ -334,6 +397,42 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
     embedded_intermediate as _embedded_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    engineering_dynamics_advanced as _engineering_dynamics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    engineering_dynamics_basics as _engineering_dynamics_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    engineering_dynamics_intermediate as _engineering_dynamics_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    engineering_graphics_cad_advanced as _engineering_graphics_cad_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    engineering_graphics_cad_basics as _engineering_graphics_cad_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    engineering_graphics_cad_intermediate as _engineering_graphics_cad_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    engineering_statics_advanced as _engineering_statics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    engineering_statics_basics as _engineering_statics_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    engineering_statics_intermediate as _engineering_statics_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    engineering_thermodynamics_advanced as _engineering_thermodynamics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    engineering_thermodynamics_basics as _engineering_thermodynamics_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    engineering_thermodynamics_intermediate as _engineering_thermodynamics_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     english_brazil_advanced as _english_brazil_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -369,6 +468,24 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 from cyberdyne_backend.application.courses.seed_quizzes import (
     filter_design_intermediate as _filter_design_intermediate,
 )
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    finite_element_analysis_advanced as _finite_element_analysis_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    finite_element_analysis_basics as _finite_element_analysis_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    finite_element_analysis_intermediate as _finite_element_analysis_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    fluid_mechanics_advanced as _fluid_mechanics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    fluid_mechanics_basics as _fluid_mechanics_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    fluid_mechanics_intermediate as _fluid_mechanics_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import fpga_advanced as _fpga_advanced
 from cyberdyne_backend.application.courses.seed_quizzes import fpga_basics as _fpga_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -382,6 +499,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     general_chemistry_intermediate as _general_chemistry_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    generative_design_advanced as _generative_design_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    generative_design_basics as _generative_design_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    generative_design_intermediate as _generative_design_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     generative_molecular_design_advanced as _generative_molecular_design_advanced,
@@ -409,6 +535,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 from cyberdyne_backend.application.courses.seed_quizzes import go_basics as _go_basics
 from cyberdyne_backend.application.courses.seed_quizzes import go_intermediate as _go_intermediate
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    heat_transfer_advanced as _heat_transfer_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    heat_transfer_basics as _heat_transfer_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    heat_transfer_intermediate as _heat_transfer_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     high_voltage_advanced as _high_voltage_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -416,6 +551,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     high_voltage_intermediate as _high_voltage_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    hydraulics_pneumatics_advanced as _hydraulics_pneumatics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    hydraulics_pneumatics_basics as _hydraulics_pneumatics_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    hydraulics_pneumatics_intermediate as _hydraulics_pneumatics_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     image_processing_advanced as _image_processing_advanced,
@@ -442,6 +586,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
     javascript_intermediate as _javascript_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    kinematics_of_machinery_advanced as _kinematics_of_machinery_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    kinematics_of_machinery_basics as _kinematics_of_machinery_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    kinematics_of_machinery_intermediate as _kinematics_of_machinery_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     kubernetes_advanced as _kubernetes_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -451,11 +604,38 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
     kubernetes_intermediate as _kubernetes_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    machine_design_advanced as _machine_design_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    machine_design_basics as _machine_design_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    machine_design_intermediate as _machine_design_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     machines_advanced as _machines_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import machines_basics as _machines_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
     machines_intermediate as _machines_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    manufacturing_processes_advanced as _manufacturing_processes_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    manufacturing_processes_basics as _manufacturing_processes_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    manufacturing_processes_intermediate as _manufacturing_processes_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    materials_science_advanced as _materials_science_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    materials_science_basics as _materials_science_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    materials_science_intermediate as _materials_science_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import math_advanced as _math_advanced
 from cyberdyne_backend.application.courses.seed_quizzes import math_basics as _math_basics
@@ -483,6 +663,33 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 from cyberdyne_backend.application.courses.seed_quizzes import math_probability as _math_probability
 from cyberdyne_backend.application.courses.seed_quizzes import matlab_basics as _matlab_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    mechanical_vibrations_advanced as _mechanical_vibrations_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    mechanical_vibrations_basics as _mechanical_vibrations_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    mechanical_vibrations_intermediate as _mechanical_vibrations_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    mechanics_of_materials_advanced as _mechanics_of_materials_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    mechanics_of_materials_basics as _mechanics_of_materials_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    mechanics_of_materials_intermediate as _mechanics_of_materials_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    mechatronics_advanced as _mechatronics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    mechatronics_basics as _mechatronics_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    mechatronics_intermediate as _mechatronics_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     medicinal_chemistry_advanced as _medicinal_chemistry_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -506,6 +713,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 from cyberdyne_backend.application.courses.seed_quizzes import microwave_basics as _microwave_basics
 from cyberdyne_backend.application.courses.seed_quizzes import (
     microwave_intermediate as _microwave_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    ml_for_engineering_advanced as _ml_for_engineering_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    ml_for_engineering_basics as _ml_for_engineering_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    ml_for_engineering_intermediate as _ml_for_engineering_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
     ml_life_sciences_advanced as _ml_life_sciences_advanced,
@@ -544,6 +760,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
     molecular_modeling_intermediate as _molecular_modeling_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import mongodb as _mongodb
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    multibody_dynamics_advanced as _multibody_dynamics_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    multibody_dynamics_basics as _multibody_dynamics_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    multibody_dynamics_intermediate as _multibody_dynamics_intermediate,
+)
 from cyberdyne_backend.application.courses.seed_quizzes import (
     ngs_analysis_advanced as _ngs_analysis_advanced,
 )
@@ -766,6 +991,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
     rfic_intermediate as _rfic_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    robot_manipulators_advanced as _robot_manipulators_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    robot_manipulators_basics as _robot_manipulators_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    robot_manipulators_intermediate as _robot_manipulators_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     robotics_advanced as _robotics_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import robotics_basics as _robotics_basics
@@ -922,6 +1156,15 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
     terraform_intermediate as _terraform_intermediate,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
+    topology_optimization_advanced as _topology_optimization_advanced,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    topology_optimization_basics as _topology_optimization_basics,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
+    topology_optimization_intermediate as _topology_optimization_intermediate,
+)
+from cyberdyne_backend.application.courses.seed_quizzes import (
     transcriptomics_advanced as _transcriptomics_advanced,
 )
 from cyberdyne_backend.application.courses.seed_quizzes import (
@@ -962,6 +1205,87 @@ from cyberdyne_backend.application.courses.seed_quizzes import (
 from cyberdyne_backend.application.courses.seed_types import CourseQuiz
 
 QUIZ_REGISTRY: dict[str, CourseQuiz] = {
+    "actuators-motion-systems-basics": _actuators_motion_systems_basics.QUIZ,
+    "actuators-motion-systems-intermediate": _actuators_motion_systems_intermediate.QUIZ,
+    "actuators-motion-systems-advanced": _actuators_motion_systems_advanced.QUIZ,
+    "ai-organic-shapes-basics": _ai_organic_shapes_basics.QUIZ,
+    "ai-organic-shapes-intermediate": _ai_organic_shapes_intermediate.QUIZ,
+    "ai-organic-shapes-advanced": _ai_organic_shapes_advanced.QUIZ,
+    "cad-cae-parametric-basics": _cad_cae_parametric_basics.QUIZ,
+    "cad-cae-parametric-intermediate": _cad_cae_parametric_intermediate.QUIZ,
+    "cad-cae-parametric-advanced": _cad_cae_parametric_advanced.QUIZ,
+    "capstone-generative-mechanical-design-basics": _capstone_generative_mechanical_design_basics.QUIZ,
+    "capstone-generative-mechanical-design-intermediate": _capstone_generative_mechanical_design_intermediate.QUIZ,
+    "capstone-generative-mechanical-design-advanced": _capstone_generative_mechanical_design_advanced.QUIZ,
+    "computational-fluid-dynamics-basics": _computational_fluid_dynamics_basics.QUIZ,
+    "computational-fluid-dynamics-intermediate": _computational_fluid_dynamics_intermediate.QUIZ,
+    "computational-fluid-dynamics-advanced": _computational_fluid_dynamics_advanced.QUIZ,
+    "design-optimization-basics": _design_optimization_basics.QUIZ,
+    "design-optimization-intermediate": _design_optimization_intermediate.QUIZ,
+    "design-optimization-advanced": _design_optimization_advanced.QUIZ,
+    "finite-element-analysis-basics": _finite_element_analysis_basics.QUIZ,
+    "finite-element-analysis-intermediate": _finite_element_analysis_intermediate.QUIZ,
+    "finite-element-analysis-advanced": _finite_element_analysis_advanced.QUIZ,
+    "generative-design-basics": _generative_design_basics.QUIZ,
+    "generative-design-intermediate": _generative_design_intermediate.QUIZ,
+    "generative-design-advanced": _generative_design_advanced.QUIZ,
+    "hydraulics-pneumatics-basics": _hydraulics_pneumatics_basics.QUIZ,
+    "hydraulics-pneumatics-intermediate": _hydraulics_pneumatics_intermediate.QUIZ,
+    "hydraulics-pneumatics-advanced": _hydraulics_pneumatics_advanced.QUIZ,
+    "kinematics-of-machinery-basics": _kinematics_of_machinery_basics.QUIZ,
+    "kinematics-of-machinery-intermediate": _kinematics_of_machinery_intermediate.QUIZ,
+    "kinematics-of-machinery-advanced": _kinematics_of_machinery_advanced.QUIZ,
+    "machine-design-basics": _machine_design_basics.QUIZ,
+    "machine-design-intermediate": _machine_design_intermediate.QUIZ,
+    "machine-design-advanced": _machine_design_advanced.QUIZ,
+    "mechanical-vibrations-basics": _mechanical_vibrations_basics.QUIZ,
+    "mechanical-vibrations-intermediate": _mechanical_vibrations_intermediate.QUIZ,
+    "mechanical-vibrations-advanced": _mechanical_vibrations_advanced.QUIZ,
+    "mechatronics-basics": _mechatronics_basics.QUIZ,
+    "mechatronics-intermediate": _mechatronics_intermediate.QUIZ,
+    "mechatronics-advanced": _mechatronics_advanced.QUIZ,
+    "ml-for-engineering-basics": _ml_for_engineering_basics.QUIZ,
+    "ml-for-engineering-intermediate": _ml_for_engineering_intermediate.QUIZ,
+    "ml-for-engineering-advanced": _ml_for_engineering_advanced.QUIZ,
+    "multibody-dynamics-basics": _multibody_dynamics_basics.QUIZ,
+    "multibody-dynamics-intermediate": _multibody_dynamics_intermediate.QUIZ,
+    "multibody-dynamics-advanced": _multibody_dynamics_advanced.QUIZ,
+    "robot-manipulators-basics": _robot_manipulators_basics.QUIZ,
+    "robot-manipulators-intermediate": _robot_manipulators_intermediate.QUIZ,
+    "robot-manipulators-advanced": _robot_manipulators_advanced.QUIZ,
+    "topology-optimization-basics": _topology_optimization_basics.QUIZ,
+    "topology-optimization-intermediate": _topology_optimization_intermediate.QUIZ,
+    "topology-optimization-advanced": _topology_optimization_advanced.QUIZ,
+    "additive-manufacturing-basics": _additive_manufacturing_basics.QUIZ,
+    "additive-manufacturing-intermediate": _additive_manufacturing_intermediate.QUIZ,
+    "additive-manufacturing-advanced": _additive_manufacturing_advanced.QUIZ,
+    "engineering-dynamics-basics": _engineering_dynamics_basics.QUIZ,
+    "engineering-dynamics-intermediate": _engineering_dynamics_intermediate.QUIZ,
+    "engineering-dynamics-advanced": _engineering_dynamics_advanced.QUIZ,
+    "engineering-graphics-cad-basics": _engineering_graphics_cad_basics.QUIZ,
+    "engineering-graphics-cad-intermediate": _engineering_graphics_cad_intermediate.QUIZ,
+    "engineering-graphics-cad-advanced": _engineering_graphics_cad_advanced.QUIZ,
+    "engineering-statics-basics": _engineering_statics_basics.QUIZ,
+    "engineering-statics-intermediate": _engineering_statics_intermediate.QUIZ,
+    "engineering-statics-advanced": _engineering_statics_advanced.QUIZ,
+    "engineering-thermodynamics-basics": _engineering_thermodynamics_basics.QUIZ,
+    "engineering-thermodynamics-intermediate": _engineering_thermodynamics_intermediate.QUIZ,
+    "engineering-thermodynamics-advanced": _engineering_thermodynamics_advanced.QUIZ,
+    "fluid-mechanics-basics": _fluid_mechanics_basics.QUIZ,
+    "fluid-mechanics-intermediate": _fluid_mechanics_intermediate.QUIZ,
+    "fluid-mechanics-advanced": _fluid_mechanics_advanced.QUIZ,
+    "heat-transfer-basics": _heat_transfer_basics.QUIZ,
+    "heat-transfer-intermediate": _heat_transfer_intermediate.QUIZ,
+    "heat-transfer-advanced": _heat_transfer_advanced.QUIZ,
+    "manufacturing-processes-basics": _manufacturing_processes_basics.QUIZ,
+    "manufacturing-processes-intermediate": _manufacturing_processes_intermediate.QUIZ,
+    "manufacturing-processes-advanced": _manufacturing_processes_advanced.QUIZ,
+    "materials-science-basics": _materials_science_basics.QUIZ,
+    "materials-science-intermediate": _materials_science_intermediate.QUIZ,
+    "materials-science-advanced": _materials_science_advanced.QUIZ,
+    "mechanics-of-materials-basics": _mechanics_of_materials_basics.QUIZ,
+    "mechanics-of-materials-intermediate": _mechanics_of_materials_intermediate.QUIZ,
+    "mechanics-of-materials-advanced": _mechanics_of_materials_advanced.QUIZ,
     "admet-prediction-basics": _admet_prediction_basics.QUIZ,
     "admet-prediction-intermediate": _admet_prediction_intermediate.QUIZ,
     "admet-prediction-advanced": _admet_prediction_advanced.QUIZ,

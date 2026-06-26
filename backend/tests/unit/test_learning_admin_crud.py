@@ -323,3 +323,32 @@ def test_life_sciences_payloads_are_valid() -> None:
     assert len(bundled) == 150
     missing = sorted(set(bundled) - catalogue)
     assert not missing, f"modules reference unseeded courses: {missing}"
+
+
+def test_mechanical_engineering_payloads_are_valid() -> None:
+    from cyberdyne_backend.application.courses.seed import ACADEMY_COURSES
+    from cyberdyne_backend.cli.create_mechanical_engineering_paths import build_payloads
+    from cyberdyne_backend.domain.learning import VALID_LEVELS
+
+    modules, paths = build_payloads()
+    # 27 tracks -> 27 modules across the three degree-stage paths.
+    assert len(modules) == 27
+    assert [p["slug"] for p in paths] == [
+        "mechanical-foundations",
+        "mechatronics-robotics",
+        "generative-design-ai",
+    ]
+    module_slugs = [m["slug"] for m in modules]
+    assert len(module_slugs) == len(set(module_slugs)), "duplicate module slugs"
+    assert all(m["level"] in VALID_LEVELS for m in modules)
+    referenced: set[str] = set()
+    for p in paths:
+        assert set(p["moduleSlugs"]) <= set(module_slugs)
+        referenced.update(p["moduleSlugs"])
+    assert referenced == set(module_slugs)
+    # Every bundled course slug is a real seeded course (3 per track = 81).
+    catalogue = {c.slug for c in ACADEMY_COURSES}
+    bundled = [s for m in modules for s in m["courseSlugs"]]
+    assert len(bundled) == 81
+    missing = sorted(set(bundled) - catalogue)
+    assert not missing, f"modules reference unseeded courses: {missing}"
