@@ -25,6 +25,16 @@ class ToolCall:
     arguments_json: str
 
 
+@dataclass(frozen=True, slots=True)
+class AttachmentRef:
+    """A file a learner attached to a user turn — the durable upload id
+    plus the display metadata the frontend renders (issue #220)."""
+
+    id: UUID
+    filename: str
+    content_type: str
+
+
 @dataclass(slots=True)
 class ChatMessage:
     id: UUID
@@ -36,6 +46,9 @@ class ChatMessage:
     tokens_in: int = 0
     tokens_out: int = 0
     model: str | None = None
+    # Files the learner attached to this (user) turn — echoed back in
+    # history so the frontend can render them (issue #220).
+    attachments: tuple[AttachmentRef, ...] = ()
     created_at: datetime = field(default_factory=lambda: datetime.now(tz=UTC))
 
 
@@ -62,6 +75,7 @@ def _new_message(
     tokens_in: int = 0,
     tokens_out: int = 0,
     model: str | None = None,
+    attachments: tuple[AttachmentRef, ...] = (),
     now: datetime | None = None,
 ) -> ChatMessage:
     return ChatMessage(
@@ -74,12 +88,23 @@ def _new_message(
         tokens_in=tokens_in,
         tokens_out=tokens_out,
         model=model,
+        attachments=attachments,
         created_at=now or datetime.now(tz=UTC),
     )
 
 
-def new_user_message(*, session_id: UUID, content: str) -> ChatMessage:
-    return _new_message(session_id=session_id, role=ChatRole.USER, content=content)
+def new_user_message(
+    *,
+    session_id: UUID,
+    content: str,
+    attachments: tuple[AttachmentRef, ...] = (),
+) -> ChatMessage:
+    return _new_message(
+        session_id=session_id,
+        role=ChatRole.USER,
+        content=content,
+        attachments=attachments,
+    )
 
 
 def new_assistant_message(

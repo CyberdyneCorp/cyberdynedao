@@ -43,12 +43,21 @@ class ToolCallView(_CamelModel):
     arguments_json: str
 
 
+class AttachmentView(_CamelModel):
+    """A learner-attached file on a user turn, for frontend rendering."""
+
+    id: UUID
+    filename: str
+    content_type: str
+
+
 class ChatMessageResponse(_CamelModel):
     id: UUID
     session_id: UUID
     role: Literal["user", "assistant", "tool", "system"]
     content: str
     tool_calls: list[ToolCallView] = []
+    attachments: list[AttachmentView] = []
     tool_call_id: str | None = None
     tokens_in: int = 0
     tokens_out: int = 0

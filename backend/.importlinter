@@ -39,3 +39,5 @@ ignore_imports =
     cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.python_interpreter.client
     cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.cyberflies.client
     cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.documents.pdf
+    cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.attachments
+    cyberdyne_backend.infrastructure.container -> cyberdyne_backend.adapters.outbound.llm.vision_client

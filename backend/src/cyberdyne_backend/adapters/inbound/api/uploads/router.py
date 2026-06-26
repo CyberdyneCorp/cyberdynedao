@@ -16,14 +16,14 @@ from cyberdyne_backend.adapters.inbound.api.uploads.schemas import (
     UploadListResponse,
     UploadResponse,
 )
-from cyberdyne_backend.adapters.inbound.middleware.auth import require_editor
+from cyberdyne_backend.adapters.inbound.middleware.auth import require_editor, require_principal
 from cyberdyne_backend.application.uploads import (
     GetUpload,
     SaveUpload,
     SaveUploads,
     UploadInput,
 )
-from cyberdyne_backend.domain.auth_identity import UserPrincipal
+from cyberdyne_backend.domain.auth_identity import Principal, UserPrincipal
 from cyberdyne_backend.domain.uploads import (
     MAX_UPLOAD_BYTES,
     FileTooLargeError,
@@ -138,6 +138,33 @@ async def upload_files(
     except (UnsupportedMediaTypeError, FileTooLargeError, UnsafeFilenameError) as exc:
         raise _map_domain_error(exc) from exc
     return UploadListResponse(items=[_response(s) for s in stored])
+
+
+# ── Learner write ────────────────────────────────────────────────────
+
+
+@public_router.post(
+    "",
+    response_model=UploadResponse,
+    response_model_by_alias=True,
+    status_code=201,
+)
+async def learner_upload_file(
+    use_case: Annotated[SaveUpload, Depends(get_save_upload_uc)],
+    principal: Annotated[Principal, Depends(require_principal)],
+    file: Annotated[UploadFile, File()],
+) -> UploadResponse:
+    """A signed-in learner attaches a file (PDF/DOCX/CSV/XLSX/image) for the
+    AI tutor to read. Reuses the same save-upload use case as the admin
+    endpoint; only the allow-list + per-category caps gate the bytes."""
+    if not isinstance(principal, UserPrincipal):
+        raise HTTPException(status_code=403, detail="user token required")
+    item = await _to_input(file)
+    try:
+        stored = await use_case.execute(item, uploaded_by=principal.user_id)
+    except (UnsupportedMediaTypeError, FileTooLargeError, UnsafeFilenameError) as exc:
+        raise _map_domain_error(exc) from exc
+    return _response(stored)
 
 
 # ── Public metadata read ─────────────────────────────────────────────

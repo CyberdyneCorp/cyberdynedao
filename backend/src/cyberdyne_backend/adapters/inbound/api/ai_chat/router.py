@@ -22,6 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from cyberdyne_backend.adapters.inbound.api.ai_chat.schemas import (
+    AttachmentView,
     ChatHistoryResponse,
     ChatMessageResponse,
     SendMessageRequest,
@@ -95,6 +96,10 @@ def _message_response(m: ChatMessage) -> ChatMessageResponse:
         tool_calls=[
             ToolCallView(id=tc.id, name=tc.name, arguments_json=tc.arguments_json)
             for tc in m.tool_calls
+        ],
+        attachments=[
+            AttachmentView(id=a.id, filename=a.filename, content_type=a.content_type)
+            for a in m.attachments
         ],
         tool_call_id=m.tool_call_id,
         tokens_in=m.tokens_in,

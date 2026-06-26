@@ -181,6 +181,9 @@ class Settings(BaseSettings):
     # Unset = StaticChatClient mock — local dev only.
     openai_api_key: SecretStr | None = None
     openai_model: str = "gpt-4o-mini"
+    # Vision model for describing / OCR-ing image attachments (issue #220).
+    # Defaults to the cheap vision-capable chat model.
+    openai_vision_model: str = "gpt-4o-mini"
     # CyberRAG MCP URL — stub fallback runs when unset. Real client is a
     # follow-up adapter (see docs/backend-roadmap.md §5.6).
     cyberrag_mcp_url: str | None = None

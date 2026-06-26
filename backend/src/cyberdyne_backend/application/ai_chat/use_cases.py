@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Literal
@@ -10,10 +11,13 @@ from uuid import UUID
 
 from cyberdyne_backend.application.ai_chat.tools import CYBERDYNE_TOOLS, ToolDispatcher
 from cyberdyne_backend.domain.ai_chat import (
+    AttachmentIngestorPort,
+    AttachmentRef,
     ChatLLMPort,
     ChatMessage,
     ChatRepository,
     ChatSession,
+    IngestedAttachment,
     LLMResponse,
     new_assistant_message,
     new_session,
@@ -254,6 +258,55 @@ def build_attachments_block(filenames: tuple[str, ...]) -> str:
     )
 
 
+def build_uploaded_attachments_block(ingested: tuple[IngestedAttachment, ...]) -> str:
+    """Grounding block embedding each attached file's extracted text (or, for
+    images, its vision description). Unlike ``build_attachments_block`` — which
+    points the agent at files in the python_exec workspace — this inlines the
+    contents directly so the tutor can answer from them without running code."""
+    if not ingested:
+        return ""
+    parts = [
+        "\n\n# Attached files (contents)\n"
+        "The user attached the following file(s). Answer grounded in their "
+        "contents below; do not ask the user to paste the text — it is here."
+    ]
+    for item in ingested:
+        parts.append(f"\n\n## {item.ref.filename} ({item.ref.content_type})\n{item.text}")
+    return "".join(parts)
+
+
+def _split_attachments(attachments: tuple[str, ...]) -> tuple[tuple[UUID, ...], tuple[str, ...]]:
+    """Partition the raw attachment tokens into upload UUIDs (new
+    grounding path) and interpreter filenames (existing workspace path)."""
+    upload_ids: list[UUID] = []
+    filenames: list[str] = []
+    for token in attachments:
+        try:
+            upload_ids.append(uuid.UUID(token))
+        except ValueError:
+            filenames.append(token)
+    return tuple(upload_ids), tuple(filenames)
+
+
+async def _resolve_attachments(
+    *,
+    attachments: tuple[str, ...],
+    ingestor: AttachmentIngestorPort | None,
+) -> tuple[str, tuple[AttachmentRef, ...]]:
+    """Build the per-turn attachment prompt suffix and the resolved
+    ``AttachmentRef``s to persist onto the user message. Filenames keep the
+    existing python_exec-workspace behavior; upload UUIDs are ingested
+    (text-extracted / vision-described) and inlined as a grounding block."""
+    upload_ids, filenames = _split_attachments(attachments)
+    suffix = build_attachments_block(filenames)
+    refs: tuple[AttachmentRef, ...] = ()
+    if upload_ids and ingestor is not None:
+        ingested = await ingestor.ingest(upload_ids)
+        suffix += build_uploaded_attachments_block(ingested)
+        refs = tuple(item.ref for item in ingested)
+    return suffix, refs
+
+
 @dataclass(slots=True)
 class StartChatSession:
     repo: ChatRepository
@@ -286,6 +339,7 @@ class RunChatTurn:
     system_prompt: str = SYSTEM_PROMPT
     user: UserProfile | None = None
     max_tool_rounds: int = MAX_TOOL_ROUNDS
+    ingestor: AttachmentIngestorPort | None = None
 
     async def execute(
         self,
@@ -297,16 +351,20 @@ class RunChatTurn:
     ) -> ChatMessage:
         # Raises ChatSessionNotFoundError if missing.
         await self.repo.get_session(session_id)
-        user_msg = new_user_message(session_id=session_id, content=user_content)
+
+        # Attachments are either interpreter filenames (read in the python_exec
+        # workspace) or upload UUIDs (text-extracted / vision-described and
+        # inlined as grounding). The resolved refs echo back in history.
+        attach_suffix, refs = await _resolve_attachments(
+            attachments=attachments, ingestor=self.ingestor
+        )
+        user_msg = new_user_message(session_id=session_id, content=user_content, attachments=refs)
         await self.repo.append_message(user_msg)
 
-        # Upload-and-analyze: run python_exec in the workspace the user
-        # uploaded files to, and tell the agent which files are there.
         if interpreter_session_id:
             self.dispatcher.use_python_session(interpreter_session_id)
         effective_prompt = self.system_prompt + build_user_context_block(self.user)
-        if attachments:
-            effective_prompt += build_attachments_block(attachments)
+        effective_prompt += attach_suffix
         for _ in range(self.max_tool_rounds):
             transcript = await self.repo.list_messages(session_id)
             response = await self.llm.complete(
@@ -366,6 +424,7 @@ class StreamChatTurn:
     system_prompt: str = SYSTEM_PROMPT
     user: UserProfile | None = None
     max_tool_rounds: int = MAX_TOOL_ROUNDS
+    ingestor: AttachmentIngestorPort | None = None
 
     async def execute(
         self,
@@ -376,15 +435,18 @@ class StreamChatTurn:
         attachments: tuple[str, ...] = (),
     ) -> AsyncIterator[StreamEvent]:
         await self.repo.get_session(session_id)  # raises ChatSessionNotFoundError
+
+        attach_suffix, refs = await _resolve_attachments(
+            attachments=attachments, ingestor=self.ingestor
+        )
         await self.repo.append_message(
-            new_user_message(session_id=session_id, content=user_content)
+            new_user_message(session_id=session_id, content=user_content, attachments=refs)
         )
 
         if interpreter_session_id:
             self.dispatcher.use_python_session(interpreter_session_id)
         effective_prompt = self.system_prompt + build_user_context_block(self.user)
-        if attachments:
-            effective_prompt += build_attachments_block(attachments)
+        effective_prompt += attach_suffix
 
         for _ in range(self.max_tool_rounds):
             transcript = await self.repo.list_messages(session_id)

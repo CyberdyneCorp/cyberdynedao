@@ -22,11 +22,13 @@ from cyberdyne_backend.application.content.use_cases import ListProjects
 from cyberdyne_backend.application.learning import ListPaths
 from cyberdyne_backend.application.marketplace.use_cases import GetProduct
 from cyberdyne_backend.domain.ai_chat import (
+    AttachmentRef,
     ChatLLMPort,
     ChatMessage,
     ChatRole,
     ChatSession,
     ChatSessionNotFoundError,
+    IngestedAttachment,
     LLMResponse,
     ToolCall,
 )
@@ -56,6 +58,18 @@ class _FakeChatRepo:
 
     async def list_messages(self, session_id: uuid.UUID) -> list[ChatMessage]:
         return [m for m in self.messages if m.session_id == session_id]
+
+
+class _FakeIngestor:
+    """Returns canned IngestedAttachments; records the ids it was asked for."""
+
+    def __init__(self, ingested: tuple[IngestedAttachment, ...]) -> None:
+        self._ingested = ingested
+        self.seen: tuple[uuid.UUID, ...] | None = None
+
+    async def ingest(self, upload_ids: tuple[uuid.UUID, ...]) -> tuple[IngestedAttachment, ...]:
+        self.seen = upload_ids
+        return self._ingested
 
 
 class _ScriptedLLM:
@@ -829,6 +843,48 @@ class TestRunChatTurn:
             session_id=session.id, user_content="hello"
         )
         assert "Attached files" not in llm.last_system_prompt
+
+    async def test_upload_uuid_grounds_prompt_and_persists_ref(self) -> None:
+        # An attachment that parses as a UUID is an upload id: the ingestor
+        # resolves it, the grounding block lands in the prompt, and the
+        # resolved AttachmentRef is persisted on the user message.
+        repo = _FakeChatRepo()
+        session = await StartChatSession(repo=repo).execute()
+        llm = _ScriptedLLM([LLMResponse(content="ok")])
+        ref = AttachmentRef(id=uuid.uuid4(), filename="notes.pdf", content_type="application/pdf")
+        ingestor = _FakeIngestor((IngestedAttachment(ref=ref, text="grounding-text-here"),))
+        await RunChatTurn(
+            repo=repo, llm=llm, dispatcher=ToolDispatcher(_build_ctx()), ingestor=ingestor
+        ).execute(
+            session_id=session.id,
+            user_content="summarize this",
+            attachments=(str(ref.id),),
+        )
+        assert ingestor.seen == (ref.id,)
+        assert "# Attached files (contents)" in llm.last_system_prompt
+        assert "notes.pdf" in llm.last_system_prompt
+        assert "grounding-text-here" in llm.last_system_prompt
+        user_msg = next(m for m in repo.messages if m.role is ChatRole.USER)
+        assert user_msg.attachments == (ref,)
+
+    async def test_non_uuid_attachment_uses_interpreter_block(self) -> None:
+        # A non-UUID attachment is an interpreter filename: it must keep using
+        # the python_exec-workspace block, not the ingestor.
+        repo = _FakeChatRepo()
+        session = await StartChatSession(repo=repo).execute()
+        llm = _ScriptedLLM([LLMResponse(content="ok")])
+        ingestor = _FakeIngestor(())
+        await RunChatTurn(
+            repo=repo, llm=llm, dispatcher=ToolDispatcher(_build_ctx()), ingestor=ingestor
+        ).execute(
+            session_id=session.id,
+            user_content="analyze",
+            attachments=("scores.csv",),
+        )
+        assert ingestor.seen is None  # never called
+        assert "python_exec workspace" in llm.last_system_prompt
+        assert "scores.csv" in llm.last_system_prompt
+        assert "# Attached files (contents)" not in llm.last_system_prompt
 
 
 class TestStreamChatTurn:

@@ -18,6 +18,11 @@ dependencies = [
     "alembic>=1.13.0",
     "python-multipart>=0.0.30",
     "reportlab>=4.5.1",
+    # Attachment text extraction for the AI tutor (issue #220): PDF, DOCX,
+    # and XLSX. CSV + plain text use the stdlib.
+    "pypdf>=5.0.0",
+    "python-docx>=1.1.0",
+    "openpyxl>=3.1.0",
     # Ed25519 certificate signing (keypair — for external verifiers).
     "cryptography>=43.0.0",
     # Local RS256 access-token verification against CyberdyneAuth's JWKS.
@@ -124,4 +129,9 @@ disallow_incomplete_defs = false
 # reportlab ships no type stubs.
 [[tool.mypy.overrides]]
 module = "reportlab.*"
+ignore_missing_imports = true
+
+# openpyxl ships no type stubs.
+[[tool.mypy.overrides]]
+module = "openpyxl.*"
 ignore_missing_imports = true

@@ -41,6 +41,15 @@ _MIME_TABLE: dict[str, tuple[UploadCategory, str]] = {
     "image/webp": (UploadCategory.IMAGE, ".webp"),
     "image/gif": (UploadCategory.IMAGE, ".gif"),
     "application/pdf": (UploadCategory.DOCUMENT, ".pdf"),
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": (
+        UploadCategory.DOCUMENT,
+        ".docx",
+    ),
+    "text/csv": (UploadCategory.DOCUMENT, ".csv"),
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": (
+        UploadCategory.DOCUMENT,
+        ".xlsx",
+    ),
     "application/vnd.ms-powerpoint": (UploadCategory.PRESENTATION, ".ppt"),
     "application/vnd.openxmlformats-officedocument.presentationml.presentation": (
         UploadCategory.PRESENTATION,
