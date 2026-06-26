@@ -32,6 +32,14 @@ from cyberdyne_backend.adapters.inbound.api.activity.router import (
 from cyberdyne_backend.adapters.inbound.api.activity.router import (
     public_router as activity_public_router,
 )
+from cyberdyne_backend.adapters.inbound.api.agent_chat.router import (
+    get_agent_history_uc,
+    get_agent_start_session_uc,
+    get_agent_turn_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.agent_chat.router import (
+    router as agent_chat_router,
+)
 from cyberdyne_backend.adapters.inbound.api.ai_chat.router import (
     get_history_uc as get_chat_history_uc,
 )
@@ -445,6 +453,11 @@ from cyberdyne_backend.application.achievements import GetMyAchievements
 from cyberdyne_backend.application.activity import (
     GetLearnerStats,
     RecordActivity,
+)
+from cyberdyne_backend.application.agent_chat import (
+    AnswerAgentTurn,
+    LearnerContextDispatcher,
+    LearnerContextToolset,
 )
 from cyberdyne_backend.application.ai_chat import (
     GetChatHistory,
@@ -1548,6 +1561,60 @@ def create_app() -> FastAPI:
                 ingestor=_attachment_ingestor(session),
             )
 
+    # ── Global Agent Chat (issue #234) ───────────────────────────────
+    # A top-level answer agent for signed-in learners. Reuses the chat
+    # ChatRepository (sessions/messages) + chat LLM; grounds on the learner's
+    # own history via the small learner-context tool set, ingests attachments
+    # (#220), routes each answer to the catalog (the SAME container-cached
+    # index the scan endpoint uses — built once per process), and logs
+    # out-of-catalog topics to the demand registry (#232).
+    async def _agent_start_session_dep() -> AsyncIterator[StartChatSession]:
+        async with session_scope() as session:
+            yield StartChatSession(repo=SqlAlchemyChatRepository(session))
+
+    async def _agent_history_dep() -> AsyncIterator[GetChatHistory]:
+        async with session_scope() as session:
+            yield GetChatHistory(repo=SqlAlchemyChatRepository(session))
+
+    def _learner_tools(session: AsyncSession, user_id: UUID) -> LearnerContextDispatcher:
+        course_repo = SqlAlchemyCourseRepository(session)
+        learning_repo = SqlAlchemyLearningRepository(session)
+        return LearnerContextDispatcher(
+            LearnerContextToolset(
+                user_id=user_id,
+                list_my_progress=ListMyCourseProgress(
+                    courses=course_repo,
+                    progress=SqlAlchemyCourseProgressRepository(session),
+                ),
+                get_my_learning_state=GetMyLearningState(repo=learning_repo),
+                recommend_courses=RecommendCourses(
+                    courses=course_repo,
+                    analytics=SqlAlchemyAnalyticsRepository(session),
+                    llm=container.chat_llm,
+                ),
+            )
+        )
+
+    async def _agent_turn_dep(request: Request) -> AsyncIterator[AnswerAgentTurn]:
+        profile = await _chat_profile(request)
+        principal = getattr(request.state, "principal", None)
+        # The router's require_principal guard rejects anonymous callers before
+        # the turn runs; a zero UUID is only a never-reached fallback.
+        user_id = principal.user_id if isinstance(principal, UserPrincipal) else UUID(int=0)
+        async with session_scope() as session:
+            yield AnswerAgentTurn(
+                repo=SqlAlchemyChatRepository(session),
+                llm=container.chat_llm,
+                learner_tools=_learner_tools(session, user_id),
+                catalog_index=container.catalog_index(_build_catalog_index),
+                submit_course_request=SubmitCourseRequest(
+                    repo=SqlAlchemyCourseRequestRepository(session)
+                ),
+                user_id=user_id,
+                user=profile,
+                ingestor=_attachment_ingestor(session),
+            )
+
     app.dependency_overrides[get_list_team_uc] = _list_team_dep
     app.dependency_overrides[get_list_concepts_uc] = _list_concepts_dep
     app.dependency_overrides[get_concept_uc] = _get_concept_dep
@@ -1678,6 +1745,9 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_chat_history_uc] = _chat_history_dep
     app.dependency_overrides[get_run_turn_uc] = _run_turn_dep
     app.dependency_overrides[get_stream_turn_uc] = _stream_turn_dep
+    app.dependency_overrides[get_agent_start_session_uc] = _agent_start_session_dep
+    app.dependency_overrides[get_agent_turn_uc] = _agent_turn_dep
+    app.dependency_overrides[get_agent_history_uc] = _agent_history_dep
     # Lets require_editor fall back to a /users/me admin-flag check when
     # introspection doesn't surface it. Reuses the container's cached
     # profile client.
@@ -1732,6 +1802,7 @@ def create_app() -> FastAPI:
     app.include_router(marketplace_webhook_router)
     app.include_router(marketplace_admin_router)
     app.include_router(chat_router)
+    app.include_router(agent_chat_router)
     return app
 
 
