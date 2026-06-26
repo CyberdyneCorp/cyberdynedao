@@ -1592,6 +1592,7 @@ def create_app() -> FastAPI:
                     analytics=SqlAlchemyAnalyticsRepository(session),
                     llm=container.chat_llm,
                 ),
+                list_user_notes=ListUserNotes(repo=SqlAlchemyLessonNoteRepository(session)),
             )
         )
 

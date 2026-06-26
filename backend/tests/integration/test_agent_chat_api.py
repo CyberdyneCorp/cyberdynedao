@@ -16,6 +16,7 @@ end-to-end.
 
 from __future__ import annotations
 
+import json
 import uuid
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
@@ -52,7 +53,7 @@ from cyberdyne_backend.application.agent_chat import (
 from cyberdyne_backend.application.ai_chat import GetChatHistory, StartChatSession
 from cyberdyne_backend.application.course_demand import SubmitCourseRequest
 from cyberdyne_backend.application.quota import EnforceQuota
-from cyberdyne_backend.domain.ai_chat import IngestedAttachment, LLMResponse
+from cyberdyne_backend.domain.ai_chat import IngestedAttachment, LLMResponse, ToolCall
 from cyberdyne_backend.domain.ai_chat.entities import AttachmentRef
 from cyberdyne_backend.domain.auth_identity import UserPrincipal
 from cyberdyne_backend.domain.course_finder import CourseMatch
@@ -147,6 +148,7 @@ def _learner_tools(session, user_id):  # type: ignore[no-untyped-def]
             list_my_progress=_Empty(),  # type: ignore[arg-type]
             get_my_learning_state=_Empty(),  # type: ignore[arg-type]
             recommend_courses=_Empty(),  # type: ignore[arg-type]
+            list_user_notes=_Empty(),  # type: ignore[arg-type]
         )
     )
 
@@ -266,6 +268,76 @@ def test_unauthenticated_is_rejected(app: FastAPI) -> None:
         json={"content": "hi"},
     )
     assert resp.status_code in (401, 403)
+
+
+class _ScriptedLLM:
+    """Plays scripted replies (a tool-call round, then a final answer)."""
+
+    def __init__(self, replies: list[LLMResponse]) -> None:
+        self._replies = list(replies)
+
+    async def complete(self, *, messages, tools, system_prompt):  # type: ignore[no-untyped-def]
+        if self._replies:
+            return self._replies.pop(0)
+        return LLMResponse(content="done", model="fake")
+
+    async def stream(self, *, messages, tools, system_prompt):  # type: ignore[no-untyped-def]
+        raise NotImplementedError
+
+
+@pytest.mark.usefixtures("_prepared_schema")
+def test_notebook_action_is_proposed(app: FastAPI) -> None:
+    # The agent proposes a Notebook write via the tool; the backend surfaces it
+    # for the client to commit (it performs NO write itself).
+    propose = ToolCall(
+        id="t1",
+        name="propose_notebook_action",
+        arguments_json=json.dumps(
+            {
+                "op": "create",
+                "title": "Mindmap — My Algorithms Notes",
+                "type": "theory",
+                "body": "```mermaid\nmindmap\n  root((Algorithms))\n```",
+            }
+        ),
+    )
+    llm = _ScriptedLLM(
+        [
+            LLMResponse(content="", tool_calls=(propose,), model="fake"),
+            LLMResponse(content="Saved a mindmap of your Algorithms notes.", model="fake"),
+        ]
+    )
+
+    async def _dep() -> AsyncIterator[AnswerAgentTurn]:
+        async with session_scope() as session:
+            yield AnswerAgentTurn(
+                repo=SqlAlchemyChatRepository(session),
+                llm=llm,  # type: ignore[arg-type]
+                learner_tools=_learner_tools(session, _LEARNER.user_id),
+                catalog_index=_FakeIndex([]),  # type: ignore[arg-type]
+                submit_course_request=SubmitCourseRequest(
+                    repo=SqlAlchemyCourseRequestRepository(session)
+                ),
+                user_id=_LEARNER.user_id,
+            )
+
+    app.dependency_overrides[require_principal] = lambda: _LEARNER
+    app.dependency_overrides[optional_principal] = lambda: _LEARNER
+    app.dependency_overrides[get_enforce_quota_uc] = _real_enforcer
+    app.dependency_overrides[get_agent_start_session_uc] = _start_session_dep
+    app.dependency_overrides[get_agent_turn_uc] = _dep
+    client = TestClient(app)
+    session_id = _start(client)
+
+    resp = client.post(
+        f"/api/v1/agent/sessions/{session_id}/messages",
+        json={"content": "Make a mindmap of my algorithms notes and save it as a new notebook"},
+    )
+    assert resp.status_code == 200, resp.text
+    action = resp.json()["notebookAction"]
+    assert action["op"] == "create"
+    assert action["type"] == "theory"  # NotebookNoteType raw value, aliased to "type"
+    assert "mermaid" in action["body"]
 
 
 @pytest.mark.usefixtures("_prepared_schema")

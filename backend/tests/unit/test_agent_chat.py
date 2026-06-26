@@ -145,6 +145,31 @@ class _RecordingRecommendUC:
         return self._recs
 
 
+class _RecordingNotesUC:
+    """Stands in for ListUserNotes — records the (user_id, course_slug, limit)
+    it was called with, returns a canned page."""
+
+    def __init__(self, items) -> None:  # type: ignore[no-untyped-def]
+        self._items = items
+        self.seen_user_id: uuid.UUID | None = None
+        self.seen_course_slug: str | None = None
+        self.seen_limit: int | None = None
+
+    async def execute(self, *, user_id, course_slug=None, limit=50):  # type: ignore[no-untyped-def]
+        self.seen_user_id = user_id
+        self.seen_course_slug = course_slug
+        self.seen_limit = limit
+        return type("Page", (), {"items": self._items, "next_cursor": None})()
+
+
+class _NoteRow:
+    def __init__(self, course_slug, lesson_id, quote, body) -> None:  # type: ignore[no-untyped-def]
+        self.course_slug = course_slug
+        self.lesson_id = lesson_id
+        self.quote = quote
+        self.body = body
+
+
 # Lightweight data holders matching the duck-typed shapes the dispatcher reads.
 class _Row:
     def __init__(self, slug, completed_lessons, total_lessons, percent, completed):  # type: ignore[no-untyped-def]
@@ -213,12 +238,14 @@ def _toolset(user_id: uuid.UUID, **overrides):  # type: ignore[no-untyped-def]
     progress = overrides.get("progress", _RecordingProgressUC([]))
     learning = overrides.get("learning", _RecordingLearningStateUC(_LearningState([], {}, [])))
     recommend = overrides.get("recommend", _RecordingRecommendUC(_Recommendations("go", [])))
+    notes = overrides.get("notes", _RecordingNotesUC([]))
     return LearnerContextDispatcher(
         LearnerContextToolset(
             user_id=user_id,
             list_my_progress=cast("object", progress),  # type: ignore[arg-type]
             get_my_learning_state=cast("object", learning),  # type: ignore[arg-type]
             recommend_courses=cast("object", recommend),  # type: ignore[arg-type]
+            list_user_notes=cast("object", notes),  # type: ignore[arg-type]
         )
     )
 
@@ -445,3 +472,187 @@ async def test_dispatcher_unknown_tool_returns_error() -> None:
         )
     )
     assert out["error"] == "unknown_tool"
+
+
+# ── get_my_notes + notebook action proposal (issue #243) ─────────────
+
+
+@pytest.mark.asyncio
+async def test_get_my_notes_returns_user_notes_scoped_and_bounded() -> None:
+    user_id = uuid.uuid4()
+    long_body = "x" * 1000
+    notes = _RecordingNotesUC(
+        [_NoteRow("algorithms", "l1", "big-O", long_body)],
+    )
+    dispatcher = _toolset(user_id, notes=notes)
+    out = json.loads(
+        await dispatcher.dispatch(
+            ToolCall(
+                id="c",
+                name="get_my_notes",
+                arguments_json=json.dumps({"course_slug": "algorithms"}),
+            )
+        )
+    )
+    assert notes.seen_user_id == user_id  # scoped to the authenticated user
+    assert notes.seen_course_slug == "algorithms"  # filter forwarded
+    assert out["notes"][0]["courseSlug"] == "algorithms"
+    assert out["notes"][0]["lessonId"] == "l1"
+    assert out["notes"][0]["quote"] == "big-O"
+    assert len(out["notes"][0]["body"]) == 600  # truncated to the cap
+
+
+@pytest.mark.asyncio
+async def test_propose_notebook_action_create_is_recorded() -> None:
+    dispatcher = _toolset(uuid.uuid4())
+    ack = json.loads(
+        await dispatcher.dispatch(
+            ToolCall(
+                id="c",
+                name="propose_notebook_action",
+                arguments_json=json.dumps(
+                    {
+                        "op": "create",
+                        "title": "Mindmap — My Algorithms Notes",
+                        "type": "theory",
+                        "body": "```mermaid\nmindmap\n  root((Algorithms))\n```",
+                    }
+                ),
+            )
+        )
+    )
+    assert ack["status"] == "proposed"
+    action = dispatcher.proposed_action
+    assert action is not None
+    assert action.op == "create"
+    assert action.title == "Mindmap — My Algorithms Notes"
+    assert action.note_type == "theory"
+    assert "mermaid" in action.body
+
+
+@pytest.mark.asyncio
+async def test_propose_notebook_action_append_requires_target() -> None:
+    dispatcher = _toolset(uuid.uuid4())
+    out = json.loads(
+        await dispatcher.dispatch(
+            ToolCall(
+                id="c",
+                name="propose_notebook_action",
+                arguments_json=json.dumps({"op": "append", "body": "more"}),
+            )
+        )
+    )
+    assert out["error"] == "append_requires_target_note_id"
+    assert dispatcher.proposed_action is None
+
+
+@pytest.mark.asyncio
+async def test_propose_notebook_action_rejects_bad_op_and_empty_body() -> None:
+    dispatcher = _toolset(uuid.uuid4())
+    bad_op = json.loads(
+        await dispatcher.dispatch(
+            ToolCall(
+                id="c",
+                name="propose_notebook_action",
+                arguments_json=json.dumps({"op": "delete", "body": "x"}),
+            )
+        )
+    )
+    assert bad_op["error"] == "invalid_op"
+    empty_body = json.loads(
+        await dispatcher.dispatch(
+            ToolCall(
+                id="c",
+                name="propose_notebook_action",
+                arguments_json=json.dumps({"op": "create", "body": "  "}),
+            )
+        )
+    )
+    assert empty_body["error"] == "missing_body"
+    assert dispatcher.proposed_action is None  # nothing recorded on either error
+
+
+@pytest.mark.asyncio
+async def test_propose_notebook_action_drops_unknown_type() -> None:
+    dispatcher = _toolset(uuid.uuid4())
+    await dispatcher.dispatch(
+        ToolCall(
+            id="c",
+            name="propose_notebook_action",
+            arguments_json=json.dumps({"op": "create", "type": "nonsense", "body": "ok"}),
+        )
+    )
+    assert dispatcher.proposed_action is not None
+    assert dispatcher.proposed_action.note_type is None  # invalid type dropped, not fatal
+
+
+@pytest.mark.asyncio
+async def test_answer_turn_surfaces_proposed_notebook_action() -> None:
+    repo = _FakeChatRepo()
+    session_id = _seeded_session(repo)
+    user_id = repo.sessions[session_id].user_id
+    notes = _RecordingNotesUC([_NoteRow("algorithms", "l1", "q", "sorting is O(n log n)")])
+    # Round 1: read notes. Round 2: propose the notebook write. Round 3: answer.
+    llm = _ScriptedLLM(
+        [
+            LLMResponse(
+                content="",
+                tool_calls=(
+                    ToolCall(
+                        id="t1",
+                        name="get_my_notes",
+                        arguments_json=json.dumps({"course_slug": "algorithms"}),
+                    ),
+                ),
+            ),
+            LLMResponse(
+                content="",
+                tool_calls=(
+                    ToolCall(
+                        id="t2",
+                        name="propose_notebook_action",
+                        arguments_json=json.dumps(
+                            {
+                                "op": "create",
+                                "title": "Mindmap — Algorithms",
+                                "type": "theory",
+                                "body": "```mermaid\nmindmap\n  root((Algorithms))\n```",
+                            }
+                        ),
+                    ),
+                ),
+            ),
+            LLMResponse(content="Saved a mindmap of your Algorithms notes."),
+        ]
+    )
+    turn = AnswerAgentTurn(
+        repo=repo,
+        llm=cast("object", llm),  # type: ignore[arg-type]
+        learner_tools=_toolset(user_id, notes=notes),
+        catalog_index=cast("object", _FakeIndex([])),  # type: ignore[arg-type]
+        submit_course_request=cast("object", _FakeSubmitCourseRequest()),  # type: ignore[arg-type]
+        user_id=user_id,
+    )
+
+    result = await turn.execute(
+        session_id=session_id,
+        user_content="Make a mindmap of my algorithms notes and save it as a new notebook",
+    )
+
+    assert llm.calls == 3
+    assert result.notebook_action is not None
+    assert result.notebook_action.op == "create"
+    assert "mermaid" in result.notebook_action.body
+
+
+@pytest.mark.asyncio
+async def test_ordinary_turn_has_no_notebook_action() -> None:
+    repo = _FakeChatRepo()
+    session_id = _seeded_session(repo)
+    user_id = repo.sessions[session_id].user_id
+    llm = _ScriptedLLM([LLMResponse(content="An eigenvalue is a scalar λ.")])
+    turn = _turn(
+        repo, llm, index=_FakeIndex([]), submit=_FakeSubmitCourseRequest(), user_id=user_id
+    )
+    result = await turn.execute(session_id=session_id, user_content="What is an eigenvalue?")
+    assert result.notebook_action is None

@@ -21,8 +21,9 @@ from dataclasses import dataclass, field
 from uuid import UUID
 
 from cyberdyne_backend.application.agent_chat.tools import (
-    LEARNER_CONTEXT_TOOLS,
+    AGENT_TOOLS,
     LearnerContextDispatcher,
+    NotebookActionProposal,
 )
 from cyberdyne_backend.application.ai_chat.use_cases import (
     build_uploaded_attachments_block,
@@ -61,7 +62,16 @@ learner can ask anything, with no course open.
       * `get_my_progress` — courses they've started (completed vs total, %).
       * `get_my_learning_state` — their active tracks/paths + certificates.
       * `get_my_recommendations` — suggested next courses.
-    Never invent progress or course names; read them from the tools.
+      * `get_my_notes` — their own lesson notes (optionally one course), to
+        synthesize (e.g. build a mindmap or summary) before saving.
+    Never invent progress, course names, or notes; read them from the tools.
+  - When (and ONLY when) the learner asks to SAVE or SYNTHESIZE something into
+    their Notebook ("make a mindmap of my <course> notes and save it", "add
+    that to my <X> notebook"), call `propose_notebook_action` with the content
+    — `op:"create"` for a new entry (with a `title` + `type`) or `op:"append"`
+    to an existing one (with `target_note_id`). Render a mindmap as a
+    ```mermaid mindmap block in `body`. You only PROPOSE; the learner confirms
+    and the app saves it. Do NOT call it for ordinary questions.
   - If the learner attached an image or document (e.g. a photographed
     question), it is provided to you below as extracted text / a vision
     description. Answer grounded in that content; do not ask them to retype it.
@@ -90,11 +100,14 @@ class UnmatchedTopic:
 @dataclass(frozen=True, slots=True)
 class AnswerTurnResult:
     """One answer turn: the assistant message, the ranked courses that cover the
-    topic (deep-linkable), and — on a catalog miss — the recorded demand topic."""
+    topic (deep-linkable), an optional recorded demand topic (catalog miss), and
+    an optional proposed Notebook action (when the learner asked to save to the
+    Notebook — proposed only, never executed server-side, issue #243)."""
 
     message: ChatMessage
     course_refs: list[CourseMatch]
     unmatched_topic: UnmatchedTopic | None = None
+    notebook_action: NotebookActionProposal | None = None
 
 
 @dataclass(slots=True)
@@ -140,7 +153,14 @@ class AnswerAgentTurn:
         course_refs, unmatched = await self._route(
             question=user_content, answer_text=answer.content
         )
-        return AnswerTurnResult(message=answer, course_refs=course_refs, unmatched_topic=unmatched)
+        # A Notebook write the LLM proposed via the tool, if any — surfaced for
+        # the client to commit after confirmation; never executed here (#243).
+        return AnswerTurnResult(
+            message=answer,
+            course_refs=course_refs,
+            unmatched_topic=unmatched,
+            notebook_action=self.learner_tools.proposed_action,
+        )
 
     async def _resolve_attachments(
         self, attachments: tuple[str, ...]
@@ -166,7 +186,7 @@ class AnswerAgentTurn:
             transcript = await self.repo.list_messages(session_id)
             response = await self.llm.complete(
                 messages=transcript,
-                tools=LEARNER_CONTEXT_TOOLS,
+                tools=AGENT_TOOLS,
                 system_prompt=system_prompt,
             )
             assistant_msg = new_assistant_message(

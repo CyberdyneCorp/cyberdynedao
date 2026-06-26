@@ -24,6 +24,7 @@ from cyberdyne_backend.adapters.inbound.api.agent_chat.schemas import (
     AgentTurnResponse,
     ChatHistoryResponse,
     CourseRefView,
+    NotebookActionView,
     StartSessionResponse,
     UnmatchedTopicView,
 )
@@ -78,6 +79,17 @@ def _turn_response(result: AnswerTurnResult) -> AgentTurnResponse:
                 subject=result.unmatched_topic.subject,
             )
             if result.unmatched_topic is not None
+            else None
+        ),
+        notebook_action=(
+            NotebookActionView(
+                op=result.notebook_action.op,
+                body=result.notebook_action.body,
+                title=result.notebook_action.title,
+                note_type=result.notebook_action.note_type,
+                target_note_id=result.notebook_action.target_note_id,
+            )
+            if result.notebook_action is not None
             else None
         ),
     )

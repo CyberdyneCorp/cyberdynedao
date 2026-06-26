@@ -8,6 +8,7 @@ demand registry when nothing in the catalog covers the topic).
 
 from __future__ import annotations
 
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -24,6 +25,7 @@ __all__ = [
     "AgentTurnResponse",
     "ChatHistoryResponse",
     "CourseRefView",
+    "NotebookActionView",
     "StartSessionResponse",
     "UnmatchedTopicView",
 ]
@@ -65,10 +67,25 @@ class UnmatchedTopicView(_CamelModel):
     subject: str | None = None
 
 
+class NotebookActionView(_CamelModel):
+    """A PROPOSED Notebook write the client commits after the learner confirms
+    (issue #243). Present only when the learner asked to save/synthesize to the
+    Notebook; the backend never writes. ``type`` is a NotebookNoteType raw
+    value; ``targetNoteId`` is set for ``append``."""
+
+    op: Literal["create", "append"]
+    body: str
+    title: str | None = None
+    note_type: str | None = Field(default=None, alias="type")
+    target_note_id: str | None = None
+
+
 class AgentTurnResponse(_CamelModel):
     """One answer turn: the assistant message, the courses that cover the topic,
-    and — on a catalog miss — the recorded demand topic."""
+    an optional recorded demand topic (catalog miss), and an optional proposed
+    Notebook action (when the learner asked to save to the Notebook)."""
 
     message: ChatMessageResponse
     course_refs: list[CourseRefView] = []
     unmatched_topic: UnmatchedTopicView | None = None
+    notebook_action: NotebookActionView | None = None

@@ -7,9 +7,11 @@ out-of-catalog topics to the demand registry (#232).
 """
 
 from cyberdyne_backend.application.agent_chat.tools import (
+    AGENT_TOOLS,
     LEARNER_CONTEXT_TOOLS,
     LearnerContextDispatcher,
     LearnerContextToolset,
+    NotebookActionProposal,
 )
 from cyberdyne_backend.application.agent_chat.use_cases import (
     ANSWER_AGENT_SYSTEM_PROMPT,
@@ -19,11 +21,13 @@ from cyberdyne_backend.application.agent_chat.use_cases import (
 )
 
 __all__ = [
+    "AGENT_TOOLS",
     "ANSWER_AGENT_SYSTEM_PROMPT",
     "LEARNER_CONTEXT_TOOLS",
     "AnswerAgentTurn",
     "AnswerTurnResult",
     "LearnerContextDispatcher",
     "LearnerContextToolset",
+    "NotebookActionProposal",
     "UnmatchedTopic",
 ]
