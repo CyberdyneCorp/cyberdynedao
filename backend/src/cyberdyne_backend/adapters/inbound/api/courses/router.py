@@ -28,6 +28,7 @@ from cyberdyne_backend.adapters.inbound.api.courses.schemas import (
     SetCourseCategoryRequest,
     SetCourseDeadlineRequest,
     SetLessonProgressRequest,
+    TranslationJobStatusResponse,
     UpdateCategoryRequest,
     UpdateCourseRequest,
     UpdateLessonRequest,
@@ -791,18 +792,32 @@ async def reorder_courses(
 async def get_course_languages(
     slug: str,
     use_case: Annotated[GetCourseLanguages, Depends(get_course_languages_uc)],
+    job_store: Annotated[TranslationJobStore, Depends(get_translation_job_store)],
     can_translate: Annotated[bool, Depends(translation_available)],
     _principal: Annotated[UserPrincipal, Depends(require_editor)],
 ) -> CourseLanguagesResponse:
-    """Languages this course is available in + whether translation can run."""
+    """Languages this course is available in, whether translation can run, and
+    the per-language job state (status/attempts/error) so a language stuck out
+    of ``available`` is diagnosable from the API (issue #235)."""
     try:
         available = await use_case.execute(slug)
     except CourseNotFoundError as exc:
         raise HTTPException(status_code=404, detail="course not found") from exc
+    jobs = await job_store.list_jobs(slug)
     return CourseLanguagesResponse(
         available=available,
         supported=list(SUPPORTED_LANGUAGES),
         can_translate=can_translate,
+        jobs=[
+            TranslationJobStatusResponse(
+                language=job.language,
+                status=job.status,
+                attempts=job.attempts,
+                error=job.error,
+                updated_at=job.updated_at,
+            )
+            for job in jobs
+        ],
     )
 
 
