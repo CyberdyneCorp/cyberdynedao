@@ -16,8 +16,9 @@ store. (src: adapters/inbound/api/agent_chat/router.py, application/agent_chat)
 The system SHALL run an answer turn (`POST /api/v1/agent/sessions/{id}/messages`)
 for a signed-in learner that answers directly (a distinct answer-mode persona,
 not Socratic) and MAY call learner-context tools — the learner's own course
-progress, active tracks/paths, and recommendations — to ground answers about
-their learning, scoped to the authenticated user only. Text turns SHALL count
+progress, active tracks/paths, recommendations, and lesson notes (optionally
+filtered to one course) — to ground answers about their learning, scoped to the
+authenticated user only (the `user_id` is never a tool argument). Text turns SHALL count
 toward the AI-message quota (#230). Attached upload ids (incl. a photographed
 question) SHALL be ingested (text/vision) and grounded. An unknown session
 SHALL return `404`; an unauthenticated caller SHALL be refused (`401`/`403`).
@@ -27,6 +28,29 @@ SHALL return `404`; an unauthenticated caller SHALL be refused (`401`/`403`).
 - GIVEN a learner who has completed some courses
 - WHEN they ask "what have I finished / what next?"
 - THEN the answer reflects their real progress and active track via the learner-context tools
+
+### Requirement: Proposed Notebook actions (client-committed)
+
+When (and only when) the learner asks to save or synthesize something into
+their Notebook (e.g. "make a mindmap of my Algorithms notes and save it"), the
+turn SHALL include a structured `notebookAction` — `{op: create|append, title?,
+type?, targetNoteId?, body}` (mindmaps as a ```mermaid block in `body`). The
+backend SHALL only PROPOSE: it performs NO notebook write/append/delete; the
+client commits via the notebook endpoints after the learner confirms. Ordinary
+Q&A turns SHALL omit `notebookAction`. An `append` proposal SHALL carry a
+`targetNoteId`.
+
+#### Scenario: Save-to-Notebook request yields a proposed action
+
+- GIVEN a learner asks to make a mindmap of a course's notes and save it
+- WHEN the agent answers (after reading their notes via `get_my_notes`)
+- THEN the response includes `notebookAction{op:"create", body:<mermaid mindmap>}` and no server-side write occurs
+
+#### Scenario: Ordinary question has no action
+
+- GIVEN an ordinary question
+- WHEN the agent answers
+- THEN `notebookAction` is omitted
 
 ### Requirement: Course routing with each answer
 
