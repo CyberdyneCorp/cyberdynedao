@@ -20,7 +20,15 @@ course + lesson texts. It SHALL return ranked `CourseMatch[]`
 (`{courseSlug, lessonId?, score, matchReason}`), with a deep-linkable
 `lessonId` for lesson-level hits. The scan SHALL count toward the SCANS quota
 (402 when the free cap is hit). A non-image upload SHALL return `415`. Images
-are analyzed only and SHALL NOT be retained.
+are analyzed only and SHALL NOT be retained. Building the catalog index SHALL
+batch the embeddings request under the provider's per-request input cap so it
+scales as the catalog grows (issue #244).
+
+#### Scenario: Catalog larger than the embeddings cap still builds
+
+- GIVEN a catalog with more entries than the embeddings provider's per-request input cap
+- WHEN the index is built
+- THEN the embeddings are requested in batches under the cap and the build succeeds
 
 #### Scenario: In-catalog topic routes to its course
 
