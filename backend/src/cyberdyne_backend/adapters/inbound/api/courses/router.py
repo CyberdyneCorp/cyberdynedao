@@ -34,6 +34,7 @@ from cyberdyne_backend.adapters.inbound.api.courses.schemas import (
     UpdateLessonRequest,
 )
 from cyberdyne_backend.adapters.inbound.api.locale import resolve_locale
+from cyberdyne_backend.adapters.inbound.api.quota.dependencies import require_pro
 from cyberdyne_backend.adapters.inbound.middleware.auth import (
     EDITOR_SCOPE,
     require_editor,
@@ -590,11 +591,12 @@ async def download_course_certificate_pdf(
 async def issue_course_certificate(
     slug: str,
     use_case: Annotated[IssueCourseCertificate, Depends(get_issue_certificate_uc)],
-    principal: Annotated[UserPrincipal, Depends(require_principal)],
+    principal: Annotated[UserPrincipal, Depends(require_pro)],
 ) -> CourseCertificateResponse:
     """Claim the signed-in learner's certificate for a completed course.
-    Idempotent (returns the existing certificate); 409 if not every
-    lesson is complete yet."""
+    Certificate issuance is Pro-only (issue #230): a non-Pro learner gets 402.
+    Idempotent (returns the existing certificate); 409 if not every lesson is
+    complete yet."""
     if not isinstance(principal, UserPrincipal):
         raise HTTPException(status_code=403, detail="user token required")
     try:

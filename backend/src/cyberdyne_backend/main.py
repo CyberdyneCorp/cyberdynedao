@@ -297,6 +297,7 @@ from cyberdyne_backend.adapters.inbound.api.quizzes.router import (
 from cyberdyne_backend.adapters.inbound.api.quizzes.router import (
     player_router as quizzes_player_router,
 )
+from cyberdyne_backend.adapters.inbound.api.quota.dependencies import get_enforce_quota_uc
 from cyberdyne_backend.adapters.inbound.api.recommendations.router import (
     get_recommend_courses_uc,
 )
@@ -407,6 +408,9 @@ from cyberdyne_backend.adapters.outbound.persistence.quizzes.catalog_repository 
 )
 from cyberdyne_backend.adapters.outbound.persistence.quizzes.repository import (
     SqlAlchemyQuizRepository,
+)
+from cyberdyne_backend.adapters.outbound.persistence.quota.repository import (
+    SqlAlchemyUsageCounterRepository,
 )
 from cyberdyne_backend.adapters.outbound.persistence.skills.reader import (
     SqlAlchemySkillMapReader,
@@ -580,6 +584,7 @@ from cyberdyne_backend.application.quizzes import (
     SubmitQuizAttempt,
     UpsertQuiz,
 )
+from cyberdyne_backend.application.quota import EnforceQuota
 from cyberdyne_backend.application.recommendations import RecommendCourses
 from cyberdyne_backend.application.skills import GetSkillMap
 from cyberdyne_backend.application.uploads import (
@@ -1268,6 +1273,11 @@ def create_app() -> FastAPI:
         async with session_scope() as session:
             yield ListCourseRequestClusters(repo=SqlAlchemyCourseRequestRepository(session))
 
+    # Server-side quota / Pro fair-use enforcement (issue #230).
+    async def _enforce_quota_dep() -> AsyncIterator[EnforceQuota]:
+        async with session_scope() as session:
+            yield EnforceQuota(repo=SqlAlchemyUsageCounterRepository(session))
+
     async def _path_gating_dep() -> AsyncIterator[GetPathGating]:
         async with session_scope() as session:
             yield GetPathGating(
@@ -1585,6 +1595,7 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_list_feedback_uc] = _list_feedback_dep
     app.dependency_overrides[get_submit_course_request_uc] = _submit_course_request_dep
     app.dependency_overrides[get_list_clusters_uc] = _list_clusters_dep
+    app.dependency_overrides[get_enforce_quota_uc] = _enforce_quota_dep
     app.dependency_overrides[get_path_gating_uc] = _path_gating_dep
     app.dependency_overrides[get_eligibility_uc] = _eligibility_dep
     app.dependency_overrides[get_issue_certificate_uc] = _issue_certificate_dep

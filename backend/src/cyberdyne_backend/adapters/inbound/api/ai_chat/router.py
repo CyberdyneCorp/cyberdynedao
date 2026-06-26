@@ -28,6 +28,7 @@ from cyberdyne_backend.adapters.inbound.api.ai_chat.schemas import (
     StartSessionResponse,
     ToolCallView,
 )
+from cyberdyne_backend.adapters.inbound.api.quota.dependencies import QuotaGuard
 from cyberdyne_backend.adapters.inbound.api.rate_limit import SlidingWindowRateLimiter
 from cyberdyne_backend.application.ai_chat import (
     GetChatHistory,
@@ -41,6 +42,7 @@ from cyberdyne_backend.domain.ai_chat import (
     ChatSessionNotFoundError,
 )
 from cyberdyne_backend.domain.auth_identity import UserPrincipal
+from cyberdyne_backend.domain.quota import QuotaMeter
 
 logger = logging.getLogger("cyberdyne_backend.ai_chat.api")
 
@@ -57,6 +59,11 @@ _chat_rate_limiter = SlidingWindowRateLimiter(
 def _chat_rate_limit(request: Request) -> None:
     client = request.client
     _chat_rate_limiter.check(client.host if client is not None else None)
+
+
+# Per-user free-tier cap + Pro fair-use on tutor turns (issue #230); the per-IP
+# limiter above still guards anonymous traffic.
+_tutor_quota = QuotaGuard(QuotaMeter.TUTOR_MESSAGES)
 
 
 async def get_start_session_uc() -> StartChatSession:  # pragma: no cover
@@ -119,7 +126,7 @@ async def start_session(
     "/sessions/{session_id}/messages",
     response_model=ChatMessageResponse,
     response_model_by_alias=True,
-    dependencies=[Depends(_chat_rate_limit)],
+    dependencies=[Depends(_chat_rate_limit), Depends(_tutor_quota)],
 )
 async def send_message(
     session_id: UUID,
@@ -142,7 +149,7 @@ async def send_message(
 
 @router.post(
     "/sessions/{session_id}/messages/stream",
-    dependencies=[Depends(_chat_rate_limit)],
+    dependencies=[Depends(_chat_rate_limit), Depends(_tutor_quota)],
     responses={
         200: {
             "description": (

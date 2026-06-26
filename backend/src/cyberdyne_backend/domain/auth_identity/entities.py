@@ -26,10 +26,20 @@ class UserPrincipal:
     audience: str | None
     expires_at: datetime
     is_admin: bool = False
+    # Subscription entitlements from CyberdyneAuth (e.g. ``pro`` / ``pro:annual``).
+    # The entitlement source of truth is Auth; DAO only reads them to gate
+    # quota/fair-use (issue #230).
+    entitlements: frozenset[str] = frozenset()
 
     @property
     def kind(self) -> str:
         return "user"
+
+    @property
+    def is_pro(self) -> bool:
+        """Whether this user holds the ``pro`` entitlement (bare ``pro`` or any
+        ``pro:<plan>`` variant)."""
+        return has_pro_entitlement(self.entitlements)
 
 
 @dataclass(frozen=True, slots=True)
@@ -129,6 +139,23 @@ def _scopes_from_claim(raw: Any) -> frozenset[str]:
     return frozenset()
 
 
+def _entitlements_from_claim(raw: Any) -> frozenset[str]:
+    """Normalize an ``entitlements`` claim/field. CyberdyneAuth ships it as a
+    JSON array (``["pro:annual"]``); also accept a space-delimited string for
+    robustness."""
+    if isinstance(raw, str):
+        return frozenset(e for e in raw.split() if e)
+    if isinstance(raw, (list, tuple)):
+        return frozenset(e for e in raw if isinstance(e, str) and e)
+    return frozenset()
+
+
+def has_pro_entitlement(entitlements: frozenset[str]) -> bool:
+    """A user is Pro if they hold the bare ``pro`` token or any ``pro:<plan>``
+    variant (e.g. ``pro:monthly``, ``pro:annual``)."""
+    return any(e == "pro" or e.startswith("pro:") for e in entitlements)
+
+
 def principal_from_access_token(claims: dict[str, Any]) -> Principal | None:
     """Map verified RS256 access-token claims to a domain principal.
 
@@ -185,6 +212,7 @@ def principal_from_access_token(claims: dict[str, Any]) -> Principal | None:
         audience=audience,
         expires_at=expires_at,
         is_admin=_parse_admin_flag(claims),
+        entitlements=_entitlements_from_claim(claims.get("entitlements")),
     )
 
 
@@ -242,4 +270,5 @@ def principal_from_introspection(payload: dict[str, Any]) -> Principal | None:
         audience=audience,
         expires_at=expires_at,
         is_admin=_parse_admin_flag(payload),
+        entitlements=_entitlements_from_claim(payload.get("entitlements")),
     )
