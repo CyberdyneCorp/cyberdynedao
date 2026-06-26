@@ -7,6 +7,8 @@ container module: explicit, testable, no magic.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import httpx
 
 from cyberdyne_backend.adapters.outbound.access.fake_reader import FakeAccessReader
@@ -42,6 +44,10 @@ from cyberdyne_backend.adapters.outbound.email.smtp import (
     SmtpMailer,
     SmtpSettings,
 )
+from cyberdyne_backend.adapters.outbound.llm.embedding_client import (
+    OpenAIEmbeddingClient,
+    StaticEmbeddingClient,
+)
 from cyberdyne_backend.adapters.outbound.llm.openai_client import (
     OpenAIChatClient,
     StaticChatClient,
@@ -63,6 +69,7 @@ from cyberdyne_backend.adapters.outbound.stripe.webhook_verifier import (
     MockStripeWebhookVerifier,
     StripeWebhookVerifier,
 )
+from cyberdyne_backend.application.course_finder import CatalogSearchIndex
 from cyberdyne_backend.domain.access import AccessReaderPort
 from cyberdyne_backend.domain.ai_chat import (
     ChatLLMPort,
@@ -75,6 +82,7 @@ from cyberdyne_backend.domain.ai_chat import (
     VisionPort,
 )
 from cyberdyne_backend.domain.auth_identity import AuthPort, UserProfilePort
+from cyberdyne_backend.domain.course_finder import EmbeddingPort
 from cyberdyne_backend.domain.dao_treasury import ChainReaderPort
 from cyberdyne_backend.domain.leads import CaptchaPort, EmailNotifierPort
 from cyberdyne_backend.domain.learning import CertificateSigner
@@ -107,6 +115,11 @@ class Container:
         self._license_email_notifier: LicenseEmailNotifierPort | None = None
         self._chat_llm: ChatLLMPort | None = None
         self._vision: VisionPort | None = None
+        self._embedding: EmbeddingPort | None = None
+        # Scan-to-Learn catalog index — one per process so the catalog is
+        # embedded once (cached in memory), not per scan. Set lazily by
+        # main.py's scan dep via ``set_catalog_index``.
+        self._catalog_index: CatalogSearchIndex | None = None
         self._text_extractor: TextExtractorPort | None = None
         self._knowledge_search: KnowledgeSearchPort | None = None
         self._matlab: MatlabPort | None = None
@@ -366,6 +379,31 @@ class Container:
         else:
             self._vision = StaticVisionClient()
         return self._vision
+
+    @property
+    def embedding(self) -> EmbeddingPort:
+        """OpenAI embedding client when a key is configured; the deterministic
+        static fallback otherwise (mirrors ``vision``). Used by Scan-to-Learn
+        to embed the catalog + the query (issue #231)."""
+        if self._embedding is not None:
+            return self._embedding
+        key = self._settings.openai_api_key
+        if key is not None:
+            self._embedding = OpenAIEmbeddingClient(
+                api_key=key.get_secret_value(),
+                http_client=self.http_client,
+                model=self._settings.openai_embedding_model,
+            )
+        else:
+            self._embedding = StaticEmbeddingClient()
+        return self._embedding
+
+    def catalog_index(self, build: Callable[[], CatalogSearchIndex]) -> CatalogSearchIndex:
+        """The process-wide Scan-to-Learn index, built once via ``build`` and
+        cached so the catalog is embedded a single time across requests."""
+        if self._catalog_index is None:
+            self._catalog_index = build()
+        return self._catalog_index
 
     @property
     def text_extractor(self) -> TextExtractorPort:

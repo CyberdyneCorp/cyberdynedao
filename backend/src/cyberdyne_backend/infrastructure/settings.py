@@ -184,6 +184,9 @@ class Settings(BaseSettings):
     # Vision model for describing / OCR-ing image attachments (issue #220).
     # Defaults to the cheap vision-capable chat model.
     openai_vision_model: str = "gpt-4o-mini"
+    # Embedding model for Scan-to-Learn catalog matching (issue #231).
+    # Falls back to a deterministic local embedder when no key is set.
+    openai_embedding_model: str = "text-embedding-3-small"
     # CyberRAG MCP URL — stub fallback runs when unset. Real client is a
     # follow-up adapter (see docs/backend-roadmap.md §5.6).
     cyberrag_mcp_url: str | None = None
