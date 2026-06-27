@@ -103,11 +103,40 @@ describe('coursesViewModel — loadCatalogue', () => {
 		expect(get(vm.error)).toBeNull();
 	});
 
-	it('passes the level filter through', async () => {
+	it('passes the level filter through with a bounded first page', async () => {
 		const deps = fakeDeps();
 		const vm = createCoursesViewModel(deps);
 		await vm.loadCatalogue('Advanced');
-		expect(deps.fetchCourses).toHaveBeenCalledWith('Advanced');
+		expect(deps.fetchCourses).toHaveBeenCalledWith('Advanced', { limit: 60 });
+	});
+
+	it('a short first page means no more to load', async () => {
+		const vm = createCoursesViewModel(fakeDeps());
+		await vm.loadCatalogue();
+		// fakeDeps returns 1 course (< page) → hasMore false, no "load more".
+		expect(get(vm.coursesHasMore)).toBe(false);
+	});
+
+	it('a full first page flags more, and loadMoreCourses appends the next page', async () => {
+		const full = Array.from({ length: 60 }, (_, i) => ({ ...summary, id: `c${i}`, slug: `c${i}` }));
+		const next = [{ ...summary, id: 'c60', slug: 'c60' }];
+		const fetchCourses = vi.fn().mockResolvedValueOnce(full).mockResolvedValueOnce(next);
+		const vm = createCoursesViewModel(fakeDeps({ fetchCourses }));
+		await vm.loadCatalogue();
+		expect(get(vm.coursesHasMore)).toBe(true);
+		await vm.loadMoreCourses();
+		expect(fetchCourses).toHaveBeenLastCalledWith(undefined, { limit: 60, offset: 60 });
+		expect(get(vm.courses)).toHaveLength(61);
+		expect(get(vm.coursesHasMore)).toBe(false); // short second page → end
+	});
+
+	it('loadMoreCourses is a no-op when nothing more remains', async () => {
+		const deps = fakeDeps();
+		const vm = createCoursesViewModel(deps);
+		await vm.loadCatalogue();
+		(deps.fetchCourses as ReturnType<typeof vi.fn>).mockClear();
+		await vm.loadMoreCourses();
+		expect(deps.fetchCourses).not.toHaveBeenCalled();
 	});
 
 	it('captures the error message and clears loading', async () => {

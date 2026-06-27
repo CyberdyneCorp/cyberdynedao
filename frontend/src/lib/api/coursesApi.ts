@@ -243,9 +243,21 @@ const enc = encodeURIComponent;
 
 // ── Catalogue (public) ────────────────────────────────────────────────
 
-export function fetchCourses(level?: CourseLevel): Promise<CourseSummary[]> {
-	const query = level ? `?level=${enc(level)}` : '';
-	return getJson<CourseSummary[]>(`/api/v1/courses${query}`);
+export interface CoursePageParams {
+	limit?: number;
+	offset?: number;
+}
+
+export function fetchCourses(
+	level?: CourseLevel,
+	page: CoursePageParams = {}
+): Promise<CourseSummary[]> {
+	const q = new URLSearchParams();
+	if (level) q.set('level', level);
+	if (page.limit !== undefined) q.set('limit', String(page.limit));
+	if (page.offset !== undefined) q.set('offset', String(page.offset));
+	const qs = q.toString();
+	return getJson<CourseSummary[]>(`/api/v1/courses${qs ? `?${qs}` : ''}`);
 }
 
 export function fetchCourse(slug: string): Promise<CourseDetail> {
