@@ -35,6 +35,7 @@ pytestmark = pytest.mark.integration
 
 _USER = uuid.UUID("44444444-4444-4444-4444-444444444444")
 _NOW = datetime(2026, 1, 1, tzinfo=UTC)
+_LATER = datetime(2026, 2, 1, tzinfo=UTC)
 
 _CAT = uuid.uuid4()
 _COURSE_PUB = uuid.uuid4()
@@ -158,6 +159,29 @@ async def seeded(_prepared_schema: None) -> AsyncIterator[None]:
     yield
 
 
+@pytest_asyncio.fixture
+async def with_beta_attempt(seeded: None) -> AsyncIterator[None]:
+    """Adds a later attempt on the beta quiz so two quizzes are attempted,
+    beta the most recent — exercises the attempted-view ordering/paging."""
+    factory = get_session_factory()
+    async with factory() as s:
+        s.add(
+            QuizAttemptRow(
+                id=uuid.uuid4(),
+                user_id=_USER,
+                quiz_id=_QUIZ_PUB2,
+                lesson_id=_LESSON_PUB2,
+                score=80,
+                passed=True,
+                attempt_number=1,
+                answers={},
+                submitted_at=_LATER,
+            )
+        )
+        await s.commit()
+    yield
+
+
 @pytest.fixture
 def learner_client(app: FastAPI) -> TestClient:
     app.dependency_overrides[require_principal] = _learner
@@ -217,3 +241,48 @@ def test_malformed_cursor_starts_from_beginning(seeded: None, learner_client: Te
 def test_limit_out_of_range_rejected(seeded: None, learner_client: TestClient) -> None:
     assert learner_client.get("/api/v1/quizzes?limit=0").status_code == 422
     assert learner_client.get("/api/v1/quizzes?limit=101").status_code == 422
+
+
+def test_attempted_excludes_unattempted_quizzes(seeded: None, learner_client: TestClient) -> None:
+    # Only alpha is attempted in the base seed; beta has no attempt.
+    body = learner_client.get("/api/v1/quizzes?attempted=true").json()
+    assert [it["courseSlug"] for it in body["items"]] == ["alpha"]
+    assert body["items"][0]["lastAttempt"]["score"] == 90  # latest attempt
+
+
+def test_attempted_orders_by_most_recent_submission(
+    with_beta_attempt: None, learner_client: TestClient
+) -> None:
+    body = learner_client.get("/api/v1/quizzes?attempted=true").json()
+    # beta submitted later than alpha → most-recent first.
+    assert [it["courseSlug"] for it in body["items"]] == ["beta", "alpha"]
+    assert body["nextCursor"] is None
+    assert all(it["lastAttempt"] is not None for it in body["items"])
+
+
+def test_attempted_pagination_with_cursor(
+    with_beta_attempt: None, learner_client: TestClient
+) -> None:
+    first = learner_client.get("/api/v1/quizzes?attempted=true&limit=1").json()
+    assert [it["courseSlug"] for it in first["items"]] == ["beta"]
+    assert first["nextCursor"] is not None
+
+    second = learner_client.get(
+        f"/api/v1/quizzes?attempted=true&limit=1&cursor={first['nextCursor']}"
+    ).json()
+    assert [it["courseSlug"] for it in second["items"]] == ["alpha"]
+    assert second["nextCursor"] is None
+
+
+def test_attempted_respects_course_filter(
+    with_beta_attempt: None, learner_client: TestClient
+) -> None:
+    body = learner_client.get("/api/v1/quizzes?attempted=true&courseSlug=alpha").json()
+    assert [it["courseSlug"] for it in body["items"]] == ["alpha"]
+
+
+def test_attempted_malformed_cursor_starts_from_beginning(
+    with_beta_attempt: None, learner_client: TestClient
+) -> None:
+    body = learner_client.get("/api/v1/quizzes?attempted=true&cursor=not-a-cursor").json()
+    assert [it["courseSlug"] for it in body["items"]] == ["beta", "alpha"]

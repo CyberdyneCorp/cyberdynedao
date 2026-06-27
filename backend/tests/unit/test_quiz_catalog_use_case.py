@@ -19,6 +19,7 @@ class _FakeReader:
         user_id,
         course_slug=None,
         category_slug=None,
+        attempted=False,
         cursor=None,
         limit=20,
     ) -> QuizCatalogPage:
@@ -27,6 +28,7 @@ class _FakeReader:
                 "user_id": user_id,
                 "course_slug": course_slug,
                 "category_slug": category_slug,
+                "attempted": attempted,
                 "cursor": cursor,
                 "limit": limit,
             }
@@ -56,6 +58,7 @@ def test_filters_pass_through() -> None:
             user_id=user,
             course_slug="python-101",
             category_slug="programming",
+            attempted=True,
             cursor="abc",
         )
     )
@@ -63,6 +66,7 @@ def test_filters_pass_through() -> None:
     call = reader.calls[0]
     assert call["course_slug"] == "python-101"
     assert call["category_slug"] == "programming"
+    assert call["attempted"] is True
     assert call["cursor"] == "abc"
     assert call["user_id"] == user
     assert call["limit"] == 20  # default

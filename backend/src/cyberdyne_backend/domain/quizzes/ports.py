@@ -50,7 +50,11 @@ class QuizCatalogReader(Protocol):
     Lists quizzes for *published* courses with denormalized course/lesson
     metadata and the requesting learner's most-recent attempt. Filtering
     is optional; ``cursor`` is the opaque token returned by the prior
-    page (``None`` for the first page)."""
+    page (``None`` for the first page).
+
+    When ``attempted`` is true the view is narrowed to quizzes the learner
+    has already attempted, ordered by most-recent submission first — so the
+    client can fetch just the "recent results" without the whole catalog."""
 
     async def list_quizzes(
         self,
@@ -58,6 +62,7 @@ class QuizCatalogReader(Protocol):
         user_id: UUID,
         course_slug: str | None = None,
         category_slug: str | None = None,
+        attempted: bool = False,
         cursor: str | None = None,
         limit: int = 20,
     ) -> QuizCatalogPage: ...
