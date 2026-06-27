@@ -49,6 +49,16 @@ export interface AgentSessionStart {
 export interface AgentHistory {
 	sessionId: string;
 	messages: AgentMessage[];
+	/** Opaque token for the next (older) page when paged with `limit`;
+	 *  null when the oldest message is already included or unpaged. */
+	nextCursor: string | null;
+}
+
+export interface HistoryParams {
+	/** Return the most-recent N messages (still chronological). */
+	limit?: number;
+	/** Opaque cursor (a prior `nextCursor`) to page into older history. */
+	before?: string;
 }
 
 export class AgentApiError extends Error {
@@ -119,8 +129,14 @@ export function sendMessage(
 	);
 }
 
-export function getHistory(sessionId: string): Promise<AgentHistory> {
-	return getJson<AgentHistory>(`/api/v1/chat/sessions/${encodeURIComponent(sessionId)}`);
+export function getHistory(sessionId: string, params: HistoryParams = {}): Promise<AgentHistory> {
+	const q = new URLSearchParams();
+	if (params.limit !== undefined) q.set('limit', String(params.limit));
+	if (params.before) q.set('before', params.before);
+	const qs = q.toString();
+	return getJson<AgentHistory>(
+		`/api/v1/chat/sessions/${encodeURIComponent(sessionId)}${qs ? `?${qs}` : ''}`
+	);
 }
 
 /** Callbacks for the streamed turn. `onDone` carries the final persisted

@@ -328,6 +328,14 @@
 				</div>
 			{/if}
 
+			{#if vm.hasOlder}
+				<div class="load-older">
+					<PixelButton variant="ghost" size="sm" disabled={vm.loadingOlder} onclick={() => vm.loadOlder()}>
+						{vm.loadingOlder ? 'Loading…' : 'Load older messages'}
+					</PixelButton>
+				</div>
+			{/if}
+
 			{#each vm.bubbles as bubble (bubble.id)}
 				<article class="bubble bubble--{bubble.role}" class:bubble--pending={bubble.pending} class:bubble--error={bubble.error}>
 					<header class="bubble__head">
@@ -600,6 +608,11 @@
 </div>
 
 <style>
+	.load-older {
+		display: flex;
+		justify-content: center;
+		padding: 0.4rem 0 0.6rem;
+	}
 	.agent {
 		font-family: var(--font-mono, 'JetBrains Mono', monospace);
 		background: #ffffff;
