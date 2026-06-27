@@ -259,7 +259,31 @@ export const en = {
 	'wallet.notAvailable': 'Not available',
 	'wallet.methodWalletConnect': 'WalletConnect + SIWE',
 	'wallet.methodCyberdyne': 'CyberdyneAuth',
-	'wallet.methodUnknown': 'Unknown'
+	'wallet.methodUnknown': 'Unknown',
+
+	// ── Learn tabs + Learning Tracks ──
+	'courses.tabs.aria': 'Learn sections',
+	'courses.tabs.courses': 'Courses',
+	'courses.tabs.tracks': 'Learning Tracks',
+	'tracks.hero.title': 'Learning Tracks',
+	'tracks.hero.subtitle': 'Guided multi-course paths that take you from fundamentals to mastery.',
+	'tracks.loading': 'Loading tracks…',
+	'tracks.empty': 'No learning tracks are available yet.',
+	'tracks.backToTracks': '← All tracks',
+	'tracks.estimatedTime': '⏱ {time}',
+	'tracks.moduleCount': '{count}-module track',
+	'tracks.enroll': 'Enroll in this track',
+	'tracks.enrolling': 'Enrolling…',
+	'tracks.signInToEnroll': 'Sign in to enroll and track your progress.',
+	'tracks.markComplete': 'Mark module complete',
+	'tracks.status.active': 'In progress',
+	'tracks.status.completed': 'Completed',
+	'tracks.status.dropped': 'Dropped',
+	'tracks.deadline.upcoming': 'Due in {days}d',
+	'tracks.deadline.urgent': 'Due in {days}d',
+	'tracks.deadline.overdue': 'Overdue by {days}d',
+	'tracks.lock.level': 'Unlocks once you reach the required level (after {blocker}).',
+	'tracks.lock.sequential': 'Complete {blocker} first.'
 };
 
 export type Messages = typeof en;

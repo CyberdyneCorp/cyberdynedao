@@ -249,5 +249,29 @@ export const fr: Messages = {
 	'wallet.notAvailable': 'Non disponible',
 	'wallet.methodWalletConnect': 'WalletConnect + SIWE',
 	'wallet.methodCyberdyne': 'CyberdyneAuth',
-	'wallet.methodUnknown': 'Inconnu'
+	'wallet.methodUnknown': 'Inconnu',
+
+	// ── Onglets Apprendre + Parcours ──
+	'courses.tabs.aria': 'Sections Apprendre',
+	'courses.tabs.courses': 'Cours',
+	'courses.tabs.tracks': "Parcours d'apprentissage",
+	'tracks.hero.title': "Parcours d'apprentissage",
+	'tracks.hero.subtitle': 'Des parcours guidés multi-cours, des bases à la maîtrise.',
+	'tracks.loading': 'Chargement des parcours…',
+	'tracks.empty': "Aucun parcours d'apprentissage n'est encore disponible.",
+	'tracks.backToTracks': '← Tous les parcours',
+	'tracks.estimatedTime': '⏱ {time}',
+	'tracks.moduleCount': 'parcours de {count} modules',
+	'tracks.enroll': "S'inscrire à ce parcours",
+	'tracks.enrolling': 'Inscription…',
+	'tracks.signInToEnroll': 'Connectez-vous pour vous inscrire et suivre votre progression.',
+	'tracks.markComplete': 'Marquer le module comme terminé',
+	'tracks.status.active': 'En cours',
+	'tracks.status.completed': 'Terminé',
+	'tracks.status.dropped': 'Abandonné',
+	'tracks.deadline.upcoming': 'Échéance dans {days}j',
+	'tracks.deadline.urgent': 'Échéance dans {days}j',
+	'tracks.deadline.overdue': 'En retard de {days}j',
+	'tracks.lock.level': 'Se débloque une fois le niveau requis atteint (après {blocker}).',
+	'tracks.lock.sequential': "Terminez d'abord {blocker}."
 };
