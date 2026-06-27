@@ -13,6 +13,7 @@ from datetime import datetime
 from uuid import UUID
 
 from cyberdyne_backend.domain.courses import (
+    MAX_COURSE_LIST_LIMIT,
     Category,
     CategoryNotFoundError,
     CategoryRepository,
@@ -39,9 +40,18 @@ class ListCourses:
         level: CourseLevel | None = None,
         include_drafts: bool = False,
         locale: str = "en",
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[Course]:
+        # limit=None preserves the original full-catalogue behaviour; a
+        # supplied limit is clamped to a safe ceiling and offset floored.
+        clamped = None if limit is None else max(1, min(limit, MAX_COURSE_LIST_LIMIT))
         return await self.repo.list_courses(
-            level=level, include_drafts=include_drafts, locale=locale
+            level=level,
+            include_drafts=include_drafts,
+            locale=locale,
+            limit=clamped,
+            offset=max(0, offset),
         )
 
 

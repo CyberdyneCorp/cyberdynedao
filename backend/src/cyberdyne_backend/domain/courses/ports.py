@@ -42,11 +42,19 @@ class CourseRepository(Protocol):
         level: CourseLevel | None = None,
         include_drafts: bool = False,
         locale: str = "en",
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[Course]:
         """All courses ordered by (level, sort_order). Drafts are
         filtered out unless ``include_drafts`` is true. Lessons are
         included so a catalogue render needs a single round-trip. A
-        non-English ``locale`` overlays localized fields (English fallback)."""
+        non-English ``locale`` overlays localized fields (English fallback).
+
+        ``limit``/``offset`` bound the page when supplied; ``limit=None``
+        (the default) returns the whole catalogue, preserving the existing
+        contract. The window is applied to the *courses* before their
+        lessons/translations are loaded, so a bounded request also bounds
+        the eager-load work."""
         ...
 
     async def delete(self, course_id: UUID) -> None:

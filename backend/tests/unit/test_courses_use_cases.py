@@ -62,6 +62,8 @@ class FakeCourseRepo:
         level: CourseLevel | None = None,
         include_drafts: bool = False,
         locale: str = "en",
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[Course]:
         items = list(self._by_slug.values())
         if not include_drafts:
@@ -69,6 +71,10 @@ class FakeCourseRepo:
         if level is not None:
             items = [c for c in items if c.level is level]
         items.sort(key=lambda c: (c.level.value, c.sort_order, c.title))
+        if offset:
+            items = items[offset:]
+        if limit is not None:
+            items = items[:limit]
         return items
 
     async def get_by_id(self, course_id: UUID) -> Course | None:
@@ -171,6 +177,36 @@ class TestVisibility:
         uc = ListCourses(repo=FakeCourseRepo(seed=[beginner, advanced]))
         only_adv = await uc.execute(level=CourseLevel.ADVANCED)
         assert [c.slug for c in only_adv] == ["a"]
+
+    def _seed_published(self, n: int) -> FakeCourseRepo:
+        courses = []
+        for i in range(n):
+            c = new_course(title=f"C{i:02d}", description="d", level="Beginner", sort_order=i)
+            c.publish()
+            courses.append(c)
+        return FakeCourseRepo(seed=courses)
+
+    async def test_no_limit_returns_full_catalogue(self) -> None:
+        uc = ListCourses(repo=self._seed_published(5))
+        courses = await uc.execute()
+        assert len(courses) == 5  # default: unpaged, backward-compatible
+
+    async def test_limit_bounds_the_page(self) -> None:
+        uc = ListCourses(repo=self._seed_published(5))
+        courses = await uc.execute(limit=2)
+        assert [c.title for c in courses] == ["C00", "C01"]
+
+    async def test_offset_with_limit_pages(self) -> None:
+        uc = ListCourses(repo=self._seed_published(5))
+        courses = await uc.execute(limit=2, offset=2)
+        assert [c.title for c in courses] == ["C02", "C03"]
+
+    async def test_limit_clamped_to_ceiling(self) -> None:
+        repo = self._seed_published(3)
+        uc = ListCourses(repo=repo)
+        # An over-cap limit must not error and still returns what exists.
+        courses = await uc.execute(limit=10_000)
+        assert len(courses) == 3
 
     async def test_get_draft_404_for_anon(self) -> None:
         uc = GetCourse(repo=self._seed())

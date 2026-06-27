@@ -194,6 +194,8 @@ class SqlAlchemyCourseRepository:
         level: CourseLevel | None = None,
         include_drafts: bool = False,
         locale: str = "en",
+        limit: int | None = None,
+        offset: int = 0,
     ) -> list[Course]:
         stmt = select(CourseRow)
         if not include_drafts:
@@ -201,6 +203,12 @@ class SqlAlchemyCourseRepository:
         if level is not None:
             stmt = stmt.where(CourseRow.level == level.value)
         stmt = stmt.order_by(CourseRow.level, CourseRow.sort_order, CourseRow.title)
+        # Bound the page (and thus the lesson/translation eager-load below)
+        # before fetching. ``limit is None`` keeps the full-catalogue read.
+        if offset:
+            stmt = stmt.offset(offset)
+        if limit is not None:
+            stmt = stmt.limit(limit)
         rows = (await self._session.execute(stmt)).scalars().all()
         if not rows:
             return []

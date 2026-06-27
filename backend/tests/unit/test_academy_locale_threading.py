@@ -22,7 +22,9 @@ class RecordingCourseRepo:
         self.calls.append(locale)
         return new_course(title="C", description="d", level="Beginner", slug=slug)
 
-    async def list_courses(self, *, level=None, include_drafts=False, locale="en"):
+    async def list_courses(
+        self, *, level=None, include_drafts=False, locale="en", limit=None, offset=0
+    ):
         self.calls.append(locale)
         return []
 

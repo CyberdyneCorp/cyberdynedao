@@ -171,3 +171,38 @@ def test_admin_requires_editor(client: TestClient) -> None:
         json={"title": "x", "description": "d", "level": "Beginner"},
     )
     assert resp.status_code in (401, 403)
+
+
+def _publish_course(editor_client: TestClient, title: str) -> None:
+    editor_client.post(
+        "/api/v1/admin/courses",
+        json={"title": title, "description": "d", "level": "Beginner"},
+    )
+    slug = title.lower().replace(" ", "-")
+    editor_client.post(f"/api/v1/admin/courses/{slug}/publish")
+
+
+@pytest.mark.usefixtures("_prepared_schema")
+def test_courses_limit_and_offset_page_the_catalogue(editor_client: TestClient) -> None:
+    # Three published courses; default order is (level, sort_order, title).
+    for title in ("Course A", "Course B", "Course C"):
+        _publish_course(editor_client, title)
+    anon = TestClient(editor_client.app)
+
+    # No params → full catalogue (backward-compatible bare array).
+    full = anon.get("/api/v1/courses").json()
+    assert [c["title"] for c in full] == ["Course A", "Course B", "Course C"]
+    assert isinstance(full, list)  # shape stays a bare array
+
+    first = anon.get("/api/v1/courses?limit=2").json()
+    assert [c["title"] for c in first] == ["Course A", "Course B"]
+
+    second = anon.get("/api/v1/courses?limit=2&offset=2").json()
+    assert [c["title"] for c in second] == ["Course C"]
+
+
+@pytest.mark.usefixtures("_prepared_schema")
+def test_courses_pagination_params_validated(client: TestClient) -> None:
+    assert client.get("/api/v1/courses?limit=0").status_code == 422
+    assert client.get("/api/v1/courses?limit=201").status_code == 422
+    assert client.get("/api/v1/courses?offset=-1").status_code == 422

@@ -27,6 +27,13 @@ from cyberdyne_backend.domain.courses.errors import (
     InvalidLessonContentError,
 )
 
+# Public catalogue paging cap. The catalogue is unpaged by default (the
+# full list, for backward compatibility with existing clients); when a
+# caller passes an optional ``limit`` it is clamped to this ceiling so a
+# single request can never fetch (and eager-load lessons for) an
+# unbounded number of courses.
+MAX_COURSE_LIST_LIMIT = 200
+
 
 class CourseLevel(StrEnum):
     BEGINNER = "Beginner"
