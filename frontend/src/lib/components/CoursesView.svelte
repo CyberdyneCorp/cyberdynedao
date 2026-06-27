@@ -1120,7 +1120,7 @@
 		display: flex;
 		gap: 0.25rem;
 		margin: 0 0 1rem;
-		border-bottom: 2px solid var(--pixel-border, #2b2b3a);
+		border-bottom: 2px solid #e5e7eb;
 	}
 	.tab {
 		background: none;
@@ -1128,17 +1128,16 @@
 		border-bottom: 2px solid transparent;
 		margin-bottom: -2px;
 		padding: 0.45rem 0.9rem;
-		color: inherit;
-		opacity: 0.65;
+		color: #6b7280;
 		cursor: pointer;
 		font: inherit;
 	}
 	.tab--active {
-		opacity: 1;
-		border-bottom-color: var(--pixel-accent, #6cf);
+		color: #111827;
+		border-bottom-color: #3b82f6;
 	}
 	.tab:hover {
-		opacity: 1;
+		color: #111827;
 	}
 	.load-more {
 		display: flex;
