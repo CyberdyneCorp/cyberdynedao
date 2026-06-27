@@ -249,5 +249,29 @@ export const ptBR: Messages = {
 	'wallet.notAvailable': 'Indisponível',
 	'wallet.methodWalletConnect': 'WalletConnect + SIWE',
 	'wallet.methodCyberdyne': 'CyberdyneAuth',
-	'wallet.methodUnknown': 'Desconhecido'
+	'wallet.methodUnknown': 'Desconhecido',
+
+	// ── Abas do Aprender + Trilhas ──
+	'courses.tabs.aria': 'Seções do Aprender',
+	'courses.tabs.courses': 'Cursos',
+	'courses.tabs.tracks': 'Trilhas de Aprendizado',
+	'tracks.hero.title': 'Trilhas de Aprendizado',
+	'tracks.hero.subtitle': 'Percursos guiados com vários cursos, do básico à maestria.',
+	'tracks.loading': 'Carregando trilhas…',
+	'tracks.empty': 'Nenhuma trilha de aprendizado disponível ainda.',
+	'tracks.backToTracks': '← Todas as trilhas',
+	'tracks.estimatedTime': '⏱ {time}',
+	'tracks.moduleCount': 'trilha de {count} módulos',
+	'tracks.enroll': 'Inscrever-se nesta trilha',
+	'tracks.enrolling': 'Inscrevendo…',
+	'tracks.signInToEnroll': 'Entre para se inscrever e acompanhar seu progresso.',
+	'tracks.markComplete': 'Marcar módulo como concluído',
+	'tracks.status.active': 'Em andamento',
+	'tracks.status.completed': 'Concluída',
+	'tracks.status.dropped': 'Abandonada',
+	'tracks.deadline.upcoming': 'Vence em {days}d',
+	'tracks.deadline.urgent': 'Vence em {days}d',
+	'tracks.deadline.overdue': 'Atrasada {days}d',
+	'tracks.lock.level': 'Desbloqueia ao atingir o nível necessário (após {blocker}).',
+	'tracks.lock.sequential': 'Conclua {blocker} primeiro.'
 };

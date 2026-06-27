@@ -18,6 +18,11 @@
 	import { t, locale } from '$lib/i18n';
 	import QuizPlayer from './QuizPlayer.svelte';
 	import LessonContent from './LessonContent.svelte';
+	import LearningTracksView from './LearningTracksView.svelte';
+
+	// Learn view has two surfaces: the course catalogue and learning tracks
+	// (guided multi-course paths). Default to courses for backward-compat.
+	let activeTab = $state<'courses' | 'tracks'>('courses');
 
 	// The view-model owns all backend orchestration (catalogue, detail,
 	// progress, mark-complete, certificate) over the new /api/v1/courses
@@ -620,6 +625,28 @@
 		</div>
 	</header>
 
+	<nav class="tabs" aria-label={$t('courses.tabs.aria')}>
+		<button
+			class="tab"
+			class:tab--active={activeTab === 'courses'}
+			aria-pressed={activeTab === 'courses'}
+			onclick={() => (activeTab = 'courses')}
+		>
+			{$t('courses.tabs.courses')}
+		</button>
+		<button
+			class="tab"
+			class:tab--active={activeTab === 'tracks'}
+			aria-pressed={activeTab === 'tracks'}
+			onclick={() => (activeTab = 'tracks')}
+		>
+			{$t('courses.tabs.tracks')}
+		</button>
+	</nav>
+
+	{#if activeTab === 'tracks'}
+		<LearningTracksView />
+	{:else}
 	{#if !authReady}
 		<div class="auth-banner">
 			<strong>{$t('courses.guest.title')}</strong>
@@ -1054,10 +1081,35 @@
 			{/if}
 		</section>
 	{/if}
+	{/if}
 </div>
 </PixelScrollArea>
 
 <style>
+	.tabs {
+		display: flex;
+		gap: 0.25rem;
+		margin: 0 0 1rem;
+		border-bottom: 2px solid var(--pixel-border, #2b2b3a);
+	}
+	.tab {
+		background: none;
+		border: none;
+		border-bottom: 2px solid transparent;
+		margin-bottom: -2px;
+		padding: 0.45rem 0.9rem;
+		color: inherit;
+		opacity: 0.65;
+		cursor: pointer;
+		font: inherit;
+	}
+	.tab--active {
+		opacity: 1;
+		border-bottom-color: var(--pixel-accent, #6cf);
+	}
+	.tab:hover {
+		opacity: 1;
+	}
 	.courses-view {
 		padding: 1.25rem;
 		color: #000000;

@@ -249,5 +249,29 @@ export const es: Messages = {
 	'wallet.notAvailable': 'No disponible',
 	'wallet.methodWalletConnect': 'WalletConnect + SIWE',
 	'wallet.methodCyberdyne': 'CyberdyneAuth',
-	'wallet.methodUnknown': 'Desconocido'
+	'wallet.methodUnknown': 'Desconocido',
+
+	// ── Pestañas de Aprender + Rutas ──
+	'courses.tabs.aria': 'Secciones de Aprender',
+	'courses.tabs.courses': 'Cursos',
+	'courses.tabs.tracks': 'Rutas de Aprendizaje',
+	'tracks.hero.title': 'Rutas de Aprendizaje',
+	'tracks.hero.subtitle': 'Itinerarios guiados de varios cursos, de lo básico a la maestría.',
+	'tracks.loading': 'Cargando rutas…',
+	'tracks.empty': 'Aún no hay rutas de aprendizaje disponibles.',
+	'tracks.backToTracks': '← Todas las rutas',
+	'tracks.estimatedTime': '⏱ {time}',
+	'tracks.moduleCount': 'ruta de {count} módulos',
+	'tracks.enroll': 'Inscribirse en esta ruta',
+	'tracks.enrolling': 'Inscribiendo…',
+	'tracks.signInToEnroll': 'Inicia sesión para inscribirte y seguir tu progreso.',
+	'tracks.markComplete': 'Marcar módulo como completado',
+	'tracks.status.active': 'En curso',
+	'tracks.status.completed': 'Completada',
+	'tracks.status.dropped': 'Abandonada',
+	'tracks.deadline.upcoming': 'Vence en {days}d',
+	'tracks.deadline.urgent': 'Vence en {days}d',
+	'tracks.deadline.overdue': 'Atrasada {days}d',
+	'tracks.lock.level': 'Se desbloquea al alcanzar el nivel requerido (tras {blocker}).',
+	'tracks.lock.sequential': 'Completa {blocker} primero.'
 };
