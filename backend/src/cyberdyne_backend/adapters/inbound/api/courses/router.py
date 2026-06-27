@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
 from cyberdyne_backend.adapters.inbound.api.courses.schemas import (
     CategoryResponse,
@@ -79,6 +79,7 @@ from cyberdyne_backend.application.courses import (
 from cyberdyne_backend.application.courses.certificates import CourseCertificateVerification
 from cyberdyne_backend.domain.auth_identity import UserPrincipal
 from cyberdyne_backend.domain.courses import (
+    MAX_COURSE_LIST_LIMIT,
     Category,
     CategoryNotFoundError,
     Course,
@@ -430,7 +431,15 @@ async def list_courses(
     use_case: Annotated[ListCourses, Depends(get_list_courses_uc)],
     locale: Annotated[str, Depends(resolve_locale)],
     level: str | None = None,
+    limit: Annotated[int | None, Query(ge=1, le=MAX_COURSE_LIST_LIMIT)] = None,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[CourseSummaryResponse]:
+    """Public course catalogue. Returns a bare array ordered by
+    ``(level, sort_order, title)``. ``limit``/``offset`` optionally page
+    the result so a client (or a future high-traffic surface) can fetch a
+    window instead of the full catalogue; omitting ``limit`` returns the
+    whole list as before. The response shape is unchanged either way —
+    clients that ignore the new params keep working."""
     parsed_level = None
     if level is not None:
         try:
@@ -441,6 +450,8 @@ async def list_courses(
         level=parsed_level,
         include_drafts=_viewer_can_see_drafts(request),
         locale=locale,
+        limit=limit,
+        offset=offset,
     )
     return [_summary(c) for c in courses]
 

@@ -19,11 +19,24 @@ the full lesson syllabus SHALL be returned but only the first lesson's body;
 lessons 2+ SHALL have their body/content stripped. Authenticated viewers SHALL
 receive all lesson bodies.
 
+`GET /api/v1/courses` SHALL accept optional `limit` (1..200) and `offset`
+(>=0) query params that page the catalogue, applied to the courses before
+their lessons are loaded. Omitting `limit` SHALL return the full catalogue and
+the response SHALL remain a bare array ordered by `(level, sort_order, title)`
+either way, so existing clients are unaffected.
+
 #### Scenario: Guest sees syllabus but only first lesson body
 
 - GIVEN a published course with 3 lessons
 - WHEN an anonymous user GETs the course
 - THEN all 3 lesson titles are present but only lesson 1 has a body
+
+#### Scenario: Paged catalogue
+
+- GIVEN three published courses
+- WHEN a client GETs `/api/v1/courses?limit=2&offset=2`
+- THEN only the third course is returned, as a bare array, and an out-of-range
+  `limit`/`offset` returns `422`
 
 #### Scenario: Draft hidden from public
 

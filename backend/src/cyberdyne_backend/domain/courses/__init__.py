@@ -13,6 +13,7 @@ from cyberdyne_backend.domain.courses.certificates import (
     new_course_certificate,
 )
 from cyberdyne_backend.domain.courses.entities import (
+    MAX_COURSE_LIST_LIMIT,
     Category,
     Course,
     CourseLevel,
@@ -55,6 +56,7 @@ from cyberdyne_backend.domain.courses.progress import (
 )
 
 __all__ = [
+    "MAX_COURSE_LIST_LIMIT",
     "Category",
     "CategoryNotFoundError",
     "CategoryRepository",

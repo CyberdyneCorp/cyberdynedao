@@ -201,10 +201,16 @@ class _FakeCourseRepo:
         )
         self._course = c
 
-    async def list_courses(self, *, level=None, include_drafts=False, locale="en"):
+    async def list_courses(
+        self, *, level=None, include_drafts=False, locale="en", limit=None, offset=0
+    ):
         items = [self._course]
         if level is not None:
             items = [x for x in items if x.level is level]
+        if offset:
+            items = items[offset:]
+        if limit is not None:
+            items = items[:limit]
         return items
 
     async def get_by_slug(self, slug: str, *, include_drafts: bool = False, locale: str = "en"):
