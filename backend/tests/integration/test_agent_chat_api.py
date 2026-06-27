@@ -255,9 +255,46 @@ def test_history_endpoint_returns_the_turn(app: FastAPI) -> None:
     )
     hist = client.get(f"/api/v1/agent/sessions/{session_id}")
     assert hist.status_code == 200, hist.text
-    roles = [m["role"] for m in hist.json()["messages"]]
+    body = hist.json()
+    roles = [m["role"] for m in body["messages"]]
     assert "user" in roles
     assert "assistant" in roles
+    # Default (unpaged) keeps the existing shape; nextCursor is additive/null.
+    assert body["nextCursor"] is None
+
+
+@pytest.mark.usefixtures("_prepared_schema")
+def test_history_limit_pages_with_cursor(app: FastAPI) -> None:
+    client = _client(app, answer="ok.", matches=[])
+    session_id = _start(client)
+    # Three turns → six messages (user+assistant each).
+    for q in ("one", "two", "three"):
+        client.post(
+            f"/api/v1/agent/sessions/{session_id}/messages",
+            json={"content": q},
+        )
+
+    first = client.get(f"/api/v1/agent/sessions/{session_id}?limit=2").json()
+    assert len(first["messages"]) == 2
+    assert first["nextCursor"] is not None  # older messages remain
+
+    # Page backwards with the cursor; the older page precedes the first.
+    second = client.get(
+        f"/api/v1/agent/sessions/{session_id}?limit=2&before={first['nextCursor']}"
+    ).json()
+    assert len(second["messages"]) == 2
+    # No overlap between the two pages.
+    first_ids = {m["id"] for m in first["messages"]}
+    second_ids = {m["id"] for m in second["messages"]}
+    assert first_ids.isdisjoint(second_ids)
+
+
+@pytest.mark.usefixtures("_prepared_schema")
+def test_history_limit_out_of_range_rejected(app: FastAPI) -> None:
+    client = _client(app, answer="ok.", matches=[])
+    session_id = _start(client)
+    assert client.get(f"/api/v1/agent/sessions/{session_id}?limit=0").status_code == 422
+    assert client.get(f"/api/v1/agent/sessions/{session_id}?limit=201").status_code == 422
 
 
 @pytest.mark.usefixtures("_prepared_schema")

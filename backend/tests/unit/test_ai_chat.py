@@ -56,8 +56,20 @@ class _FakeChatRepo:
     async def append_message(self, message: ChatMessage) -> None:
         self.messages.append(message)
 
-    async def list_messages(self, session_id: uuid.UUID) -> list[ChatMessage]:
-        return [m for m in self.messages if m.session_id == session_id]
+    async def list_messages(
+        self,
+        session_id: uuid.UUID,
+        *,
+        limit: int | None = None,
+        before: tuple[datetime, uuid.UUID] | None = None,
+    ) -> list[ChatMessage]:
+        msgs = [m for m in self.messages if m.session_id == session_id]
+        msgs.sort(key=lambda m: (m.created_at, m.id))
+        if before is not None:
+            msgs = [m for m in msgs if (m.created_at, m.id) < before]
+        if limit is not None:
+            msgs = msgs[-limit:]  # most-recent N, still chronological
+        return msgs
 
 
 class _FakeIngestor:
@@ -729,12 +741,60 @@ class TestGetChatHistory:
 
         await repo.append_message(new_user_message(session_id=session.id, content="hi"))
         await repo.append_message(new_assistant_message(session_id=session.id, content="hello"))
-        history = await GetChatHistory(repo=repo).execute(session.id)
-        assert [m.role for m in history] == [ChatRole.USER, ChatRole.ASSISTANT]
+        page = await GetChatHistory(repo=repo).execute(session.id)
+        # Default (no limit): whole history, no cursor — backward-compatible.
+        assert [m.role for m in page.messages] == [ChatRole.USER, ChatRole.ASSISTANT]
+        assert page.next_cursor is None
 
     async def test_missing_session_raises(self) -> None:
         with pytest.raises(ChatSessionNotFoundError):
             await GetChatHistory(repo=_FakeChatRepo()).execute(uuid.uuid4())
+
+    async def _seed_messages(self, repo: _FakeChatRepo, session_id: uuid.UUID, n: int) -> None:
+        from cyberdyne_backend.domain.ai_chat import new_user_message
+
+        base = datetime(2026, 1, 1, tzinfo=UTC)
+        for i in range(n):
+            msg = new_user_message(session_id=session_id, content=f"m{i:02d}")
+            # Deterministic, strictly increasing timestamps for stable paging.
+            msg.created_at = base.replace(minute=i)
+            await repo.append_message(msg)
+
+    async def test_limit_returns_most_recent_with_cursor(self) -> None:
+        repo = _FakeChatRepo()
+        session = await StartChatSession(repo=repo).execute()
+        await self._seed_messages(repo, session.id, 5)
+        page = await GetChatHistory(repo=repo).execute(session.id, limit=2)
+        # Most-recent 2, still chronological.
+        assert [m.content for m in page.messages] == ["m03", "m04"]
+        assert page.next_cursor is not None  # older messages remain
+
+    async def test_cursor_pages_backwards(self) -> None:
+        repo = _FakeChatRepo()
+        session = await StartChatSession(repo=repo).execute()
+        await self._seed_messages(repo, session.id, 5)
+        uc = GetChatHistory(repo=repo)
+        first = await uc.execute(session.id, limit=2)
+        second = await uc.execute(session.id, limit=2, before=first.next_cursor)
+        assert [m.content for m in second.messages] == ["m01", "m02"]
+        third = await uc.execute(session.id, limit=2, before=second.next_cursor)
+        assert [m.content for m in third.messages] == ["m00"]
+        assert third.next_cursor is None  # reached the oldest message
+
+    async def test_limit_at_or_above_total_has_no_cursor(self) -> None:
+        repo = _FakeChatRepo()
+        session = await StartChatSession(repo=repo).execute()
+        await self._seed_messages(repo, session.id, 3)
+        page = await GetChatHistory(repo=repo).execute(session.id, limit=10)
+        assert [m.content for m in page.messages] == ["m00", "m01", "m02"]
+        assert page.next_cursor is None
+
+    async def test_malformed_cursor_treated_as_most_recent(self) -> None:
+        repo = _FakeChatRepo()
+        session = await StartChatSession(repo=repo).execute()
+        await self._seed_messages(repo, session.id, 3)
+        page = await GetChatHistory(repo=repo).execute(session.id, limit=2, before="not-a-cursor")
+        assert [m.content for m in page.messages] == ["m01", "m02"]
 
 
 # ── RunChatTurn (tool loop) ──────────────────────────────────────────

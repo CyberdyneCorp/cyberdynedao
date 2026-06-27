@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import datetime
 from typing import cast
 
 import pytest
@@ -59,8 +60,20 @@ class _FakeChatRepo:
     async def append_message(self, message: ChatMessage) -> None:
         self.messages.append(message)
 
-    async def list_messages(self, session_id: uuid.UUID) -> list[ChatMessage]:
-        return [m for m in self.messages if m.session_id == session_id]
+    async def list_messages(
+        self,
+        session_id: uuid.UUID,
+        *,
+        limit: int | None = None,
+        before: tuple[datetime, uuid.UUID] | None = None,
+    ) -> list[ChatMessage]:
+        msgs = [m for m in self.messages if m.session_id == session_id]
+        msgs.sort(key=lambda m: (m.created_at, m.id))
+        if before is not None:
+            msgs = [m for m in msgs if (m.created_at, m.id) < before]
+        if limit is not None:
+            msgs = msgs[-limit:]
+        return msgs
 
 
 class _ScriptedLLM:

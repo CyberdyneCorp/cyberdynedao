@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cyberdyne_backend.adapters.outbound.persistence.ai_chat.models import (
@@ -125,16 +126,35 @@ class SqlAlchemyChatRepository:
             sess_row.last_message_at = message.created_at
         await self._session.flush()
 
-    async def list_messages(self, session_id: UUID) -> list[ChatMessage]:
-        rows = (
-            (
-                await self._session.execute(
-                    select(ChatMessageRow)
-                    .where(ChatMessageRow.session_id == session_id)
-                    .order_by(ChatMessageRow.created_at, ChatMessageRow.id)
+    async def list_messages(
+        self,
+        session_id: UUID,
+        *,
+        limit: int | None = None,
+        before: tuple[datetime, UUID] | None = None,
+    ) -> list[ChatMessage]:
+        stmt = select(ChatMessageRow).where(ChatMessageRow.session_id == session_id)
+        if before is not None:
+            before_ts, before_id = before
+            stmt = stmt.where(
+                or_(
+                    ChatMessageRow.created_at < before_ts,
+                    and_(
+                        ChatMessageRow.created_at == before_ts,
+                        ChatMessageRow.id < before_id,
+                    ),
                 )
             )
-            .scalars()
-            .all()
+        if limit is None:
+            # Whole history, chronological — the original behaviour.
+            stmt = stmt.order_by(ChatMessageRow.created_at, ChatMessageRow.id)
+            rows = (await self._session.execute(stmt)).scalars().all()
+            return [_row_to_message(r) for r in rows]
+        # Most-recent ``limit`` messages, then re-ordered chronologically so
+        # the caller still renders oldest→newest.
+        stmt = stmt.order_by(ChatMessageRow.created_at.desc(), ChatMessageRow.id.desc()).limit(
+            limit
         )
+        rows = list((await self._session.execute(stmt)).scalars().all())
+        rows.reverse()
         return [_row_to_message(r) for r in rows]
