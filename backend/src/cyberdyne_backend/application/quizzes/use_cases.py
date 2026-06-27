@@ -86,7 +86,9 @@ class ListQuizCatalog:
 
     Discovery surface for the Quizzes nav: lists quizzes from published
     courses with the learner's most-recent attempt, optionally filtered
-    by course or category, paged via an opaque cursor.
+    by course or category, paged via an opaque cursor. With ``attempted``
+    the view narrows to the learner's already-attempted quizzes, ordered
+    by most-recent submission first (the Quizzes "Results" tab).
     """
 
     reader: QuizCatalogReader
@@ -97,6 +99,7 @@ class ListQuizCatalog:
         user_id: UUID,
         course_slug: str | None = None,
         category_slug: str | None = None,
+        attempted: bool = False,
         cursor: str | None = None,
         limit: int = DEFAULT_CATALOG_LIMIT,
     ) -> QuizCatalogPage:
@@ -105,6 +108,7 @@ class ListQuizCatalog:
             user_id=user_id,
             course_slug=course_slug,
             category_slug=category_slug,
+            attempted=attempted,
             cursor=cursor,
             limit=clamped,
         )

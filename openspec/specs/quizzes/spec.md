@@ -71,8 +71,21 @@ courses with lesson/course/category metadata, question count, and the
 learner's most-recent attempt — filterable by `courseSlug` and `domain`
 (category) and keyset-paged (`limit` 1..100 default 20, opaque `cursor`).
 
+With `attempted=true` the system SHALL narrow the list to quizzes the learner
+has already attempted, ordered by most-recent submission first, and key the
+`cursor` on `(submitted_at, quiz_id)` — so the client can fetch just its recent
+results via `limit` instead of the whole catalogue. Without `attempted` the
+default full-catalogue response is preserved for backward compatibility.
+
 #### Scenario: Filtered, paged browse
 
 - GIVEN published courses with quizzes
 - WHEN a learner GETs `/api/v1/quizzes?courseSlug=python&limit=10`
 - THEN only that course's quizzes are returned with a `nextCursor` when more remain
+
+#### Scenario: Recent attempted results
+
+- GIVEN a learner who has attempted several quizzes across courses
+- WHEN they GET `/api/v1/quizzes?attempted=true&limit=10`
+- THEN only their attempted quizzes are returned, most-recently-submitted first,
+  capped at 10, with a `nextCursor` when more remain

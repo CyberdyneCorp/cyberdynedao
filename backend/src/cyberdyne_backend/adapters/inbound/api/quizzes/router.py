@@ -309,12 +309,17 @@ async def browse_quizzes(
     principal: Annotated[UserPrincipal, Depends(require_principal)],
     course_slug: Annotated[str | None, Query(alias="courseSlug")] = None,
     domain: Annotated[str | None, Query()] = None,
+    attempted: Annotated[bool, Query()] = False,
     cursor: Annotated[str | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=MAX_CATALOG_LIMIT)] = DEFAULT_CATALOG_LIMIT,
 ) -> QuizCatalogResponse:
     """List quizzes from published courses so a learner can discover and
     start them without first opening a specific lesson. ``domain`` filters
-    by the course's category slug. Reuses the existing per-lesson quiz +
+    by the course's category slug. With ``attempted=true`` the response is
+    narrowed to quizzes the learner has already attempted, ordered by most
+    recent submission first (and paged by an attempt-keyed cursor) — so the
+    Quizzes "Results" tab can fetch just its recent rows via ``limit``
+    instead of the whole catalog. Reuses the existing per-lesson quiz +
     attempt endpoints to actually play a quiz (via the returned
     ``lessonId``)."""
     user = _require_user(principal)
@@ -322,6 +327,7 @@ async def browse_quizzes(
         user_id=user.user_id,
         course_slug=course_slug,
         category_slug=domain,
+        attempted=attempted,
         cursor=cursor,
         limit=limit,
     )
