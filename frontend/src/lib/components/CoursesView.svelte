@@ -19,10 +19,12 @@
 	import QuizPlayer from './QuizPlayer.svelte';
 	import LessonContent from './LessonContent.svelte';
 	import LearningTracksView from './LearningTracksView.svelte';
+	import QuizzesView from './QuizzesView.svelte';
 
-	// Learn view has two surfaces: the course catalogue and learning tracks
-	// (guided multi-course paths). Default to courses for backward-compat.
-	let activeTab = $state<'courses' | 'tracks'>('courses');
+	// Learn view surfaces: the course catalogue, learning tracks (guided
+	// multi-course paths), and the quiz catalogue. Default to courses for
+	// backward-compat.
+	let activeTab = $state<'courses' | 'tracks' | 'quizzes'>('courses');
 
 	// The view-model owns all backend orchestration (catalogue, detail,
 	// progress, mark-complete, certificate) over the new /api/v1/courses
@@ -642,10 +644,20 @@
 		>
 			{$t('courses.tabs.tracks')}
 		</button>
+		<button
+			class="tab"
+			class:tab--active={activeTab === 'quizzes'}
+			aria-pressed={activeTab === 'quizzes'}
+			onclick={() => (activeTab = 'quizzes')}
+		>
+			{$t('courses.tabs.quizzes')}
+		</button>
 	</nav>
 
 	{#if activeTab === 'tracks'}
 		<LearningTracksView />
+	{:else if activeTab === 'quizzes'}
+		<QuizzesView />
 	{:else}
 	{#if !authReady}
 		<div class="auth-banner">

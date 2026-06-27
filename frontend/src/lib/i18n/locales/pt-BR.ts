@@ -273,5 +273,25 @@ export const ptBR: Messages = {
 	'tracks.deadline.urgent': 'Vence em {days}d',
 	'tracks.deadline.overdue': 'Atrasada {days}d',
 	'tracks.lock.level': 'Desbloqueia ao atingir o nível necessário (após {blocker}).',
-	'tracks.lock.sequential': 'Conclua {blocker} primeiro.'
+	'tracks.lock.sequential': 'Conclua {blocker} primeiro.',
+
+	// ── Catálogo de quizzes ──
+	'courses.tabs.quizzes': 'Quizzes',
+	'quizzes.hero.title': 'Quizzes',
+	'quizzes.hero.subtitle': 'Revise seus resultados recentes e encontre novos quizzes para fazer.',
+	'quizzes.signIn': 'Entre para ver seus resultados e fazer quizzes.',
+	'quizzes.back': '← Voltar aos quizzes',
+	'quizzes.tabs.aria': 'Seções de quizzes',
+	'quizzes.tabs.results': 'Meus resultados',
+	'quizzes.tabs.available': 'Disponíveis',
+	'quizzes.loading': 'Carregando…',
+	'quizzes.noResults': 'Você ainda não fez nenhum quiz.',
+	'quizzes.noAvailable': 'Nenhum quiz novo para fazer no momento.',
+	'quizzes.passed': 'Aprovado',
+	'quizzes.failed': 'Não aprovado',
+	'quizzes.scorePct': '{score}%',
+	'quizzes.retake': 'Refazer',
+	'quizzes.take': 'Fazer quiz',
+	'quizzes.loadMore': 'Carregar mais',
+	'quizzes.questionCount': '{count} questões'
 };

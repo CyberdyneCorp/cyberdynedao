@@ -273,5 +273,25 @@ export const es: Messages = {
 	'tracks.deadline.urgent': 'Vence en {days}d',
 	'tracks.deadline.overdue': 'Atrasada {days}d',
 	'tracks.lock.level': 'Se desbloquea al alcanzar el nivel requerido (tras {blocker}).',
-	'tracks.lock.sequential': 'Completa {blocker} primero.'
+	'tracks.lock.sequential': 'Completa {blocker} primero.',
+
+	// ── Catálogo de cuestionarios ──
+	'courses.tabs.quizzes': 'Cuestionarios',
+	'quizzes.hero.title': 'Cuestionarios',
+	'quizzes.hero.subtitle': 'Revisa tus resultados recientes y encuentra nuevos cuestionarios.',
+	'quizzes.signIn': 'Inicia sesión para ver tus resultados y hacer cuestionarios.',
+	'quizzes.back': '← Volver a los cuestionarios',
+	'quizzes.tabs.aria': 'Secciones de cuestionarios',
+	'quizzes.tabs.results': 'Mis resultados',
+	'quizzes.tabs.available': 'Disponibles',
+	'quizzes.loading': 'Cargando…',
+	'quizzes.noResults': 'Aún no has hecho ningún cuestionario.',
+	'quizzes.noAvailable': 'No hay cuestionarios nuevos por ahora.',
+	'quizzes.passed': 'Aprobado',
+	'quizzes.failed': 'No aprobado',
+	'quizzes.scorePct': '{score}%',
+	'quizzes.retake': 'Repetir',
+	'quizzes.take': 'Hacer cuestionario',
+	'quizzes.loadMore': 'Cargar más',
+	'quizzes.questionCount': '{count} preguntas'
 };
