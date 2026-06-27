@@ -176,20 +176,22 @@
 		padding: 1rem 1.25rem 2rem;
 		max-width: 880px;
 		margin: 0 auto;
+		color: #111827;
 	}
 	.hero h1 {
 		margin: 0 0 0.25rem;
 		font-size: 1.4rem;
+		color: #111827;
 	}
 	.hero p {
 		margin: 0 0 1rem;
-		opacity: 0.8;
+		color: #374151;
 	}
 	.subtabs {
 		display: flex;
 		gap: 0.25rem;
 		margin: 0 0 1rem;
-		border-bottom: 2px solid var(--pixel-border, #2b2b3a);
+		border-bottom: 2px solid #e5e7eb;
 	}
 	.subtab {
 		background: none;
@@ -197,17 +199,16 @@
 		border-bottom: 2px solid transparent;
 		margin-bottom: -2px;
 		padding: 0.4rem 0.8rem;
-		color: inherit;
-		opacity: 0.65;
+		color: #6b7280;
 		cursor: pointer;
 		font: inherit;
 	}
 	.subtab--active {
-		opacity: 1;
-		border-bottom-color: var(--pixel-accent, #6cf);
+		color: #111827;
+		border-bottom-color: #3b82f6;
 	}
 	.subtab:hover {
-		opacity: 1;
+		color: #111827;
 	}
 	.list {
 		list-style: none;
@@ -222,8 +223,10 @@
 		align-items: center;
 		gap: 0.75rem;
 		padding: 0.6rem 0.8rem;
-		border: 2px solid var(--pixel-border, #2b2b3a);
-		background: var(--pixel-surface, #15151f);
+		border: 2px solid #000000;
+		border-radius: 8px;
+		background: #ffffff;
+		color: #111827;
 		flex-wrap: wrap;
 	}
 	.row__main {
@@ -234,19 +237,21 @@
 	}
 	.row__title {
 		font-weight: bold;
+		color: #111827;
 	}
 	.row__sub {
 		font-size: 0.8rem;
-		opacity: 0.7;
+		color: #6b7280;
 	}
 	.row__attempt {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
 		font-size: 0.8rem;
+		color: #374151;
 	}
 	.row__date {
-		opacity: 0.6;
+		color: #6b7280;
 	}
 	.group {
 		margin-bottom: 1.25rem;
@@ -257,11 +262,13 @@
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
+		color: #111827;
 	}
 	.group__count {
 		font-size: 0.75rem;
-		opacity: 0.6;
-		border: 1px solid var(--pixel-border, #2b2b3a);
+		color: #6b7280;
+		border: 1px solid #d1d5db;
+		border-radius: 999px;
 		padding: 0 0.35rem;
 	}
 	.more {
@@ -273,20 +280,20 @@
 	.link {
 		background: none;
 		border: none;
-		color: var(--pixel-accent, #6cf);
+		color: #3b82f6;
 		cursor: pointer;
 		padding: 0;
 		font: inherit;
 		margin-bottom: 0.75rem;
 	}
 	.hint {
-		opacity: 0.75;
+		color: #6b7280;
 	}
 	.empty {
 		padding: 2rem 0;
 		text-align: center;
 	}
 	.err {
-		color: var(--pixel-danger, #ff5c5c);
+		color: #991b1b;
 	}
 </style>
