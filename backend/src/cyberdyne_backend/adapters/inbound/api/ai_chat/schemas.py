@@ -68,6 +68,10 @@ class ChatMessageResponse(_CamelModel):
 class ChatHistoryResponse(_CamelModel):
     session_id: UUID
     messages: list[ChatMessageResponse]
+    # Opaque token for the next (older) page when the history was paged with
+    # ``limit``; ``null`` when the oldest message is already included or the
+    # response is unpaged. Additive — existing clients ignore it.
+    next_cursor: str | None = None
 
 
 # ── Streaming (SSE) event chunks ─────────────────────────────────────

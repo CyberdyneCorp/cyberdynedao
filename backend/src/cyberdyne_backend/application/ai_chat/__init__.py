@@ -6,6 +6,8 @@ from cyberdyne_backend.application.ai_chat.tools import (
     ToolDispatcher,
 )
 from cyberdyne_backend.application.ai_chat.use_cases import (
+    MAX_CHAT_HISTORY_LIMIT,
+    ChatHistoryPage,
     GetChatHistory,
     RunChatTurn,
     StartChatSession,
@@ -15,6 +17,8 @@ from cyberdyne_backend.application.ai_chat.use_cases import (
 
 __all__ = [
     "CYBERDYNE_TOOLS",
+    "MAX_CHAT_HISTORY_LIMIT",
+    "ChatHistoryPage",
     "GetChatHistory",
     "RunChatTurn",
     "StartChatSession",

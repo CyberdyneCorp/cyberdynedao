@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 import logging
 import uuid
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
@@ -317,14 +320,68 @@ class StartChatSession:
         return session
 
 
+# Upper bound on a single history page. The endpoint is unpaged by
+# default (the whole history); a supplied ``limit`` is clamped to this.
+MAX_CHAT_HISTORY_LIMIT = 200
+
+# Cursor separator — a NUL byte never appears in an ISO timestamp or UUID.
+_HISTORY_CURSOR_SEP = "\x00"
+
+
+def _encode_history_cursor(created_at: datetime, message_id: UUID) -> str:
+    raw = f"{created_at.isoformat()}{_HISTORY_CURSOR_SEP}{message_id}".encode()
+    return base64.urlsafe_b64encode(raw).decode("ascii")
+
+
+def _decode_history_cursor(cursor: str) -> tuple[datetime, UUID] | None:
+    """Decode a ``before`` cursor into ``(created_at, message_id)``. Returns
+    ``None`` for a malformed token so the caller treats it as 'from the most
+    recent' rather than erroring."""
+    try:
+        raw = base64.urlsafe_b64decode(cursor.encode("ascii")).decode()
+        ts_raw, _, id_raw = raw.partition(_HISTORY_CURSOR_SEP)
+        return datetime.fromisoformat(ts_raw), UUID(id_raw)
+    except (ValueError, binascii.Error, UnicodeDecodeError):
+        return None
+
+
+@dataclass(slots=True)
+class ChatHistoryPage:
+    """A page of chat history (chronological) plus an opaque ``next_cursor``
+    pointing at older messages — ``None`` when the oldest message is on the
+    page (or the history is unpaged)."""
+
+    messages: list[ChatMessage]
+    next_cursor: str | None = None
+
+
 @dataclass(slots=True)
 class GetChatHistory:
     repo: ChatRepository
 
-    async def execute(self, session_id: UUID) -> list[ChatMessage]:
+    async def execute(
+        self,
+        session_id: UUID,
+        *,
+        limit: int | None = None,
+        before: str | None = None,
+    ) -> ChatHistoryPage:
         # Raises ChatSessionNotFoundError if missing.
         await self.repo.get_session(session_id)
-        return await self.repo.list_messages(session_id)
+        if limit is None:
+            # Backward-compatible default: the whole history, unpaged.
+            messages = await self.repo.list_messages(session_id)
+            return ChatHistoryPage(messages=messages, next_cursor=None)
+        clamped = max(1, min(limit, MAX_CHAT_HISTORY_LIMIT))
+        decoded = _decode_history_cursor(before) if before else None
+        # Fetch one extra to detect whether older history remains.
+        fetched = await self.repo.list_messages(session_id, limit=clamped + 1, before=decoded)
+        has_more = len(fetched) > clamped
+        page = fetched[-clamped:] if has_more else fetched
+        next_cursor = (
+            _encode_history_cursor(page[0].created_at, page[0].id) if has_more and page else None
+        )
+        return ChatHistoryPage(messages=page, next_cursor=next_cursor)
 
 
 @dataclass(slots=True)

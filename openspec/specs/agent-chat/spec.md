@@ -64,6 +64,24 @@ catalog semantic match (the #231 matcher) as ranked, deep-linkable `courseRefs`
 - WHEN the agent answers
 - THEN the reply includes ranked `courseRefs` pointing at the covering course/lesson
 
+### Requirement: Session history read
+
+The system SHALL expose `GET /api/v1/agent/sessions/{id}` returning the
+session's messages oldest-first. It SHALL accept an optional `limit` (1..200)
+that returns the most-recent `limit` messages (still chronological) plus a
+`nextCursor`, and an optional `before` cursor (the prior `nextCursor`) to page
+backwards into older history. Omitting `limit` SHALL return the full history
+unchanged, and `nextCursor` SHALL be additive (`null` when unpaged or when the
+oldest message is included) so existing clients are unaffected. The same
+contract applies to the tutor history read (`GET /api/v1/chat/sessions/{id}`).
+
+#### Scenario: Recent page with backward cursor
+
+- GIVEN a session with several turns of history
+- WHEN a client GETs the session with `limit=2`
+- THEN the two most-recent messages are returned with a `nextCursor`, and
+  passing it back as `before` returns the preceding (older) page
+
 ### Requirement: Unavailable-topic capture
 
 When no course clears the relevance threshold, the system SHALL still answer

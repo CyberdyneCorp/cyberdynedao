@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from cyberdyne_backend.adapters.inbound.api.agent_chat.schemas import (
     AgentMessageRequest,
@@ -32,7 +32,11 @@ from cyberdyne_backend.adapters.inbound.api.ai_chat.router import _message_respo
 from cyberdyne_backend.adapters.inbound.api.quota.dependencies import QuotaGuard
 from cyberdyne_backend.adapters.inbound.middleware.auth import require_principal
 from cyberdyne_backend.application.agent_chat import AnswerAgentTurn, AnswerTurnResult
-from cyberdyne_backend.application.ai_chat import GetChatHistory, StartChatSession
+from cyberdyne_backend.application.ai_chat import (
+    MAX_CHAT_HISTORY_LIMIT,
+    GetChatHistory,
+    StartChatSession,
+)
 from cyberdyne_backend.domain.ai_chat import ChatProviderError, ChatSessionNotFoundError
 from cyberdyne_backend.domain.auth_identity import UserPrincipal
 from cyberdyne_backend.domain.quota import QuotaMeter
@@ -145,15 +149,23 @@ async def get_history(
     session_id: UUID,
     use_case: Annotated[GetChatHistory, Depends(get_agent_history_uc)],
     principal: Annotated[UserPrincipal, Depends(require_principal)],
+    limit: Annotated[int | None, Query(ge=1, le=MAX_CHAT_HISTORY_LIMIT)] = None,
+    before: Annotated[str | None, Query()] = None,
 ) -> ChatHistoryResponse:
+    """Session history, oldest message first. Without ``limit`` the whole
+    history is returned (unchanged). With ``limit`` the most-recent N
+    messages are returned plus a ``nextCursor``; pass it back as ``before``
+    to load the previous (older) page — so a long conversation no longer
+    transfers in full on every open."""
     _require_user(principal)
     try:
-        messages = await use_case.execute(session_id)
+        page = await use_case.execute(session_id, limit=limit, before=before)
     except ChatSessionNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return ChatHistoryResponse(
         session_id=session_id,
-        messages=[_message_response(m) for m in messages],
+        messages=[_message_response(m) for m in page.messages],
+        next_cursor=page.next_cursor,
     )
 
 

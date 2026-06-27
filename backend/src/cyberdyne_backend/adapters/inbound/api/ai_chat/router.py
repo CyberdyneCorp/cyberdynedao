@@ -18,7 +18,7 @@ from collections.abc import AsyncIterator
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 
 from cyberdyne_backend.adapters.inbound.api.ai_chat.schemas import (
@@ -32,6 +32,7 @@ from cyberdyne_backend.adapters.inbound.api.ai_chat.schemas import (
 from cyberdyne_backend.adapters.inbound.api.quota.dependencies import QuotaGuard
 from cyberdyne_backend.adapters.inbound.api.rate_limit import SlidingWindowRateLimiter
 from cyberdyne_backend.application.ai_chat import (
+    MAX_CHAT_HISTORY_LIMIT,
     GetChatHistory,
     RunChatTurn,
     StartChatSession,
@@ -265,14 +266,20 @@ async def stream_message(
 async def get_history(
     session_id: UUID,
     use_case: Annotated[GetChatHistory, Depends(get_history_uc)],
+    limit: Annotated[int | None, Query(ge=1, le=MAX_CHAT_HISTORY_LIMIT)] = None,
+    before: Annotated[str | None, Query()] = None,
 ) -> ChatHistoryResponse:
+    """Session history, oldest first. ``limit`` returns the most-recent N
+    messages plus a ``nextCursor`` (pass back as ``before`` for the older
+    page); omitting ``limit`` returns the whole history as before."""
     try:
-        messages = await use_case.execute(session_id)
+        page = await use_case.execute(session_id, limit=limit, before=before)
     except ChatSessionNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return ChatHistoryResponse(
         session_id=session_id,
-        messages=[_message_response(m) for m in messages],
+        messages=[_message_response(m) for m in page.messages],
+        next_cursor=page.next_cursor,
     )
 
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Protocol, runtime_checkable
 from uuid import UUID
 
@@ -330,7 +331,21 @@ class ChatRepository(Protocol):
     async def save_session(self, session: ChatSession) -> None: ...
     async def get_session(self, session_id: UUID) -> ChatSession: ...
     async def append_message(self, message: ChatMessage) -> None: ...
-    async def list_messages(self, session_id: UUID) -> list[ChatMessage]: ...
+    async def list_messages(
+        self,
+        session_id: UUID,
+        *,
+        limit: int | None = None,
+        before: tuple[datetime, UUID] | None = None,
+    ) -> list[ChatMessage]:
+        """A session's messages in chronological order (oldest first).
+
+        ``limit=None`` (the default) returns the whole history. When a
+        ``limit`` is given, the *most recent* ``limit`` messages are
+        returned (still chronologically ordered); ``before`` — a
+        ``(created_at, id)`` keyset — restricts to messages strictly older
+        than that point so the caller can page backwards into history."""
+        ...
 
 
 # ── Attachment ingestion (issue #220) ────────────────────────────────
