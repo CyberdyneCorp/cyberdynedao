@@ -293,5 +293,9 @@ export const es: Messages = {
 	'quizzes.retake': 'Repetir',
 	'quizzes.take': 'Hacer cuestionario',
 	'quizzes.loadMore': 'Cargar más',
-	'quizzes.questionCount': '{count} preguntas'
+	'quizzes.questionCount': '{count} preguntas',
+
+	// ── Paginación del catálogo de cursos ──
+	'courses.loadMore': 'Cargar más cursos',
+	'courses.loadMoreHint': 'Mostrando solo los cursos cargados — carga más para buscar en todo el catálogo.'
 };

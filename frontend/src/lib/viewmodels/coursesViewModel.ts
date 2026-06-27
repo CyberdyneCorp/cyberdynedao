@@ -35,6 +35,12 @@ function message(err: unknown): string {
 	return err instanceof Error ? err.message : String(err);
 }
 
+// Initial catalogue page + "load more" chunk. The endpoint is otherwise
+// unbounded; capping the first fetch keeps a large catalogue fast to load.
+// A catalogue smaller than one page behaves exactly as before (no "load
+// more" shown), so existing deployments are unaffected.
+const COURSE_PAGE = 60;
+
 export interface CoursesViewModelDeps {
 	fetchCourses: typeof apiFetchCourses;
 	fetchCourse: typeof apiFetchCourse;
@@ -70,7 +76,13 @@ export interface CoursesViewModel {
 	verifying: Writable<boolean>;
 	loading: Writable<boolean>;
 	error: Writable<string | null>;
+	/** True when more courses remain to page in (last fetch filled a page). */
+	coursesHasMore: Writable<boolean>;
+	/** True while a "load more" page is in flight. */
+	loadingMore: Writable<boolean>;
 	loadCatalogue: (level?: CourseLevel) => Promise<void>;
+	/** Append the next page of courses to the catalogue. */
+	loadMoreCourses: () => Promise<void>;
 	/** Public certificate authenticity check by id. */
 	verify: (certificateId: string) => Promise<void>;
 	/** Load the signed-in learner's dashboard + recommendations (best-effort). */
@@ -95,6 +107,13 @@ export function createCoursesViewModel(
 	const verifying = writable(false);
 	const loading = writable(false);
 	const error = writable<string | null>(null);
+	const coursesHasMore = writable(false);
+	const loadingMore = writable(false);
+	// Paging cursor for the catalogue: the level the current list was loaded
+	// at and how many rows we hold, so "load more" continues from the right
+	// offset even with a level filter applied.
+	let loadedLevel: CourseLevel | undefined;
+	let loadedCount = 0;
 
 	// Best-effort: the learner's dashboard + recommendations for the
 	// catalogue header. Failures (e.g. 401 when the session lapsed) leave
@@ -131,11 +150,36 @@ export function createCoursesViewModel(
 		loading.set(true);
 		error.set(null);
 		try {
-			courses.set(await deps.fetchCourses(level));
+			const items = await deps.fetchCourses(level, { limit: COURSE_PAGE });
+			courses.set(items);
+			loadedLevel = level;
+			loadedCount = items.length;
+			// A full page back means there may be more; a short page is the end.
+			coursesHasMore.set(items.length === COURSE_PAGE);
 		} catch (err) {
 			error.set(message(err));
 		} finally {
 			loading.set(false);
+		}
+	}
+
+	async function loadMoreCourses(): Promise<void> {
+		let more = false;
+		coursesHasMore.subscribe((v) => (more = v))();
+		if (!more) return;
+		loadingMore.set(true);
+		try {
+			const items = await deps.fetchCourses(loadedLevel, {
+				limit: COURSE_PAGE,
+				offset: loadedCount
+			});
+			courses.update((cur) => [...cur, ...items]);
+			loadedCount += items.length;
+			coursesHasMore.set(items.length === COURSE_PAGE);
+		} catch (err) {
+			error.set(message(err));
+		} finally {
+			loadingMore.set(false);
 		}
 	}
 
@@ -237,7 +281,10 @@ export function createCoursesViewModel(
 		verifying,
 		loading,
 		error,
+		coursesHasMore,
+		loadingMore,
 		loadCatalogue,
+		loadMoreCourses,
 		loadMe,
 		open,
 		refreshProgress,

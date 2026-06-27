@@ -40,7 +40,9 @@
 		verification,
 		verifying,
 		loading,
-		error
+		error,
+		coursesHasMore,
+		loadingMore
 	} = vm;
 
 	// Public "verify a certificate" panel.
@@ -1040,6 +1042,22 @@
 					{#each coursesInTopic as course (course.id)}{@render courseCard(course)}{/each}
 				</ul>
 			{/if}
+
+			{#if $coursesHasMore}
+				<div class="load-more">
+					{#if search.trim() || levelFilter !== 'all' || selectedTopic !== 'all'}
+						<p class="hint">{$t('courses.loadMoreHint')}</p>
+					{/if}
+					<PixelButton
+						variant="ghost"
+						size="sm"
+						disabled={$loadingMore}
+						onclick={() => vm.loadMoreCourses()}
+					>
+						{$loadingMore ? '…' : $t('courses.loadMore')}
+					</PixelButton>
+				</div>
+			{/if}
 			</div>
 			</div>
 		{/if}
@@ -1121,6 +1139,13 @@
 	}
 	.tab:hover {
 		opacity: 1;
+	}
+	.load-more {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.4rem;
+		margin: 1.25rem 0 0.5rem;
 	}
 	.courses-view {
 		padding: 1.25rem;

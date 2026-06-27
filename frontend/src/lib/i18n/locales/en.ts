@@ -303,7 +303,11 @@ export const en = {
 	'quizzes.retake': 'Retake',
 	'quizzes.take': 'Take quiz',
 	'quizzes.loadMore': 'Load more',
-	'quizzes.questionCount': '{count} questions'
+	'quizzes.questionCount': '{count} questions',
+
+	// ── Courses catalogue paging ──
+	'courses.loadMore': 'Load more courses',
+	'courses.loadMoreHint': 'Showing loaded courses only — load more to search the full catalogue.'
 };
 
 export type Messages = typeof en;

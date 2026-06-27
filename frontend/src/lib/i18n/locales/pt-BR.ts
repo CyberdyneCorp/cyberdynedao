@@ -293,5 +293,9 @@ export const ptBR: Messages = {
 	'quizzes.retake': 'Refazer',
 	'quizzes.take': 'Fazer quiz',
 	'quizzes.loadMore': 'Carregar mais',
-	'quizzes.questionCount': '{count} questões'
+	'quizzes.questionCount': '{count} questões',
+
+	// ── Paginação do catálogo de cursos ──
+	'courses.loadMore': 'Carregar mais cursos',
+	'courses.loadMoreHint': 'Mostrando apenas os cursos carregados — carregue mais para pesquisar todo o catálogo.'
 };
