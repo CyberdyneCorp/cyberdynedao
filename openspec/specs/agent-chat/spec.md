@@ -31,10 +31,10 @@ SHALL return `404`; an unauthenticated caller SHALL be refused (`401`/`403`).
 
 ### Requirement: Proposed Notebook actions (client-committed)
 
-When (and only when) the learner asks to save or synthesize something into
-their Notebook (e.g. "make a mindmap of my Algorithms notes and save it"), the
-turn SHALL include a structured `notebookAction` — `{op: create|append, title?,
-type?, targetNoteId?, body}` (mindmaps as a ```mermaid block in `body`). The
+The turn SHALL include a structured `notebookAction` when (and only when) the
+learner asks to save or synthesize something into their Notebook (e.g. "make a
+mindmap of my Algorithms notes and save it") — `{op: create|append, title?,
+type?, targetNoteId?, body}` (mindmaps as a fenced `mermaid` block in `body`). The
 backend SHALL only PROPOSE: it performs NO notebook write/append/delete; the
 client commits via the notebook endpoints after the learner confirms. Ordinary
 Q&A turns SHALL omit `notebookAction`. An `append` proposal SHALL carry a
