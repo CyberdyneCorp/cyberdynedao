@@ -273,5 +273,25 @@ export const fr: Messages = {
 	'tracks.deadline.urgent': 'Échéance dans {days}j',
 	'tracks.deadline.overdue': 'En retard de {days}j',
 	'tracks.lock.level': 'Se débloque une fois le niveau requis atteint (après {blocker}).',
-	'tracks.lock.sequential': "Terminez d'abord {blocker}."
+	'tracks.lock.sequential': "Terminez d'abord {blocker}.",
+
+	// ── Catalogue de quiz ──
+	'courses.tabs.quizzes': 'Quiz',
+	'quizzes.hero.title': 'Quiz',
+	'quizzes.hero.subtitle': 'Consultez vos résultats récents et trouvez de nouveaux quiz à passer.',
+	'quizzes.signIn': 'Connectez-vous pour voir vos résultats et passer des quiz.',
+	'quizzes.back': '← Retour aux quiz',
+	'quizzes.tabs.aria': 'Sections de quiz',
+	'quizzes.tabs.results': 'Mes résultats',
+	'quizzes.tabs.available': 'Disponibles',
+	'quizzes.loading': 'Chargement…',
+	'quizzes.noResults': "Vous n'avez encore passé aucun quiz.",
+	'quizzes.noAvailable': 'Aucun nouveau quiz à passer pour le moment.',
+	'quizzes.passed': 'Réussi',
+	'quizzes.failed': 'Non réussi',
+	'quizzes.scorePct': '{score}%',
+	'quizzes.retake': 'Refaire',
+	'quizzes.take': 'Passer le quiz',
+	'quizzes.loadMore': 'Charger plus',
+	'quizzes.questionCount': '{count} questions'
 };

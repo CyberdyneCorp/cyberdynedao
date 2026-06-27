@@ -283,7 +283,27 @@ export const en = {
 	'tracks.deadline.urgent': 'Due in {days}d',
 	'tracks.deadline.overdue': 'Overdue by {days}d',
 	'tracks.lock.level': 'Unlocks once you reach the required level (after {blocker}).',
-	'tracks.lock.sequential': 'Complete {blocker} first.'
+	'tracks.lock.sequential': 'Complete {blocker} first.',
+
+	// ── Quizzes catalogue ──
+	'courses.tabs.quizzes': 'Quizzes',
+	'quizzes.hero.title': 'Quizzes',
+	'quizzes.hero.subtitle': 'Review your recent quiz results and find new quizzes to take.',
+	'quizzes.signIn': 'Sign in to see your quiz results and take quizzes.',
+	'quizzes.back': '← Back to quizzes',
+	'quizzes.tabs.aria': 'Quiz sections',
+	'quizzes.tabs.results': 'My results',
+	'quizzes.tabs.available': 'Available',
+	'quizzes.loading': 'Loading…',
+	'quizzes.noResults': "You haven't taken any quizzes yet.",
+	'quizzes.noAvailable': 'No new quizzes to take right now.',
+	'quizzes.passed': 'Passed',
+	'quizzes.failed': 'Not passed',
+	'quizzes.scorePct': '{score}%',
+	'quizzes.retake': 'Retake',
+	'quizzes.take': 'Take quiz',
+	'quizzes.loadMore': 'Load more',
+	'quizzes.questionCount': '{count} questions'
 };
 
 export type Messages = typeof en;

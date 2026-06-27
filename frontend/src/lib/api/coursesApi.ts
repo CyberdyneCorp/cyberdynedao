@@ -336,6 +336,53 @@ export function fetchQuizFeedback(
 	});
 }
 
+// ── Quiz catalogue / browse (me) ──────────────────────────────────────
+
+export interface QuizLastAttempt {
+	score: number;
+	passed: boolean;
+	attemptNumber: number;
+	submittedAt: string;
+}
+
+export interface QuizCatalogItem {
+	quizId: string;
+	lessonId: string;
+	lessonTitle: string;
+	courseSlug: string;
+	courseTitle: string;
+	categorySlug: string | null;
+	passingScore: number;
+	questionCount: number;
+	/** The learner's most-recent attempt, or null if never taken. */
+	lastAttempt: QuizLastAttempt | null;
+}
+
+export interface QuizCatalogPage {
+	items: QuizCatalogItem[];
+	nextCursor: string | null;
+}
+
+export interface QuizCatalogParams {
+	/** true → only the learner's attempted quizzes, most-recent first. */
+	attempted?: boolean;
+	courseSlug?: string;
+	domain?: string;
+	cursor?: string;
+	limit?: number;
+}
+
+export function fetchQuizCatalogue(params: QuizCatalogParams = {}): Promise<QuizCatalogPage> {
+	const q = new URLSearchParams();
+	if (params.attempted !== undefined) q.set('attempted', String(params.attempted));
+	if (params.courseSlug) q.set('courseSlug', params.courseSlug);
+	if (params.domain) q.set('domain', params.domain);
+	if (params.cursor) q.set('cursor', params.cursor);
+	if (params.limit !== undefined) q.set('limit', String(params.limit));
+	const qs = q.toString();
+	return getJson<QuizCatalogPage>(`/api/v1/quizzes${qs ? `?${qs}` : ''}`);
+}
+
 // ── Code lessons (me) ─────────────────────────────────────────────────
 
 export type CodeLanguage = 'matlab' | 'python';
