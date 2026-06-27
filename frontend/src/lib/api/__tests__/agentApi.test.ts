@@ -146,6 +146,16 @@ describe('agentApi', () => {
 		const h = await getHistory('s-1');
 		expect(h.messages).toHaveLength(1);
 		expect(h.messages[0].role).toBe('user');
+		const [url] = (globalThis.fetch as unknown as FetchMock).mock.calls[0];
+		expect(String(url)).toMatch(/\/api\/v1\/chat\/sessions\/s-1$/); // no params → unpaged
+	});
+
+	it('getHistory forwards limit + before as query params', async () => {
+		mockJsonOnce(200, { sessionId: 's-1', messages: [], nextCursor: null });
+		await getHistory('s-1', { limit: 30, before: 'cur-1' });
+		const [url] = (globalThis.fetch as unknown as FetchMock).mock.calls[0];
+		expect(String(url)).toContain('limit=30');
+		expect(String(url)).toContain('before=cur-1');
 	});
 
 	it('throws AgentApiError on non-2xx with the detail field', async () => {

@@ -66,7 +66,7 @@ describe('agentViewModel', () => {
 				]
 			})
 		);
-		vi.spyOn(agentApi, 'getHistory').mockResolvedValue({
+		vi.spyOn(agentApi, 'getHistory').mockResolvedValue({ nextCursor: null,
 			sessionId: 's-1',
 			messages: [
 				{
@@ -95,7 +95,7 @@ describe('agentViewModel', () => {
 			'cyberdyne.agent.v1',
 			JSON.stringify({ sessionId: 's-plot', bubbles: [] })
 		);
-		vi.spyOn(agentApi, 'getHistory').mockResolvedValue({
+		vi.spyOn(agentApi, 'getHistory').mockResolvedValue({ nextCursor: null,
 			sessionId: 's-plot',
 			messages: [
 				{
@@ -138,7 +138,7 @@ describe('agentViewModel', () => {
 			'cyberdyne.agent.v1',
 			JSON.stringify({ sessionId: 's-py', bubbles: [] })
 		);
-		vi.spyOn(agentApi, 'getHistory').mockResolvedValue({
+		vi.spyOn(agentApi, 'getHistory').mockResolvedValue({ nextCursor: null,
 			sessionId: 's-py',
 			messages: [
 				{
@@ -179,7 +179,7 @@ describe('agentViewModel', () => {
 			'cyberdyne.agent.v1',
 			JSON.stringify({ sessionId: 's-manim', bubbles: [] })
 		);
-		vi.spyOn(agentApi, 'getHistory').mockResolvedValue({
+		vi.spyOn(agentApi, 'getHistory').mockResolvedValue({ nextCursor: null,
 			sessionId: 's-manim',
 			messages: [
 				{
@@ -227,7 +227,7 @@ describe('agentViewModel', () => {
 			error: 'Manim render failed',
 			stderr: 'Traceback ... NameError: name BLUE is not defined'
 		});
-		vi.spyOn(agentApi, 'getHistory').mockResolvedValue({
+		vi.spyOn(agentApi, 'getHistory').mockResolvedValue({ nextCursor: null,
 			sessionId: 's-err',
 			messages: [
 				{
@@ -260,7 +260,7 @@ describe('agentViewModel', () => {
 			'cyberdyne.agent.v1',
 			JSON.stringify({ sessionId: 's-doc', bubbles: [] })
 		);
-		vi.spyOn(agentApi, 'getHistory').mockResolvedValue({
+		vi.spyOn(agentApi, 'getHistory').mockResolvedValue({ nextCursor: null,
 			sessionId: 's-doc',
 			messages: [
 				{
@@ -304,7 +304,7 @@ describe('agentViewModel', () => {
 			'cyberdyne.agent.v1',
 			JSON.stringify({ sessionId: 's-turn', bubbles: [] })
 		);
-		vi.spyOn(agentApi, 'getHistory').mockResolvedValue({
+		vi.spyOn(agentApi, 'getHistory').mockResolvedValue({ nextCursor: null,
 			sessionId: 's-turn',
 			messages: [
 				{
@@ -592,5 +592,64 @@ describe('agentViewModel', () => {
 		await vm.send();
 		expect(sendSpy.mock.calls[0][1]).toContain('report.txt');
 		expect(vm.bubbles[0].content).toContain('report.txt');
+	});
+});
+
+describe('agentViewModel history paging', () => {
+	beforeEach(() => {
+		sessionStorage.clear();
+		vi.restoreAllMocks();
+	});
+
+	function msg(id: string, content: string): agentApi.AgentMessage {
+		return {
+			id,
+			sessionId: 's-1',
+			role: 'user',
+			content,
+			toolCalls: [],
+			toolCallId: null,
+			tokensIn: 0,
+			tokensOut: 0,
+			model: null,
+			createdAt: '2026-05-26T09:00:00Z'
+		};
+	}
+
+	it('bootstrap requests a bounded page and exposes hasOlder from the cursor', async () => {
+		sessionStorage.setItem('cyberdyne.agent.v1', JSON.stringify({ sessionId: 's-1', bubbles: [] }));
+		const getSpy = vi
+			.spyOn(agentApi, 'getHistory')
+			.mockResolvedValue({ sessionId: 's-1', messages: [msg('m2', 'newer')], nextCursor: 'cur-older' });
+		const vm = createAgentVM();
+		await vm.bootstrap();
+		expect(getSpy).toHaveBeenCalledWith('s-1', { limit: 30 });
+		expect(vm.hasOlder).toBe(true);
+		expect(vm.bubbles).toHaveLength(1);
+	});
+
+	it('loadOlder prepends the older page and advances the cursor', async () => {
+		sessionStorage.setItem('cyberdyne.agent.v1', JSON.stringify({ sessionId: 's-1', bubbles: [] }));
+		vi.spyOn(agentApi, 'getHistory')
+			.mockResolvedValueOnce({ sessionId: 's-1', messages: [msg('m2', 'newer')], nextCursor: 'cur-older' })
+			.mockResolvedValueOnce({ sessionId: 's-1', messages: [msg('m1', 'older')], nextCursor: null });
+		const vm = createAgentVM();
+		await vm.bootstrap();
+		await vm.loadOlder();
+		expect(vm.bubbles.map((b) => b.content)).toEqual(['older', 'newer']); // prepended
+		expect(vm.hasOlder).toBe(false); // cursor exhausted
+	});
+
+	it('loadOlder is a no-op when no older cursor is held', async () => {
+		sessionStorage.setItem('cyberdyne.agent.v1', JSON.stringify({ sessionId: 's-1', bubbles: [] }));
+		const getSpy = vi
+			.spyOn(agentApi, 'getHistory')
+			.mockResolvedValue({ sessionId: 's-1', messages: [msg('m2', 'newer')], nextCursor: null });
+		const vm = createAgentVM();
+		await vm.bootstrap();
+		expect(vm.hasOlder).toBe(false);
+		getSpy.mockClear();
+		await vm.loadOlder();
+		expect(getSpy).not.toHaveBeenCalled();
 	});
 });

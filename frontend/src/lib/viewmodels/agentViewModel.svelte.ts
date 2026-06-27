@@ -304,7 +304,13 @@ export interface AgentViewModel {
 	readonly attachments: PendingAttachment[];
 	/** True while a file upload is in flight. */
 	readonly uploading: boolean;
+	/** True when older history remains to page in (a cursor is held). */
+	readonly hasOlder: boolean;
+	/** True while an older-history page is loading. */
+	readonly loadingOlder: boolean;
 	bootstrap(): Promise<void>;
+	/** Prepend the previous (older) page of messages to the transcript. */
+	loadOlder(): Promise<void>;
 	setInput(value: string): void;
 	send(): Promise<void>;
 	attachFile(file: File): Promise<void>;
@@ -312,6 +318,11 @@ export interface AgentViewModel {
 	resetSession(): Promise<void>;
 	clearError(): void;
 }
+
+// Initial transcript window + older-page size. The history endpoint is
+// otherwise unbounded; capping the open load keeps a long conversation
+// fast to fetch and render, with "load older" paging the rest.
+const HISTORY_PAGE = 30;
 
 export function createAgentVM(): AgentViewModel {
 	let sessionId = $state<string | null>(null);
@@ -325,6 +336,11 @@ export function createAgentVM(): AgentViewModel {
 	let interpreterSessionId = $state<string | null>(null);
 	let attachments = $state<PendingAttachment[]>([]);
 	let uploading = $state<boolean>(false);
+	// The loaded (non-in-flight) history, kept authoritative so paging in an
+	// older page rebuilds bubbles cleanly (turns aren't split at the seam).
+	let historyMessages = $state<AgentMessage[]>([]);
+	let historyCursor = $state<string | null>(null);
+	let loadingOlder = $state<boolean>(false);
 
 	function persist(): void {
 		if (sessionId !== null) {
@@ -356,8 +372,10 @@ export function createAgentVM(): AgentViewModel {
 				// another tab progressed the conversation. Failures
 				// here are non-fatal — we keep the cached bubbles.
 				try {
-					const remote = await getHistory(persisted.sessionId);
-					bubbles = bubblesFromMessages(remote.messages);
+					const remote = await getHistory(persisted.sessionId, { limit: HISTORY_PAGE });
+					historyMessages = remote.messages;
+					historyCursor = remote.nextCursor;
+					bubbles = bubblesFromMessages(historyMessages);
 					persist();
 				} catch {
 					/* offline / 404 — keep local cache */
@@ -494,8 +512,10 @@ export function createAgentVM(): AgentViewModel {
 			// downloadable files produced by tool calls attach to their bubble.
 			// Non-fatal enrichment — keep the streamed bubbles on failure.
 			try {
-				const remote = await getHistory(sid);
-				bubbles = bubblesFromMessages(remote.messages);
+				const remote = await getHistory(sid, { limit: HISTORY_PAGE });
+				historyMessages = remote.messages;
+				historyCursor = remote.nextCursor;
+				bubbles = bubblesFromMessages(historyMessages);
 				persist();
 			} catch {
 				/* keep optimistic bubbles on refresh failure */
@@ -517,6 +537,28 @@ export function createAgentVM(): AgentViewModel {
 		}
 	}
 
+	// Page in the previous (older) chunk and prepend it. Rebuilds bubbles
+	// from the full accumulated message list so a tool turn straddling the
+	// page boundary still renders as one bubble.
+	async function loadOlder(): Promise<void> {
+		if (sessionId === null || historyCursor === null || loadingOlder) return;
+		loadingOlder = true;
+		try {
+			const remote = await getHistory(sessionId, {
+				limit: HISTORY_PAGE,
+				before: historyCursor
+			});
+			historyMessages = [...remote.messages, ...historyMessages];
+			historyCursor = remote.nextCursor;
+			bubbles = bubblesFromMessages(historyMessages);
+			persist();
+		} catch (err) {
+			error = err instanceof AgentApiError ? err.message : err instanceof Error ? err.message : String(err);
+		} finally {
+			loadingOlder = false;
+		}
+	}
+
 	async function resetSession(): Promise<void> {
 		sessionId = null;
 		bubbles = [];
@@ -524,6 +566,8 @@ export function createAgentVM(): AgentViewModel {
 		error = null;
 		interpreterSessionId = null;
 		attachments = [];
+		historyMessages = [];
+		historyCursor = null;
 		wipe();
 		// Spawn a fresh session eagerly so the next send is one round-
 		// trip, not two. Failure here is non-fatal — `send()` will
@@ -544,7 +588,10 @@ export function createAgentVM(): AgentViewModel {
 		get bootstrapped() { return bootstrapped; },
 		get attachments() { return attachments; },
 		get uploading() { return uploading; },
+		get hasOlder() { return historyCursor !== null; },
+		get loadingOlder() { return loadingOlder; },
 		bootstrap,
+		loadOlder,
 		setInput: (value) => {
 			input = value;
 		},
