@@ -1,67 +1,91 @@
 <script lang="ts">
-	const features = [
+	const GITHUB = 'https://github.com/CyberdyneCorp';
+
+	// Sovereignty thesis — the three pillars every product shares.
+	const pillars = [
 		{
-			n: '01',
-			title: 'Learn by doing',
-			body: 'Hands-on courses, lessons, quizzes and learning tracks — inside an interactive retro-terminal desktop, not a video wall.'
+			title: 'Your data, your infra',
+			body: 'Every product is self-hostable. No mandatory cloud, and no data leaving your perimeter.'
 		},
 		{
-			n: '02',
-			title: 'Secure by default',
-			body: 'Sign-in with multi-factor auth and recovery codes. Passwords are hashed with Argon2id; secrets are encrypted at rest and access is audited.'
+			title: 'Agent-first by design',
+			body: 'REST and MCP at the same core — humans and AI agents are first-class clients of every service.'
 		},
 		{
-			n: '03',
-			title: 'Managed wallet',
-			body: 'A built-in custodial wallet and on-chain identity, so you can join the DAO and own your progress without wrangling private keys.'
-		},
-		{
-			n: '04',
-			title: 'Buy once, everywhere',
-			body: 'Purchases and subscriptions made on the web or the App Store unlock the same entitlements across every device you sign in on.'
+			title: 'Regulation-ready',
+			body: 'Multi-tenancy, audit logs, provenance and LGPD — over a single identity spine.'
 		}
 	];
 
-	const steps = [
-		{ title: 'Create your account', body: 'Sign up and turn on MFA. A managed wallet is provisioned for you automatically.' },
-		{ title: 'Pick a track', body: 'Browse the catalogue, start a course, and progress through lessons and quizzes at your pace.' },
-		{ title: 'Own what you earn', body: 'Your progress and on-chain identity are yours — carry them into the DAO and across devices.' }
+	// What we can do — breadth without listing every product.
+	const capabilities = [
+		{
+			n: '01',
+			title: 'AI, agents & knowledge',
+			body: 'RAG and knowledge graphs, MCP servers, and agent-native platforms on hexagonal FastAPI + Svelte.'
+		},
+		{
+			n: '02',
+			title: 'Apple & engineering software',
+			body: 'Swift 6 / SwiftUI / Metal apps; precision CAD, CAE simulation, and C++20 compilers that run on the GPU.'
+		},
+		{
+			n: '03',
+			title: 'Geospatial',
+			body: '3D Cesium globes, STAC catalogues, and RF-propagation planning built on live data sources.'
+		},
+		{
+			n: '04',
+			title: 'Blockchain & identity',
+			body: 'Solidity, DAOs and wallet-based identity — up to launching your own EVM chain and oracle network.'
+		}
 	];
 
-	const trust = [
-		'Multi-factor auth',
-		'Argon2id passwords',
-		'Encrypted at rest',
-		'Custodial wallet',
-		'On-chain identity',
-		'Stripe & App Store billing'
+	// How we work — the two engagement tracks.
+	const tracks = [
+		{
+			tag: 'Track A',
+			title: 'We build it',
+			body: 'We design and build your product end-to-end: AI systems, full-stack SaaS, Apple-native apps, high-performance C++. The delivery is yours.'
+		},
+		{
+			tag: 'Track B',
+			title: 'Use our products',
+			body: 'License and deploy our existing suite — a corporate OS, RAG engine, geospatial platform, engineering tools — on your infra or ours.'
+		}
+	];
+
+	// Engineering discipline — how the work stays auditable.
+	const discipline = [
+		'Spec before code (OpenSpec)',
+		'Oracle-validated correctness',
+		'A regression test per fix',
+		'Hexagonal backends + MVVM',
+		'Stable ABIs',
+		'CI-gated builds'
 	];
 
 	const faqs = [
 		{
-			q: 'What is Cyberdyne?',
-			a: 'A retro-terminal learning platform — hands-on courses, quizzes and learning tracks, wrapped in secure accounts, a managed wallet, and DAO membership.'
+			q: 'Can we self-host everything?',
+			a: 'Yes. Every product runs on your own infrastructure — identity, AI, data, even your own blockchain. No vendor lock-in at any layer.'
 		},
 		{
-			q: 'Do I need a crypto wallet to start?',
-			a: 'No. A custodial wallet is created and secured for you when you sign up — you can use everything without ever touching a private key.'
+			q: 'Do you build custom software, or sell products?',
+			a: 'Both. Hire the studio to build end-to-end, license our ready-made suite, or start with a product and grow custom work on top of it.'
 		},
 		{
-			q: 'How do purchases work across web and the App Store?',
-			a: 'Buy on the web or through the Apple App Store; either way the same entitlements unlock on every device where you sign in.'
-		},
-		{
-			q: 'How is my personal data handled?',
-			a: 'We process only what the service needs, encrypt secrets at rest, and never sell your data. See the Privacy Policy for the full detail and your rights.'
+			q: 'How do you handle data and support?',
+			a: 'We process only what a service needs and keep it inside your perimeter. See the Privacy Policy for the detail, or the Support page for help.'
 		}
 	];
 </script>
 
 <svelte:head>
-	<title>Cyberdyne — Learn, build, and own it</title>
+	<title>Cyberdyne — Sovereign, agent-first software</title>
 	<meta
 		name="description"
-		content="Cyberdyne is a retro-terminal learning platform: hands-on courses and quizzes, secure accounts with MFA, a managed wallet, and DAO membership."
+		content="CyberdyneCorp builds sovereign, agent-first software with engineering discipline — full-stack from GPU kernels and compilers to native apps and multi-tenant SaaS, self-hostable and proven in the open."
 	/>
 </svelte:head>
 
@@ -69,38 +93,55 @@
 	<!-- Hero -->
 	<section class="hero">
 		<div class="hero-copy">
-			<p class="eyebrow">// CYBERDYNE_OS</p>
-			<h1>Learn, build,<br />and own it.</h1>
+			<p class="eyebrow">// SOVEREIGN · AGENT-FIRST</p>
+			<h1>Sovereign,<br />agent-first software.</h1>
 			<p class="lead">
-				A retro-terminal learning platform — hands-on courses, quizzes and learning tracks,
-				wrapped in secure accounts, a managed wallet, and DAO membership.
+				One systems architect directing a fleet of AI agents — building full-stack, from GPU
+				kernels and compilers to native apps and multi-tenant SaaS. Self-hostable by default,
+				audit-ready, and proven in the open.
 			</p>
 			<div class="cta-row">
 				<a class="cta" href="/">Launch the app →</a>
-				<a class="cta-ghost" href="#features">See what's inside</a>
+				<a class="cta-ghost" href="#capabilities">What we do</a>
 			</div>
 		</div>
 
-		<!-- Stylised terminal session (decorative) -->
+		<!-- Stylised build session (decorative) -->
 		<div class="term" aria-hidden="true">
 			<div class="term-bar">
 				<span class="dot"></span><span class="dot"></span><span class="dot"></span>
-				<span class="term-title">cyberdyne@os</span>
+				<span class="term-title">cyberdyne@studio</span>
 			</div>
-			<pre class="term-body"><span class="p">cyberdyne@os:~$</span> open academy
-<span class="c">▸</span> loading catalogue… courses · tracks · quizzes
-<span class="c">▸</span> resume <span class="s">"Deep Learning × Biology"</span>  <span class="bar">▓▓▓▓▓░░░</span> 63%
-<span class="p">cyberdyne@os:~$</span> wallet status
-<span class="c">▸</span> 0xA1b2…9F42 · on-chain identity <span class="ok">verified ✓</span>
-<span class="p">cyberdyne@os:~$</span> <span class="cursor">█</span></pre>
+			<pre class="term-body"><span class="p">cyberdyne@studio:~$</span> spec new payments-api
+<span class="c">▸</span> OpenSpec capability drafted · 12 scenarios
+<span class="p">cyberdyne@studio:~$</span> build --agents
+<span class="c">▸</span> fleet: 6 agents · architect-reviewed
+<span class="p">cyberdyne@studio:~$</span> validate --oracle numpy,scipy
+<span class="c">▸</span> 10,110 checks · <span class="ok">0 divergences ✓</span>
+<span class="p">cyberdyne@studio:~$</span> deploy --self-host
+<span class="c">▸</span> identity · MCP · isolated exec · <span class="ok">LGPD ✓</span>
+<span class="p">cyberdyne@studio:~$</span> <span class="cursor">█</span></pre>
 		</div>
 	</section>
 
-	<!-- Features -->
-	<section id="features" class="block">
-		<h2 class="section-title">Everything in one place</h2>
+	<!-- Sovereignty pillars -->
+	<section class="block">
+		<h2 class="section-title">Sovereignty by default</h2>
+		<div class="grid grid-3">
+			{#each pillars as p (p.title)}
+				<article class="card">
+					<h3>{p.title}</h3>
+					<p>{p.body}</p>
+				</article>
+			{/each}
+		</div>
+	</section>
+
+	<!-- Capabilities -->
+	<section id="capabilities" class="block">
+		<h2 class="section-title">What we can do</h2>
 		<div class="grid">
-			{#each features as f (f.n)}
+			{#each capabilities as f (f.n)}
 				<article class="card">
 					<span class="card-n">{f.n}</span>
 					<h3>{f.title}</h3>
@@ -110,30 +151,41 @@
 		</div>
 	</section>
 
-	<!-- How it works -->
+	<!-- How we work -->
 	<section class="block">
-		<h2 class="section-title">How it works</h2>
-		<ol class="steps">
-			{#each steps as step, i (step.title)}
-				<li class="step">
-					<span class="step-n">{i + 1}</span>
-					<div>
-						<h3>{step.title}</h3>
-						<p>{step.body}</p>
-					</div>
-				</li>
+		<h2 class="section-title">Two ways to work with us</h2>
+		<div class="grid grid-2">
+			{#each tracks as t (t.tag)}
+				<article class="card track">
+					<span class="track-tag">{t.tag}</span>
+					<h3>{t.title}</h3>
+					<p>{t.body}</p>
+				</article>
 			{/each}
-		</ol>
-	</section>
-
-	<!-- Trust band -->
-	<section class="block">
-		<h2 class="section-title">Built to be trusted</h2>
+		</div>
+		<p class="note">
+			Both run on one platform underneath: identity, ingestion, isolated execution, and MCP tools.
+		</p>
 		<ul class="chips">
-			{#each trust as item (item)}
+			{#each discipline as item (item)}
 				<li class="chip">{item}</li>
 			{/each}
 		</ul>
+	</section>
+
+	<!-- Proven in the open -->
+	<section class="proven">
+		<div>
+			<h2>Proven in the open</h2>
+			<p>
+				18+ open-source repositories — a C++20 port of NumPy and SciPy, a MATLAB compiler, a CAE
+				suite, an RF ray tracer. Over <strong>10,000 oracle checks</strong> against NumPy and SciPy,
+				with zero divergences. Audit exactly how we build before we build anything for you.
+			</p>
+		</div>
+		<a class="cta-ghost" href={GITHUB} target="_blank" rel="noopener noreferrer">
+			Audit us on GitHub →
+		</a>
 	</section>
 
 	<!-- FAQ -->
@@ -148,15 +200,15 @@
 			{/each}
 		</div>
 		<p class="faq-foot">
-			More help on the <a href="/support">Support</a> page, or read the full
+			More on the <a href="/support">Support</a> page, or read the full
 			<a href="/privacy">Privacy Policy</a>.
 		</p>
 	</section>
 
 	<!-- Closing CTA -->
 	<section class="cta-band">
-		<h2>Ready to start?</h2>
-		<p>Create an account and open the terminal — your first track is a click away.</p>
+		<h2>Audit the code. Then let's build.</h2>
+		<p>Everything we ship is proven in the open. Open the app, explore the repos, or reach out about your project.</p>
 		<div class="cta-row">
 			<a class="cta" href="/">Launch the app →</a>
 			<a class="cta-ghost" href="/support">Get support</a>
@@ -202,8 +254,8 @@
 
 	h1 {
 		color: #4ade80;
-		font-size: clamp(2.4rem, 7vw, 3.9rem);
-		line-height: 1.05;
+		font-size: clamp(2.3rem, 6.4vw, 3.7rem);
+		line-height: 1.06;
 		letter-spacing: 0.01em;
 		margin: 0 0 1.1rem;
 		text-shadow: 0 0 34px rgba(74, 222, 128, 0.28);
@@ -302,7 +354,7 @@
 		margin: 0;
 		padding: 1.1rem 1.25rem 1.35rem;
 		font-family: inherit;
-		font-size: 0.83rem;
+		font-size: 0.82rem;
 		line-height: 1.85;
 		color: #a7cba7;
 		white-space: pre-wrap;
@@ -315,15 +367,8 @@
 	.term-body .c {
 		color: #6ee79b;
 	}
-	.term-body .s {
-		color: #eafff0;
-	}
 	.term-body .ok {
 		color: #4ade80;
-	}
-	.term-body .bar {
-		color: #2f6b39;
-		letter-spacing: 1px;
 	}
 
 	.cursor {
@@ -350,6 +395,15 @@
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
 		gap: 1rem;
+	}
+
+	@media (min-width: 52rem) {
+		.grid-3 {
+			grid-template-columns: repeat(3, 1fr);
+		}
+		.grid-2 {
+			grid-template-columns: repeat(2, 1fr);
+		}
 	}
 
 	.card {
@@ -389,54 +443,30 @@
 		line-height: 1.6;
 	}
 
-	/* ── Steps ──────────────────────────────────────────── */
-	.steps {
-		list-style: none;
-		margin: 0;
-		padding: 0;
-		display: grid;
-		gap: 1rem;
-		grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-		counter-reset: step;
+	/* ── Tracks ─────────────────────────────────────────── */
+	.track {
+		padding: 1.5rem 1.6rem;
 	}
 
-	.step {
-		display: flex;
-		gap: 1rem;
-		align-items: flex-start;
-		border: 1px solid #17331a;
-		border-radius: 12px;
-		padding: 1.2rem 1.3rem;
-		background: rgba(12, 20, 12, 0.5);
-	}
-
-	.step-n {
-		flex: none;
-		display: grid;
-		place-items: center;
-		width: 2rem;
-		height: 2rem;
-		border-radius: 50%;
-		border: 1px solid #2f6b39;
+	.track-tag {
+		display: inline-block;
+		font-size: 0.72rem;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
 		color: #4ade80;
-		font-weight: 700;
-		font-size: 0.9rem;
+		border: 1px solid #2a5230;
+		border-radius: 999px;
+		padding: 0.15rem 0.7rem;
+		margin-bottom: 0.7rem;
 	}
 
-	.step h3 {
-		margin: 0 0 0.35rem;
-		color: #cfe8cf;
-		font-size: 1rem;
+	.note {
+		margin: 1.1rem 0 1.25rem;
+		color: #9fce9f;
+		font-size: 0.92rem;
 	}
 
-	.step p {
-		margin: 0;
-		font-size: 0.9rem;
-		color: #a7cba7;
-		line-height: 1.6;
-	}
-
-	/* ── Trust chips ────────────────────────────────────── */
+	/* ── Discipline chips ───────────────────────────────── */
 	.chips {
 		list-style: none;
 		margin: 0;
@@ -458,6 +488,43 @@
 	.chip::before {
 		content: '✓ ';
 		color: #4ade80;
+	}
+
+	/* ── Proven band ────────────────────────────────────── */
+	.proven {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1.5rem;
+		border: 1px solid #1e3a1e;
+		border-radius: 16px;
+		padding: clamp(1.75rem, 5vw, 2.5rem);
+		background:
+			radial-gradient(120% 130% at 100% 0%, rgba(74, 222, 128, 0.08), transparent 55%),
+			rgba(10, 16, 10, 0.7);
+	}
+
+	.proven h2 {
+		color: #86efac;
+		font-size: 1.35rem;
+		margin: 0 0 0.6rem;
+	}
+
+	.proven p {
+		color: #b8dcb8;
+		margin: 0;
+		max-width: 42rem;
+		line-height: 1.6;
+	}
+
+	.proven strong {
+		color: #eafff0;
+	}
+
+	.proven .cta-ghost {
+		flex: none;
+		white-space: nowrap;
 	}
 
 	/* ── FAQ ────────────────────────────────────────────── */
@@ -495,7 +562,6 @@
 		content: '+';
 		color: #4ade80;
 		font-weight: 700;
-		transition: transform 0.15s ease;
 	}
 
 	.faq details[open] summary::after {
@@ -545,7 +611,7 @@
 	.cta-band p {
 		color: #b8dcb8;
 		margin: 0 auto 1.6rem;
-		max-width: 32rem;
+		max-width: 34rem;
 	}
 
 	.cta-band .cta-row {
