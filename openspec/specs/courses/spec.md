@@ -19,6 +19,15 @@ the full lesson syllabus SHALL be returned but only the first lesson's body;
 lessons 2+ SHALL have their body/content stripped. Authenticated viewers SHALL
 receive all lesson bodies.
 
+The catalogue is publicly browsable, but the member-policy fields (`mandatory`,
+`dueAt`, `deadlineStatus`, `daysRemaining`) are organisation policy and SHALL
+NOT be disclosed to anonymous callers. For an unauthenticated viewer both
+endpoints SHALL emit neutral values for these fields (`mandatory=false`,
+`dueAt=null`, `deadlineStatus="none"`, `daysRemaining=null`) equal to their
+schema defaults, so the JSON shape is unchanged; authenticated viewers SHALL
+receive the real policy values. The neutralisation is decided by the same
+signed-in/guest predicate that gates lesson bodies.
+
 `GET /api/v1/courses` SHALL accept optional `limit` (1..200) and `offset`
 (>=0) query params that page the catalogue, applied to the courses before
 their lessons are loaded. Omitting `limit` SHALL return the full catalogue and
@@ -37,6 +46,14 @@ either way, so existing clients are unaffected.
 - WHEN a client GETs `/api/v1/courses?limit=2&offset=2`
 - THEN only the third course is returned, as a bare array, and an out-of-range
   `limit`/`offset` returns `422`
+
+#### Scenario: Anonymous viewer sees neutralised member policy
+
+- GIVEN a published course that is `mandatory` with a future `due_at`
+- WHEN an anonymous user lists or GETs the course
+- THEN `mandatory` is `false`, `dueAt`/`daysRemaining` are `null` and
+  `deadlineStatus` is `"none"`, while an authenticated viewer sees the real
+  `mandatory`, `dueAt`, `deadlineStatus` and `daysRemaining`
 
 #### Scenario: Draft hidden from public
 
@@ -106,12 +123,15 @@ anonymous); `GET /api/v1/courses/me/progress` SHALL list only started courses.
 The system SHALL let an editor set/clear a course `due_at` (`PUT
 /api/v1/admin/courses/{slug}/deadline`, null clears). The course read SHALL
 derive a `deadlineStatus` (`none`/`upcoming`/`urgent`/`overdue`) and
-`daysRemaining` at read time from `due_at` vs now.
+`daysRemaining` at read time from `due_at` vs now. These derived fields are
+member policy and SHALL be neutralised (`deadlineStatus="none"`,
+`daysRemaining=null`, `dueAt=null`) for anonymous catalogue readers; only
+authenticated viewers see them derived from `due_at`.
 
 #### Scenario: Overdue derived at read time
 
 - GIVEN a course whose `due_at` is in the past
-- WHEN the course is read
+- WHEN the course is read by an authenticated viewer
 - THEN `deadlineStatus` is `overdue` with a negative `daysRemaining`
 
 ### Requirement: Completion certificates
