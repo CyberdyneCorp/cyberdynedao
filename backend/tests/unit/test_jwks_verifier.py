@@ -206,3 +206,25 @@ class TestUpstreamUnavailable:
         verifier, _ = _verifier([_jwk(key)], status=503)
         with pytest.raises(AuthServiceUnavailableError):
             await verifier.introspect(_sign(key))
+
+
+class TestPrewarm:
+    async def test_prewarm_fetches_jwks(self) -> None:
+        # After prewarm the key set is populated, so a following authed
+        # request verifies with no additional fetch (issue #259).
+        key = _keypair()
+        verifier, counter = _verifier([_jwk(key)])
+        await verifier.prewarm()
+        assert counter["fetches"] == 1
+        principal = await verifier.introspect(_sign(key))
+        assert isinstance(principal, UserPrincipal)
+        assert counter["fetches"] == 1  # served from the prewarmed cache
+
+    async def test_prewarm_swallows_unreachable(self) -> None:
+        # Regression: a cold / unreachable auth server must NOT block boot.
+        verifier, _ = _verifier([], fail=True)
+        await verifier.prewarm()  # does not raise
+
+    async def test_prewarm_swallows_non_200(self) -> None:
+        verifier, _ = _verifier([], status=503)
+        await verifier.prewarm()  # does not raise

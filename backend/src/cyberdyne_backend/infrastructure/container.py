@@ -102,6 +102,9 @@ class Container:
         self._settings = settings
         self._http_client: httpx.AsyncClient | None = None
         self._auth_port: AuthPort | None = None
+        # Ref to the inner JWKS verifier the auth_port wraps, so startup can
+        # prewarm its key cache without widening the AuthPort protocol.
+        self._jwks_verifier: JwksTokenVerifier | None = None
         self._user_profile_port: UserProfilePort | None = None
         self._service_token_provider: ServiceTokenProvider | None = None
         self._captcha_port: CaptchaPort | None = None
@@ -159,11 +162,21 @@ class Container:
                 jwks_min_refresh_s=self._settings.cyberdyne_auth_jwks_min_refresh_s,
                 timeout_s=self._settings.cyberdyne_auth_request_timeout_s,
             )
+            self._jwks_verifier = inner
             self._auth_port = CachingAuthPort(
                 inner=inner,
                 ttl_s=self._settings.cyberdyne_auth_introspection_ttl_s,
             )
         return self._auth_port
+
+    async def prewarm_auth(self) -> None:
+        """Build the auth port and fetch its JWKS once so the first
+        authenticated request doesn't pay the cold round-trip (issue #259).
+        Best-effort: the inner verifier's ``prewarm`` swallows an unreachable
+        auth server."""
+        _ = self.auth_port  # ensure the inner verifier is built
+        if self._jwks_verifier is not None:
+            await self._jwks_verifier.prewarm()
 
     @property
     def user_profile_port(self) -> UserProfilePort:
