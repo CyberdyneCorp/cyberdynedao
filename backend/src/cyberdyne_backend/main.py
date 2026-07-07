@@ -857,6 +857,7 @@ def create_app() -> FastAPI:
                 courses=SqlAlchemyCourseRepository(session),
                 analytics=SqlAlchemyAnalyticsRepository(session),
                 llm=container.chat_llm,
+                cache=container.recommendations_cache,
             )
 
     # Skill Map — per-domain mastery + weak areas (issue #165).
@@ -1591,6 +1592,7 @@ def create_app() -> FastAPI:
                     courses=course_repo,
                     analytics=SqlAlchemyAnalyticsRepository(session),
                     llm=container.chat_llm,
+                    cache=container.recommendations_cache,
                 ),
                 list_user_notes=ListUserNotes(repo=SqlAlchemyLessonNoteRepository(session)),
             )

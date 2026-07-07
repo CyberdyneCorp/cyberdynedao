@@ -70,6 +70,7 @@ from cyberdyne_backend.adapters.outbound.stripe.webhook_verifier import (
     StripeWebhookVerifier,
 )
 from cyberdyne_backend.application.course_finder import CatalogSearchIndex
+from cyberdyne_backend.application.recommendations import RecommendationsCache
 from cyberdyne_backend.domain.access import AccessReaderPort
 from cyberdyne_backend.domain.ai_chat import (
     ChatLLMPort,
@@ -126,6 +127,7 @@ class Container:
         self._python: PythonInterpreterPort | None = None
         self._cyberflies: CyberfliesPort | None = None
         self._document_renderer: DocumentRendererPort | None = None
+        self._recommendations_cache: RecommendationsCache | None = None
 
     # ── HTTP ──────────────────────────────────────────────────────────
     @property
@@ -362,6 +364,18 @@ class Container:
         else:
             self._chat_llm = StaticChatClient()
         return self._chat_llm
+
+    @property
+    def recommendations_cache(self) -> RecommendationsCache:
+        # Process-scoped per-user TTL cache so app launch doesn't pay an LLM
+        # round-trip on every /recommendations/me request (issue #257). Shared
+        # by the endpoint and the chat-agent recommend tool so the same user
+        # hits one cache.
+        if self._recommendations_cache is None:
+            self._recommendations_cache = RecommendationsCache(
+                ttl_s=self._settings.recommendations_cache_ttl_s,
+            )
+        return self._recommendations_cache
 
     @property
     def vision(self) -> VisionPort:
