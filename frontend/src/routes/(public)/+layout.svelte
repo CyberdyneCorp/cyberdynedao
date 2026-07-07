@@ -124,9 +124,16 @@
 	main {
 		flex: 1;
 		width: 100%;
-		max-width: 48rem;
+		max-width: 64rem;
 		margin: 0 auto;
 		padding: clamp(2rem, 6vw, 4rem) clamp(1.15rem, 5vw, 3rem) 4.5rem;
+	}
+
+	/* Long-form documents (Privacy, Support) read best at a narrower measure;
+	   the landing page (.landing) uses the full width above. */
+	:global(.prose) {
+		max-width: 46rem;
+		margin-inline: auto;
 	}
 
 	footer {
