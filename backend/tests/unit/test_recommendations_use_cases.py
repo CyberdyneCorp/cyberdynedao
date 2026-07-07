@@ -6,7 +6,10 @@ from __future__ import annotations
 import uuid
 from uuid import UUID
 
-from cyberdyne_backend.application.recommendations import RecommendCourses
+from cyberdyne_backend.application.recommendations import (
+    RecommendationsCache,
+    RecommendCourses,
+)
 from cyberdyne_backend.domain.ai_chat import ChatMessage, LLMResponse, ToolSchema
 from cyberdyne_backend.domain.analytics import AnalyticsRepository, LearnerCounts
 from cyberdyne_backend.domain.courses import (
@@ -158,3 +161,62 @@ class TestRecommendCourses:
         assert result.courses == []
         assert "no published courses" in result.summary.lower()
         assert llm.prompts == []  # no LLM call when there is nothing to recommend
+
+
+class _Clock:
+    """A hand-cranked monotonic clock for TTL tests (no sleeping)."""
+
+    def __init__(self) -> None:
+        self.now = 0.0
+
+    def __call__(self) -> float:
+        return self.now
+
+
+class TestRecommendCoursesCache:
+    def _uc_with_cache(self, llm: ScriptedLLM, cache: RecommendationsCache) -> RecommendCourses:
+        catalogue = [_course("Beg", "Beginner", sort_order=0)]
+        return RecommendCourses(
+            courses=FakeCourseRepo(catalogue),
+            analytics=FakeAnalyticsRepo(LearnerCounts()),
+            llm=llm,
+            cache=cache,
+        )
+
+    async def test_second_call_within_ttl_is_served_from_cache(self) -> None:
+        clock = _Clock()
+        cache = RecommendationsCache(ttl_s=3600, time_fn=clock)
+        llm = ScriptedLLM()
+        uc = self._uc_with_cache(llm, cache)
+        user_id = uuid.uuid4()
+
+        first = await uc.execute(user_id=user_id)
+        clock.now = 3599.0  # still within TTL
+        second = await uc.execute(user_id=user_id)
+
+        assert len(llm.prompts) == 1  # LLM invoked only on the miss
+        assert second == first  # cached payload returned verbatim
+
+    async def test_expiry_recomputes(self) -> None:
+        clock = _Clock()
+        cache = RecommendationsCache(ttl_s=3600, time_fn=clock)
+        llm = ScriptedLLM()
+        uc = self._uc_with_cache(llm, cache)
+        user_id = uuid.uuid4()
+
+        await uc.execute(user_id=user_id)
+        clock.now = 3600.0  # exactly at expiry -> recompute
+        await uc.execute(user_id=user_id)
+
+        assert len(llm.prompts) == 2
+
+    async def test_cache_is_isolated_per_user(self) -> None:
+        clock = _Clock()
+        cache = RecommendationsCache(ttl_s=3600, time_fn=clock)
+        llm = ScriptedLLM()
+        uc = self._uc_with_cache(llm, cache)
+
+        await uc.execute(user_id=uuid.uuid4())
+        await uc.execute(user_id=uuid.uuid4())
+
+        assert len(llm.prompts) == 2  # each user pays its own LLM call

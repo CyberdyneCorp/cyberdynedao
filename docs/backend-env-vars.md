@@ -76,6 +76,12 @@ dev-only adapters** that must be replaced before a real go-live (see
 | `DAO_SNAPSHOT_PREWARM` | `true` | Background worker re-reads the snapshot every `DAO_SNAPSHOT_TTL_S` so the DaoView is served from a warm cache. Inert unless `DAO_TREASURY_ADDRESS` is set; disable for purely-lazy caching. |
 | `DAO_HOLDERS_COUNT` | `0` | Surfaced in `/dao/overview` until the governance subgraph ships. |
 
+## Course recommendations
+
+| Env var | Default | Notes |
+|---------|---------|-------|
+| `RECOMMENDATIONS_CACHE_TTL_S` | `21600` (6h) | Per-user TTL for the `GET /api/v1/recommendations/me` result. Without it every request pays a synchronous LLM round-trip on the app-launch hot path. Recommendations change rarely, so results may be up to this stale (mid-TTL progress won't reflect until expiry). The cache is in-process, hence **per-worker** with `--workers > 1`; the Dockerfile runs a single worker so today it is process-wide. The endpoint and the chat-agent recommend tool share one cache per user. |
+
 ## Marketplace / Stripe
 
 | Env var | Default | Notes |

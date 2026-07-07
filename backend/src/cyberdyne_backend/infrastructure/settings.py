@@ -167,6 +167,14 @@ class Settings(BaseSettings):
     # Filled in by the governance subgraph once it ships; defaults to 0.
     dao_holders_count: int = 0
 
+    # ── Course recommendations ────────────────────────────────────────
+    # Per-user TTL (seconds) for the recommendation result. Each request to
+    # /api/v1/recommendations/me otherwise pays a synchronous LLM round-trip
+    # on the app-launch hot path (issue #257). Recommendations change rarely,
+    # so a few hours of staleness is acceptable. Default 6h. The cache is
+    # in-process, hence per-worker with ``--workers > 1`` (issue #259).
+    recommendations_cache_ttl_s: int = 21_600
+
     # ── Marketplace / Stripe (Phase 6) ────────────────────────────────
     # Both unset = MockStripeCheckoutClient + MockStripeWebhookVerifier
     # (local-dev only). Settings hard-refuses to start with mocks in
