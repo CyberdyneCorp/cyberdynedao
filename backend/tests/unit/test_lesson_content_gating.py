@@ -15,6 +15,7 @@ from fastapi import Request
 
 from cyberdyne_backend.adapters.inbound.api.courses.router import (
     _detail,
+    _summary,
     _viewer_is_authenticated,
 )
 from cyberdyne_backend.domain.auth_identity import UserPrincipal
@@ -27,6 +28,9 @@ from cyberdyne_backend.domain.courses.entities import (
 )
 
 _NOW = datetime(2024, 1, 1, tzinfo=UTC)
+# Far-future deadline so the derived status is a stable "upcoming" with a
+# large positive days_remaining regardless of the wall clock at test time.
+_DUE_AT = datetime(2999, 1, 1, tzinfo=UTC)
 
 
 def _course() -> Course:
@@ -38,8 +42,10 @@ def _course() -> Course:
         description="d",
         level=CourseLevel.BEGINNER,
         status=CourseStatus.PUBLISHED,
-        mandatory=False,
+        # Non-default org policy so the anonymous-neutralisation is observable.
+        mandatory=True,
         sort_order=0,
+        due_at=_DUE_AT,
         created_at=_NOW,
         published_at=_NOW,
         lessons=[
@@ -85,6 +91,47 @@ def test_authenticated_detail_keeps_all_bodies() -> None:
     detail = _detail(_course(), full_content=True)
     assert detail.lessons[1].text_body == "# second body"
     assert detail.lessons[2].content_url == "https://v/abc"
+
+
+def test_anonymous_summary_neutralises_member_policy_fields() -> None:
+    # Issue #260: the public catalogue must not leak org policy (which courses
+    # are mandatory, their deadlines) to anonymous callers. Neutral values
+    # equal the schema defaults, so the JSON shape is unchanged.
+    summary = _summary(_course(), member_policy=False)
+    assert summary.mandatory is False
+    assert summary.due_at is None
+    assert summary.deadline_status == "none"
+    assert summary.days_remaining is None
+    # Non-policy fields are untouched.
+    assert summary.slug == "solidity-101"
+    assert summary.lesson_count == 3
+
+
+def test_authenticated_summary_exposes_member_policy_fields() -> None:
+    summary = _summary(_course())  # member_policy defaults True
+    assert summary.mandatory is True
+    assert summary.due_at == _DUE_AT
+    assert summary.deadline_status == "upcoming"
+    assert summary.days_remaining is not None
+    assert summary.days_remaining > 0
+
+
+def test_anonymous_detail_neutralises_policy_but_keeps_all_lessons() -> None:
+    detail = _detail(_course(), full_content=False, member_policy=False)
+    # Policy neutralised for the guest.
+    assert detail.mandatory is False
+    assert detail.due_at is None
+    assert detail.deadline_status == "none"
+    assert detail.days_remaining is None
+    # The syllabus (lesson list) is unaffected by the policy gating.
+    assert [lesson.title for lesson in detail.lessons] == ["Intro", "Deep dive", "Watch"]
+
+
+def test_authenticated_detail_keeps_member_policy_fields() -> None:
+    detail = _detail(_course(), full_content=True, member_policy=True)
+    assert detail.mandatory is True
+    assert detail.due_at == _DUE_AT
+    assert detail.deadline_status == "upcoming"
 
 
 def _request_with(principal: object) -> Request:

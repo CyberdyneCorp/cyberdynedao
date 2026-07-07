@@ -311,7 +311,13 @@ def _category_response(course: Course) -> CategoryResponse | None:
     return _to_category_response(course.category) if course.category is not None else None
 
 
-def _summary(course: Course) -> CourseSummaryResponse:
+def _summary(course: Course, *, member_policy: bool = True) -> CourseSummaryResponse:
+    # ``member_policy`` gates the org-policy fields (``mandatory``, ``due_at``,
+    # ``deadline_status``, ``days_remaining``). Anonymous callers browse the
+    # public catalogue but must not learn which courses are mandatory or when
+    # they are due, so we emit neutral values (equal to the schema defaults)
+    # for them. Authenticated viewers get the real policy. The JSON *shape* is
+    # identical either way — every key stays present — so no client breaks.
     now = datetime.now(tz=UTC)
     return CourseSummaryResponse(
         id=course.id,
@@ -320,23 +326,29 @@ def _summary(course: Course) -> CourseSummaryResponse:
         description=course.description,
         level=course.level.value,
         status=course.status.value,
-        mandatory=course.mandatory,
+        mandatory=course.mandatory if member_policy else False,
         sort_order=course.sort_order,
         lesson_count=len(course.lessons),
         created_at=course.created_at,
         published_at=course.published_at,
-        due_at=course.due_at,
-        deadline_status=deadline_status(course.due_at, now=now).value,
-        days_remaining=days_remaining(course.due_at, now=now),
+        due_at=course.due_at if member_policy else None,
+        deadline_status=(
+            deadline_status(course.due_at, now=now).value if member_policy else "none"
+        ),
+        days_remaining=days_remaining(course.due_at, now=now) if member_policy else None,
         category=_category_response(course),
     )
 
 
-def _detail(course: Course, *, full_content: bool = True) -> CourseDetailResponse:
+def _detail(
+    course: Course, *, full_content: bool = True, member_policy: bool = True
+) -> CourseDetailResponse:
     # Guests (``full_content=False``) may only read the FIRST lesson; the rest
     # come back with their bodies stripped. Authenticated viewers get the lot.
+    # ``member_policy`` follows the same signed-in/guest split for the
+    # org-policy fields (see ``_summary``).
     return CourseDetailResponse(
-        **_summary(course).model_dump(by_alias=False),
+        **_summary(course, member_policy=member_policy).model_dump(by_alias=False),
         lessons=[
             _lesson_response(les, include_body=full_content or idx == 0)
             for idx, les in enumerate(course.lessons)
@@ -453,7 +465,8 @@ async def list_courses(
         limit=limit,
         offset=offset,
     )
-    return [_summary(c) for c in courses]
+    member_policy = _viewer_is_authenticated(request)
+    return [_summary(c, member_policy=member_policy) for c in courses]
 
 
 @public_router.get(
@@ -473,7 +486,8 @@ async def get_course(
         )
     except CourseNotFoundError as exc:
         raise HTTPException(status_code=404, detail="course not found") from exc
-    return _detail(course, full_content=_viewer_is_authenticated(request))
+    authenticated = _viewer_is_authenticated(request)
+    return _detail(course, full_content=authenticated, member_policy=authenticated)
 
 
 # ── Learner progress ─────────────────────────────────────────────────
