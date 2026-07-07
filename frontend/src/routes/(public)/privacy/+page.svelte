@@ -7,6 +7,20 @@
 		MINIMUM_AGE,
 		POLICY_LAST_UPDATED
 	} from '$lib/constants/company';
+
+	const sections = [
+		{ id: 'data', label: '1. Data we process' },
+		{ id: 'legal-bases', label: '2. Legal bases' },
+		{ id: 'sharing', label: '3. Who we share with' },
+		{ id: 'transfers', label: '4. Transfers' },
+		{ id: 'retention', label: '5. Retention' },
+		{ id: 'blockchain', label: '6. Blockchain' },
+		{ id: 'rights', label: '7. Your rights' },
+		{ id: 'security', label: '8. Security' },
+		{ id: 'children', label: '9. Children' },
+		{ id: 'changes', label: '10. Changes' },
+		{ id: 'contact', label: '11. Contact' }
+	];
 </script>
 
 <svelte:head>
@@ -33,7 +47,16 @@
 		basis, who we share it with, how long we keep it, and the rights you have.
 	</p>
 
-	<h2>1. Personal data we process</h2>
+	<nav class="toc" aria-label="On this page">
+		<span class="toc-title">On this page</span>
+		<ul>
+			{#each sections as s (s.id)}
+				<li><a href="#{s.id}">{s.label}</a></li>
+			{/each}
+		</ul>
+	</nav>
+
+	<h2 id="data">1. Personal data we process</h2>
 	<table>
 		<thead>
 			<tr><th>Category</th><th>Examples</th><th>Purpose</th></tr>
@@ -81,7 +104,7 @@
 		purchase processing is handled entirely by Stripe and Apple.
 	</p>
 
-	<h2>2. Legal bases</h2>
+	<h2 id="legal-bases">2. Legal bases</h2>
 	<p>
 		We process personal data under the applicable data-protection law — Brazil's Lei
 		Geral de Proteção de Dados (LGPD) and, where it applies to you, the EU/UK GDPR — on
@@ -106,7 +129,7 @@
 		</li>
 	</ul>
 
-	<h2>3. Who we share data with</h2>
+	<h2 id="sharing">3. Who we share data with</h2>
 	<p>We share personal data only with the processors and services needed to run the product:</p>
 	<ul>
 		<li>
@@ -136,14 +159,14 @@
 		analytics data to third-party observability vendors.
 	</p>
 
-	<h2>4. International transfers</h2>
+	<h2 id="transfers">4. International transfers</h2>
 	<p>
 		Some processors (Apple, Stripe, Google, Microsoft, and our email provider) process
 		data outside Brazil, including in the United States. Where required, such transfers
 		rely on appropriate safeguards, such as Standard Contractual Clauses.
 	</p>
 
-	<h2>5. How long we keep it</h2>
+	<h2 id="retention">5. How long we keep it</h2>
 	<p>We keep personal data only as long as needed for the purposes above, under a documented retention schedule:</p>
 	<ul>
 		<li>Short-lived authentication data (one-time codes, sign-in challenges, verification and reset tokens) is deleted within days of use or expiry.</li>
@@ -158,7 +181,7 @@
 		cannot be deleted</strong> (Section 6).
 	</p>
 
-	<h2>6. Blockchain and permanence</h2>
+	<h2 id="blockchain">6. Blockchain and permanence</h2>
 	<p>
 		If you use the on-chain identity feature, your <strong>wallet address and public key
 		are recorded on a public blockchain</strong>. By design, blockchain data is
@@ -167,7 +190,7 @@
 		they remain erasable. Consider this before enabling on-chain features.
 	</p>
 
-	<h2>7. Your rights</h2>
+	<h2 id="rights">7. Your rights</h2>
 	<p>
 		Subject to applicable law, you may request to <strong>access</strong>,
 		<strong>correct</strong>, <strong>export</strong>, or <strong>erase</strong> your
@@ -178,7 +201,7 @@
 		authority — in Brazil, the Autoridade Nacional de Proteção de Dados (ANPD).
 	</p>
 
-	<h2>8. Security</h2>
+	<h2 id="security">8. Security</h2>
 	<p>
 		We protect your data with encryption in transit and at rest: custodial private keys
 		and MFA secrets are encrypted with authenticated encryption under a key-derivation
@@ -186,21 +209,65 @@
 		hashes. Access to administrative functions is restricted and audited.
 	</p>
 
-	<h2>9. Children</h2>
+	<h2 id="children">9. Children</h2>
 	<p>
 		The service is not directed to children under {MINIMUM_AGE}, and we do not knowingly
 		collect their data.
 	</p>
 
-	<h2>10. Changes</h2>
+	<h2 id="changes">10. Changes</h2>
 	<p>
 		We may update this policy; we will change the "Last updated" date and, for material
 		changes, notify you through the service.
 	</p>
 
-	<h2>11. Contact</h2>
+	<h2 id="contact">11. Contact</h2>
 	<p>
 		{LEGAL_ENTITY} — CNPJ {CNPJ} — {REGISTERED_ADDRESS} —
 		<a href="mailto:{PRIVACY_EMAIL}">{PRIVACY_EMAIL}</a>
 	</p>
 </article>
+
+<style>
+	.toc {
+		border: 1px solid #17331a;
+		border-radius: 12px;
+		padding: 1rem 1.25rem 1.15rem;
+		margin: 1.5rem 0 0.5rem;
+		background: rgba(14, 26, 14, 0.5);
+	}
+
+	.toc-title {
+		display: block;
+		font-size: 0.72rem;
+		letter-spacing: 0.2em;
+		text-transform: uppercase;
+		color: #7fae7f;
+		margin-bottom: 0.6rem;
+	}
+
+	.toc ul {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+		gap: 0.35rem 1.1rem;
+	}
+
+	.toc li {
+		margin: 0;
+	}
+
+	.toc a {
+		color: #a7cba7;
+		text-decoration: none;
+		font-size: 0.86rem;
+		border-bottom: 1px solid transparent;
+	}
+
+	.toc a:hover {
+		color: #4ade80;
+		border-bottom-color: #4ade80;
+	}
+</style>
