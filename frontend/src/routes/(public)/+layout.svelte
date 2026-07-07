@@ -14,9 +14,13 @@
 	let current = $derived($page.url.pathname.replace(/\/$/, ''));
 </script>
 
-<div class="shell">
+<!-- Own the full viewport as a fixed, opaque, self-scrolling panel. The app's
+     global CSS pins `html, body { overflow: hidden }` for the terminal desktop
+     and paints an animated background behind everything; a static document page
+     must scroll on its own and fully cover that layer, independent of the app. -->
+<div class="shell retro-scrollbar">
 	<header>
-		<a class="brand" href="/">CYBERDYNE<span class="blink">_</span></a>
+		<a class="brand" href="/">CYBERDYNE<span class="cursor">_</span></a>
 		<nav aria-label="Public pages">
 			{#each links as link (link.href)}
 				<a href={link.href} aria-current={current === link.href ? 'page' : undefined}>
@@ -36,22 +40,29 @@
 			{LEGAL_ENTITY} · CNPJ {CNPJ}
 		</p>
 		<p class="foot-links">
-			<a href="/">Home</a> · <a href="/privacy">Privacy Policy</a> ·
-			<a href="/support">Support</a>
+			<a href="/">Home</a><span aria-hidden="true"> · </span><a href="/privacy">Privacy Policy</a
+			><span aria-hidden="true"> · </span><a href="/support">Support</a>
 		</p>
 	</footer>
 </div>
 
 <style>
 	.shell {
-		min-height: 100vh;
+		position: fixed;
+		inset: 0;
+		overflow-y: auto;
+		overflow-x: hidden;
 		display: flex;
 		flex-direction: column;
-		background: #0a0e0a;
+		/* Faint green aurora at the top, over a near-black base — on-brand but
+		   stays out of the way of long-form reading. */
+		background:
+			radial-gradient(130% 90% at 50% -20%, rgba(74, 222, 128, 0.08), transparent 55%),
+			#080b08;
 		color: #cfe8cf;
-		font-family:
-			'IBM Plex Mono', ui-monospace, 'SFMono-Regular', 'Courier New', monospace;
-		line-height: 1.65;
+		font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', 'Courier New', monospace;
+		line-height: 1.7;
+		scroll-behavior: smooth;
 	}
 
 	header {
@@ -60,23 +71,25 @@
 		gap: 0.75rem 1.5rem;
 		align-items: baseline;
 		justify-content: space-between;
-		padding: 1.25rem clamp(1rem, 5vw, 3rem);
-		border-bottom: 1px solid #1e3a1e;
+		padding: 1.1rem clamp(1rem, 5vw, 3rem);
+		border-bottom: 1px solid #17331a;
 		position: sticky;
 		top: 0;
-		background: rgba(10, 14, 10, 0.92);
-		backdrop-filter: blur(6px);
+		z-index: 10;
+		background: rgba(8, 11, 8, 0.82);
+		backdrop-filter: blur(10px);
 	}
 
 	.brand {
 		font-weight: 700;
-		letter-spacing: 0.12em;
+		letter-spacing: 0.14em;
 		color: #4ade80;
 		text-decoration: none;
 		font-size: 1.05rem;
+		text-shadow: 0 0 18px rgba(74, 222, 128, 0.35);
 	}
 
-	.blink {
+	.cursor {
 		animation: blink 1.1s step-end infinite;
 	}
 
@@ -88,15 +101,18 @@
 
 	nav {
 		display: flex;
-		gap: 1.25rem;
+		gap: 1.5rem;
 	}
 
 	nav a {
 		color: #9fce9f;
 		text-decoration: none;
 		font-size: 0.9rem;
-		padding-bottom: 2px;
-		border-bottom: 1px solid transparent;
+		padding-bottom: 3px;
+		border-bottom: 2px solid transparent;
+		transition:
+			color 0.15s ease,
+			border-color 0.15s ease;
 	}
 
 	nav a:hover,
@@ -108,21 +124,21 @@
 	main {
 		flex: 1;
 		width: 100%;
-		max-width: 52rem;
+		max-width: 48rem;
 		margin: 0 auto;
-		padding: clamp(1.75rem, 5vw, 3.5rem) clamp(1rem, 5vw, 3rem) 4rem;
+		padding: clamp(2rem, 6vw, 4rem) clamp(1.15rem, 5vw, 3rem) 4.5rem;
 	}
 
 	footer {
-		border-top: 1px solid #1e3a1e;
-		padding: 1.5rem clamp(1rem, 5vw, 3rem);
+		border-top: 1px solid #17331a;
+		padding: 2rem clamp(1rem, 5vw, 3rem) 2.5rem;
 		font-size: 0.8rem;
-		color: #7fae7f;
+		color: #6f9e6f;
 		text-align: center;
 	}
 
 	.foot-links {
-		margin-top: 0.35rem;
+		margin-top: 0.4rem;
 	}
 
 	footer a {
@@ -135,54 +151,81 @@
 		text-decoration: underline;
 	}
 
+	/* Keyboard focus is clearly visible on the dark theme. */
+	.shell :global(a:focus-visible),
+	.shell :global(button:focus-visible) {
+		outline: 2px solid #4ade80;
+		outline-offset: 3px;
+		border-radius: 3px;
+	}
+
 	@media (prefers-reduced-motion: reduce) {
-		.blink {
+		.cursor {
 			animation: none;
+		}
+		.shell {
+			scroll-behavior: auto;
 		}
 	}
 
-	/* Shared document typography for the child pages (rendered outside this
-	   component's scope, hence :global). Tuned for readable long-form legal
-	   and support copy. */
+	/* ── Shared document typography for the child pages (rendered outside this
+	   component's scope, hence :global). Tuned for readable long-form copy. ── */
+	:global(.prose > * + *) {
+		margin-top: 0.9rem;
+	}
+
 	:global(.prose h1) {
 		color: #4ade80;
-		font-size: clamp(1.6rem, 4vw, 2.2rem);
-		letter-spacing: 0.02em;
-		margin: 0 0 0.5rem;
+		font-size: clamp(1.8rem, 5vw, 2.5rem);
+		letter-spacing: 0.01em;
+		line-height: 1.15;
+		margin: 0 0 0.35rem;
+		text-shadow: 0 0 26px rgba(74, 222, 128, 0.25);
 	}
 
 	:global(.prose h2) {
 		color: #86efac;
-		font-size: 1.2rem;
-		margin: 2.25rem 0 0.75rem;
-		padding-bottom: 0.3rem;
-		border-bottom: 1px solid #1e3a1e;
+		font-size: 1.22rem;
+		margin: 2.5rem 0 0.5rem;
+		padding-bottom: 0.35rem;
+		border-bottom: 1px solid #17331a;
+		scroll-margin-top: 5rem;
 	}
 
 	:global(.prose h3) {
 		color: #9fce9f;
 		font-size: 1rem;
-		margin: 1.5rem 0 0.5rem;
+		margin: 1.6rem 0 0.4rem;
 	}
 
 	:global(.prose p),
 	:global(.prose li) {
-		color: #cfe8cf;
+		color: #c4dfc4;
 	}
 
 	:global(.prose ul) {
-		padding-left: 1.25rem;
-		margin: 0.5rem 0 1rem;
+		padding-left: 1.3rem;
+		margin: 0.4rem 0 0.9rem;
 	}
 
 	:global(.prose li) {
-		margin: 0.35rem 0;
+		margin: 0.4rem 0;
+	}
+
+	:global(.prose li::marker) {
+		color: #4ade80;
 	}
 
 	:global(.prose a) {
-		color: #4ade80;
+		color: #6ee79b;
 		text-decoration: underline;
-		text-underline-offset: 2px;
+		text-underline-offset: 3px;
+		text-decoration-color: rgba(110, 231, 155, 0.45);
+		transition: text-decoration-color 0.15s ease;
+	}
+
+	:global(.prose a:hover) {
+		text-decoration-color: #6ee79b;
 	}
 
 	:global(.prose strong) {
@@ -192,42 +235,60 @@
 	:global(.prose table) {
 		width: 100%;
 		border-collapse: collapse;
-		margin: 1rem 0 1.5rem;
-		font-size: 0.88rem;
+		margin: 1.1rem 0 1.5rem;
+		font-size: 0.86rem;
 		display: block;
 		overflow-x: auto;
+		border: 1px solid #17331a;
+		border-radius: 10px;
 	}
 
 	:global(.prose th),
 	:global(.prose td) {
-		border: 1px solid #1e3a1e;
-		padding: 0.5rem 0.7rem;
+		border-bottom: 1px solid #142a16;
+		border-right: 1px solid #142a16;
+		padding: 0.6rem 0.8rem;
 		text-align: left;
 		vertical-align: top;
 	}
 
+	:global(.prose tr:last-child td) {
+		border-bottom: none;
+	}
+
 	:global(.prose th) {
-		background: #0f1a0f;
+		background: #0e1a0e;
 		color: #86efac;
 		white-space: nowrap;
+		position: sticky;
+		top: 0;
 	}
 
 	:global(.prose .lead) {
-		font-size: 1.05rem;
+		font-size: 1.08rem;
 		color: #b8dcb8;
+		max-width: 42rem;
 	}
 
 	:global(.prose .updated) {
-		font-size: 0.82rem;
+		display: inline-block;
+		font-size: 0.75rem;
 		color: #7fae7f;
-		margin-top: 0.25rem;
+		border: 1px solid #17331a;
+		border-radius: 999px;
+		padding: 0.15rem 0.7rem;
+		margin: 0.25rem 0 0.5rem;
 	}
 
 	:global(.prose .contact-card) {
 		border: 1px solid #1e3a1e;
-		border-radius: 8px;
-		padding: 1rem 1.25rem;
-		background: #0f1a0f;
-		margin: 1rem 0 1.5rem;
+		border-radius: 12px;
+		padding: 1.15rem 1.35rem;
+		background: linear-gradient(180deg, rgba(20, 42, 22, 0.55), rgba(14, 26, 14, 0.55));
+		margin: 1.25rem 0 1.75rem;
+	}
+
+	:global(.prose .contact-card p) {
+		margin: 0.15rem 0;
 	}
 </style>
