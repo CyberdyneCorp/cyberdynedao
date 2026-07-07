@@ -67,6 +67,21 @@ class JwksTokenVerifier:
         self._last_refresh = 0.0
         self._lock = asyncio.Lock()
 
+    async def prewarm(self) -> None:
+        """Best-effort JWKS fetch on startup so the first authenticated
+        request doesn't pay the cold round-trip (issue #259).
+
+        Idempotent and cheap: takes the same lock as ``_resolve_key`` and
+        refreshes once. Swallows ``AuthServiceUnavailableError`` so a cold or
+        unreachable auth server never blocks boot — the first real request
+        then falls back to the normal lazy fetch.
+        """
+        async with self._lock:
+            try:
+                await self._refresh()
+            except AuthServiceUnavailableError as exc:
+                logger.warning("JWKS prewarm failed (%s); first request will retry", exc)
+
     async def introspect(self, token: str) -> Principal:
         if not token:
             raise InvalidTokenError("empty bearer token")

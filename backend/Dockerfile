@@ -45,6 +45,14 @@ RUN adduser --disabled-password --gecos '' appuser && \
     chown -R appuser:appuser /app /data
 USER appuser
 
+# Number of uvicorn worker processes. uvicorn reads $WEB_CONCURRENCY as the
+# fallback for --workers, so this makes the default >=2 (issue #259/#257): one
+# slow request (e.g. an LLM recommendations call) can no longer head-of-line-
+# block the whole launch burst. Override per replica in compose / Coolify.
+# NOTE: the FastAPI lifespan runs in EACH worker — see main.py's lifespan
+# comment for why the background tasks are safe at N×.
+ENV WEB_CONCURRENCY=2
+
 EXPOSE 8000
 
 # Coolify trap: `wget -qO-` and `localhost` (DNS) both fail silently inside
@@ -55,7 +63,9 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 # On container start: apply migrations, provision the version-controlled
 # Academy catalogue, then exec uvicorn so SIGTERM reaches it for graceful
 # shutdown. The seed (application.courses.seed) is idempotent and
-# non-destructive, so running it every boot just reconciles content; it's
-# wrapped so a seed failure logs and still lets the API come up. The wider
-# `start-period=40s` gives Alembic + the seed room before Traefik probes us.
-CMD ["sh", "-c", "alembic upgrade head && (python -m cyberdyne_backend.cli.seed_academy || echo 'academy seed failed; continuing boot') && exec uvicorn cyberdyne_backend.main:app --host 0.0.0.0 --port 8000"]
+# non-destructive; the `--on-boot` flag makes it honour SEED_ACADEMY_ON_BOOT,
+# so ops can set that env false and run the seed as a release step to keep it
+# OFF the blocking boot path (issue #259). It's still wrapped so a seed failure
+# logs and lets the API come up. The wider `start-period=40s` gives Alembic +
+# the (default-on) seed room before Traefik probes us.
+CMD ["sh", "-c", "alembic upgrade head && (python -m cyberdyne_backend.cli.seed_academy --on-boot || echo 'academy seed failed; continuing boot') && exec uvicorn cyberdyne_backend.main:app --host 0.0.0.0 --port 8000"]

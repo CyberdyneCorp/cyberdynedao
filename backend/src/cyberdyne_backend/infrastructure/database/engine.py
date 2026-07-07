@@ -12,6 +12,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from functools import lru_cache
 
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -62,6 +63,18 @@ async def session_scope() -> AsyncIterator[AsyncSession]:
         except Exception:
             await session.rollback()
             raise
+
+
+async def ping_engine() -> None:
+    """Open one connection and run ``SELECT 1`` so the pool is warm and the
+    database is reachable before the app is marked healthy (issue #259).
+
+    Works on both the asyncpg (Postgres) and aiosqlite (test) backends. The
+    caller treats it as best-effort: a failure just means the first real
+    request pays the initial connect + pre-ping instead."""
+    engine = get_engine()
+    async with engine.connect() as conn:
+        await conn.execute(text("SELECT 1"))
 
 
 async def dispose_engine() -> None:

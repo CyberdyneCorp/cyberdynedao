@@ -35,6 +35,21 @@ class Settings(BaseSettings):
     log_level: str = Field("INFO", description="Root log level — DEBUG / INFO / WARNING / ERROR")
     port: int = 8000
 
+    # Full-catalog Academy seed on container boot. Default true keeps the
+    # historical behaviour (the Dockerfile CMD runs the seed with --on-boot,
+    # which honours this flag). Set false to take the seed OFF the blocking
+    # boot path and run it as a release/deploy step instead — a manual
+    # ``python -m cyberdyne_backend.cli.seed_academy`` (no --on-boot) always
+    # seeds regardless of this flag. See issue #259 (cold start).
+    seed_academy_on_boot: bool = True
+
+    # Per-worker translation-worker pool size. The web process drains the
+    # translation-job queue with this many concurrent workers; each claim
+    # locks its row (FOR UPDATE SKIP LOCKED) so they never double-process.
+    # With multiple uvicorn workers the effective LLM concurrency is
+    # (uvicorn workers x this), so cap it here to bound upstream load.
+    translation_worker_count: int = 4
+
     # When true, app startup HARD-FAILS in staging/production if any
     # dev-default mock adapter is still active (see ``mock_adapter_problems``).
     # Default false: the app still boots and only logs warnings, so a

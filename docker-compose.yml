@@ -54,6 +54,16 @@ services:
       PORT: "8000"
       CORS_ORIGINS: ${CORS_ORIGINS:-https://cyberdyne.coolify.cyberdynecorp.ai}
       PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:-https://cyberdyne.coolify.cyberdynecorp.ai}
+      # uvicorn worker processes (fallback for --workers). Default >=2 so one
+      # slow request can't head-of-line-block the launch burst (issue #259).
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
+      # Per-worker translation-worker pool. Effective LLM concurrency is
+      # WEB_CONCURRENCY × this; lower it to cap upstream load.
+      TRANSLATION_WORKER_COUNT: ${TRANSLATION_WORKER_COUNT:-4}
+      # Full-catalog Academy seed on boot. Default true reconciles content on
+      # every start (blocks uvicorn briefly). Set false + run the seed as a
+      # release step to take it off the boot path (issue #259).
+      SEED_ACADEMY_ON_BOOT: ${SEED_ACADEMY_ON_BOOT:-true}
 
       # ---- Database ----
       # Service-name hostname; never `localhost` here.
