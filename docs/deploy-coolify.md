@@ -39,6 +39,9 @@ Set these in **Application → Environment Variables**. The compose references e
 | `LOG_LEVEL` | `INFO` |
 | `CORS_ORIGINS` | Comma-separated; must include the frontend FQDN |
 | `PUBLIC_SITE_URL` | Frontend FQDN — used by the RSS feed |
+| `WEB_CONCURRENCY` | uvicorn workers. Default `2` (Docker) so one slow request can't stall the launch burst. Raise per replica capacity; set `1` to force single-worker. |
+| `TRANSLATION_WORKER_COUNT` | Per-worker translation pool. Default `4`. Effective LLM concurrency is `WEB_CONCURRENCY × TRANSLATION_WORKER_COUNT`. |
+| `SEED_ACADEMY_ON_BOOT` | Default `true` (seed reconciles on every boot). Set `false` to move seeding to the release step below. |
 
 ### CyberdyneAuth (Phase 1+)
 
@@ -109,6 +112,28 @@ Set these in **Application → Environment Variables**. The compose references e
 | `VITE_WEB3AUTH_CLIENT_ID` | yes | |
 | `VITE_WEB3AUTH_NETWORK` | yes | `sapphire_mainnet` in prod. |
 | `VITE_CYBERDYNE_ACCESS_NFT_ADDRESS` | yes | Contract address on Base. |
+
+## 3b · Cold start — seed as a release step (issue #259)
+
+By default the container seeds the full Academy catalogue on every boot
+(`seed_academy --on-boot`, gated by `SEED_ACADEMY_ON_BOOT`). That reconcile
+briefly blocks `uvicorn` and, combined with a single worker + a cold JWKS
+fetch, made the first launch after a deploy slow.
+
+Two things now mitigate this out of the box: `WEB_CONCURRENCY` defaults to
+`2`, and each worker prewarms the JWKS key set + a DB connection on startup so
+the first authenticated request is fast.
+
+To take seeding off the boot path entirely, set `SEED_ACADEMY_ON_BOOT=false`
+and run the seed as a **release/deploy step** (Coolify: *Application →
+Advanced → Post-deployment command*, or a pre-deploy job):
+
+```bash
+python -m cyberdyne_backend.cli.seed_academy   # no --on-boot → always seeds
+```
+
+The seed is idempotent and non-destructive, so it is safe to run on every
+deploy. Boot then only runs `alembic upgrade head` before `uvicorn`.
 
 ## 4 · Sanity checks after deploy
 

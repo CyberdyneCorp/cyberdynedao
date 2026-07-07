@@ -18,8 +18,23 @@ dev-only adapters** that must be replaced before a real go-live (see
 | `LOG_LEVEL` | `INFO` | DEBUG / INFO / WARNING / ERROR (upper-cased). |
 | `PORT` | `8000` | |
 | `ENFORCE_PRODUCTION_ADAPTERS` | `false` | When `true`, app startup **hard-fails** in staging/production if any dev-default mock adapter is still active. Default warns + boots. Flip on once everything below is provisioned. |
+| `WEB_CONCURRENCY` | `2` (Docker) | uvicorn worker processes (uvicorn reads it as the `--workers` fallback). Default >=2 so one slow request can't head-of-line-block the launch burst (issue #259). The FastAPI lifespan runs in **each** worker — background tasks are safe at N× (see below). |
+| `SEED_ACADEMY_ON_BOOT` | `true` | Whether the container-boot seed (`seed_academy --on-boot`) reconciles the full catalogue on start. Set `false` and run the seed as a release step to take it off the blocking boot path. A manual `python -m cyberdyne_backend.cli.seed_academy` (no `--on-boot`) always seeds. |
+| `TRANSLATION_WORKER_COUNT` | `4` | Per-worker translation-worker pool size. Effective LLM concurrency is `WEB_CONCURRENCY × TRANSLATION_WORKER_COUNT`; lower it to cap upstream load. |
 | `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated allowed origins; set to the frontend FQDN(s) in prod. |
 | `PUBLIC_SITE_URL` | `http://localhost:5173` | Used for absolute URLs (RSS, certificate verify links). |
+
+### Boot & workers (cold start — issue #259)
+
+- The container CMD runs `alembic upgrade head`, then `seed_academy --on-boot`, then `uvicorn`. The seed is honoured by `SEED_ACADEMY_ON_BOOT`; move it to a release step (below) to keep the boot path fast.
+- On startup each worker **prewarms** the JWKS key set and opens/validates one DB connection before it is marked healthy, so the first authenticated request doesn't pay the cold JWKS fetch or the first asyncpg connect. Prewarm is best-effort: a cold auth server or not-yet-ready DB logs a warning and boot proceeds.
+- The FastAPI lifespan runs in **each** uvicorn worker. This is deliberate: translation workers claim jobs with `FOR UPDATE SKIP LOCKED` (no double-processing — effective LLM concurrency is `WEB_CONCURRENCY × TRANSLATION_WORKER_COUNT`), and the treasury snapshot prewarmer runs per worker because each worker has its own in-process chain-reader cache (N× RPC reads per TTL — accepted, not a bug).
+
+**Move the seed off the boot path (recommended for prod):** set `SEED_ACADEMY_ON_BOOT=false` and run the seed once per deploy as a release step:
+
+```bash
+python -m cyberdyne_backend.cli.seed_academy   # no --on-boot → always seeds
+```
 
 ## Database
 
@@ -75,6 +90,12 @@ dev-only adapters** that must be replaced before a real go-live (see
 | `DAO_SNAPSHOT_TTL_S` | `300` | Chain-snapshot cache TTL. |
 | `DAO_SNAPSHOT_PREWARM` | `true` | Background worker re-reads the snapshot every `DAO_SNAPSHOT_TTL_S` so the DaoView is served from a warm cache. Inert unless `DAO_TREASURY_ADDRESS` is set; disable for purely-lazy caching. |
 | `DAO_HOLDERS_COUNT` | `0` | Surfaced in `/dao/overview` until the governance subgraph ships. |
+
+## Course recommendations
+
+| Env var | Default | Notes |
+|---------|---------|-------|
+| `RECOMMENDATIONS_CACHE_TTL_S` | `21600` (6h) | Per-user TTL for the `GET /api/v1/recommendations/me` result. Without it every request pays a synchronous LLM round-trip on the app-launch hot path. Recommendations change rarely, so results may be up to this stale (mid-TTL progress won't reflect until expiry). The cache is in-process, hence **per-worker** with `--workers > 1`; the Dockerfile runs a single worker so today it is process-wide. The endpoint and the chat-agent recommend tool share one cache per user. |
 
 ## Marketplace / Stripe
 

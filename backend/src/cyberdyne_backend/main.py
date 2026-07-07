@@ -627,6 +627,7 @@ from cyberdyne_backend.domain.course_finder import CatalogEntry
 from cyberdyne_backend.infrastructure.container import Container
 from cyberdyne_backend.infrastructure.database.engine import (
     dispose_engine,
+    ping_engine,
     session_scope,
 )
 from cyberdyne_backend.infrastructure.logging import configure_logging
@@ -634,11 +635,25 @@ from cyberdyne_backend.infrastructure.settings import get_settings
 
 logger = logging.getLogger("cyberdyne_backend.main")
 
-# Size of the translation-worker pool. Each worker drains the job queue
-# independently (claims lock their row), so a backlog (e.g. a catalogue-wide
-# re-translation) drains roughly N times faster. Kept modest to bound concurrent
-# LLM calls and load on the web process.
-_TRANSLATION_WORKERS = 4
+
+async def _startup_prewarm(container: Container) -> None:
+    """Warm the caches the first real request would otherwise pay for
+    (issue #259): fetch the JWKS once and open/validate a DB connection
+    before the app is marked healthy.
+
+    Best-effort and idempotent per worker — each step is guarded so a cold
+    auth server or a not-yet-ready DB logs and lets boot proceed (worst
+    case is the status quo: the first request pays the cost)."""
+    try:
+        await container.prewarm_auth()
+    except Exception:
+        # Never let prewarm crash boot — worst case is the status quo.
+        logger.warning("auth prewarm failed; first request will fetch JWKS", exc_info=True)
+    try:
+        await ping_engine()
+    except Exception:
+        # Never let prewarm crash boot — worst case is the status quo.
+        logger.warning("database prewarm failed; first request will connect", exc_info=True)
 
 
 def create_app() -> FastAPI:
@@ -700,9 +715,21 @@ def create_app() -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        # NOTE: with uvicorn --workers/WEB_CONCURRENCY > 1 this lifespan runs
+        # in EACH worker process. The background tasks below are deliberately
+        # safe at Nx: translation workers claim rows with FOR UPDATE SKIP
+        # LOCKED (no double-processing — effective LLM concurrency is
+        # workers x translation_worker_count, bounded via the setting), and the
+        # treasury prewarmer is per-worker on purpose because each worker owns
+        # its own in-process CachingChainReader cache.
+        #
         # Phase 1's public endpoints don't make outbound CyberdyneAuth-
         # authed calls, so we don't start the service-token provider
         # here. Phase 6 will: ``await container.service_token_provider.start()``.
+        #
+        # Prewarm JWKS + a DB connection before serving so the first real
+        # request doesn't pay the cold fetch/connect (issue #259). Best-effort.
+        await _startup_prewarm(container)
         worker_tasks: list[asyncio.Task[None]] = []
         if settings.openai_api_key is not None:
             # Only run workers when translation is actually available (mirrors
@@ -710,7 +737,7 @@ def create_app() -> FastAPI:
             # ``running`` by the last restart, then drain in parallel — each
             # claim_next() locks its row (FOR UPDATE SKIP LOCKED), so a small
             # pool never claims the same job and a backlog drains N times faster.
-            for _ in range(_TRANSLATION_WORKERS):
+            for _ in range(settings.translation_worker_count):
                 worker = TranslationWorker(
                     store=_WorkerJobStore(),
                     translate_course_factory=_translate_course_scope,
@@ -857,6 +884,7 @@ def create_app() -> FastAPI:
                 courses=SqlAlchemyCourseRepository(session),
                 analytics=SqlAlchemyAnalyticsRepository(session),
                 llm=container.chat_llm,
+                cache=container.recommendations_cache,
             )
 
     # Skill Map — per-domain mastery + weak areas (issue #165).
@@ -1591,6 +1619,7 @@ def create_app() -> FastAPI:
                     courses=course_repo,
                     analytics=SqlAlchemyAnalyticsRepository(session),
                     llm=container.chat_llm,
+                    cache=container.recommendations_cache,
                 ),
                 list_user_notes=ListUserNotes(repo=SqlAlchemyLessonNoteRepository(session)),
             )

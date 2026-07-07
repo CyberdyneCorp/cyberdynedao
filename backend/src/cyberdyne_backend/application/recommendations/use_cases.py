@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from cyberdyne_backend.domain.ai_chat import ChatLLMPort, ChatMessage, ChatRole
@@ -22,6 +23,9 @@ from cyberdyne_backend.domain.analytics import (
     build_learner_dashboard,
 )
 from cyberdyne_backend.domain.courses import Course, CourseLevel, CourseRepository
+
+if TYPE_CHECKING:
+    from cyberdyne_backend.application.recommendations.cache import RecommendationsCache
 
 _LEVEL_ORDINAL = {
     CourseLevel.BEGINNER: 0,
@@ -61,8 +65,16 @@ class RecommendCourses:
     analytics: AnalyticsRepository
     llm: ChatLLMPort
     max_courses: int = field(default=3)
+    # Optional process-scoped TTL cache so app launch doesn't pay an LLM
+    # round-trip every request. Defaults to None (no cache) so existing
+    # callers and tests are unaffected.
+    cache: RecommendationsCache | None = field(default=None)
 
     async def execute(self, *, user_id: UUID) -> LearningRecommendations:
+        if self.cache is not None:
+            cached = self.cache.get(user_id)
+            if cached is not None:
+                return cached
         dashboard = build_learner_dashboard(await self.analytics.learner_counts(user_id))
         catalogue = await self.courses.list_courses()  # published only
         ranked = self._rank(catalogue, dashboard)[: self.max_courses]
@@ -76,9 +88,13 @@ class RecommendCourses:
             for course in ranked
         ]
         if not recs:
-            return LearningRecommendations(summary=_EMPTY_SUMMARY, courses=[])
-        summary = await self._summarize(dashboard, recs)
-        return LearningRecommendations(summary=summary, courses=recs)
+            result = LearningRecommendations(summary=_EMPTY_SUMMARY, courses=[])
+        else:
+            summary = await self._summarize(dashboard, recs)
+            result = LearningRecommendations(summary=summary, courses=recs)
+        if self.cache is not None:
+            self.cache.set(user_id, result)
+        return result
 
     def _target_level(self, dashboard: LearnerDashboard) -> int:
         """Where the learner sits on the Beginner->Advanced ladder.
