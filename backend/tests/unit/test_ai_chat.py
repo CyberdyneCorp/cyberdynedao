@@ -214,7 +214,14 @@ class _FakeCourseRepo:
         self._course = c
 
     async def list_courses(
-        self, *, level=None, include_drafts=False, locale="en", limit=None, offset=0
+        self,
+        *,
+        level=None,
+        include_drafts=False,
+        locale="en",
+        limit=None,
+        offset=0,
+        include_lessons=True,
     ):
         items = [self._course]
         if level is not None:

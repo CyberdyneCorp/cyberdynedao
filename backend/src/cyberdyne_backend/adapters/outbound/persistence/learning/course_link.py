@@ -31,7 +31,11 @@ class SqlAlchemyCourseLinkReader:
         return {course.slug for course in courses}
 
     async def course_cards(self, *, locale: str = "en") -> dict[str, LinkedCourse]:
-        courses = await self._courses.list_courses(include_drafts=False, locale=locale)
+        # A card only needs slug/title/level — never lesson bodies — so skip
+        # hydrating them (the whole catalogue was being loaded and discarded).
+        courses = await self._courses.list_courses(
+            include_drafts=False, locale=locale, include_lessons=False
+        )
         return {
             course.slug: LinkedCourse(
                 slug=course.slug, title=course.title, level=course.level.value

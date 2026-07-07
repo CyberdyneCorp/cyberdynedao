@@ -42,9 +42,13 @@ class ListCourses:
         locale: str = "en",
         limit: int | None = None,
         offset: int = 0,
+        include_lessons: bool = True,
     ) -> list[Course]:
         # limit=None preserves the original full-catalogue behaviour; a
         # supplied limit is clamped to a safe ceiling and offset floored.
+        # include_lessons=False lets a count-only read (public catalogue)
+        # skip hydrating lesson bodies; the default keeps full lessons for
+        # progress/AI/category callers.
         clamped = None if limit is None else max(1, min(limit, MAX_COURSE_LIST_LIMIT))
         return await self.repo.list_courses(
             level=level,
@@ -52,6 +56,7 @@ class ListCourses:
             locale=locale,
             limit=clamped,
             offset=max(0, offset),
+            include_lessons=include_lessons,
         )
 
 

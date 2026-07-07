@@ -44,6 +44,7 @@ class CourseRepository(Protocol):
         locale: str = "en",
         limit: int | None = None,
         offset: int = 0,
+        include_lessons: bool = True,
     ) -> list[Course]:
         """All courses ordered by (level, sort_order). Drafts are
         filtered out unless ``include_drafts`` is true. Lessons are
@@ -54,7 +55,14 @@ class CourseRepository(Protocol):
         (the default) returns the whole catalogue, preserving the existing
         contract. The window is applied to the *courses* before their
         lessons/translations are loaded, so a bounded request also bounds
-        the eager-load work."""
+        the eager-load work.
+
+        ``include_lessons`` defaults to true (every existing caller keeps
+        full lessons). When false, lesson bodies are NOT hydrated — each
+        course comes back with ``lessons == []`` and ``lesson_count`` set
+        from a single COUNT(*) aggregate. Use it for count-only reads (the
+        public catalogue summary, link cards) to avoid loading every lesson
+        ``text_body`` just to count them."""
         ...
 
     async def delete(self, course_id: UUID) -> None:

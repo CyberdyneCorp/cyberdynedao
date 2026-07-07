@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -80,6 +80,7 @@ def _row_to_course(
     course_tr: CourseTranslationRow | None = None,
     lesson_tr: dict[UUID, LessonTranslationRow] | None = None,
     category: Category | None = None,
+    lesson_count: int | None = None,
 ) -> Course:
     title = course_tr.title if course_tr and course_tr.title else row.title
     description = course_tr.description if course_tr and course_tr.description else row.description
@@ -102,6 +103,7 @@ def _row_to_course(
             for les in sorted(lessons, key=lambda x: x.sort_order)
         ],
         category=category,
+        lesson_count=lesson_count,
     )
 
 
@@ -196,6 +198,7 @@ class SqlAlchemyCourseRepository:
         locale: str = "en",
         limit: int | None = None,
         offset: int = 0,
+        include_lessons: bool = True,
     ) -> list[Course]:
         stmt = select(CourseRow)
         if not include_drafts:
@@ -212,17 +215,31 @@ class SqlAlchemyCourseRepository:
         rows = (await self._session.execute(stmt)).scalars().all()
         if not rows:
             return []
-        lessons_by_course = await self._lessons_for_many([r.id for r in rows])
+        page_ids = [r.id for r in rows]
         cats = await self._categories_by_id()
 
         def _cat(r: CourseRow) -> Category | None:
             return cats.get(r.category_id) if r.category_id else None
 
+        course_tr = (
+            {} if _is_base_locale(locale) else await self._course_translations(page_ids, locale)
+        )
+        if not include_lessons:
+            # Count-only read: one COUNT(*) GROUP BY instead of hydrating
+            # every lesson row (incl. full ``text_body``) just to count them.
+            counts = await self._lesson_counts_for_many(page_ids)
+            return [
+                _row_to_course(
+                    r, [], course_tr.get(r.id), category=_cat(r), lesson_count=counts.get(r.id, 0)
+                )
+                for r in rows
+            ]
+
+        lessons_by_course = await self._lessons_for_many(page_ids)
         if _is_base_locale(locale):
             return [
                 _row_to_course(r, lessons_by_course.get(r.id, []), category=_cat(r)) for r in rows
             ]
-        course_tr = await self._course_translations([r.id for r in rows], locale)
         all_lesson_ids = [le.id for les in lessons_by_course.values() for le in les]
         lesson_tr = await self._lesson_translations(all_lesson_ids, locale)
         return [
@@ -267,6 +284,17 @@ class SqlAlchemyCourseRepository:
         for row in result.scalars().all():
             out.setdefault(row.course_id, []).append(row)
         return out
+
+    async def _lesson_counts_for_many(self, course_ids: list[UUID]) -> dict[UUID, int]:
+        # Count lessons per course without loading a single lesson body.
+        if not course_ids:
+            return {}
+        result = await self._session.execute(
+            select(LessonRow.course_id, func.count())
+            .where(LessonRow.course_id.in_(course_ids))
+            .group_by(LessonRow.course_id)
+        )
+        return {course_id: count for course_id, count in result.all()}
 
     async def _course_translations(
         self, course_ids: list[UUID], locale: str

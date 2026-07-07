@@ -6,8 +6,9 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
+from cyberdyne_backend.adapters.inbound.api.http_cache import conditional_json_list
 from cyberdyne_backend.adapters.inbound.api.learning.schemas import (
     CertificateResponse,
     CertificateVerificationResponse,
@@ -288,11 +289,12 @@ def _verification_response(v: CertificateVerification) -> CertificateVerificatio
     response_model_by_alias=True,
 )
 async def list_modules(
+    request: Request,
     use_case: Annotated[ListModules, Depends(get_list_modules_uc)],
     locale: Annotated[str, Depends(resolve_locale)],
-) -> list[LearningModuleResponse]:
+) -> Response:
     modules = await use_case.execute(locale=locale)
-    return [_module_response(m) for m in modules]
+    return conditional_json_list([_module_response(m) for m in modules], request)
 
 
 @public_router.get(
@@ -301,11 +303,12 @@ async def list_modules(
     response_model_by_alias=True,
 )
 async def list_paths(
+    request: Request,
     use_case: Annotated[ListPaths, Depends(get_list_paths_uc)],
     locale: Annotated[str, Depends(resolve_locale)],
-) -> list[LearningPathResponse]:
+) -> Response:
     paths = await use_case.execute(locale=locale)
-    return [_path_response(p) for p in paths]
+    return conditional_json_list([_path_response(p) for p in paths], request)
 
 
 @public_router.get(

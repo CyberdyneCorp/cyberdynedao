@@ -171,6 +171,12 @@ class Course:
     # Assigned category (None = uncategorized). Set on read by the repo's join;
     # on write, ``save`` persists ``category.id`` (or NULL).
     category: Category | None = None
+    # Read-time lesson count, populated by count-only list reads that
+    # deliberately skip hydrating lesson bodies (public catalogue). It is
+    # NOT a persisted column — derived at the read boundary like
+    # ``deadline_status``. ``None`` means "not provided", so a caller falls
+    # back to ``len(lessons)`` and behaviour stays byte-identical to before.
+    lesson_count: int | None = None
 
     def is_visible_to_anonymous(self) -> bool:
         return self.status is CourseStatus.PUBLISHED and self.published_at is not None
