@@ -412,8 +412,12 @@ Worth raising a follow-up with `geo_dashboard` and `orgpilot` maintainers: they 
 
 **Key dependencies:** the `Content` module (a module's body markdown can be authored once and rendered identically to a blog post — same repo pattern).
 
+**Catalogue read performance (issue #258):** the public catalogue reads — `GET /api/v1/courses`, `/api/v1/categories`, `/api/v1/learning/modules`, `/api/v1/learning/paths` — are read-only and polled, so they are served with conditional-request caching:
+- A strong `ETag` (sha256 of the serialized body) plus `Cache-Control: private, max-age=60`. A client caches its own copy for up to 60s and afterwards revalidates with `If-None-Match`; a matching body returns an empty `304 Not Modified` instead of re-transferring the payload. `private` (not `public`) is deliberate: `/api/v1/courses` varies by caller (an editor's token also lists drafts) and every catalogue read varies by `Accept-Language`, so a shared/proxy cache must never store one caller's body and serve it to another (see #260). The ETag is computed from the pydantic `by_alias` JSON of the response models, so the 200 body is byte-for-byte the same shape as before — clients are unaffected.
+- `GET /api/v1/courses` sizes `lessonCount` with a single `COUNT(*) … GROUP BY course_id` aggregate (`CourseRepository.list_courses(..., include_lessons=False)`) instead of hydrating every lesson row — including the full `text_body` markdown — just to count them. `include_lessons` defaults to `True`, so progress / AI-chat / category callers that genuinely need full lessons are unchanged. This is a pure read-path change: no new column, no migration.
+
 **Testing:**
-- Unit: progress invariant (100% ⇔ `completed_at`), enrollment idempotency, certificate eligibility predicate.
+- Unit: progress invariant (100% ⇔ `completed_at`), enrollment idempotency, certificate eligibility predicate. Count-only list read does not hydrate lesson bodies (SQL-capture assertion) and the conditional GET returns `200`+`ETag` then `304` on `If-None-Match`.
 - Integration: enroll → progress → complete-all → certificate flow against real Postgres.
 
 ### 5.4 Marketplace + Stripe

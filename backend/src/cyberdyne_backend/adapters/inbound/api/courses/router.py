@@ -33,6 +33,7 @@ from cyberdyne_backend.adapters.inbound.api.courses.schemas import (
     UpdateCourseRequest,
     UpdateLessonRequest,
 )
+from cyberdyne_backend.adapters.inbound.api.http_cache import conditional_json_list
 from cyberdyne_backend.adapters.inbound.api.locale import resolve_locale
 from cyberdyne_backend.adapters.inbound.api.quota.dependencies import require_pro
 from cyberdyne_backend.adapters.inbound.middleware.auth import (
@@ -322,7 +323,11 @@ def _summary(course: Course) -> CourseSummaryResponse:
         status=course.status.value,
         mandatory=course.mandatory,
         sort_order=course.sort_order,
-        lesson_count=len(course.lessons),
+        # Count-only list reads set ``lesson_count`` without hydrating lessons;
+        # detail reads leave it None and we count the loaded lessons.
+        lesson_count=(
+            course.lesson_count if course.lesson_count is not None else len(course.lessons)
+        ),
         created_at=course.created_at,
         published_at=course.published_at,
         due_at=course.due_at,
@@ -349,10 +354,11 @@ def _detail(course: Course, *, full_content: bool = True) -> CourseDetailRespons
 
 @category_public_router.get("", response_model=list[CategoryResponse], response_model_by_alias=True)
 async def list_categories(
+    request: Request,
     use_case: Annotated[ListCategories, Depends(get_list_categories_uc)],
-) -> list[CategoryResponse]:
+) -> Response:
     cats = await use_case.execute()
-    return [_to_category_response(c) for c in cats]
+    return conditional_json_list([_to_category_response(c) for c in cats], request)
 
 
 @category_admin_router.post(
@@ -433,13 +439,18 @@ async def list_courses(
     level: str | None = None,
     limit: Annotated[int | None, Query(ge=1, le=MAX_COURSE_LIST_LIMIT)] = None,
     offset: Annotated[int, Query(ge=0)] = 0,
-) -> list[CourseSummaryResponse]:
+) -> Response:
     """Public course catalogue. Returns a bare array ordered by
     ``(level, sort_order, title)``. ``limit``/``offset`` optionally page
     the result so a client (or a future high-traffic surface) can fetch a
     window instead of the full catalogue; omitting ``limit`` returns the
     whole list as before. The response shape is unchanged either way —
-    clients that ignore the new params keep working."""
+    clients that ignore the new params keep working.
+
+    Lessons are counted with a COUNT(*) aggregate (``include_lessons=False``)
+    instead of hydrating every lesson body just to size ``lessonCount``, and
+    the response is served with an ETag + short ``Cache-Control`` so a polling
+    client can revalidate cheaply (304) instead of re-fetching the whole body."""
     parsed_level = None
     if level is not None:
         try:
@@ -452,8 +463,9 @@ async def list_courses(
         locale=locale,
         limit=limit,
         offset=offset,
+        include_lessons=False,
     )
-    return [_summary(c) for c in courses]
+    return conditional_json_list([_summary(c) for c in courses], request)
 
 
 @public_router.get(

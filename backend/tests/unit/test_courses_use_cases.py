@@ -64,6 +64,7 @@ class FakeCourseRepo:
         locale: str = "en",
         limit: int | None = None,
         offset: int = 0,
+        include_lessons: bool = True,
     ) -> list[Course]:
         items = list(self._by_slug.values())
         if not include_drafts:
