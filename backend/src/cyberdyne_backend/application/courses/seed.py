@@ -226,6 +226,9 @@ from cyberdyne_backend.application.courses.seed_scientific_computing import (
     SCIENTIFIC_COMPUTING_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_security import SECURITY_COURSES
+from cyberdyne_backend.application.courses.seed_selling_software_ai import (
+    SELLING_SOFTWARE_AI_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_semiconductors import SEMICONDUCTOR_COURSES
 from cyberdyne_backend.application.courses.seed_sensors import SENSORS_COURSES
 from cyberdyne_backend.application.courses.seed_sequence_analysis import SEQUENCE_ANALYSIS_COURSES
@@ -1514,6 +1517,7 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *TOPOLOGY_OPTIMIZATION_COURSES,
     *RAILS_COURSES,
     *STARTUPS_AGE_OF_AI_COURSES,
+    *SELLING_SOFTWARE_AI_COURSES,
 )
 
 
