@@ -44,7 +44,7 @@ MODULE: dict[str, Any] = {
     "title": "Surviving & Selling Software in the Age of AI",
     "category": "Entrepreneurship",
     "level": "Beginner",
-    "duration": "1.5 hr",
+    "duration": "2.5 hr",
     "icon": "💰",
     "description": (
         "When the cost of building software goes to zero: the coder → "

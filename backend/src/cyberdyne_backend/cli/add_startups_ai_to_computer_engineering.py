@@ -44,7 +44,7 @@ MODULE: dict[str, Any] = {
     "title": "Startups in the Age of AI",
     "category": "Entrepreneurship",
     "level": "Beginner",
-    "duration": "11 hr",
+    "duration": "14 hr",
     "icon": "🚀",
     "description": (
         "The Y Combinator Startup School playbook: ideas, co-founders, "

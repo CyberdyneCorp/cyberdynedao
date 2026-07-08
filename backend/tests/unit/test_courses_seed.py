@@ -171,6 +171,30 @@ class TestSeedCourses:
         assert again.id == watch.id
         assert again.content_url == "https://www.youtube.com/watch?v=new"
 
+    def _assert_ai_course_pattern(self, course: SeedCourse) -> None:
+        """The AI-era course pattern: every video is followed by a text
+        summary then a checkpoint quiz; every text lesson is immediately
+        followed by a quiz; the course ends with the comprehensive final
+        quiz; every quiz question has exactly one correct option (an
+        invalid question aborts the whole real-DB seed run)."""
+        lessons = list(course.lessons)
+        for i, lesson in enumerate(lessons):
+            if lesson.lesson_type == "video":
+                assert lessons[i + 1].lesson_type == "text", f"{lesson.title}: no summary"
+                assert lessons[i + 2].lesson_type == "quiz", f"{lesson.title}: no quiz"
+            elif lesson.lesson_type == "text":
+                assert lessons[i + 1].lesson_type == "quiz", f"{lesson.title}: no quiz"
+        assert lessons[-1].lesson_type == "quiz"
+        assert lessons[-1].title == "Check your knowledge"
+        for lesson in lessons:
+            if lesson.lesson_type != "quiz":
+                continue
+            assert lesson.quiz, f"{lesson.title}: quiz lesson without questions"
+            for idx, question in enumerate(lesson.quiz):
+                n_correct = sum(1 for o in question.options if o.is_correct)
+                assert n_correct == 1, f"{lesson.title}/q{idx}: {n_correct} correct options"
+                assert len(question.options) >= 2
+
     def test_startups_age_of_ai_course_shape(self) -> None:
         course = next(c for c in ACADEMY_COURSES if c.slug == "startups-in-the-age-of-ai")
         videos = [le for le in course.lessons if le.lesson_type == "video"]
@@ -182,14 +206,16 @@ class TestSeedCourses:
         )
         ids = [le.content_url.rsplit("=", 1)[-1] for le in videos if le.content_url]
         assert len(ids) == len(set(ids)), "duplicate videos in the curriculum"
-        # Inline final quiz: every question has exactly one correct option
-        # (an invalid question aborts the whole real-DB seed run).
-        final = next(le for le in course.lessons if le.lesson_type == "quiz")
-        assert final.quiz
-        for idx, question in enumerate(final.quiz):
-            n_correct = sum(1 for o in question.options if o.is_correct)
-            assert n_correct == 1, f"q{idx}: {n_correct} correct options"
-            assert len(question.options) >= 2
+        # welcome + 6 intros + 29 summaries = 36 texts, one quiz each + final.
+        assert len(course.lessons) == 102
+        self._assert_ai_course_pattern(course)
+        # Each video's summary is the "Key ideas" lesson for that talk.
+        lessons = list(course.lessons)
+        for i, lesson in enumerate(lessons):
+            if lesson.lesson_type == "video":
+                assert lessons[i + 1].title == f"Key ideas — {lesson.title}"
+                assert lessons[i + 1].text_body
+                assert lessons[i + 2].title == f"Quiz: {lesson.title}"
 
     def test_selling_software_ai_course_shape(self) -> None:
         course = next(c for c in ACADEMY_COURSES if c.slug == "selling-software-in-the-age-of-ai")
@@ -200,14 +226,8 @@ class TestSeedCourses:
         texts = [le for le in course.lessons if le.lesson_type == "text"]
         assert len(texts) >= 5
         assert all(le.text_body for le in texts)
-        # Inline final quiz: every question has exactly one correct option
-        # (an invalid question aborts the whole real-DB seed run).
-        final = next(le for le in course.lessons if le.lesson_type == "quiz")
-        assert final.quiz
-        for idx, question in enumerate(final.quiz):
-            n_correct = sum(1 for o in question.options if o.is_correct)
-            assert n_correct == 1, f"q{idx}: {n_correct} correct options"
-            assert len(question.options) >= 2
+        assert len(course.lessons) == 14
+        self._assert_ai_course_pattern(course)
 
     def test_every_registry_quiz_question_has_exactly_one_correct_option(self) -> None:
         # Regression: a quiz question with zero (or >1) correct options passes the
