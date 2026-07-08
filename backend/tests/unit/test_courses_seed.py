@@ -209,12 +209,16 @@ class TestSeedCourses:
         # welcome + 6 intros + 29 summaries = 36 texts, one quiz each + final.
         assert len(course.lessons) == 102
         self._assert_ai_course_pattern(course)
-        # Each video's summary is the "Key ideas" lesson for that talk.
+        # Each video's companion is the "Key ideas" lesson for that talk,
+        # carrying a complete summary, the main ideas, and a Mermaid mindmap.
         lessons = list(course.lessons)
         for i, lesson in enumerate(lessons):
             if lesson.lesson_type == "video":
-                assert lessons[i + 1].title == f"Key ideas — {lesson.title}"
-                assert lessons[i + 1].text_body
+                summary = lessons[i + 1]
+                assert summary.title == f"Key ideas — {lesson.title}"
+                body = summary.text_body or ""
+                for marker in ("## Summary", "## Main ideas", "## Mindmap", "```mermaid"):
+                    assert marker in body, f"{summary.title}: missing {marker}"
                 assert lessons[i + 2].title == f"Quiz: {lesson.title}"
 
     def test_selling_software_ai_course_shape(self) -> None:
@@ -228,6 +232,37 @@ class TestSeedCourses:
         assert all(le.text_body for le in texts)
         assert len(course.lessons) == 14
         self._assert_ai_course_pattern(course)
+        # The TEDx talk's companion lesson carries the summary / main ideas /
+        # mindmap anatomy too.
+        distilled = next(le for le in course.lessons if le.title == "The talk, distilled")
+        for marker in ("## Summary", "## Main ideas", "## Mindmap", "```mermaid"):
+            assert marker in (distilled.text_body or ""), f"missing {marker}"
+
+    def test_ai_course_mindmaps_use_strict_mermaid_syntax(self) -> None:
+        # A malformed mindmap renders as an error box in the lesson viewer.
+        # Enforce the constrained grammar the diagrams were authored against:
+        # `mindmap` header, one `root((Title))`, then indented plain-ASCII
+        # nodes (letters/digits/spaces/hyphens only — punctuation breaks the
+        # mermaid parser).
+        import re
+
+        root_re = re.compile(r"^  root\(\([A-Za-z0-9 -]+\)\)$")
+        node_re = re.compile(r"^ {4,}[A-Za-z0-9][A-Za-z0-9 -]*$")
+        checked = 0
+        for slug in ("startups-in-the-age-of-ai", "selling-software-in-the-age-of-ai"):
+            course = next(c for c in ACADEMY_COURSES if c.slug == slug)
+            for lesson in course.lessons:
+                body = lesson.text_body or ""
+                if "```mermaid" not in body:
+                    continue
+                block = body.split("```mermaid", 1)[1].split("```", 1)[0].strip("\n")
+                lines = block.split("\n")
+                assert lines[0] == "mindmap", f"{slug}/{lesson.title}: not a mindmap"
+                assert root_re.match(lines[1]), f"{slug}/{lesson.title}: bad root"
+                for line in lines[2:]:
+                    assert node_re.match(line), f"{slug}/{lesson.title}: bad node {line!r}"
+                checked += 1
+        assert checked == 30  # 29 Key-ideas lessons + the TEDx companion
 
     def test_every_registry_quiz_question_has_exactly_one_correct_option(self) -> None:
         # Regression: a quiz question with zero (or >1) correct options passes the
