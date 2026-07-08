@@ -68,6 +68,41 @@ lessons extend his argument into economics and strategy, and a final quiz
 checks what stuck.
 """,
         ),
+        quiz_lesson(
+            "Quiz: Welcome — the question this course answers",
+            (
+                q(
+                    "Why does near-zero development cost threaten the price of software itself?",
+                    (
+                        opt("Regulators cap prices when production gets cheap"),
+                        opt(
+                            "When the cost of producing something falls, its selling price "
+                            "follows — unless you're selling something else along with it",
+                            correct=True,
+                        ),
+                        opt("Customers stop needing software once AI exists"),
+                        opt("It doesn't — prices are set only by demand"),
+                    ),
+                    "The welcome lesson's premise: software careers were built on scarcity "
+                    "of production, and AI is collapsing exactly that scarcity.",
+                ),
+                q(
+                    "Which two questions does this course set out to answer?",
+                    (
+                        opt("Which language to learn next, and which framework will win"),
+                        opt("How to raise venture capital, and how to hire engineers"),
+                        opt(
+                            "How to survive as a developer whose craft is being automated, "
+                            "and how to sell software when anyone can generate it",
+                            correct=True,
+                        ),
+                        opt("Whether AI is conscious, and whether coding is ethical"),
+                    ),
+                    "Survival and selling — the human question and the market question — "
+                    "structure everything that follows.",
+                ),
+            ),
+        ),
         video_lesson(
             "What to teach when AI writes the code (TEDx)",
             "https://www.youtube.com/watch?v=yhGzXULZkEw",
@@ -115,6 +150,57 @@ clarity."** Syntax is no longer the bottleneck — describing what you want,
 with constraints, examples and tests of intent, is.
 """,
         ),
+        quiz_lesson(
+            "Quiz: What to teach when AI writes the code",
+            (
+                q(
+                    "What did Stropek realize he had actually been in love with all along?",
+                    (
+                        opt("Writing syntactically perfect code"),
+                        opt("The prestige of a software career"),
+                        opt("Computer hardware, starting with his Commodore C128"),
+                        opt(
+                            "Developing things — turning vague thoughts into something real "
+                            "and usable; code was just a tool",
+                            correct=True,
+                        ),
+                    ),
+                    "That realization is the hinge of the talk: \"I'm not just a coder, "
+                    "I'm a developer.\"",
+                ),
+                q(
+                    "Why does Stropek argue coding will survive even when AI is faster?",
+                    (
+                        opt(
+                            "For the same reason chess, running and sailing survived engines "
+                            "— efficiency was never the point, experience and training a "
+                            "kind of thinking were",
+                            correct=True,
+                        ),
+                        opt("Because AI will be banned from production systems"),
+                        opt("Because models cannot write working programs"),
+                        opt("Because employers will always require it in interviews"),
+                    ),
+                    "Coding teaches precision, logic and patience — and understanding code "
+                    "stays valuable for closing the almost-correct-to-correct gap.",
+                ),
+                q(
+                    "Working with AI revived a feeling from Stropek's teenage years. Which one?",
+                    (
+                        opt("Frustration at tools that constantly break"),
+                        opt(
+                            "Self-efficacy — the feeling that his ideas can change reality, "
+                            "with the distance from idea to result drastically shortened",
+                            correct=True,
+                        ),
+                        opt("Fear of being replaced by better programmers"),
+                        opt("Boredom with repetitive exercises"),
+                    ),
+                    "As with his first programs on the C128, what mattered was making "
+                    "something happen — AI shortens idea-to-reality, it doesn't remove it.",
+                ),
+            ),
+        ),
         _t(
             "The economics of near-free code",
             "10 min",
@@ -160,6 +246,53 @@ is the free input, the scarce complements are:
 to zero, and start owning one of its scarce complements.**
 """,
         ),
+        quiz_lesson(
+            "Quiz: The economics of near-free code",
+            (
+                q(
+                    "Why do generic CRUD apps head toward a price of zero?",
+                    (
+                        opt("Because open source made them illegal to sell"),
+                        opt("Because customers no longer need CRUD functionality"),
+                        opt(
+                            "Because competition pushes price toward marginal cost, and "
+                            "their entire value is 'it's working code' — now a commodity",
+                            correct=True,
+                        ),
+                        opt("Because app stores take too large a cut"),
+                    ),
+                    "Anything whose whole value is working code inherits the near-zero "
+                    "marginal cost of generating it.",
+                ),
+                q(
+                    "Which of these is NOT one of the scarce complements the lesson says "
+                    "value migrates to?",
+                    (
+                        opt("Verification and accountability"),
+                        opt("Distribution — reaching the person with the problem"),
+                        opt("Generic boilerplate code", correct=True),
+                        opt("Proprietary data and context"),
+                    ),
+                    "Boilerplate is the input being commoditized; judgment, verification, "
+                    "distribution, trust and data are what stays scarce next to it.",
+                ),
+                q(
+                    "The lesson's one-sentence survival strategy is…",
+                    (
+                        opt("undercut competitors before they undercut you"),
+                        opt(
+                            "stop selling the thing whose price is going to zero and start "
+                            "owning one of its scarce complements",
+                            correct=True,
+                        ),
+                        opt("patent your prompts before others do"),
+                        opt("wait for the AI hype cycle to end"),
+                    ),
+                    "It's the 'commoditize your complement' logic applied from the other "
+                    "side: position yourself where the money lands when code is free.",
+                ),
+            ),
+        ),
         _t(
             "What still commands a price",
             "9 min",
@@ -199,6 +332,58 @@ commercially: people already pay premiums for handmade, intentional,
 human-crafted goods. "Maybe one day we'll even start valuing software that
 was handmade — because it is not efficient, it's intentional."
 """,
+        ),
+        quiz_lesson(
+            "Quiz: What still commands a price",
+            (
+                q(
+                    "Why does verification stay expensive when generation is free?",
+                    (
+                        opt("Verification tools are priced by enterprise vendors"),
+                        opt(
+                            "'Almost correct' is free but 'actually correct' is not — "
+                            "someone must find what's wrong and sign their name to it, and "
+                            "liability can't be delegated to a model",
+                            correct=True,
+                        ),
+                        opt("Because generated code is always completely wrong"),
+                        opt("Because regulators require human-written code"),
+                    ),
+                    "Accountability — to the customer, the auditor, the regulator — is the "
+                    "direct market value of still understanding code deeply.",
+                ),
+                q(
+                    "Why do distribution and trust get MORE valuable as software supply explodes?",
+                    (
+                        opt(
+                            "A thousand generated competitors can appear in a weekend — which "
+                            "is exactly why nobody installs software from strangers, so a "
+                            "trusted channel becomes the bottleneck",
+                            correct=True,
+                        ),
+                        opt("Advertising prices fall when supply rises"),
+                        opt("They don't — distribution matters less when supply is high"),
+                        opt("Because app marketplaces close to new entrants"),
+                    ),
+                    "Abundance devalues production and revalues everything that separates "
+                    "one credible product from a flood of lookalikes.",
+                ),
+                q(
+                    "What does the lesson suggest about 'handmade' software?",
+                    (
+                        opt("It will be forbidden in professional settings"),
+                        opt("It is always higher quality than generated software"),
+                        opt(
+                            "Like handmade goods, it may command a premium precisely because "
+                            "it is intentional rather than efficient",
+                            correct=True,
+                        ),
+                        opt("It only matters for retro computing hobbyists"),
+                    ),
+                    "Stropek's line: we may start valuing software that was handmade — not "
+                    "efficient, but intentional. Experience can be the product.",
+                ),
+            ),
         ),
         _t(
             "How to sell software when anyone can generate it",
@@ -246,6 +431,54 @@ code production; competing on feature count; "it's like X but cheaper"
 a model can re-derive.
 """,
         ),
+        quiz_lesson(
+            "Quiz: How to sell software when anyone can generate it",
+            (
+                q(
+                    "'Sell outcomes, not artifacts' means pricing…",
+                    (
+                        opt("per line of code delivered"),
+                        opt("per hour of AI compute consumed"),
+                        opt(
+                            "the result the customer actually wants — collected invoices, "
+                            "resolved tickets — so cheap production becomes your margin",
+                            correct=True,
+                        ),
+                        opt("a flat fee for the source-code handover"),
+                    ),
+                    "Nobody ever wanted code; when delivery gets cheap, charging for the "
+                    "outcome turns AI from a threat into your cost advantage.",
+                ),
+                q(
+                    "Why does owning the workflow (system of record) protect you when "
+                    "features are trivially regenerable?",
+                    (
+                        opt("Because copyright prevents anyone from rebuilding features"),
+                        opt(
+                            "Because the customer's data, history, integrations and habits "
+                            "live in your product — 'I could rebuild this' stops mattering",
+                            correct=True,
+                        ),
+                        opt("Because workflows can't be expressed in code"),
+                        opt("Because enterprises never switch vendors for any reason"),
+                    ),
+                    "A feature is an afternoon of generation; accumulated state and habit are not.",
+                ),
+                q(
+                    "Which of the following is listed as an ANTI-strategy — something that "
+                    "no longer works?",
+                    (
+                        opt("Selling verification, audits and SLAs"),
+                        opt("Value-based pricing on outcomes"),
+                        opt("Depth in one niche workflow"),
+                        opt("Billing by the hour for code production", correct=True),
+                    ),
+                    "Hourly code production prices exactly the thing whose cost is going "
+                    "to zero — along with feature-count competition and 'like X but "
+                    "cheaper'.",
+                ),
+            ),
+        ),
         _t(
             "Your layer above — a survival worksheet",
             "8 min",
@@ -288,6 +521,42 @@ one nearest your strengths and invest deliberately. Surviving the age of
 AI is not about outrunning the model — it's about standing where the
 money lands when code is free.
 """,
+        ),
+        quiz_lesson(
+            "Quiz: Your layer above — a survival worksheet",
+            (
+                q(
+                    "What is the FIRST step of the survival worksheet?",
+                    (
+                        opt("Pick the fastest-growing AI tool and master it"),
+                        opt(
+                            "Separate what you loved from what you did — list what you'd "
+                            "miss if AI did all your typing; that list is your essence",
+                            correct=True,
+                        ),
+                        opt("Rewrite your CV around prompt engineering"),
+                        opt("Choose a scarce complement at random and commit"),
+                    ),
+                    "The carpenter loved shaping ideas into objects, not sandpaper — the "
+                    "worksheet starts by naming your equivalent.",
+                ),
+                q(
+                    "Why keep one 'handmade' coding practice even when AI is faster?",
+                    (
+                        opt("To pass whiteboard interviews"),
+                        opt("Because generated code is never trustworthy"),
+                        opt(
+                            "It maintains the mental models that make you a credible "
+                            "verifier — and the joy was the point",
+                            correct=True,
+                        ),
+                        opt("To keep your typing speed high"),
+                    ),
+                    "Chess survived engines; hand-coding survives generation as training "
+                    "and as experience — and it underwrites the verification skill that "
+                    "still commands a price.",
+                ),
+            ),
         ),
         quiz_lesson(
             "Check your knowledge",
