@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 506
+        assert len(summary) == 507
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -126,6 +126,70 @@ class TestSeedCourses:
         intro_quiz = next(le for le in updated.lessons if le.id == clash.id)
         assert intro_quiz.lesson_type.value == "quiz"  # untouched
         assert intro_quiz.text_body is None
+
+    async def test_video_lessons_seed_and_refresh_their_url(self) -> None:
+        spec = SeedCourse(
+            slug="v1",
+            title="V1",
+            description="d",
+            level="Beginner",
+            lessons=(
+                SeedLesson(
+                    title="Watch",
+                    lesson_type="video",
+                    content_url="https://www.youtube.com/watch?v=old",
+                    duration="10 min",
+                ),
+            ),
+        )
+        repo = FakeCourseRepo()
+        await seed_courses(repo, courses=(spec,))
+        course = await repo.get_by_slug("v1", include_drafts=True)
+        watch = next(le for le in course.lessons if le.title == "Watch")
+        assert watch.lesson_type.value == "video"
+        assert watch.content_url == "https://www.youtube.com/watch?v=old"
+        assert watch.text_body is None
+
+        # A changed curated URL is applied in place — same lesson id.
+        new_spec = SeedCourse(
+            slug="v1",
+            title="V1",
+            description="d",
+            level="Beginner",
+            lessons=(
+                SeedLesson(
+                    title="Watch",
+                    lesson_type="video",
+                    content_url="https://www.youtube.com/watch?v=new",
+                    duration="10 min",
+                ),
+            ),
+        )
+        await seed_courses(repo, courses=(new_spec,))
+        refreshed = await repo.get_by_slug("v1", include_drafts=True)
+        again = next(le for le in refreshed.lessons if le.title == "Watch")
+        assert again.id == watch.id
+        assert again.content_url == "https://www.youtube.com/watch?v=new"
+
+    def test_startups_age_of_ai_course_shape(self) -> None:
+        course = next(c for c in ACADEMY_COURSES if c.slug == "startups-in-the-age-of-ai")
+        videos = [le for le in course.lessons if le.lesson_type == "video"]
+        # The full YC Startup School playlist, each with a YouTube URL.
+        assert len(videos) == 29
+        assert all(
+            le.content_url and le.content_url.startswith("https://www.youtube.com/watch?v=")
+            for le in videos
+        )
+        ids = [le.content_url.rsplit("=", 1)[-1] for le in videos if le.content_url]
+        assert len(ids) == len(set(ids)), "duplicate videos in the curriculum"
+        # Inline final quiz: every question has exactly one correct option
+        # (an invalid question aborts the whole real-DB seed run).
+        final = next(le for le in course.lessons if le.lesson_type == "quiz")
+        assert final.quiz
+        for idx, question in enumerate(final.quiz):
+            n_correct = sum(1 for o in question.options if o.is_correct)
+            assert n_correct == 1, f"q{idx}: {n_correct} correct options"
+            assert len(question.options) >= 2
 
     def test_every_registry_quiz_question_has_exactly_one_correct_option(self) -> None:
         # Regression: a quiz question with zero (or >1) correct options passes the
@@ -655,6 +719,7 @@ class TestSeedCourses:
             "renewable-ev-basics",
             "renewable-ev-intermediate",
             "renewable-ev-advanced",
+            "startups-in-the-age-of-ai",
         }
         for course in ACADEMY_COURSES:
             assert course.lessons  # non-empty

@@ -237,6 +237,9 @@ from cyberdyne_backend.application.courses.seed_software_architecture import (
     SOFTWARE_ARCHITECTURE_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_software_quality import SOFTWARE_QUALITY_COURSES
+from cyberdyne_backend.application.courses.seed_startups_age_of_ai import (
+    STARTUPS_AGE_OF_AI_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_statistics import STATISTICS_COURSES
 from cyberdyne_backend.application.courses.seed_stochastic_processes import (
     STOCHASTIC_PROCESSES_COURSES,
@@ -1510,6 +1513,7 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *ROBOT_MANIPULATORS_COURSES,
     *TOPOLOGY_OPTIMIZATION_COURSES,
     *RAILS_COURSES,
+    *STARTUPS_AGE_OF_AI_COURSES,
 )
 
 
@@ -1626,9 +1630,12 @@ def _reconcile_lessons(
     for sl in spec.lessons:
         existing = by_title.get(sl.title.casefold())
         if existing is not None and existing.lesson_type.value == sl.lesson_type:
-            # Quiz lessons carry no body; only refresh text/code content.
+            # Quiz lessons carry no body; refresh text/code bodies and
+            # URL-backed (video/pdf/presentation) content URLs.
             if sl.lesson_type in ("text", "code"):
                 existing.set_content(text_body=sl.text_body, duration=sl.duration, now=now)
+            elif sl.lesson_type in ("video", "pdf", "presentation"):
+                existing.set_content(content_url=sl.content_url, duration=sl.duration, now=now)
             updated += 1
             ordered.append(existing)
             seen.add(existing.id)
@@ -1637,6 +1644,7 @@ def _reconcile_lessons(
                 course_id=course.id,
                 title=sl.title,
                 lesson_type=sl.lesson_type,
+                content_url=sl.content_url,
                 text_body=sl.text_body,
                 duration=sl.duration,
                 sort_order=len(ordered),
