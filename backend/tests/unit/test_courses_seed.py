@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 507
+        assert len(summary) == 508
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -182,6 +182,24 @@ class TestSeedCourses:
         )
         ids = [le.content_url.rsplit("=", 1)[-1] for le in videos if le.content_url]
         assert len(ids) == len(set(ids)), "duplicate videos in the curriculum"
+        # Inline final quiz: every question has exactly one correct option
+        # (an invalid question aborts the whole real-DB seed run).
+        final = next(le for le in course.lessons if le.lesson_type == "quiz")
+        assert final.quiz
+        for idx, question in enumerate(final.quiz):
+            n_correct = sum(1 for o in question.options if o.is_correct)
+            assert n_correct == 1, f"q{idx}: {n_correct} correct options"
+            assert len(question.options) >= 2
+
+    def test_selling_software_ai_course_shape(self) -> None:
+        course = next(c for c in ACADEMY_COURSES if c.slug == "selling-software-in-the-age-of-ai")
+        # One anchor video (the TEDx talk) plus the text curriculum around it.
+        videos = [le for le in course.lessons if le.lesson_type == "video"]
+        assert len(videos) == 1
+        assert videos[0].content_url == "https://www.youtube.com/watch?v=yhGzXULZkEw"
+        texts = [le for le in course.lessons if le.lesson_type == "text"]
+        assert len(texts) >= 5
+        assert all(le.text_body for le in texts)
         # Inline final quiz: every question has exactly one correct option
         # (an invalid question aborts the whole real-DB seed run).
         final = next(le for le in course.lessons if le.lesson_type == "quiz")
@@ -720,6 +738,7 @@ class TestSeedCourses:
             "renewable-ev-intermediate",
             "renewable-ev-advanced",
             "startups-in-the-age-of-ai",
+            "selling-software-in-the-age-of-ai",
         }
         for course in ACADEMY_COURSES:
             assert course.lessons  # non-empty
