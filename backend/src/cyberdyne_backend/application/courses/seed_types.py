@@ -24,8 +24,12 @@ class SeedQuizQuestion:
 @dataclass(frozen=True, slots=True)
 class SeedLesson:
     title: str
-    lesson_type: str  # 'text' | 'code' | 'quiz' | …
+    lesson_type: str  # 'text' | 'code' | 'quiz' | 'video' | …
     text_body: str | None = None
+    # For URL-backed lessons ('video' | 'pdf' | 'presentation'): the external
+    # asset (e.g. a YouTube link). The domain invariant requires it for those
+    # types and forbids a text_body.
+    content_url: str | None = None
     duration: str | None = None
     # For a ``quiz`` lesson: the curated questions to author against it. The
     # seed creates the lesson, then upserts this quiz once lesson ids are
@@ -59,6 +63,11 @@ def quiz_lesson(
         quiz=questions,
         passing_score=passing_score,
     )
+
+
+def video_lesson(title: str, url: str, *, duration: str | None = None) -> SeedLesson:
+    """A ``video`` lesson backed by an external URL (e.g. YouTube)."""
+    return SeedLesson(title=title, lesson_type="video", content_url=url, duration=duration)
 
 
 def q(prompt: str, options: tuple[SeedQuizOption, ...], explanation: str = "") -> SeedQuizQuestion:
@@ -137,5 +146,6 @@ __all__ = [
     "opt",
     "q",
     "quiz_lesson",
+    "video_lesson",
     "with_checkpoint_quizzes",
 ]
