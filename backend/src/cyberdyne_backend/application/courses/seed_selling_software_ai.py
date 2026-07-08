@@ -110,44 +110,110 @@ checks what stuck.
         ),
         _t(
             "The talk, distilled",
-            "8 min",
-            """# The talk, distilled
+            "10 min",
+            """# What to teach when AI writes the code
 
-Stropek's argument moves in five steps. Keep them — the rest of the course
-builds on each one.
+## Summary
 
-**1. The grief is real, and it isn't fear of technology.** His carpenter
-image: a robot can shape wood faster and more precisely, and the carpenter
-could learn to program the robot — but what he loved was *the process*, not
-just the result. Developers who resist AI aren't Luddites; many are grieving
-the part of the work they fell in love with.
+Stropek opens at his desk on an ordinary evening, preparing coding
+exercises for the students he teaches in his spare time, when a question
+stops him: isn't AI making all of this meaningless? The irony stings
+because he is an AI expert who spends his days helping developers adopt
+these tools — he isn't just hearing "programming is dead", he is watching
+functions and whole features appear from a few sentences in his own editor.
 
-**2. Code was never the point.** Looking back at his first programs on a
-Commodore C128, Stropek realizes he "was never in love primarily with
-coding — I was in love with developing things, with turning vague thoughts
-into something real and usable. Code was just a tool." His sentence for it:
-*"I'm not just a coder, I'm a developer."*
+Instead of writing another exercise, he goes back to the beginning: 1987
+and his first computer, a Commodore C128. He types programs from computer
+magazines line by line; one typo and nothing works, but when a tiny game or
+pattern appears it feels like magic. He shows his nested-loop patterns to
+his family and even demos them in a local electronics store, where the
+sales staff use them to tell parents that programming is the future. Back
+then programming feels like music: he imagines something and translates it
+into code — expression, not technology. That feeling, he notes, is what
+psychologists call self-efficacy: the sense that your ideas can change
+reality.
 
-**3. AI is an abstraction layer, not a replacement.** Programming languages
-already freed us from registers and machine code. AI is the next layer up.
-"It doesn't shrink my role — it expands it. The goals I aim for are bigger
-now." The distance between idea and reality gets drastically shorter.
+Fast-forward to today, and the grief many developers feel is real — but it
+is grief, not fear of technology. His image is a carpenter watching a robot
+shape wood faster and more precisely: the result survives, the beloved
+process doesn't. Yet Stropek himself feels more powerful than ever, because
+AI drastically shortens the distance between idea and reality. That is when
+it clicks: he was never in love primarily with coding but with *developing*
+— building mental models and turning vague thoughts into something real.
+"I'm not just a coder, I'm a developer." Programming languages were always
+abstractions over machine code; AI is simply the next layer, and it expands
+his role rather than shrinking it.
 
-**4. Coding survives the way chess survived.** Machines beat us at chess;
-we still play. Engines outrun us; we still run. "Efficiency was never the
-point, experience was." And practically: AI makes mistakes, and **the last
-few percent between *almost correct* and *actually correct* are expensive
-and valuable.** People who truly understand code close that gap.
+Coding itself survives the way chess survived engines — efficiency was
+never the point — and stays economically valuable because AI makes
+mistakes, and the last few percent between almost correct and actually
+correct are expensive. Programmers are only the first profession through
+this arc: designers, writers, lawyers and doctors will follow the same
+journey of denial, fear, grief and redefinition, each finding its own
+"layer above". For teaching, his conclusion is the talk's thesis: **the new
+programming language is clarity** — he now teaches agency, clarity, and the
+craft of turning ideas into reality across abstraction layers.
 
-**5. Programming is the canary in the coal mine.** Designers, writers,
-lawyers, accountants, doctors — every knowledge profession is entering the
-same emotional arc: denial → fear → grief → *redefinition*. Each has to find
-its own "layer above": not a pixel pusher but a visual thinker; not a
-sentence crafter but a storyteller.
+## Main ideas
 
-His thesis, and this course's hinge: **"The new programming language is
-clarity."** Syntax is no longer the bottleneck — describing what you want,
-with constraints, examples and tests of intent, is.
+- **The grief is real, and it isn't fear of technology** — like a carpenter
+  replaced by a robot, developers mourn the process they loved, not the
+  result.
+- **Code was never the point** — "I was in love with developing things…
+  code was just a tool." His sentence: *"I'm not just a coder, I'm a
+  developer."*
+- **AI is an abstraction layer, not a replacement** — like languages freed
+  us from machine code, it changes the level you work at and expands your
+  goals.
+- **Self-efficacy returns** — AI shortens idea-to-reality, reviving the
+  feeling of his first C128 programs: my ideas can change reality.
+- **Coding survives the way chess survived** — efficiency was never the
+  point; coding trains precision, logic and patience, and handmade software
+  may one day be valued for being intentional.
+- **The last few percent are expensive** — AI makes mistakes, so people who
+  truly understand code stay valuable to debug, verify and close the gap.
+- **Programming is the canary in the coal mine** — every knowledge
+  profession follows the same arc (denial → fear → grief → redefinition)
+  and must find its own layer above.
+- **The new programming language is clarity** — syntax is no longer the
+  bottleneck; describing intent with constraints, examples and tests is.
+
+## Mindmap
+
+```mermaid
+mindmap
+  root((AI Writes the Code))
+    The evening of doubt
+      Preparing coding exercises
+      Is teaching still meaningful
+      AI expert irony
+    First love 1987
+      Commodore C128
+      Typing code from magazines
+      Programming felt like music
+      Self-efficacy
+    Programming is dead
+      AI writes entire features
+      Grief not fear
+      Carpenter and robot
+    Coder to developer
+      Code was just a tool
+      AI as abstraction layer
+      Bigger goals less friction
+    Why coding stays
+      Chess running sailing
+      Trains precision and logic
+      Last percent needs experts
+      Handmade software is intentional
+    Canary in the coal mine
+      Designers writers lawyers doctors
+      Denial fear grief redefinition
+      Find the layer above
+    Teaching clarity
+      Natural language as interface
+      Constraints examples intent tests
+      Teach agency and clarity
+```
 """,
         ),
         quiz_lesson(
