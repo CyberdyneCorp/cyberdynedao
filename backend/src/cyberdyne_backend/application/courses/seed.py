@@ -1639,7 +1639,12 @@ def _reconcile_lessons(
             if sl.lesson_type in ("text", "code"):
                 existing.set_content(text_body=sl.text_body, duration=sl.duration, now=now)
             elif sl.lesson_type in ("video", "pdf", "presentation"):
-                existing.set_content(content_url=sl.content_url, duration=sl.duration, now=now)
+                existing.set_content(
+                    content_url=sl.content_url,
+                    text_body=sl.text_body,
+                    duration=sl.duration,
+                    now=now,
+                )
             updated += 1
             ordered.append(existing)
             seen.add(existing.id)

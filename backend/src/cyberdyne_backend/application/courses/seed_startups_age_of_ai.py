@@ -4,11 +4,12 @@ A curated video course built on Y Combinator's Startup School playlist
 (https://www.youtube.com/playlist?list=PLQ-uHSnFig5M9fW16o2l35jrfdsxGknNB).
 The 29 talks are re-ordered from the playlist's reverse-chronological feed
 into a curriculum arc — idea → team → building with AI → launch & customers
-→ pricing & sales → metrics & fundraising. Every video is followed by a
-"Key ideas" text lesson — a complete summary, the main ideas, and a Mermaid
-mindmap of the talk, all grounded in its transcript — and a checkpoint
-quiz; the welcome and part-intro lessons carry checkpoint quizzes too, and
-the course closes with a comprehensive final quiz.
+→ pricing & sales → metrics & fundraising. Every video lesson carries a
+markdown companion body rendered below the player — a complete summary,
+the main ideas, and a Mermaid mindmap of the talk, all grounded in its
+transcript — and is followed by a checkpoint quiz; the welcome and
+part-intro lessons carry checkpoint quizzes too, and the course closes
+with a comprehensive final quiz.
 
 Video lessons carry only the YouTube URL (the frontend embeds the player);
 the summaries, quizzes and connective tissue are what the Academy adds.
@@ -30,8 +31,13 @@ def _t(title: str, duration: str, body: str) -> SeedLesson:
     return SeedLesson(title=title, lesson_type="text", duration=duration, text_body=body)
 
 
-def _yt(title: str, video_id: str, duration: str) -> SeedLesson:
-    return video_lesson(title, f"https://www.youtube.com/watch?v={video_id}", duration=duration)
+def _yt(title: str, video_id: str, duration: str, body: str) -> SeedLesson:
+    return video_lesson(
+        title,
+        f"https://www.youtube.com/watch?v={video_id}",
+        duration=duration,
+        body=body,
+    )
 
 
 _STARTUPS_AGE_OF_AI = SeedCourse(
@@ -142,10 +148,10 @@ legal/financial vocabulary you'll need from day one.
                 ),
             ),
         ),
-        _yt("Should You Start A Startup?", "BUE-icVYRFU", "17 min"),
-        _t(
-            "Key ideas — Should You Start A Startup?",
-            "8 min",
+        _yt(
+            "Should You Start A Startup?",
+            "BUE-icVYRFU",
+            "17 min",
             """# Should You Start A Startup?
 
 ## Summary
@@ -240,10 +246,10 @@ mindmap
                 ),
             ),
         ),
-        _yt("How to Get and Evaluate Startup Ideas", "Th8JoIan4dg", "32 min"),
-        _t(
-            "Key ideas — How to Get and Evaluate Startup Ideas",
-            "8 min",
+        _yt(
+            "How to Get and Evaluate Startup Ideas",
+            "Th8JoIan4dg",
+            "32 min",
             """# How to Get and Evaluate Startup Ideas
 
 ## Summary
@@ -343,10 +349,10 @@ mindmap
                 ),
             ),
         ),
-        _yt("Pick One Idea and Go Deep", "R56RJFZBasQ", "12 min"),
-        _t(
-            "Key ideas — Pick One Idea and Go Deep",
-            "8 min",
+        _yt(
+            "Pick One Idea and Go Deep",
+            "R56RJFZBasQ",
+            "12 min",
             """# Pick One Idea and Go Deep
 
 ## Summary
@@ -438,10 +444,10 @@ mindmap
                 ),
             ),
         ),
-        _yt("Starting a Company? The Key Terms You Should Know", "wH3TKpALlw4", "18 min"),
-        _t(
-            "Key ideas — Starting a Company? The Key Terms You Should Know",
-            "8 min",
+        _yt(
+            "Starting a Company? The Key Terms You Should Know",
+            "wH3TKpALlw4",
+            "18 min",
             """# Starting a Company? The Key Terms You Should Know
 
 ## Summary
@@ -581,10 +587,10 @@ and account executives.
                 ),
             ),
         ),
-        _yt("How To Find A Co-Founder", "Fk9BCr5pLTU", "21 min"),
-        _t(
-            "Key ideas — How To Find A Co-Founder",
-            "8 min",
+        _yt(
+            "How To Find A Co-Founder",
+            "Fk9BCr5pLTU",
+            "21 min",
             """# How To Find A Co-Founder
 
 ## Summary
@@ -683,10 +689,10 @@ mindmap
                 ),
             ),
         ),
-        _yt("Keys To Successful Co-Founder Relationships", "A4SLDQDXdp0", "32 min"),
-        _t(
-            "Key ideas — Keys To Successful Co-Founder Relationships",
-            "8 min",
+        _yt(
+            "Keys To Successful Co-Founder Relationships",
+            "A4SLDQDXdp0",
+            "32 min",
             """# Keys To Successful Co-Founder Relationships
 
 ## Summary
@@ -775,10 +781,10 @@ mindmap
                 ),
             ),
         ),
-        _yt("Co-Founder Equity Mistakes to Avoid", "DISocTmEwiI", "20 min"),
-        _t(
-            "Key ideas — Co-Founder Equity Mistakes to Avoid",
-            "8 min",
+        _yt(
+            "Co-Founder Equity Mistakes to Avoid",
+            "DISocTmEwiI",
+            "20 min",
             """# Co-Founder Equity Mistakes to Avoid
 
 ## Summary
@@ -870,11 +876,9 @@ mindmap
             ),
         ),
         _yt(
-            "The Startup Playbook for Hiring Your First Engineers and AEs", "i_PjjXKNpA4", "43 min"
-        ),
-        _t(
-            "Key ideas — The Startup Playbook for Hiring Your First Engineers and AEs",
-            "8 min",
+            "The Startup Playbook for Hiring Your First Engineers and AEs",
+            "i_PjjXKNpA4",
+            "43 min",
             """# The Startup Playbook for Hiring Your First Engineers and AEs
 
 ## Summary
@@ -1023,10 +1027,10 @@ instead of what you want to hear.
                 ),
             ),
         ),
-        _yt("How To Build A Company With AI From The Ground Up", "EN7frwQIbKc", "10 min"),
-        _t(
-            "Key ideas — How To Build A Company With AI From The Ground Up",
-            "8 min",
+        _yt(
+            "How To Build A Company With AI From The Ground Up",
+            "EN7frwQIbKc",
+            "10 min",
             """# How To Build A Company With AI From The Ground Up
 
 ## Summary
@@ -1125,10 +1129,10 @@ mindmap
                 ),
             ),
         ),
-        _yt("How to Build an AI-Native Services Company", "gSNFJbgoaHI", "11 min"),
-        _t(
-            "Key ideas — How to Build an AI-Native Services Company",
-            "8 min",
+        _yt(
+            "How to Build an AI-Native Services Company",
+            "gSNFJbgoaHI",
+            "11 min",
             """# How to Build an AI-Native Services Company
 
 ## Summary
@@ -1228,10 +1232,10 @@ mindmap
                 ),
             ),
         ),
-        _yt("How To Get The Most Out Of Vibe Coding", "BJjsfNO5JTo", "17 min"),
-        _t(
-            "Key ideas — How To Get The Most Out Of Vibe Coding",
-            "8 min",
+        _yt(
+            "How To Get The Most Out Of Vibe Coding",
+            "BJjsfNO5JTo",
+            "17 min",
             """# How To Get The Most Out Of Vibe Coding
 
 ## Summary
@@ -1333,10 +1337,10 @@ mindmap
                 ),
             ),
         ),
-        _yt("Tips For Technical Startup Founders", "rP7bpYsfa6Q", "28 min"),
-        _t(
-            "Key ideas — Tips For Technical Startup Founders",
-            "8 min",
+        _yt(
+            "Tips For Technical Startup Founders",
+            "rP7bpYsfa6Q",
+            "28 min",
             """# Tips For Technical Startup Founders
 
 ## Summary
@@ -1439,10 +1443,10 @@ mindmap
                 ),
             ),
         ),
-        _yt("How to Build An MVP", "QRZ_l7cVzzU", "17 min"),
-        _t(
-            "Key ideas — How to Build An MVP",
-            "8 min",
+        _yt(
+            "How to Build An MVP",
+            "QRZ_l7cVzzU",
+            "17 min",
             """# How to Build An MVP
 
 ## Summary
@@ -1536,10 +1540,10 @@ mindmap
                 ),
             ),
         ),
-        _yt("How To Talk To Users", "z1iF1c8w5Lg", "18 min"),
-        _t(
-            "Key ideas — How To Talk To Users",
-            "8 min",
+        _yt(
+            "How To Talk To Users",
+            "z1iF1c8w5Lg",
+            "18 min",
             """# How To Talk To Users
 
 ## Summary
@@ -1673,10 +1677,10 @@ because keeping users is the only real evidence of product-market fit.
                 ),
             ),
         ),
-        _yt("The Best Way To Launch Your Startup", "u36A-YTxiOw", "21 min"),
-        _t(
-            "Key ideas — The Best Way To Launch Your Startup",
-            "8 min",
+        _yt(
+            "The Best Way To Launch Your Startup",
+            "u36A-YTxiOw",
+            "21 min",
             """# The Best Way To Launch Your Startup
 
 ## Summary
@@ -1765,10 +1769,10 @@ mindmap
                 ),
             ),
         ),
-        _yt("How to Get Your First Customers", "hyYCn_kAngI", "23 min"),
-        _t(
-            "Key ideas — How to Get Your First Customers",
-            "8 min",
+        _yt(
+            "How to Get Your First Customers",
+            "hyYCn_kAngI",
+            "23 min",
             """# How to Get Your First Customers
 
 ## Summary
@@ -1860,10 +1864,10 @@ mindmap
                 ),
             ),
         ),
-        _yt("How to Get Your First 10 Customers", "_FBivfgOvuE", "14 min"),
-        _t(
-            "Key ideas — How to Get Your First 10 Customers",
-            "8 min",
+        _yt(
+            "How to Get Your First 10 Customers",
+            "_FBivfgOvuE",
+            "14 min",
             """# How to Get Your First 10 Customers
 
 ## Summary
@@ -1966,10 +1970,10 @@ mindmap
                 ),
             ),
         ),
-        _yt("How To Convert Customers With Cold Emails", "7Kh_fpxP1yY", "33 min"),
-        _t(
-            "Key ideas — How To Convert Customers With Cold Emails",
-            "8 min",
+        _yt(
+            "How To Convert Customers With Cold Emails",
+            "7Kh_fpxP1yY",
+            "33 min",
             """# How To Convert Customers With Cold Emails
 
 ## Summary
@@ -2063,10 +2067,10 @@ mindmap
                 ),
             ),
         ),
-        _yt("How To Keep Your Users", "VNxBZ7ka5J0", "29 min"),
-        _t(
-            "Key ideas — How To Keep Your Users",
-            "8 min",
+        _yt(
+            "How To Keep Your Users",
+            "VNxBZ7ka5J0",
+            "29 min",
             """# How To Keep Your Users
 
 ## Summary
@@ -2208,10 +2212,10 @@ the playbook inverts.
                 ),
             ),
         ),
-        _yt("Startup Business Models and Pricing", "oWZbWzAyHAE", "33 min"),
-        _t(
-            "Key ideas — Startup Business Models and Pricing",
-            "8 min",
+        _yt(
+            "Startup Business Models and Pricing",
+            "oWZbWzAyHAE",
+            "33 min",
             """# Startup Business Models and Pricing
 
 ## Summary
@@ -2304,10 +2308,10 @@ mindmap
                 ),
             ),
         ),
-        _yt("How To Price For B2B", "4hjiRmgmHiU", "18 min"),
-        _t(
-            "Key ideas — How To Price For B2B",
-            "8 min",
+        _yt(
+            "How To Price For B2B",
+            "4hjiRmgmHiU",
+            "18 min",
             """# How To Price For B2B
 
 ## Summary
@@ -2404,10 +2408,10 @@ mindmap
                 ),
             ),
         ),
-        _yt("The Sales Playbook For Founders", "DH7REvnQ1y4", "19 min"),
-        _t(
-            "Key ideas — The Sales Playbook For Founders",
-            "8 min",
+        _yt(
+            "The Sales Playbook For Founders",
+            "DH7REvnQ1y4",
+            "19 min",
             """# The Sales Playbook For Founders
 
 ## Summary
@@ -2502,10 +2506,10 @@ mindmap
                 ),
             ),
         ),
-        _yt("Enterprise Sales", "0fKYVl12VTA", "23 min"),
-        _t(
-            "Key ideas — Enterprise Sales",
-            "8 min",
+        _yt(
+            "Enterprise Sales",
+            "0fKYVl12VTA",
+            "23 min",
             """# Enterprise Sales
 
 ## Summary
@@ -2607,10 +2611,10 @@ mindmap
                 ),
             ),
         ),
-        _yt("How To Start A Dev Tools Company", "z1aKRhRnVNk", "33 min"),
-        _t(
-            "Key ideas — How To Start A Dev Tools Company",
-            "8 min",
+        _yt(
+            "How To Start A Dev Tools Company",
+            "z1aKRhRnVNk",
+            "33 min",
             """# How To Start A Dev Tools Company
 
 ## Summary
@@ -2753,10 +2757,10 @@ want it, how to put your best foot forward applying to Y Combinator.
                 ),
             ),
         ),
-        _yt("Consumer Startup Metrics", "fdD4y4Civp4", "22 min"),
-        _t(
-            "Key ideas — Consumer Startup Metrics",
-            "8 min",
+        _yt(
+            "Consumer Startup Metrics",
+            "fdD4y4Civp4",
+            "22 min",
             """# Consumer Startup Metrics
 
 ## Summary
@@ -2862,10 +2866,10 @@ mindmap
                 ),
             ),
         ),
-        _yt("B2B Startup Metrics", "_mKeVGSqQac", "24 min"),
-        _t(
-            "Key ideas — B2B Startup Metrics",
-            "8 min",
+        _yt(
+            "B2B Startup Metrics",
+            "_mKeVGSqQac",
+            "24 min",
             """# B2B Startup Metrics
 
 ## Summary
@@ -2963,10 +2967,10 @@ mindmap
                 ),
             ),
         ),
-        _yt("Setting KPIs and Goals", "6DTK9yDP6p0", "27 min"),
-        _t(
-            "Key ideas — Setting KPIs and Goals",
-            "8 min",
+        _yt(
+            "Setting KPIs and Goals",
+            "6DTK9yDP6p0",
+            "27 min",
             """# Setting KPIs and Goals
 
 ## Summary
@@ -3067,10 +3071,10 @@ mindmap
                 ),
             ),
         ),
-        _yt("How Startup Fundraising Works", "zBUhQPPS9AY", "28 min"),
-        _t(
-            "Key ideas — How Startup Fundraising Works",
-            "8 min",
+        _yt(
+            "How Startup Fundraising Works",
+            "zBUhQPPS9AY",
+            "28 min",
             """# How Startup Fundraising Works
 
 ## Summary
@@ -3162,10 +3166,10 @@ mindmap
                 ),
             ),
         ),
-        _yt("How to Apply And Succeed at Y Combinator", "B5tU2447OK8", "25 min"),
-        _t(
-            "Key ideas — How to Apply And Succeed at Y Combinator",
-            "8 min",
+        _yt(
+            "How to Apply And Succeed at Y Combinator",
+            "B5tU2447OK8",
+            "25 min",
             """# How to Apply And Succeed at Y Combinator
 
 ## Summary

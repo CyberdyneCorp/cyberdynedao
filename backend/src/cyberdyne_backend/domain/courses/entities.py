@@ -86,8 +86,9 @@ class Lesson:
     """A single lesson within a course.
 
     Content invariants (enforced by ``new_lesson`` / ``set_content``):
-      * ``video`` | ``pdf`` | ``presentation`` → ``content_url`` set,
-        ``text_body`` empty.
+      * ``video`` | ``pdf`` | ``presentation`` → ``content_url`` set;
+        ``text_body`` is an optional markdown companion (e.g. a summary
+        rendered below the video player).
       * ``text`` → ``text_body`` set, ``content_url`` empty.
       * ``quiz`` → neither required; the questions live in the quiz
         context and reference this lesson by id.

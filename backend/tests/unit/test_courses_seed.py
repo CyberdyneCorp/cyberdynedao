@@ -150,7 +150,8 @@ class TestSeedCourses:
         assert watch.content_url == "https://www.youtube.com/watch?v=old"
         assert watch.text_body is None
 
-        # A changed curated URL is applied in place — same lesson id.
+        # A changed curated URL (and a new companion body) is applied in
+        # place — same lesson id.
         new_spec = SeedCourse(
             slug="v1",
             title="V1",
@@ -161,6 +162,7 @@ class TestSeedCourses:
                     title="Watch",
                     lesson_type="video",
                     content_url="https://www.youtube.com/watch?v=new",
+                    text_body="## Summary\nWhat the video covers.",
                     duration="10 min",
                 ),
             ),
@@ -170,18 +172,22 @@ class TestSeedCourses:
         again = next(le for le in refreshed.lessons if le.title == "Watch")
         assert again.id == watch.id
         assert again.content_url == "https://www.youtube.com/watch?v=new"
+        assert again.text_body == "## Summary\nWhat the video covers."
 
     def _assert_ai_course_pattern(self, course: SeedCourse) -> None:
-        """The AI-era course pattern: every video is followed by a text
-        summary then a checkpoint quiz; every text lesson is immediately
-        followed by a quiz; the course ends with the comprehensive final
-        quiz; every quiz question has exactly one correct option (an
-        invalid question aborts the whole real-DB seed run)."""
+        """The AI-era course pattern: every video lesson carries a markdown
+        companion body (summary / main ideas / mindmap) below the player;
+        every content lesson (text or video) is immediately followed by a
+        checkpoint quiz; the course ends with the comprehensive final quiz;
+        every quiz question has exactly one correct option (an invalid
+        question aborts the whole real-DB seed run)."""
         lessons = list(course.lessons)
         for i, lesson in enumerate(lessons):
             if lesson.lesson_type == "video":
-                assert lessons[i + 1].lesson_type == "text", f"{lesson.title}: no summary"
-                assert lessons[i + 2].lesson_type == "quiz", f"{lesson.title}: no quiz"
+                body = lesson.text_body or ""
+                for marker in ("## Summary", "## Main ideas", "## Mindmap", "```mermaid"):
+                    assert marker in body, f"{lesson.title}: missing {marker}"
+                assert lessons[i + 1].lesson_type == "quiz", f"{lesson.title}: no quiz"
             elif lesson.lesson_type == "text":
                 assert lessons[i + 1].lesson_type == "quiz", f"{lesson.title}: no quiz"
         assert lessons[-1].lesson_type == "quiz"
@@ -206,20 +212,14 @@ class TestSeedCourses:
         )
         ids = [le.content_url.rsplit("=", 1)[-1] for le in videos if le.content_url]
         assert len(ids) == len(set(ids)), "duplicate videos in the curriculum"
-        # welcome + 6 intros + 29 summaries = 36 texts, one quiz each + final.
-        assert len(course.lessons) == 102
+        # welcome + 6 intros (each with a quiz) + 29 videos (each with a
+        # companion body and a quiz) + the final quiz = 73.
+        assert len(course.lessons) == 73
         self._assert_ai_course_pattern(course)
-        # Each video's companion is the "Key ideas" lesson for that talk,
-        # carrying a complete summary, the main ideas, and a Mermaid mindmap.
         lessons = list(course.lessons)
         for i, lesson in enumerate(lessons):
             if lesson.lesson_type == "video":
-                summary = lessons[i + 1]
-                assert summary.title == f"Key ideas — {lesson.title}"
-                body = summary.text_body or ""
-                for marker in ("## Summary", "## Main ideas", "## Mindmap", "```mermaid"):
-                    assert marker in body, f"{summary.title}: missing {marker}"
-                assert lessons[i + 2].title == f"Quiz: {lesson.title}"
+                assert lessons[i + 1].title == f"Quiz: {lesson.title}"
 
     def test_selling_software_ai_course_shape(self) -> None:
         course = next(c for c in ACADEMY_COURSES if c.slug == "selling-software-in-the-age-of-ai")
@@ -230,13 +230,8 @@ class TestSeedCourses:
         texts = [le for le in course.lessons if le.lesson_type == "text"]
         assert len(texts) >= 5
         assert all(le.text_body for le in texts)
-        assert len(course.lessons) == 14
+        assert len(course.lessons) == 13
         self._assert_ai_course_pattern(course)
-        # The TEDx talk's companion lesson carries the summary / main ideas /
-        # mindmap anatomy too.
-        distilled = next(le for le in course.lessons if le.title == "The talk, distilled")
-        for marker in ("## Summary", "## Main ideas", "## Mindmap", "```mermaid"):
-            assert marker in (distilled.text_body or ""), f"missing {marker}"
 
     def test_ai_course_mindmaps_use_strict_mermaid_syntax(self) -> None:
         # A malformed mindmap renders as an error box in the lesson viewer.
