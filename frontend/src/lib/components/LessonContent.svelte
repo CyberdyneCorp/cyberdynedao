@@ -27,7 +27,8 @@
 	let mdWrap = $state<HTMLElement | null>(null);
 	$effect(() => {
 		const _ = lesson.textBody; // re-run when the lesson content changes
-		if (lesson.lessonType !== 'text') return;
+		// Text lessons and video companion bodies both render markdown.
+		if (lesson.lessonType !== 'text' && lesson.lessonType !== 'video') return;
 		queueMicrotask(() => {
 			mdWrap
 				?.querySelectorAll<HTMLElement>('code[class*="language-"]')
@@ -65,6 +66,23 @@
 	}
 </script>
 
+{#snippet markdownBody(body: string)}
+	<div class="md" bind:this={mdWrap}>
+		{#each splitPlotSegments(body) as seg}
+			{#if seg.kind === 'plot'}
+				{@const parsed = parsePlot(seg.content)}
+				{#if 'error' in parsed}
+					<p class="plot-err">{$t('lesson.plotError', { error: parsed.error })}</p>
+				{:else}
+					<Plot spec={parsed} />
+				{/if}
+			{:else}
+				<MarkdownPreview content={normalizeMathBlocks(stripKeepMarkers(seg.content))} />
+			{/if}
+		{/each}
+	</div>
+{/snippet}
+
 <div class="content">
 	{#if lesson.lessonType === 'video' && lesson.contentUrl}
 		{#if ytEmbed}
@@ -75,6 +93,10 @@
 			<!-- svelte-ignore a11y_media_has_caption -->
 			<video class="video" src={lesson.contentUrl} controls></video>
 		{/if}
+		{#if lesson.textBody}
+			<!-- Companion body (summary / key ideas / mindmap) below the player. -->
+			{@render markdownBody(lesson.textBody)}
+		{/if}
 	{:else if lesson.lessonType === 'pdf' && lesson.contentUrl}
 		<div class="frame frame--doc">
 			<iframe src={lesson.contentUrl} title={lesson.title} loading="lazy"></iframe>
@@ -83,20 +105,7 @@
 	{:else if lesson.lessonType === 'presentation' && lesson.contentUrl}
 		<a class="ext" href={lesson.contentUrl} target="_blank" rel="noopener">{$t('lesson.openPresentation')}</a>
 	{:else if lesson.lessonType === 'text'}
-		<div class="md" bind:this={mdWrap}>
-			{#each splitPlotSegments(lesson.textBody ?? $t('lesson.noContent')) as seg}
-				{#if seg.kind === 'plot'}
-					{@const parsed = parsePlot(seg.content)}
-					{#if 'error' in parsed}
-						<p class="plot-err">{$t('lesson.plotError', { error: parsed.error })}</p>
-					{:else}
-						<Plot spec={parsed} />
-					{/if}
-				{:else}
-					<MarkdownPreview content={normalizeMathBlocks(stripKeepMarkers(seg.content))} />
-				{/if}
-			{/each}
-		</div>
+		{@render markdownBody(lesson.textBody ?? $t('lesson.noContent'))}
 	{:else if lesson.lessonType === 'code'}
 		<p class="hint">{$t('lesson.editRun', { engine: langLabel })}</p>
 		<CodeEditor
@@ -162,6 +171,11 @@
 		border: 2px solid #000000;
 		border-radius: 6px;
 		padding: 0.7rem 0.9rem;
+	}
+	/* Companion body sits below the video player. */
+	.frame + .md,
+	.video + .md {
+		margin-top: 0.6rem;
 	}
 	/* Dark code fences inside rendered markdown, matching the code editor. */
 	.md :global(pre) {

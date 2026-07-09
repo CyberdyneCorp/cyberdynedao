@@ -107,11 +107,7 @@ checks what stuck.
             "What to teach when AI writes the code (TEDx)",
             "https://www.youtube.com/watch?v=yhGzXULZkEw",
             duration="18 min",
-        ),
-        _t(
-            "The talk, distilled",
-            "10 min",
-            """# What to teach when AI writes the code
+            body="""# What to teach when AI writes the code
 
 ## Summary
 

@@ -65,9 +65,14 @@ def quiz_lesson(
     )
 
 
-def video_lesson(title: str, url: str, *, duration: str | None = None) -> SeedLesson:
-    """A ``video`` lesson backed by an external URL (e.g. YouTube)."""
-    return SeedLesson(title=title, lesson_type="video", content_url=url, duration=duration)
+def video_lesson(
+    title: str, url: str, *, duration: str | None = None, body: str | None = None
+) -> SeedLesson:
+    """A ``video`` lesson backed by an external URL (e.g. YouTube), with an
+    optional markdown companion body rendered below the player."""
+    return SeedLesson(
+        title=title, lesson_type="video", content_url=url, text_body=body, duration=duration
+    )
 
 
 def q(prompt: str, options: tuple[SeedQuizOption, ...], explanation: str = "") -> SeedQuizQuestion:
