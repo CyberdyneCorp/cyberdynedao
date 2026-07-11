@@ -219,6 +219,15 @@ class Settings(BaseSettings):
     # follow-up adapter (see docs/backend-roadmap.md §5.6).
     cyberrag_mcp_url: str | None = None
 
+    # ── Quota free-tier cap overrides (issue #230) ────────────────────
+    # Per-meter free-tier caps. Unset = the built-in policy default
+    # (tutor_messages 10/mo, code_runs 20/day, scans 5/mo). Raise these in
+    # staging/dev so testing isn't blocked by the production free caps,
+    # without a code change or DB reset.
+    quota_tutor_messages_free_limit: int | None = None
+    quota_code_runs_free_limit: int | None = None
+    quota_scans_free_limit: int | None = None
+
     # SERPAPI key for the open-web search endpoint (agent tool). When unset,
     # the /search endpoint returns 503 (capability off).
     serpapi_key: SecretStr | None = None

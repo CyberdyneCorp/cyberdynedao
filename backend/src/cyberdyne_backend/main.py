@@ -312,6 +312,8 @@ from cyberdyne_backend.adapters.inbound.api.quizzes.router import (
     player_router as quizzes_player_router,
 )
 from cyberdyne_backend.adapters.inbound.api.quota.dependencies import get_enforce_quota_uc
+from cyberdyne_backend.adapters.inbound.api.quota.router import get_reset_quota_uc
+from cyberdyne_backend.adapters.inbound.api.quota.router import router as quota_admin_router
 from cyberdyne_backend.adapters.inbound.api.recommendations.router import (
     get_recommend_courses_uc,
 )
@@ -627,7 +629,7 @@ from cyberdyne_backend.application.quizzes import (
     SubmitQuizAttempt,
     UpsertQuiz,
 )
-from cyberdyne_backend.application.quota import EnforceQuota
+from cyberdyne_backend.application.quota import EnforceQuota, ResetQuota
 from cyberdyne_backend.application.recommendations import RecommendCourses
 from cyberdyne_backend.application.skills import GetSkillMap
 from cyberdyne_backend.application.uploads import (
@@ -639,6 +641,7 @@ from cyberdyne_backend.application.websearch import SearchWeb
 from cyberdyne_backend.application.youtube import GetVideoTranscript, ListPlaylistVideos
 from cyberdyne_backend.domain.auth_identity import UserPrincipal, UserProfile
 from cyberdyne_backend.domain.course_finder import CatalogEntry
+from cyberdyne_backend.domain.quota import QuotaMeter
 from cyberdyne_backend.infrastructure.container import Container
 from cyberdyne_backend.infrastructure.database.engine import (
     dispose_engine,
@@ -1347,10 +1350,29 @@ def create_app() -> FastAPI:
         async with session_scope() as session:
             yield ListCourseRequestClusters(repo=SqlAlchemyCourseRequestRepository(session))
 
-    # Server-side quota / Pro fair-use enforcement (issue #230).
+    # Server-side quota / Pro fair-use enforcement (issue #230). Free-tier
+    # caps may be raised per meter via env (staging/dev), overriding the
+    # built-in policy defaults.
+    _quota_free_limits = {
+        meter: value
+        for meter, value in (
+            (QuotaMeter.TUTOR_MESSAGES, settings.quota_tutor_messages_free_limit),
+            (QuotaMeter.CODE_RUNS, settings.quota_code_runs_free_limit),
+            (QuotaMeter.SCANS, settings.quota_scans_free_limit),
+        )
+        if value is not None
+    }
+
     async def _enforce_quota_dep() -> AsyncIterator[EnforceQuota]:
         async with session_scope() as session:
-            yield EnforceQuota(repo=SqlAlchemyUsageCounterRepository(session))
+            yield EnforceQuota(
+                repo=SqlAlchemyUsageCounterRepository(session),
+                free_limits=_quota_free_limits,
+            )
+
+    async def _reset_quota_dep() -> AsyncIterator[ResetQuota]:
+        async with session_scope() as session:
+            yield ResetQuota(repo=SqlAlchemyUsageCounterRepository(session))
 
     # Scan-to-Learn (issue #231). The catalog index is built once per process
     # and cached on the container, so the catalog is embedded a single time
@@ -1788,6 +1810,7 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_submit_course_request_uc] = _submit_course_request_dep
     app.dependency_overrides[get_list_clusters_uc] = _list_clusters_dep
     app.dependency_overrides[get_enforce_quota_uc] = _enforce_quota_dep
+    app.dependency_overrides[get_reset_quota_uc] = _reset_quota_dep
     app.dependency_overrides[get_scan_to_learn_uc] = _scan_to_learn_dep
     app.dependency_overrides[get_path_gating_uc] = _path_gating_dep
     app.dependency_overrides[get_eligibility_uc] = _eligibility_dep
@@ -1865,6 +1888,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(dao_router)
     app.include_router(wallet_router)
+    app.include_router(quota_admin_router)
     app.include_router(youtube_router)
     app.include_router(websearch_router)
     app.include_router(code_player_router)

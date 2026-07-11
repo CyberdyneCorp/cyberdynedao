@@ -19,3 +19,8 @@ class UsageCounterRepository(Protocol):
         """Atomically add one to the bucket and return the new count
         (upserts the row on first use)."""
         ...
+
+    async def reset(self, *, user_id: UUID, meter: QuotaMeter, period_key: str) -> int:
+        """Clear the bucket (delete the counter row). Returns 1 if a row
+        was removed, 0 if there was nothing to reset."""
+        ...

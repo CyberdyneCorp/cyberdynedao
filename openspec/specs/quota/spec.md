@@ -32,13 +32,36 @@ On exceeding a cap it SHALL respond **402** (payment required) so the client can
 show the paywall, including the limit, the reset time, and remaining count via
 `X-Quota-*` response headers. Counters reset on a fixed monthly/daily window.
 A blocked request SHALL NOT consume quota. Anonymous callers are not subject to
-per-user quota (the per-IP limiter guards them).
+per-user quota (the per-IP limiter guards them). Each meter's free-tier cap MAY
+be overridden per environment (e.g. raised for staging/dev) via configuration,
+falling back to the built-in default when unset.
 
 #### Scenario: Free tutor cap reached
 
 - GIVEN a non-Pro learner who has sent 10 tutor messages this month
 - WHEN they send another
 - THEN the system SHALL respond `402` with `X-Quota-Limit: 10` and `X-Quota-Remaining: 0`
+
+### Requirement: Admin quota reset
+
+The system SHALL expose `POST /api/v1/admin/quota/reset` (guarded by
+`require_editor`) that clears a user's current-period usage — one meter when
+`meter` is supplied, or every meter when omitted — and returns the meters
+actually reset (those that had usage). Each meter is reset in its own period
+bucket. An unknown `meter` SHALL return `422`; an unauthenticated caller SHALL
+be refused (`401`).
+
+#### Scenario: Reset unblocks a capped user
+
+- GIVEN a user who has exhausted their monthly `tutor_messages` free cap
+- WHEN an editor `POST`s `/api/v1/admin/quota/reset` with that `userId` and `meter: "tutor_messages"`
+- THEN the response is `200` with `reset: ["tutor_messages"]` and the user can send tutor messages again
+
+#### Scenario: Unknown meter rejected
+
+- GIVEN an editor
+- WHEN they request a reset for an unrecognized meter
+- THEN the system SHALL respond `422`
 
 ### Requirement: Pro fair-use soft caps
 
