@@ -341,6 +341,13 @@ from cyberdyne_backend.adapters.inbound.api.wallet.router import (
 from cyberdyne_backend.adapters.inbound.api.wallet.router import (
     router as wallet_router,
 )
+from cyberdyne_backend.adapters.inbound.api.youtube.router import (
+    get_list_playlist_videos_uc,
+    get_video_transcript_uc,
+)
+from cyberdyne_backend.adapters.inbound.api.youtube.router import (
+    router as youtube_router,
+)
 from cyberdyne_backend.adapters.inbound.health.router import router as health_router
 from cyberdyne_backend.adapters.inbound.middleware.auth import (
     AuthMiddleware,
@@ -622,6 +629,7 @@ from cyberdyne_backend.application.uploads import (
     SaveUpload,
     SaveUploads,
 )
+from cyberdyne_backend.application.youtube import GetVideoTranscript, ListPlaylistVideos
 from cyberdyne_backend.domain.auth_identity import UserPrincipal, UserProfile
 from cyberdyne_backend.domain.course_finder import CatalogEntry
 from cyberdyne_backend.infrastructure.container import Container
@@ -1439,6 +1447,14 @@ def create_app() -> FastAPI:
         # No DB session — access reads are chain-only (stub for now).
         yield GetWalletAccess(reader=container.access_reader)
 
+    async def _video_transcript_dep() -> AsyncIterator[GetVideoTranscript]:
+        # No DB session — YouTube reads are HTTP-only.
+        yield GetVideoTranscript(content=container.youtube)
+
+    async def _playlist_videos_dep() -> AsyncIterator[ListPlaylistVideos]:
+        # No DB session — YouTube reads are HTTP-only.
+        yield ListPlaylistVideos(content=container.youtube)
+
     async def _run_code_dep() -> AsyncIterator[RunLessonCode]:
         # No DB session — execution is HTTP-only against the MATLAB engine
         # (matlab lessons) or the Python interpreter sandbox (python lessons).
@@ -1763,6 +1779,8 @@ def create_app() -> FastAPI:
     app.dependency_overrides[get_set_deadline_uc] = _set_deadline_dep
     app.dependency_overrides[get_dao_overview_uc] = _dao_overview_dep
     app.dependency_overrides[get_wallet_access_uc] = _wallet_access_dep
+    app.dependency_overrides[get_video_transcript_uc] = _video_transcript_dep
+    app.dependency_overrides[get_list_playlist_videos_uc] = _playlist_videos_dep
     app.dependency_overrides[get_run_code_uc] = _run_code_dep
     app.dependency_overrides[get_list_products_uc] = _list_marketplace_products_dep
     app.dependency_overrides[get_create_checkout_uc] = _create_checkout_dep
@@ -1826,6 +1844,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(dao_router)
     app.include_router(wallet_router)
+    app.include_router(youtube_router)
     app.include_router(code_player_router)
     app.include_router(marketplace_public_router)
     app.include_router(marketplace_me_router)

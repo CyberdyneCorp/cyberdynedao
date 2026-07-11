@@ -69,6 +69,7 @@ from cyberdyne_backend.adapters.outbound.stripe.webhook_verifier import (
     MockStripeWebhookVerifier,
     StripeWebhookVerifier,
 )
+from cyberdyne_backend.adapters.outbound.youtube.client import YouTubeContentClient
 from cyberdyne_backend.application.course_finder import CatalogSearchIndex
 from cyberdyne_backend.application.recommendations import RecommendationsCache
 from cyberdyne_backend.domain.access import AccessReaderPort
@@ -92,6 +93,7 @@ from cyberdyne_backend.domain.marketplace import (
     StripeCheckoutPort,
     StripeWebhookVerifierPort,
 )
+from cyberdyne_backend.domain.youtube import YouTubeContentPort
 from cyberdyne_backend.infrastructure.settings import Settings
 
 
@@ -114,6 +116,7 @@ class Container:
         self._certificate_pdf_renderer: ReportlabCertificateRenderer | None = None
         self._chain_reader: ChainReaderPort | None = None
         self._access_reader: AccessReaderPort | None = None
+        self._youtube: YouTubeContentPort | None = None
         self._stripe_checkout: StripeCheckoutPort | None = None
         self._stripe_webhook_verifier: StripeWebhookVerifierPort | None = None
         self._license_email_notifier: LicenseEmailNotifierPort | None = None
@@ -314,6 +317,13 @@ class Container:
             ttl_s=self._settings.dao_snapshot_ttl_s,
         )
         return self._chain_reader
+
+    # ── YouTube content (agent source material) ──────────────────────
+    @property
+    def youtube(self) -> YouTubeContentPort:
+        if self._youtube is None:
+            self._youtube = YouTubeContentClient()
+        return self._youtube
 
     @property
     def access_reader(self) -> AccessReaderPort:

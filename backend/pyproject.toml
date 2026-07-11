@@ -27,6 +27,12 @@ dependencies = [
     "cryptography>=43.0.0",
     # Local RS256 access-token verification against CyberdyneAuth's JWKS.
     "pyjwt[crypto]>=2.9.0",
+    # YouTube source material for the chat agents: transcripts + playlist
+    # listings. Both are pure-python; hand-rolling these over httpx is not
+    # viable (YouTube's caption/playlist internals change constantly and
+    # these libraries track them).
+    "youtube-transcript-api>=1.0.0",
+    "yt-dlp>=2025.1.26",
 ]
 
 [project.optional-dependencies]
