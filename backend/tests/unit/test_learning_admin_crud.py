@@ -463,6 +463,20 @@ def test_gpu_programming_module_payload_is_valid() -> None:
     assert appended_module_slugs(["a", "b"], module["slug"]) == ["a", "b", module["slug"]]
 
 
+def test_devops_fundamentals_prepend_helper() -> None:
+    from cyberdyne_backend.application.courses.seed import ACADEMY_COURSES
+    from cyberdyne_backend.cli.add_devops_fundamentals_to_ce_devops import (
+        COURSE_SLUG,
+        prepended_course_slugs,
+    )
+
+    # The course this wires is a real seeded course.
+    assert COURSE_SLUG in {c.slug for c in ACADEMY_COURSES}
+    # Prepend is idempotent and puts the intro course first.
+    assert prepended_course_slugs(["docker-basics", COURSE_SLUG], COURSE_SLUG) is None
+    assert prepended_course_slugs(["docker-basics"], COURSE_SLUG) == [COURSE_SLUG, "docker-basics"]
+
+
 def test_mechanical_engineering_payloads_are_valid() -> None:
     from cyberdyne_backend.application.courses.seed import ACADEMY_COURSES
     from cyberdyne_backend.cli.create_mechanical_engineering_paths import build_payloads
