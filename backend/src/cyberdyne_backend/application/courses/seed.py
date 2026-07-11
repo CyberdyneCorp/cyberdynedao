@@ -134,6 +134,7 @@ from cyberdyne_backend.application.courses.seed_generative_molecular_design impo
 from cyberdyne_backend.application.courses.seed_genetics import GENETICS_COURSES
 from cyberdyne_backend.application.courses.seed_genomics import GENOMICS_COURSES
 from cyberdyne_backend.application.courses.seed_git import GIT_COURSES
+from cyberdyne_backend.application.courses.seed_gpu_programming import GPU_PROGRAMMING_COURSES
 from cyberdyne_backend.application.courses.seed_heat_transfer import HEAT_TRANSFER_COURSES
 from cyberdyne_backend.application.courses.seed_high_voltage import HIGH_VOLTAGE_COURSES
 from cyberdyne_backend.application.courses.seed_hwverification import HW_VERIFICATION_COURSES
@@ -1526,6 +1527,7 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *SVELTE_COURSES,
     *PYTORCH_COURSES,
     *TENSORFLOW_COURSES,
+    *GPU_PROGRAMMING_COURSES,
 )
 
 
