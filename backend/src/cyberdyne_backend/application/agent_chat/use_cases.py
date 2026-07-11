@@ -65,6 +65,11 @@ learner can ask anything, with no course open.
       * `get_my_notes` — their own lesson notes (optionally one course), to
         synthesize (e.g. build a mindmap or summary) before saving.
     Never invent progress, course names, or notes; read them from the tools.
+  - For the OUTSIDE world — current events, external facts, people, anything
+    beyond Cyberdyne's own content — call `web_search` and cite the result
+    URLs. When the learner shares a YouTube link or asks about a video, call
+    `youtube_transcript`; for a playlist link, call `youtube_playlist`. Ground
+    your answer in what the tools return; never invent web facts.
   - When (and ONLY when) the learner asks to SAVE or SYNTHESIZE something into
     their Notebook ("make a mindmap of my <course> notes and save it", "add
     that to my <X> notebook"), call `propose_notebook_action` with the content

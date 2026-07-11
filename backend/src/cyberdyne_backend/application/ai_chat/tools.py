@@ -25,6 +25,12 @@ from typing import cast
 from uuid import UUID, uuid4
 
 from cyberdyne_backend.application.access import GetWalletAccess
+from cyberdyne_backend.application.ai_chat.source_tools import (
+    EXTERNAL_SOURCE_TOOLS,
+    run_web_search,
+    run_youtube_playlist,
+    run_youtube_transcript,
+)
 from cyberdyne_backend.application.analytics import GetLearnerDashboard
 from cyberdyne_backend.application.blog.use_cases import (
     GetBlogPost,
@@ -46,6 +52,8 @@ from cyberdyne_backend.application.lesson_notes import ListUserNotes
 from cyberdyne_backend.application.marketplace import GetProduct
 from cyberdyne_backend.application.notebook import ListFlashcards, ListNotes
 from cyberdyne_backend.application.quizzes import GetQuiz
+from cyberdyne_backend.application.websearch import SearchWeb
+from cyberdyne_backend.application.youtube import GetVideoTranscript, ListPlaylistVideos
 from cyberdyne_backend.domain.access import InvalidWalletAddressError
 from cyberdyne_backend.domain.ai_chat import (
     CyberfliesPort,
@@ -721,6 +729,7 @@ CYBERDYNE_TOOLS: list[ToolSchema] = [
         ),
         parameters={"type": "object", "properties": {}},
     ),
+    *EXTERNAL_SOURCE_TOOLS,
 ]
 
 
@@ -777,6 +786,10 @@ class ToolContext:
     list_note_flashcards: ListFlashcards | None = None
     # Access-tier lookup for get_user_tier (reads the user's linked wallet).
     get_wallet_access: GetWalletAccess | None = None
+    # External source tools (agent research): open-web search + YouTube.
+    search_web: SearchWeb | None = None
+    youtube_transcript: GetVideoTranscript | None = None
+    youtube_playlist: ListPlaylistVideos | None = None
     user_id: UUID | None = None
 
 
@@ -824,6 +837,12 @@ class ToolDispatcher:
                 return await self._lookup_product(cast(str, args.get("slug", "")))
             if call.name == "search_cyberdyne_knowledge":
                 return await self._search(cast(str, args.get("query", "")))
+            if call.name == "web_search":
+                return await run_web_search(self._ctx.search_web, args)
+            if call.name == "youtube_transcript":
+                return await run_youtube_transcript(self._ctx.youtube_transcript, args)
+            if call.name == "youtube_playlist":
+                return await run_youtube_playlist(self._ctx.youtube_playlist, args)
             if call.name == "create_ask_for_handoff":
                 return await self._create_ask(args)
             if call.name == "capture_project_idea":
