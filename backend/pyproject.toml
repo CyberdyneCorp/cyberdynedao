@@ -141,3 +141,8 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "openpyxl.*"
 ignore_missing_imports = true
+
+# yt-dlp ships no type stubs.
+[[tool.mypy.overrides]]
+module = "yt_dlp.*"
+ignore_missing_imports = true
