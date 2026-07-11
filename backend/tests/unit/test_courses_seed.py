@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 508
+        assert len(summary) == 509
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -258,6 +258,20 @@ class TestSeedCourses:
                     assert node_re.match(line), f"{slug}/{lesson.title}: bad node {line!r}"
                 checked += 1
         assert checked == 30  # 29 Key-ideas lessons + the TEDx companion
+
+    def test_react_basics_course_shape(self) -> None:
+        course = next(c for c in ACADEMY_COURSES if c.slug == "react-basics")
+        # Welcome + 8 content lessons, a checkpoint quiz after each, and the
+        # comprehensive final quiz = 19.
+        assert len(course.lessons) == 19
+        self._assert_ai_course_pattern(course)
+        # Every content lesson carries a mermaid diagram and code examples.
+        texts = [le for le in course.lessons if le.lesson_type == "text"]
+        assert len(texts) == 9
+        for lesson in texts[1:]:  # all but the welcome
+            body = lesson.text_body or ""
+            assert "```mermaid" in body, f"{lesson.title}: missing diagram"
+            assert "```jsx" in body, f"{lesson.title}: missing code example"
 
     def test_every_registry_quiz_question_has_exactly_one_correct_option(self) -> None:
         # Regression: a quiz question with zero (or >1) correct options passes the
@@ -789,6 +803,7 @@ class TestSeedCourses:
             "renewable-ev-advanced",
             "startups-in-the-age-of-ai",
             "selling-software-in-the-age-of-ai",
+            "react-basics",
         }
         for course in ACADEMY_COURSES:
             assert course.lessons  # non-empty

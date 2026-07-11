@@ -214,6 +214,7 @@ from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
 from cyberdyne_backend.application.courses.seed_r_data_analysis import R_DATA_ANALYSIS_COURSES
 from cyberdyne_backend.application.courses.seed_radar import RADAR_COURSES
 from cyberdyne_backend.application.courses.seed_rails import RAILS_COURSES
+from cyberdyne_backend.application.courses.seed_react import REACT_COURSES
 from cyberdyne_backend.application.courses.seed_renewable_ev import RENEWABLE_EV_COURSES
 from cyberdyne_backend.application.courses.seed_reproducible_research import (
     REPRODUCIBLE_RESEARCH_COURSES,
@@ -1518,6 +1519,7 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *RAILS_COURSES,
     *STARTUPS_AGE_OF_AI_COURSES,
     *SELLING_SOFTWARE_AI_COURSES,
+    *REACT_COURSES,
 )
 
 
