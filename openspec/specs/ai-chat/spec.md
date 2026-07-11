@@ -32,7 +32,11 @@ in order (`GET /api/v1/chat/sessions/{id}`). An unknown session SHALL return
 The system SHALL run a message turn (`POST /api/v1/chat/sessions/{id}/messages`,
 content 1..4000 chars) that loops the LLM with the Cyberdyne tool set up to a
 bounded number of tool rounds (4), persisting user/assistant/tool messages,
-and returns the final assistant message. An upstream LLM failure SHALL return
+and returns the final assistant message. The tool set includes external source
+tools — `web_search` (open-web search), `youtube_transcript`, and
+`youtube_playlist` — so the agent can ground answers in the public web and
+YouTube; each returns a bounded, JSON-stringified payload, and reports an
+error result (never failing the turn) when its upstream is unavailable. An upstream LLM failure SHALL return
 `502`; an unknown session SHALL return `404`. An optional
 `interpreterSessionId` + `attachments` SHALL thread into tool dispatch; the
 caller's bearer SHALL be forwarded to tools.
