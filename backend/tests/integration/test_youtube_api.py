@@ -94,8 +94,12 @@ class TestTranscriptEndpoint:
         }
 
     def test_invalid_reference_is_422(self, app: FastAPI) -> None:
+        # NB: any 11 chars of [A-Za-z0-9_-] IS a valid video id (so a string
+        # like "not-a-video" would parse); use an unmistakably foreign URL.
         client = _client(app, _Port())
-        response = client.get("/api/v1/youtube/transcript", params={"video": "not-a-video"})
+        response = client.get(
+            "/api/v1/youtube/transcript", params={"video": "https://vimeo.com/12345"}
+        )
         assert response.status_code == 422
 
     def test_unavailable_transcript_is_404(self, app: FastAPI) -> None:
