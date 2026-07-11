@@ -343,7 +343,9 @@ class TestSeedCourses:
         assert len(texts) == 9
         for lesson in texts[1:]:  # all but the welcome
             assert "```mermaid" in (lesson.text_body or ""), f"{lesson.title}: missing diagram"
-        with_code = sum(1 for le in texts[1:] if "```" in (le.text_body or "").replace("```mermaid", ""))
+        with_code = sum(
+            1 for le in texts[1:] if "```" in (le.text_body or "").replace("```mermaid", "")
+        )
         assert with_code >= 6, f"expected config/pipeline examples, got {with_code}"
 
     def test_every_registry_quiz_question_has_exactly_one_correct_option(self) -> None:
