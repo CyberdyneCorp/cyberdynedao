@@ -44,10 +44,14 @@ from cyberdyne_backend.application.courses.seed_analytical_chemistry import (
 from cyberdyne_backend.application.courses.seed_antennas import ANTENNAS_COURSES
 from cyberdyne_backend.application.courses.seed_audio_processing import AUDIO_PROCESSING_COURSES
 from cyberdyne_backend.application.courses.seed_battery import BATTERY_COURSES
+from cyberdyne_backend.application.courses.seed_bim_for_civil import BIM_FOR_CIVIL_COURSES
 from cyberdyne_backend.application.courses.seed_bio_databases import BIO_DATABASES_COURSES
 from cyberdyne_backend.application.courses.seed_biochemistry import BIOCHEMISTRY_COURSES
 from cyberdyne_backend.application.courses.seed_bioinformatics import BIOINFORMATICS_COURSES
 from cyberdyne_backend.application.courses.seed_biostatistics import BIOSTATISTICS_COURSES
+from cyberdyne_backend.application.courses.seed_building_hydraulic_systems import (
+    BUILDING_HYDRAULIC_SYSTEMS_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_cad_cae_parametric import CAD_CAE_PARAMETRIC_COURSES
 from cyberdyne_backend.application.courses.seed_capstone_ai_drug_design import (
     CAPSTONE_AI_DRUG_DESIGN_COURSES,
@@ -72,7 +76,16 @@ from cyberdyne_backend.application.courses.seed_computer_aided_drug_design impor
 from cyberdyne_backend.application.courses.seed_computing_foundations import (
     COMPUTING_FOUNDATIONS_COURSES,
 )
+from cyberdyne_backend.application.courses.seed_concrete_technology import (
+    CONCRETE_TECHNOLOGY_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_concurrency import CONCURRENCY_COURSES
+from cyberdyne_backend.application.courses.seed_construction_management_cost import (
+    CONSTRUCTION_MANAGEMENT_COST_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_construction_materials import (
+    CONSTRUCTION_MATERIALS_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_control import CONTROL_COURSES
 from cyberdyne_backend.application.courses.seed_csharp import CSHARP_COURSES
 from cyberdyne_backend.application.courses.seed_data_converters import DATA_CONVERTERS_COURSES
@@ -93,6 +106,9 @@ from cyberdyne_backend.application.courses.seed_devops_fundamentals import (
 )
 from cyberdyne_backend.application.courses.seed_digital_comms import DIGITAL_COMMS_COURSES
 from cyberdyne_backend.application.courses.seed_digital_logic import DIGITAL_LOGIC_COURSES
+from cyberdyne_backend.application.courses.seed_digital_twins_ai_construction import (
+    DIGITAL_TWINS_AI_CONSTRUCTION_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_distributed import DISTRIBUTED_COURSES
 from cyberdyne_backend.application.courses.seed_django import DJANGO_COURSES
 from cyberdyne_backend.application.courses.seed_docking_virtual_screening import (
@@ -109,6 +125,9 @@ from cyberdyne_backend.application.courses.seed_embedded import EMBEDDED_COURSES
 from cyberdyne_backend.application.courses.seed_emc import EMC_COURSES
 from cyberdyne_backend.application.courses.seed_engineering_dynamics import (
     ENGINEERING_DYNAMICS_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_engineering_geology import (
+    ENGINEERING_GEOLOGY_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_engineering_graphics_cad import (
     ENGINEERING_GRAPHICS_CAD_COURSES,
@@ -128,6 +147,9 @@ from cyberdyne_backend.application.courses.seed_finite_element_analysis import (
     FINITE_ELEMENT_ANALYSIS_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_fluid_mechanics import FLUID_MECHANICS_COURSES
+from cyberdyne_backend.application.courses.seed_foundations_retaining import (
+    FOUNDATIONS_RETAINING_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_fpga import FPGA_COURSES
 from cyberdyne_backend.application.courses.seed_general_chemistry import GENERAL_CHEMISTRY_COURSES
 from cyberdyne_backend.application.courses.seed_generative_design import GENERATIVE_DESIGN_COURSES
@@ -140,13 +162,22 @@ from cyberdyne_backend.application.courses.seed_git import GIT_COURSES
 from cyberdyne_backend.application.courses.seed_gpu_programming import GPU_PROGRAMMING_COURSES
 from cyberdyne_backend.application.courses.seed_heat_transfer import HEAT_TRANSFER_COURSES
 from cyberdyne_backend.application.courses.seed_high_voltage import HIGH_VOLTAGE_COURSES
+from cyberdyne_backend.application.courses.seed_highways_pavement_mobility import (
+    HIGHWAYS_PAVEMENT_MOBILITY_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_hwverification import HW_VERIFICATION_COURSES
 from cyberdyne_backend.application.courses.seed_hydraulics_pneumatics import (
     HYDRAULICS_PNEUMATICS_COURSES,
 )
+from cyberdyne_backend.application.courses.seed_hydrology_water_resources import (
+    HYDROLOGY_WATER_RESOURCES_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_iac import IAC_COURSES
 from cyberdyne_backend.application.courses.seed_image_processing import IMAGE_PROCESSING_COURSES
 from cyberdyne_backend.application.courses.seed_immunology import IMMUNOLOGY_COURSES
+from cyberdyne_backend.application.courses.seed_intro_civil_engineering import (
+    INTRO_CIVIL_ENGINEERING_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_kinematics_of_machinery import (
     KINEMATICS_OF_MACHINERY_COURSES,
 )
@@ -220,6 +251,9 @@ from cyberdyne_backend.application.courses.seed_r_data_analysis import R_DATA_AN
 from cyberdyne_backend.application.courses.seed_radar import RADAR_COURSES
 from cyberdyne_backend.application.courses.seed_rails import RAILS_COURSES
 from cyberdyne_backend.application.courses.seed_react import REACT_COURSES
+from cyberdyne_backend.application.courses.seed_reinforced_concrete_design import (
+    REINFORCED_CONCRETE_DESIGN_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_renewable_ev import RENEWABLE_EV_COURSES
 from cyberdyne_backend.application.courses.seed_reproducible_research import (
     REPRODUCIBLE_RESEARCH_COURSES,
@@ -228,6 +262,9 @@ from cyberdyne_backend.application.courses.seed_rf_comms import RF_COMMS_COURSES
 from cyberdyne_backend.application.courses.seed_rfic import RFIC_COURSES
 from cyberdyne_backend.application.courses.seed_robot_manipulators import ROBOT_MANIPULATORS_COURSES
 from cyberdyne_backend.application.courses.seed_robotics import ROBOTICS_COURSES
+from cyberdyne_backend.application.courses.seed_sanitation_drainage import (
+    SANITATION_DRAINAGE_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_scientific_computing import (
     SCIENTIFIC_COMPUTING_COURSES,
 )
@@ -246,14 +283,27 @@ from cyberdyne_backend.application.courses.seed_software_architecture import (
     SOFTWARE_ARCHITECTURE_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_software_quality import SOFTWARE_QUALITY_COURSES
+from cyberdyne_backend.application.courses.seed_soil_mechanics import SOIL_MECHANICS_COURSES
 from cyberdyne_backend.application.courses.seed_startups_age_of_ai import (
     STARTUPS_AGE_OF_AI_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_statistics import STATISTICS_COURSES
+from cyberdyne_backend.application.courses.seed_steel_timber_structures import (
+    STEEL_TIMBER_STRUCTURES_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_stochastic_processes import (
     STOCHASTIC_PROCESSES_COURSES,
 )
+from cyberdyne_backend.application.courses.seed_structural_analysis import (
+    STRUCTURAL_ANALYSIS_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_structural_biology import STRUCTURAL_BIOLOGY_COURSES
+from cyberdyne_backend.application.courses.seed_surveying_geoprocessing import (
+    SURVEYING_GEOPROCESSING_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_sustainable_construction import (
+    SUSTAINABLE_CONSTRUCTION_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_svelte import SVELTE_COURSES
 from cyberdyne_backend.application.courses.seed_systemdesign import SYSTEM_DESIGN_COURSES
 from cyberdyne_backend.application.courses.seed_systems_biology import SYSTEMS_BIOLOGY_COURSES
@@ -1408,6 +1458,25 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *DISTRIBUTED_COURSES,
     *WEBDEV_COURSES,
     *DATAENG_COURSES,
+    # -- Civil Engineering track (new civil-specific courses) --------
+    *INTRO_CIVIL_ENGINEERING_COURSES,
+    *SURVEYING_GEOPROCESSING_COURSES,
+    *ENGINEERING_GEOLOGY_COURSES,
+    *CONSTRUCTION_MATERIALS_COURSES,
+    *CONCRETE_TECHNOLOGY_COURSES,
+    *SOIL_MECHANICS_COURSES,
+    *FOUNDATIONS_RETAINING_COURSES,
+    *STRUCTURAL_ANALYSIS_COURSES,
+    *REINFORCED_CONCRETE_DESIGN_COURSES,
+    *STEEL_TIMBER_STRUCTURES_COURSES,
+    *HYDROLOGY_WATER_RESOURCES_COURSES,
+    *SANITATION_DRAINAGE_COURSES,
+    *BUILDING_HYDRAULIC_SYSTEMS_COURSES,
+    *HIGHWAYS_PAVEMENT_MOBILITY_COURSES,
+    *CONSTRUCTION_MANAGEMENT_COST_COURSES,
+    *SUSTAINABLE_CONSTRUCTION_COURSES,
+    *BIM_FOR_CIVIL_COURSES,
+    *DIGITAL_TWINS_AI_CONSTRUCTION_COURSES,
     *CONCURRENCY_COURSES,
     *SIGNAL_INTEGRITY_COURSES,
     *EMC_COURSES,
