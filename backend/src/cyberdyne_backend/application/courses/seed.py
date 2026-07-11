@@ -33,6 +33,9 @@ from cyberdyne_backend.application.courses.seed_additive_manufacturing import (
 from cyberdyne_backend.application.courses.seed_admet_prediction import ADMET_PREDICTION_COURSES
 from cyberdyne_backend.application.courses.seed_advanced_control import ADVANCED_CONTROL_COURSES
 from cyberdyne_backend.application.courses.seed_aerial import AERIAL_COURSES
+from cyberdyne_backend.application.courses.seed_ai_digital_chemical_engineering import (
+    AI_DIGITAL_CHEMICAL_ENGINEERING_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_ai_drug_discovery import AI_DRUG_DISCOVERY_COURSES
 from cyberdyne_backend.application.courses.seed_ai_organic_shapes import AI_ORGANIC_SHAPES_COURSES
 from cyberdyne_backend.application.courses.seed_algorithms import ALGORITHMS_COURSES
@@ -48,6 +51,9 @@ from cyberdyne_backend.application.courses.seed_bim_for_civil import BIM_FOR_CIV
 from cyberdyne_backend.application.courses.seed_bio_databases import BIO_DATABASES_COURSES
 from cyberdyne_backend.application.courses.seed_biochemistry import BIOCHEMISTRY_COURSES
 from cyberdyne_backend.application.courses.seed_bioinformatics import BIOINFORMATICS_COURSES
+from cyberdyne_backend.application.courses.seed_bioprocess_engineering import (
+    BIOPROCESS_ENGINEERING_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_biostatistics import BIOSTATISTICS_COURSES
 from cyberdyne_backend.application.courses.seed_building_hydraulic_systems import (
     BUILDING_HYDRAULIC_SYSTEMS_COURSES,
@@ -60,6 +66,12 @@ from cyberdyne_backend.application.courses.seed_capstone_generative_mechanical_d
     CAPSTONE_GENERATIVE_MECHANICAL_DESIGN_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_cell_biology import CELL_BIOLOGY_COURSES
+from cyberdyne_backend.application.courses.seed_chemical_engineering_thermodynamics import (
+    CHEMICAL_ENGINEERING_THERMODYNAMICS_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_chemical_reaction_engineering import (
+    CHEMICAL_REACTION_ENGINEERING_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_cheminformatics import CHEMINFORMATICS_COURSES
 from cyberdyne_backend.application.courses.seed_circuit_analysis import CIRCUIT_ANALYSIS_COURSES
 from cyberdyne_backend.application.courses.seed_coding_theory import CODING_THEORY_COURSES
@@ -139,6 +151,9 @@ from cyberdyne_backend.application.courses.seed_engineering_thermodynamics impor
     ENGINEERING_THERMODYNAMICS_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_english_brazil import ENGLISH_BRAZIL_COURSES
+from cyberdyne_backend.application.courses.seed_environmental_process_engineering import (
+    ENVIRONMENTAL_PROCESS_ENGINEERING_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_estimation import ESTIMATION_COURSES
 from cyberdyne_backend.application.courses.seed_evolution_ecology import EVOLUTION_ECOLOGY_COURSES
 from cyberdyne_backend.application.courses.seed_fiber_optics import FIBER_OPTICS_COURSES
@@ -175,6 +190,9 @@ from cyberdyne_backend.application.courses.seed_hydrology_water_resources import
 from cyberdyne_backend.application.courses.seed_iac import IAC_COURSES
 from cyberdyne_backend.application.courses.seed_image_processing import IMAGE_PROCESSING_COURSES
 from cyberdyne_backend.application.courses.seed_immunology import IMMUNOLOGY_COURSES
+from cyberdyne_backend.application.courses.seed_intro_chemical_engineering import (
+    INTRO_CHEMICAL_ENGINEERING_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_intro_civil_engineering import (
     INTRO_CIVIL_ENGINEERING_COURSES,
 )
@@ -187,6 +205,12 @@ from cyberdyne_backend.application.courses.seed_machine_design import MACHINE_DE
 from cyberdyne_backend.application.courses.seed_machines import MACHINES_COURSES
 from cyberdyne_backend.application.courses.seed_manufacturing_processes import (
     MANUFACTURING_PROCESSES_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_mass_transfer_separations import (
+    MASS_TRANSFER_SEPARATIONS_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_material_energy_balances import (
+    MATERIAL_ENERGY_BALANCES_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_materials_science import MATERIALS_SCIENCE_COURSES
 from cyberdyne_backend.application.courses.seed_math import MATH_COURSES
@@ -216,6 +240,12 @@ from cyberdyne_backend.application.courses.seed_ngs_analysis import NGS_ANALYSIS
 from cyberdyne_backend.application.courses.seed_organic_chemistry import ORGANIC_CHEMISTRY_COURSES
 from cyberdyne_backend.application.courses.seed_os import OS_COURSES
 from cyberdyne_backend.application.courses.seed_pcb import PCB_COURSES
+from cyberdyne_backend.application.courses.seed_petrochemical_refining import (
+    PETROCHEMICAL_REFINING_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_pharmaceutical_engineering import (
+    PHARMACEUTICAL_ENGINEERING_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_pharmacology import PHARMACOLOGY_COURSES
 from cyberdyne_backend.application.courses.seed_photonics import PHOTONICS_COURSES
 from cyberdyne_backend.application.courses.seed_phylogenetics import PHYLOGENETICS_COURSES
@@ -225,11 +255,29 @@ from cyberdyne_backend.application.courses.seed_physics_life_sciences import (
     PHYSICS_LIFE_SCIENCES_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_physiology import PHYSIOLOGY_COURSES
+from cyberdyne_backend.application.courses.seed_polymer_engineering import (
+    POLYMER_ENGINEERING_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_power_electronics import POWER_ELECTRONICS_COURSES
 from cyberdyne_backend.application.courses.seed_power_protection import POWER_PROTECTION_COURSES
 from cyberdyne_backend.application.courses.seed_power_systems import POWER_SYSTEMS_COURSES
 from cyberdyne_backend.application.courses.seed_prob_stats_python import (
     PROB_STATS_PYTHON_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_process_design_simulation import (
+    PROCESS_DESIGN_SIMULATION_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_process_dynamics_control import (
+    PROCESS_DYNAMICS_CONTROL_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_process_economics_management import (
+    PROCESS_ECONOMICS_MANAGEMENT_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_process_equipment_design import (
+    PROCESS_EQUIPMENT_DESIGN_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_process_safety_engineering import (
+    PROCESS_SAFETY_ENGINEERING_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_programming_biology_python import (
     PROGRAMMING_BIOLOGY_PYTHON_COURSES,
@@ -304,6 +352,9 @@ from cyberdyne_backend.application.courses.seed_surveying_geoprocessing import (
 from cyberdyne_backend.application.courses.seed_sustainable_construction import (
     SUSTAINABLE_CONSTRUCTION_COURSES,
 )
+from cyberdyne_backend.application.courses.seed_sustainable_processes import (
+    SUSTAINABLE_PROCESSES_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_svelte import SVELTE_COURSES
 from cyberdyne_backend.application.courses.seed_systemdesign import SYSTEM_DESIGN_COURSES
 from cyberdyne_backend.application.courses.seed_systems_biology import SYSTEMS_BIOLOGY_COURSES
@@ -326,6 +377,7 @@ from cyberdyne_backend.application.courses.seed_types import (
     SeedLesson,
     apply_quiz_spec,
 )
+from cyberdyne_backend.application.courses.seed_unit_operations import UNIT_OPERATIONS_COURSES
 from cyberdyne_backend.application.courses.seed_vectorcalc import VECTORCALC_COURSES
 from cyberdyne_backend.application.courses.seed_vlsi import VLSI_COURSES
 from cyberdyne_backend.application.courses.seed_webdev import WEBDEV_COURSES
@@ -1477,6 +1529,25 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *SUSTAINABLE_CONSTRUCTION_COURSES,
     *BIM_FOR_CIVIL_COURSES,
     *DIGITAL_TWINS_AI_CONSTRUCTION_COURSES,
+    # -- Chemical Engineering track (new chemical-specific courses) --
+    *INTRO_CHEMICAL_ENGINEERING_COURSES,
+    *MATERIAL_ENERGY_BALANCES_COURSES,
+    *CHEMICAL_ENGINEERING_THERMODYNAMICS_COURSES,
+    *MASS_TRANSFER_SEPARATIONS_COURSES,
+    *CHEMICAL_REACTION_ENGINEERING_COURSES,
+    *UNIT_OPERATIONS_COURSES,
+    *PROCESS_DYNAMICS_CONTROL_COURSES,
+    *PROCESS_DESIGN_SIMULATION_COURSES,
+    *PROCESS_EQUIPMENT_DESIGN_COURSES,
+    *PROCESS_SAFETY_ENGINEERING_COURSES,
+    *BIOPROCESS_ENGINEERING_COURSES,
+    *PETROCHEMICAL_REFINING_COURSES,
+    *POLYMER_ENGINEERING_COURSES,
+    *PHARMACEUTICAL_ENGINEERING_COURSES,
+    *ENVIRONMENTAL_PROCESS_ENGINEERING_COURSES,
+    *SUSTAINABLE_PROCESSES_COURSES,
+    *PROCESS_ECONOMICS_MANAGEMENT_COURSES,
+    *AI_DIGITAL_CHEMICAL_ENGINEERING_COURSES,
     *CONCURRENCY_COURSES,
     *SIGNAL_INTEGRITY_COURSES,
     *EMC_COURSES,
