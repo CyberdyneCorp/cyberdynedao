@@ -84,9 +84,7 @@ class ResetQuota:
     repo: UsageCounterRepository
     now: Callable[[], datetime] = field(default=_utcnow)
 
-    async def execute(
-        self, *, user_id: UUID, meter: QuotaMeter | None = None
-    ) -> list[QuotaMeter]:
+    async def execute(self, *, user_id: UUID, meter: QuotaMeter | None = None) -> list[QuotaMeter]:
         meters = [meter] if meter is not None else list(QuotaMeter)
         moment = self.now()
         reset: list[QuotaMeter] = []
