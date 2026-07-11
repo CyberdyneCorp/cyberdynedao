@@ -209,6 +209,7 @@ from cyberdyne_backend.application.courses.seed_protein_structure_prediction imp
 from cyberdyne_backend.application.courses.seed_proteomics_metabolomics import (
     PROTEOMICS_METABOLOMICS_COURSES,
 )
+from cyberdyne_backend.application.courses.seed_pytorch import PYTORCH_COURSES
 from cyberdyne_backend.application.courses.seed_qsar_modeling import QSAR_MODELING_COURSES
 from cyberdyne_backend.application.courses.seed_quizzes import QUIZ_REGISTRY
 from cyberdyne_backend.application.courses.seed_r_data_analysis import R_DATA_ANALYSIS_COURSES
@@ -1522,6 +1523,7 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *SELLING_SOFTWARE_AI_COURSES,
     *REACT_COURSES,
     *SVELTE_COURSES,
+    *PYTORCH_COURSES,
 )
 
 
