@@ -18,7 +18,11 @@ for a signed-in learner that answers directly (a distinct answer-mode persona,
 not Socratic) and MAY call learner-context tools — the learner's own course
 progress, active tracks/paths, recommendations, and lesson notes (optionally
 filtered to one course) — to ground answers about their learning, scoped to the
-authenticated user only (the `user_id` is never a tool argument). Text turns SHALL count
+authenticated user only (the `user_id` is never a tool argument). The turn MAY
+also call external source tools (`web_search`, `youtube_transcript`,
+`youtube_playlist`) to ground answers in the public web and YouTube, each
+returning a bounded payload and an error result (never failing the turn) when
+its upstream is unavailable. Text turns SHALL count
 toward the AI-message quota (#230). Attached upload ids (incl. a photographed
 question) SHALL be ingested (text/vision) and grounded. An unknown session
 SHALL return `404`; an unauthenticated caller SHALL be refused (`401`/`403`).

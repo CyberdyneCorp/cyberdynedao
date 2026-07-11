@@ -69,7 +69,9 @@ courses, add/update/delete/reorder lessons, and manage categories, under
 omitted, be unique (duplicate → `409`), and be immutable; the level SHALL be
 immutable after creation. Lesson content SHALL satisfy its type invariant
 (e.g. `video` requires a `content_url`, `text` requires a `text_body`),
-returning `422` otherwise.
+returning `422` otherwise. A `video` (or other URL-backed) lesson MAY also
+carry an optional `text_body` — a Markdown companion (e.g. a summary,
+key ideas, and a diagram) rendered below the player.
 
 #### Scenario: Create defaults to draft with derived slug
 
