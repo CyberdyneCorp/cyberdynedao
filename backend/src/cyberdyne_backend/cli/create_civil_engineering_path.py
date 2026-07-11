@@ -511,7 +511,9 @@ def main() -> int:
         print(f"  path {path['slug']}: created")
     elif st == 409:
         _, existing = _call("GET", f"{api}/api/v1/admin/learning/paths", token)
-        current = next((p["moduleSlugs"] for p in existing if p["slug"] == path["slug"]), [])
+        current: list[str] = next(
+            (p["moduleSlugs"] for p in existing if p["slug"] == path["slug"]), []
+        )
         merged = merged_module_slugs(list(current), path["moduleSlugs"])
         if merged == current:
             print(f"  path {path['slug']}: exists (all modules already present)")
