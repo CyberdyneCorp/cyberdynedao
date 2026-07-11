@@ -1578,6 +1578,10 @@ def create_app() -> FastAPI:
             list_notebook_notes=ListNotes(repo=SqlAlchemyNotebookRepository(session)),
             list_note_flashcards=ListFlashcards(repo=SqlAlchemyNotebookRepository(session)),
             get_wallet_access=GetWalletAccess(reader=container.access_reader),
+            # External source tools (HTTP-only): open-web search + YouTube.
+            search_web=SearchWeb(provider=container.web_search),
+            youtube_transcript=GetVideoTranscript(content=container.youtube),
+            youtube_playlist=ListPlaylistVideos(content=container.youtube),
             user_id=profile.user_id if profile else None,
         )
 
@@ -1650,6 +1654,10 @@ def create_app() -> FastAPI:
                     cache=container.recommendations_cache,
                 ),
                 list_user_notes=ListUserNotes(repo=SqlAlchemyLessonNoteRepository(session)),
+                # External source tools (HTTP-only): open-web search + YouTube.
+                search_web=SearchWeb(provider=container.web_search),
+                youtube_transcript=GetVideoTranscript(content=container.youtube),
+                youtube_playlist=ListPlaylistVideos(content=container.youtube),
             )
         )
 

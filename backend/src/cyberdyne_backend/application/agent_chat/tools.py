@@ -19,10 +19,18 @@ from dataclasses import dataclass
 from typing import Any, Literal
 from uuid import UUID
 
+from cyberdyne_backend.application.ai_chat.source_tools import (
+    EXTERNAL_SOURCE_TOOLS,
+    run_web_search,
+    run_youtube_playlist,
+    run_youtube_transcript,
+)
 from cyberdyne_backend.application.courses import ListMyCourseProgress
 from cyberdyne_backend.application.learning import GetMyLearningState
 from cyberdyne_backend.application.lesson_notes import ListUserNotes
 from cyberdyne_backend.application.recommendations import RecommendCourses
+from cyberdyne_backend.application.websearch import SearchWeb
+from cyberdyne_backend.application.youtube import GetVideoTranscript, ListPlaylistVideos
 from cyberdyne_backend.domain.ai_chat import ToolCall, ToolSchema
 from cyberdyne_backend.domain.notebook import InvalidNoteError, NoteType, parse_note_type
 
@@ -127,8 +135,13 @@ NOTEBOOK_ACTION_TOOL = ToolSchema(
 )
 
 # The full tool set the answer agent exposes: the read-only learner-context
-# tools plus the write-proposal tool.
-AGENT_TOOLS: list[ToolSchema] = [*LEARNER_CONTEXT_TOOLS, NOTEBOOK_ACTION_TOOL]
+# tools, the external source tools (web search + YouTube), plus the
+# write-proposal tool.
+AGENT_TOOLS: list[ToolSchema] = [
+    *LEARNER_CONTEXT_TOOLS,
+    *EXTERNAL_SOURCE_TOOLS,
+    NOTEBOOK_ACTION_TOOL,
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -155,6 +168,12 @@ class LearnerContextToolset:
     get_my_learning_state: GetMyLearningState
     recommend_courses: RecommendCourses
     list_user_notes: ListUserNotes
+    # External source tools (web search + YouTube). Optional so a minimal
+    # toolset (e.g. in tests) can omit them; None -> the tool reports it is
+    # unavailable rather than crashing the turn.
+    search_web: SearchWeb | None = None
+    youtube_transcript: GetVideoTranscript | None = None
+    youtube_playlist: ListPlaylistVideos | None = None
 
 
 class LearnerContextDispatcher:
@@ -179,6 +198,12 @@ class LearnerContextDispatcher:
                 return await self._get_my_recommendations()
             if call.name == "get_my_notes":
                 return await self._get_my_notes(_args(call))
+            if call.name == "web_search":
+                return await run_web_search(self._ctx.search_web, _args(call))
+            if call.name == "youtube_transcript":
+                return await run_youtube_transcript(self._ctx.youtube_transcript, _args(call))
+            if call.name == "youtube_playlist":
+                return await run_youtube_playlist(self._ctx.youtube_playlist, _args(call))
             if call.name == "propose_notebook_action":
                 return self._propose_notebook_action(_args(call))
         except Exception as exc:  # never let a tool break the turn
