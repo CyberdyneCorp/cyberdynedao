@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 514
+        assert len(summary) == 532
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -347,6 +347,47 @@ class TestSeedCourses:
             1 for le in texts[1:] if "```" in (le.text_body or "").replace("```mermaid", "")
         )
         assert with_code >= 6, f"expected config/pipeline examples, got {with_code}"
+
+    def test_civil_engineering_courses_shape(self) -> None:
+        # The 18 new civil-specific courses all follow the house pattern:
+        # welcome + 8 content lessons (each with a mermaid diagram and a
+        # code/formula example), a checkpoint quiz after each, and the
+        # comprehensive final quiz = 19 lessons.
+        civil_slugs = {
+            "intro-civil-engineering",
+            "surveying-geoprocessing",
+            "engineering-geology",
+            "construction-materials",
+            "concrete-technology",
+            "soil-mechanics",
+            "foundations-retaining",
+            "structural-analysis",
+            "reinforced-concrete-design",
+            "steel-timber-structures",
+            "hydrology-water-resources",
+            "sanitation-drainage",
+            "building-hydraulic-systems",
+            "highways-pavement-mobility",
+            "construction-management-cost",
+            "sustainable-construction",
+            "bim-for-civil",
+            "digital-twins-ai-construction",
+        }
+        by_slug = {c.slug: c for c in ACADEMY_COURSES}
+        for slug in civil_slugs:
+            course = by_slug[slug]
+            assert len(course.lessons) == 19, f"{slug}: {len(course.lessons)} lessons"
+            self._assert_ai_course_pattern(course)
+            texts = [le for le in course.lessons if le.lesson_type == "text"]
+            assert len(texts) == 9, f"{slug}: {len(texts)} text lessons"
+            for lesson in texts[1:]:  # all but the welcome
+                assert "```mermaid" in (lesson.text_body or ""), (
+                    f"{slug}/{lesson.title}: no diagram"
+                )
+            with_code = sum(
+                1 for le in texts[1:] if "```" in (le.text_body or "").replace("```mermaid", "")
+            )
+            assert with_code >= 6, f"{slug}: only {with_code} lessons carry a code/formula example"
 
     def test_every_registry_quiz_question_has_exactly_one_correct_option(self) -> None:
         # Regression: a quiz question with zero (or >1) correct options passes the
@@ -884,6 +925,24 @@ class TestSeedCourses:
             "tensorflow-basics",
             "gpu-programming-cuda-opencl",
             "devops-fundamentals",
+            "intro-civil-engineering",
+            "surveying-geoprocessing",
+            "engineering-geology",
+            "construction-materials",
+            "concrete-technology",
+            "soil-mechanics",
+            "foundations-retaining",
+            "structural-analysis",
+            "reinforced-concrete-design",
+            "steel-timber-structures",
+            "hydrology-water-resources",
+            "sanitation-drainage",
+            "building-hydraulic-systems",
+            "highways-pavement-mobility",
+            "construction-management-cost",
+            "sustainable-construction",
+            "bim-for-civil",
+            "digital-twins-ai-construction",
         }
         for course in ACADEMY_COURSES:
             assert course.lessons  # non-empty
