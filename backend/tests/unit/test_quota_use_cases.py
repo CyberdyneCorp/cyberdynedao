@@ -33,6 +33,9 @@ class _FakeCounters:
         self.counts[key] = self.counts.get(key, 0) + 1
         return self.counts[key]
 
+    async def reset(self, *, user_id, meter, period_key) -> int:
+        return 1 if self.counts.pop((user_id, meter.value, period_key), None) is not None else 0
+
 
 _FIXED = datetime(2026, 6, 15, 12, 0, tzinfo=UTC)
 
@@ -109,3 +112,94 @@ def test_period_key_and_reset() -> None:
     # December rolls over to January of the next year.
     december = datetime(2026, 12, 20, 9, 0, tzinfo=UTC)
     assert period_reset(QuotaPeriod.MONTHLY, december) == datetime(2027, 1, 1, tzinfo=UTC)
+
+
+# ── Free-limit override (env-configurable caps) ──────────────────────
+
+
+def test_free_limit_override_raises_cap() -> None:
+    repo = _FakeCounters()
+    enforcer = EnforceQuota(
+        repo=repo, free_limits={QuotaMeter.TUTOR_MESSAGES: 3}, now=lambda: _FIXED
+    )
+    user = uuid.uuid4()
+
+    async def run() -> None:
+        # Default is 10; override to 3 → allowed 3 times, then 402.
+        for _ in range(3):
+            await enforcer.execute(user_id=user, meter=QuotaMeter.TUTOR_MESSAGES, is_pro=False)
+        with pytest.raises(FreeQuotaExceededError) as exc:
+            await enforcer.execute(user_id=user, meter=QuotaMeter.TUTOR_MESSAGES, is_pro=False)
+        assert exc.value.limit == 3
+
+    asyncio.run(run())
+
+
+def test_override_only_affects_named_meter() -> None:
+    repo = _FakeCounters()
+    enforcer = EnforceQuota(
+        repo=repo, free_limits={QuotaMeter.TUTOR_MESSAGES: 1}, now=lambda: _FIXED
+    )
+    user = uuid.uuid4()
+
+    async def run() -> None:
+        # scans keeps its built-in free cap (5) — override didn't touch it.
+        dec = await enforcer.execute(user_id=user, meter=QuotaMeter.SCANS, is_pro=False)
+        assert dec.limit == 5
+
+    asyncio.run(run())
+
+
+# ── ResetQuota (admin) ───────────────────────────────────────────────
+
+
+def test_reset_one_meter_clears_usage() -> None:
+    from cyberdyne_backend.application.quota import ResetQuota
+
+    repo = _FakeCounters()
+    enforcer = _enforcer(repo)
+    resetter = ResetQuota(repo=repo, now=lambda: _FIXED)
+    user = uuid.uuid4()
+
+    async def run() -> None:
+        for _ in range(10):
+            await enforcer.execute(user_id=user, meter=QuotaMeter.TUTOR_MESSAGES, is_pro=False)
+        with pytest.raises(FreeQuotaExceededError):
+            await enforcer.execute(user_id=user, meter=QuotaMeter.TUTOR_MESSAGES, is_pro=False)
+
+        reset = await resetter.execute(user_id=user, meter=QuotaMeter.TUTOR_MESSAGES)
+        assert reset == [QuotaMeter.TUTOR_MESSAGES]
+
+        # Usable again after reset.
+        dec = await enforcer.execute(user_id=user, meter=QuotaMeter.TUTOR_MESSAGES, is_pro=False)
+        assert dec.remaining == 9
+
+    asyncio.run(run())
+
+
+def test_reset_all_meters_reports_only_those_with_usage() -> None:
+    from cyberdyne_backend.application.quota import ResetQuota
+
+    repo = _FakeCounters()
+    enforcer = _enforcer(repo)
+    resetter = ResetQuota(repo=repo, now=lambda: _FIXED)
+    user = uuid.uuid4()
+
+    async def run() -> None:
+        await enforcer.execute(user_id=user, meter=QuotaMeter.TUTOR_MESSAGES, is_pro=False)
+        # No scans/code_runs used → only tutor_messages is reported reset.
+        reset = await resetter.execute(user_id=user)
+        assert reset == [QuotaMeter.TUTOR_MESSAGES]
+
+    asyncio.run(run())
+
+
+def test_reset_noop_when_nothing_used() -> None:
+    from cyberdyne_backend.application.quota import ResetQuota
+
+    resetter = ResetQuota(repo=_FakeCounters(), now=lambda: _FIXED)
+
+    async def run() -> None:
+        assert await resetter.execute(user_id=uuid.uuid4()) == []
+
+    asyncio.run(run())
