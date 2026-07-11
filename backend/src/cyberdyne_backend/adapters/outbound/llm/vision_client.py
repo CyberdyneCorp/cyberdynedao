@@ -14,6 +14,7 @@ from typing import cast
 
 import httpx
 
+from cyberdyne_backend.adapters.outbound.llm.openai_client import supports_reasoning_effort
 from cyberdyne_backend.domain.ai_chat import ChatProviderError
 
 logger = logging.getLogger("cyberdyne_backend.openai.vision")
@@ -29,6 +30,7 @@ class OpenAIVisionClient:
         api_key: str,
         http_client: httpx.AsyncClient,
         model: str = "gpt-4o-mini",
+        reasoning_effort: str | None = None,
         base_url: str = _DEFAULT_BASE_URL,
         timeout_s: float = 30.0,
     ) -> None:
@@ -37,6 +39,10 @@ class OpenAIVisionClient:
         self._api_key = api_key
         self._http = http_client
         self._model = model
+        # See OpenAIChatClient: sent only for reasoning models that accept it.
+        self._reasoning_effort = (
+            reasoning_effort if reasoning_effort and supports_reasoning_effort(model) else None
+        )
         self._base_url = base_url.rstrip("/")
         self._timeout_s = timeout_s
 
@@ -55,6 +61,8 @@ class OpenAIVisionClient:
                 }
             ],
         }
+        if self._reasoning_effort is not None:
+            body["reasoning_effort"] = self._reasoning_effort
         try:
             response = await self._http.post(
                 f"{self._base_url}/chat/completions",

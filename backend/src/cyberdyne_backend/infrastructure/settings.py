@@ -204,6 +204,11 @@ class Settings(BaseSettings):
     # Unset = StaticChatClient mock — local dev only.
     openai_api_key: SecretStr | None = None
     openai_model: str = "gpt-4o-mini"
+    # Reasoning effort for gpt-5/o-series models. Defaults to "minimal" so a
+    # switch to gpt-5-mini does not silently inflate cost with hidden
+    # reasoning tokens on our short chat/translation calls. Ignored (field
+    # not sent) for gpt-4o, which rejects it.
+    openai_reasoning_effort: str = "minimal"
     # Vision model for describing / OCR-ing image attachments (issue #220).
     # Defaults to the cheap vision-capable chat model.
     openai_vision_model: str = "gpt-4o-mini"

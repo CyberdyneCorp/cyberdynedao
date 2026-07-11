@@ -383,6 +383,7 @@ class Container:
                 api_key=key.get_secret_value(),
                 http_client=self.http_client,
                 model=self._settings.openai_model,
+                reasoning_effort=self._settings.openai_reasoning_effort,
             )
         else:
             self._chat_llm = StaticChatClient()
@@ -412,6 +413,7 @@ class Container:
                 api_key=key.get_secret_value(),
                 http_client=self.http_client,
                 model=self._settings.openai_vision_model,
+                reasoning_effort=self._settings.openai_reasoning_effort,
             )
         else:
             self._vision = StaticVisionClient()
