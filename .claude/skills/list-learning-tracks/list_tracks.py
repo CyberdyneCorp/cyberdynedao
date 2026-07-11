@@ -22,6 +22,8 @@ import json
 import os
 import ssl
 import sys
+import time
+import urllib.error
 import urllib.request
 from typing import Any
 
@@ -37,9 +39,25 @@ def _ctx() -> ssl.SSLContext | None:
     return None
 
 
-def _get(url: str) -> Any:
-    with urllib.request.urlopen(url, context=_ctx()) as r:
-        return json.loads(r.read().decode())
+def _get(url: str, *, retries: int = 3) -> Any:
+    """GET + parse JSON, retrying transient failures (transport errors and
+    5xx - Coolify cold pods blip). Raises SystemExit with a clean message on
+    a persistent failure instead of an opaque traceback."""
+    last = ""
+    for attempt in range(1, retries + 1):
+        try:
+            with urllib.request.urlopen(url, context=_ctx()) as r:
+                return json.loads(r.read().decode())
+        except urllib.error.HTTPError as e:
+            transient = e.code >= 500
+            last = f"HTTP {e.code}: {e.read().decode()[:200]}"
+        except (urllib.error.URLError, TimeoutError, ConnectionError, json.JSONDecodeError) as e:
+            transient = True
+            last = f"transport error: {getattr(e, 'reason', e)}"
+        if not transient or attempt == retries:
+            raise SystemExit(f"GET {url} failed ({last})")
+        time.sleep(0.6 * attempt)
+    raise SystemExit(f"GET {url} failed after {retries} tries ({last})")
 
 
 def build(api: str, lang: str | None) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:

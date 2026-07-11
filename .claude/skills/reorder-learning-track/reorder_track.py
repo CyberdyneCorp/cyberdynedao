@@ -34,6 +34,7 @@ import json
 import os
 import ssl
 import sys
+import time
 import urllib.error
 import urllib.request
 from typing import Any
@@ -53,6 +54,9 @@ def _ctx() -> ssl.SSLContext | None:
 
 
 def _call(method: str, url: str, token: str | None = None, body: Any = None) -> tuple[int, Any]:
+    """Return (status, parsed_body). status 0 means a transport error (no
+    HTTP response); body is then the error string. A non-JSON error body is
+    returned as its raw string."""
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(url, data=data, method=method)
     req.add_header("Content-Type", "application/json")
@@ -68,6 +72,29 @@ def _call(method: str, url: str, token: str | None = None, body: Any = None) -> 
             return e.code, json.loads(raw)
         except json.JSONDecodeError:
             return e.code, raw
+    except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+        return 0, str(getattr(e, "reason", e))
+
+
+def _get_list(api: str, path: str, *, retries: int = 3) -> list[Any]:
+    """GET a JSON array with retry on transient failure (transport error or
+    5xx - cold pods on Coolify blip). Raises SystemExit with a clear message
+    on a persistent error or an unexpected response shape."""
+    url = f"{api}{path}"
+    last = ""
+    for attempt in range(1, retries + 1):
+        status, body = _call("GET", url)
+        if status == 200 and isinstance(body, list):
+            return body
+        if status == 200:
+            raise SystemExit(f"GET {path}: expected a JSON array, got {type(body).__name__}")
+        transient = status == 0 or status >= 500
+        detail = body if isinstance(body, str) else json.dumps(body)
+        last = f"HTTP {status or 'transport error'}: {str(detail)[:200]}"
+        if not transient or attempt == retries:
+            raise SystemExit(f"GET {path} failed ({last})")
+        time.sleep(0.6 * attempt)  # brief backoff; cold pod usually recovers
+    raise SystemExit(f"GET {path} failed after {retries} tries ({last})")
 
 
 def _token() -> str:
@@ -78,13 +105,17 @@ def _token() -> str:
     email, password = os.environ.get("ACADEMY_EMAIL"), os.environ.get("ACADEMY_PASSWORD")
     if not (email and password):
         raise SystemExit("set ACADEMY_TOKEN, or ACADEMY_EMAIL + ACADEMY_PASSWORD")
-    _, body = _call("POST", f"{auth}/api/v1/auth/login", body={"email": email, "password": password})
+    status, body = _call(
+        "POST", f"{auth}/api/v1/auth/login", body={"email": email, "password": password}
+    )
+    if status != 200 or not isinstance(body, dict) or "access_token" not in body:
+        raise SystemExit(f"login failed (HTTP {status or 'transport error'}): {str(body)[:200]}")
     return str(body["access_token"])
 
 
-def _load(api: str) -> tuple[dict[str, list[dict[str, Any]]], dict[str, dict[str, Any]]]:
-    _, paths = _call("GET", f"{api}/api/v1/learning/paths")
-    _, modules = _call("GET", f"{api}/api/v1/learning/modules")
+def _load(api: str) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
+    paths = _get_list(api, "/api/v1/learning/paths")
+    modules = _get_list(api, "/api/v1/learning/modules")
     return {p["slug"]: p for p in paths}, {m["slug"]: m for m in modules}
 
 
@@ -166,7 +197,7 @@ def cmd_apply(api: str, track_slug: str, args: argparse.Namespace) -> int:
         print(f"FAILED {st}: {body}", file=sys.stderr)
         return 1
     # Verify live.
-    _, verify = _call("GET", f"{api}/api/v1/learning/paths")
+    verify = _get_list(api, "/api/v1/learning/paths")
     live = next(p["moduleSlugs"] for p in verify if p["slug"] == track_slug)
     ok = live == desired
     print(f"\nDone - reorder {'verified live' if ok else 'APPLIED but live order differs!'}.")
