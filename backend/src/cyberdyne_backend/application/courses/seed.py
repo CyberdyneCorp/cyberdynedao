@@ -249,6 +249,7 @@ from cyberdyne_backend.application.courses.seed_stochastic_processes import (
     STOCHASTIC_PROCESSES_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_structural_biology import STRUCTURAL_BIOLOGY_COURSES
+from cyberdyne_backend.application.courses.seed_svelte import SVELTE_COURSES
 from cyberdyne_backend.application.courses.seed_systemdesign import SYSTEM_DESIGN_COURSES
 from cyberdyne_backend.application.courses.seed_systems_biology import SYSTEMS_BIOLOGY_COURSES
 from cyberdyne_backend.application.courses.seed_sysverilog import SYSVERILOG_COURSES
@@ -1520,6 +1521,7 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *STARTUPS_AGE_OF_AI_COURSES,
     *SELLING_SOFTWARE_AI_COURSES,
     *REACT_COURSES,
+    *SVELTE_COURSES,
 )
 
 
