@@ -69,6 +69,7 @@ from cyberdyne_backend.adapters.outbound.stripe.webhook_verifier import (
     MockStripeWebhookVerifier,
     StripeWebhookVerifier,
 )
+from cyberdyne_backend.adapters.outbound.websearch.serpapi_client import SerpApiClient
 from cyberdyne_backend.adapters.outbound.youtube.client import YouTubeContentClient
 from cyberdyne_backend.application.course_finder import CatalogSearchIndex
 from cyberdyne_backend.application.recommendations import RecommendationsCache
@@ -93,6 +94,7 @@ from cyberdyne_backend.domain.marketplace import (
     StripeCheckoutPort,
     StripeWebhookVerifierPort,
 )
+from cyberdyne_backend.domain.websearch import WebSearchPort
 from cyberdyne_backend.domain.youtube import YouTubeContentPort
 from cyberdyne_backend.infrastructure.settings import Settings
 
@@ -117,6 +119,7 @@ class Container:
         self._chain_reader: ChainReaderPort | None = None
         self._access_reader: AccessReaderPort | None = None
         self._youtube: YouTubeContentPort | None = None
+        self._web_search: WebSearchPort | None = None
         self._stripe_checkout: StripeCheckoutPort | None = None
         self._stripe_webhook_verifier: StripeWebhookVerifierPort | None = None
         self._license_email_notifier: LicenseEmailNotifierPort | None = None
@@ -324,6 +327,18 @@ class Container:
         if self._youtube is None:
             self._youtube = YouTubeContentClient()
         return self._youtube
+
+    # ── Web search (SERPAPI — agent tool) ────────────────────────────
+    @property
+    def web_search(self) -> WebSearchPort | None:
+        """SERPAPI client when a key is configured; ``None`` otherwise, so
+        the /search endpoint degrades to 503 rather than failing opaquely."""
+        if self._web_search is None and self._settings.serpapi_key is not None:
+            self._web_search = SerpApiClient(
+                api_key=self._settings.serpapi_key.get_secret_value(),
+                http_client=self.http_client,
+            )
+        return self._web_search
 
     @property
     def access_reader(self) -> AccessReaderPort:

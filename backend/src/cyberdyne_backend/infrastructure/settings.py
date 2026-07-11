@@ -219,6 +219,10 @@ class Settings(BaseSettings):
     # follow-up adapter (see docs/backend-roadmap.md §5.6).
     cyberrag_mcp_url: str | None = None
 
+    # SERPAPI key for the open-web search endpoint (agent tool). When unset,
+    # the /search endpoint returns 503 (capability off).
+    serpapi_key: SecretStr | None = None
+
     # MATLAB-LLVM backend the chat agent's matlab_repl / matlab_plot
     # tools call (as the signed-in user). Same upstream the frontend's
     # matlabApi.ts proxies to.
