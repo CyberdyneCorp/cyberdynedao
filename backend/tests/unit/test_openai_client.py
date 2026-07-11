@@ -107,3 +107,67 @@ class TestOpenAIStreaming:
         with pytest.raises(ChatProviderError):
             async for _ in client.stream(messages=[], tools=[], system_prompt="sys"):
                 pass
+
+
+class TestReasoningEffort:
+    def test_supports_reasoning_effort(self) -> None:
+        from cyberdyne_backend.adapters.outbound.llm.openai_client import (
+            supports_reasoning_effort,
+        )
+
+        assert supports_reasoning_effort("gpt-5-mini")
+        assert supports_reasoning_effort("gpt-5")
+        assert supports_reasoning_effort("gpt-5.4-nano")
+        assert supports_reasoning_effort("o3-mini")
+        # gpt-4o and the non-reasoning gpt-5-chat variant reject the field.
+        assert not supports_reasoning_effort("gpt-4o-mini")
+        assert not supports_reasoning_effort("gpt-5-chat-latest")
+
+    @staticmethod
+    def _capture_client(model: str, reasoning_effort: str | None) -> tuple[OpenAIChatClient, list]:
+        seen: list[dict] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen.append(json.loads(request.content))
+            return httpx.Response(
+                200,
+                json={
+                    "model": model,
+                    "choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}],
+                    "usage": {"prompt_tokens": 1, "completion_tokens": 1},
+                },
+            )
+
+        http = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        return (
+            OpenAIChatClient(
+                api_key="sk-test",
+                http_client=http,
+                model=model,
+                reasoning_effort=reasoning_effort,
+            ),
+            seen,
+        )
+
+    async def test_sent_for_gpt5(self) -> None:
+        client, seen = self._capture_client("gpt-5-mini", "minimal")
+        await client.complete(messages=[], tools=[], system_prompt="sys")
+        assert seen[0]["reasoning_effort"] == "minimal"
+
+    async def test_omitted_for_gpt4o(self) -> None:
+        # gpt-4o rejects the field; it must never be sent even when configured.
+        client, seen = self._capture_client("gpt-4o-mini", "minimal")
+        await client.complete(messages=[], tools=[], system_prompt="sys")
+        assert "reasoning_effort" not in seen[0]
+
+    async def test_omitted_when_unset(self) -> None:
+        client, seen = self._capture_client("gpt-5-mini", None)
+        await client.complete(messages=[], tools=[], system_prompt="sys")
+        assert "reasoning_effort" not in seen[0]
+
+    async def test_sent_on_stream_path(self) -> None:
+        client, seen = self._capture_client("gpt-5-mini", "minimal")
+        async for _ in client.stream(messages=[], tools=[], system_prompt="sys"):
+            pass
+        assert seen[0]["reasoning_effort"] == "minimal"
+        assert seen[0]["stream"] is True

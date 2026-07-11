@@ -37,6 +37,21 @@ logger = logging.getLogger("cyberdyne_backend.openai")
 _DEFAULT_BASE_URL = "https://api.openai.com/v1"
 
 
+def supports_reasoning_effort(model: str) -> bool:
+    """Whether ``model`` accepts the ``reasoning_effort`` request field.
+
+    The gpt-5 reasoning family and the o-series accept it; gpt-4o (and
+    the non-reasoning ``gpt-5-chat`` variant) reject it with a 400. This
+    keeps a model switch self-adjusting: the field is sent only when the
+    configured model understands it, so flipping ``OPENAI_MODEL`` between
+    gpt-4o-mini and gpt-5-mini needs no other change.
+    """
+    name = model.lower()
+    if name.startswith("gpt-5") and "chat" not in name:
+        return True
+    return name.startswith(("o1", "o3", "o4"))
+
+
 class OpenAIChatClient:
     def __init__(
         self,
@@ -44,6 +59,7 @@ class OpenAIChatClient:
         api_key: str,
         http_client: httpx.AsyncClient,
         model: str = "gpt-4o-mini",
+        reasoning_effort: str | None = None,
         base_url: str = _DEFAULT_BASE_URL,
         timeout_s: float = 30.0,
     ) -> None:
@@ -52,8 +68,20 @@ class OpenAIChatClient:
         self._api_key = api_key
         self._http = http_client
         self._model = model
+        # Sent only for reasoning models (gpt-5/o-series). On those, the
+        # default effort makes the model spend hidden reasoning tokens
+        # (billed as output) even on trivial calls — a ~10x cost inflation
+        # on our short translation calls — so callers pass "minimal" to
+        # suppress it. Omitted entirely for gpt-4o, which rejects the field.
+        self._reasoning_effort = (
+            reasoning_effort if reasoning_effort and supports_reasoning_effort(model) else None
+        )
         self._base_url = base_url.rstrip("/")
         self._timeout_s = timeout_s
+
+    def _apply_reasoning_effort(self, body: dict[str, object]) -> None:
+        if self._reasoning_effort is not None:
+            body["reasoning_effort"] = self._reasoning_effort
 
     async def complete(
         self,
@@ -69,6 +97,7 @@ class OpenAIChatClient:
             "model": self._model,
             "messages": wire_messages,
         }
+        self._apply_reasoning_effort(body)
         if tools:
             body["tools"] = [_tool_to_openai(t) for t in tools]
         # Transient transport hiccups (a dropped keep-alive on the shared
@@ -115,6 +144,7 @@ class OpenAIChatClient:
             # Usage is omitted from streamed responses unless we ask for it.
             "stream_options": {"include_usage": True},
         }
+        self._apply_reasoning_effort(body)
         if tools:
             body["tools"] = [_tool_to_openai(t) for t in tools]
 
