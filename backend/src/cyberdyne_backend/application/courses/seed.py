@@ -260,6 +260,7 @@ from cyberdyne_backend.application.courses.seed_target_identification import (
 from cyberdyne_backend.application.courses.seed_technical_english import (
     TECHNICAL_ENGLISH_COURSES,
 )
+from cyberdyne_backend.application.courses.seed_tensorflow import TENSORFLOW_COURSES
 from cyberdyne_backend.application.courses.seed_test_measurement import TEST_MEASUREMENT_COURSES
 from cyberdyne_backend.application.courses.seed_testing import TESTING_COURSES
 from cyberdyne_backend.application.courses.seed_topology_optimization import (
@@ -1524,6 +1525,7 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *REACT_COURSES,
     *SVELTE_COURSES,
     *PYTORCH_COURSES,
+    *TENSORFLOW_COURSES,
 )
 
 
