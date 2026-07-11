@@ -88,6 +88,9 @@ from cyberdyne_backend.application.courses.seed_design_optimization import (
     DESIGN_OPTIMIZATION_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_devops import DEVOPS_COURSES
+from cyberdyne_backend.application.courses.seed_devops_fundamentals import (
+    DEVOPS_FUNDAMENTALS_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_digital_comms import DIGITAL_COMMS_COURSES
 from cyberdyne_backend.application.courses.seed_digital_logic import DIGITAL_LOGIC_COURSES
 from cyberdyne_backend.application.courses.seed_distributed import DISTRIBUTED_COURSES
@@ -1528,6 +1531,7 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *PYTORCH_COURSES,
     *TENSORFLOW_COURSES,
     *GPU_PROGRAMMING_COURSES,
+    *DEVOPS_FUNDAMENTALS_COURSES,
 )
 
 
