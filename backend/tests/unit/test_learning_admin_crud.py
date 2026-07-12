@@ -367,6 +367,29 @@ def test_geospatial_engineering_payloads_are_valid() -> None:
     assert merged_module_slugs(["a"], ["a"]) == ["a"]
 
 
+def test_environmental_engineering_payloads_are_valid() -> None:
+    from cyberdyne_backend.application.courses.seed import ACADEMY_COURSES
+    from cyberdyne_backend.cli.create_environmental_engineering_path import (
+        build_payloads,
+        merged_module_slugs,
+    )
+    from cyberdyne_backend.domain.learning import VALID_LEVELS
+
+    modules, path = build_payloads()
+    assert len(modules) == 14
+    module_slugs = [m["slug"] for m in modules]
+    assert len(module_slugs) == len(set(module_slugs)), "duplicate module slugs"
+    assert all(m["level"] in VALID_LEVELS for m in modules)
+    assert path["moduleSlugs"] == module_slugs
+    assert path["slug"] == "environmental-engineering"
+    catalogue = {c.slug for c in ACADEMY_COURSES}
+    bundled = [s for m in modules for s in m["courseSlugs"]]
+    missing = sorted(set(bundled) - catalogue)
+    assert not missing, f"modules reference unseeded courses: {missing}"
+    assert merged_module_slugs(["a", "b"], ["b", "c"]) == ["a", "b", "c"]
+    assert merged_module_slugs(["a"], ["a"]) == ["a"]
+
+
 def test_life_sciences_payloads_are_valid() -> None:
     from cyberdyne_backend.application.courses.seed import ACADEMY_COURSES
     from cyberdyne_backend.cli.create_life_sciences_paths import build_payloads

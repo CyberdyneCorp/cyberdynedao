@@ -37,7 +37,13 @@ from cyberdyne_backend.application.courses.seed_ai_digital_chemical_engineering 
     AI_DIGITAL_CHEMICAL_ENGINEERING_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_ai_drug_discovery import AI_DRUG_DISCOVERY_COURSES
+from cyberdyne_backend.application.courses.seed_ai_for_environmental_engineering import (
+    AI_FOR_ENVIRONMENTAL_ENGINEERING_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_ai_organic_shapes import AI_ORGANIC_SHAPES_COURSES
+from cyberdyne_backend.application.courses.seed_air_pollution_control import (
+    AIR_POLLUTION_CONTROL_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_algorithms import ALGORITHMS_COURSES
 from cyberdyne_backend.application.courses.seed_analog_comms import ANALOG_COMMS_COURSES
 from cyberdyne_backend.application.courses.seed_analog_ic import ANALOG_IC_COURSES
@@ -77,6 +83,9 @@ from cyberdyne_backend.application.courses.seed_chemical_reaction_engineering im
 )
 from cyberdyne_backend.application.courses.seed_cheminformatics import CHEMINFORMATICS_COURSES
 from cyberdyne_backend.application.courses.seed_circuit_analysis import CIRCUIT_ANALYSIS_COURSES
+from cyberdyne_backend.application.courses.seed_climate_change_carbon import (
+    CLIMATE_CHANGE_CARBON_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_coding_theory import CODING_THEORY_COURSES
 from cyberdyne_backend.application.courses.seed_comparch import COMPARCH_COURSES
 from cyberdyne_backend.application.courses.seed_computational_fluid_dynamics import (
@@ -124,6 +133,9 @@ from cyberdyne_backend.application.courses.seed_digital_logic import DIGITAL_LOG
 from cyberdyne_backend.application.courses.seed_digital_twins_ai_construction import (
     DIGITAL_TWINS_AI_CONSTRUCTION_COURSES,
 )
+from cyberdyne_backend.application.courses.seed_disaster_risk_resilience import (
+    DISASTER_RISK_RESILIENCE_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_distributed import DISTRIBUTED_COURSES
 from cyberdyne_backend.application.courses.seed_django import DJANGO_COURSES
 from cyberdyne_backend.application.courses.seed_docking_virtual_screening import (
@@ -133,6 +145,9 @@ from cyberdyne_backend.application.courses.seed_drug_development_regulatory impo
     DRUG_DEVELOPMENT_REGULATORY_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_dsp import DSP_COURSES
+from cyberdyne_backend.application.courses.seed_ecological_restoration import (
+    ECOLOGICAL_RESTORATION_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_electric_drives import ELECTRIC_DRIVES_COURSES
 from cyberdyne_backend.application.courses.seed_electromagnetics import ELECTROMAGNETICS_COURSES
 from cyberdyne_backend.application.courses.seed_electronics import ELECTRONICS_COURSES
@@ -154,11 +169,26 @@ from cyberdyne_backend.application.courses.seed_engineering_thermodynamics impor
     ENGINEERING_THERMODYNAMICS_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_english_brazil import ENGLISH_BRAZIL_COURSES
+from cyberdyne_backend.application.courses.seed_environmental_chemistry import (
+    ENVIRONMENTAL_CHEMISTRY_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_environmental_geospatial_modeling import (
     ENVIRONMENTAL_GEOSPATIAL_MODELING_COURSES,
 )
+from cyberdyne_backend.application.courses.seed_environmental_impact_assessment import (
+    ENVIRONMENTAL_IMPACT_ASSESSMENT_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_environmental_management_auditing import (
+    ENVIRONMENTAL_MANAGEMENT_AUDITING_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_environmental_modeling import (
+    ENVIRONMENTAL_MODELING_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_environmental_process_engineering import (
     ENVIRONMENTAL_PROCESS_ENGINEERING_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_environmental_risk_assessment import (
+    ENVIRONMENTAL_RISK_ASSESSMENT_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_estimation import ESTIMATION_COURSES
 from cyberdyne_backend.application.courses.seed_evolution_ecology import EVOLUTION_ECOLOGY_COURSES
@@ -203,6 +233,9 @@ from cyberdyne_backend.application.courses.seed_hwverification import HW_VERIFIC
 from cyberdyne_backend.application.courses.seed_hydraulics_pneumatics import (
     HYDRAULICS_PNEUMATICS_COURSES,
 )
+from cyberdyne_backend.application.courses.seed_hydrogeology_remediation import (
+    HYDROGEOLOGY_REMEDIATION_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_hydrology_water_resources import (
     HYDROLOGY_WATER_RESOURCES_COURSES,
 )
@@ -214,6 +247,9 @@ from cyberdyne_backend.application.courses.seed_intro_chemical_engineering impor
 )
 from cyberdyne_backend.application.courses.seed_intro_civil_engineering import (
     INTRO_CIVIL_ENGINEERING_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_intro_environmental_engineering import (
+    INTRO_ENVIRONMENTAL_ENGINEERING_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_intro_geospatial_engineering import (
     INTRO_GEOSPATIAL_ENGINEERING_COURSES,
@@ -373,6 +409,9 @@ from cyberdyne_backend.application.courses.seed_software_architecture import (
 )
 from cyberdyne_backend.application.courses.seed_software_quality import SOFTWARE_QUALITY_COURSES
 from cyberdyne_backend.application.courses.seed_soil_mechanics import SOIL_MECHANICS_COURSES
+from cyberdyne_backend.application.courses.seed_solid_waste_management import (
+    SOLID_WASTE_MANAGEMENT_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_spatial_databases_postgis import (
     SPATIAL_DATABASES_POSTGIS_COURSES,
 )
@@ -424,6 +463,13 @@ from cyberdyne_backend.application.courses.seed_types import (
 from cyberdyne_backend.application.courses.seed_unit_operations import UNIT_OPERATIONS_COURSES
 from cyberdyne_backend.application.courses.seed_vectorcalc import VECTORCALC_COURSES
 from cyberdyne_backend.application.courses.seed_vlsi import VLSI_COURSES
+from cyberdyne_backend.application.courses.seed_wastewater_treatment import (
+    WASTEWATER_TREATMENT_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_water_quality_monitoring import (
+    WATER_QUALITY_MONITORING_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_water_treatment import WATER_TREATMENT_COURSES
 from cyberdyne_backend.application.courses.seed_web_gis_development import (
     WEB_GIS_DEVELOPMENT_COURSES,
 )
@@ -1739,6 +1785,23 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *GPU_PROGRAMMING_COURSES,
     *DEVOPS_FUNDAMENTALS_COURSES,
     *FINE_TUNING_LLMS_COURSES,
+    # -- Environmental Engineering track (new environmental-specific courses) --
+    *INTRO_ENVIRONMENTAL_ENGINEERING_COURSES,
+    *ENVIRONMENTAL_CHEMISTRY_COURSES,
+    *WATER_QUALITY_MONITORING_COURSES,
+    *WATER_TREATMENT_COURSES,
+    *WASTEWATER_TREATMENT_COURSES,
+    *SOLID_WASTE_MANAGEMENT_COURSES,
+    *AIR_POLLUTION_CONTROL_COURSES,
+    *HYDROGEOLOGY_REMEDIATION_COURSES,
+    *ENVIRONMENTAL_MODELING_COURSES,
+    *ENVIRONMENTAL_IMPACT_ASSESSMENT_COURSES,
+    *ENVIRONMENTAL_MANAGEMENT_AUDITING_COURSES,
+    *CLIMATE_CHANGE_CARBON_COURSES,
+    *ENVIRONMENTAL_RISK_ASSESSMENT_COURSES,
+    *ECOLOGICAL_RESTORATION_COURSES,
+    *DISASTER_RISK_RESILIENCE_COURSES,
+    *AI_FOR_ENVIRONMENTAL_ENGINEERING_COURSES,
 )
 
 
