@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 569
+        assert len(summary) == 585
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -502,6 +502,45 @@ class TestSeedCourses:
             assert root_re.match(lines[1]), f"{v.title}: bad root {lines[1]!r}"
             for line in lines[2:]:
                 assert node_re.match(line), f"{v.title}: bad node {line!r}"
+
+    def test_environmental_engineering_courses_shape(self) -> None:
+        # The 16 new environmental-specific courses all follow the house pattern:
+        # welcome + 8 content lessons (each with a mermaid diagram and a
+        # code/formula example), a checkpoint quiz after each, and the
+        # comprehensive final quiz = 19 lessons.
+        environmental_slugs = {
+            "intro-environmental-engineering",
+            "environmental-chemistry",
+            "water-quality-monitoring",
+            "water-treatment",
+            "wastewater-treatment",
+            "solid-waste-management",
+            "air-pollution-control",
+            "hydrogeology-remediation",
+            "environmental-modeling",
+            "environmental-impact-assessment",
+            "environmental-management-auditing",
+            "climate-change-carbon",
+            "environmental-risk-assessment",
+            "ecological-restoration",
+            "disaster-risk-resilience",
+            "ai-for-environmental-engineering",
+        }
+        by_slug = {c.slug: c for c in ACADEMY_COURSES}
+        for slug in environmental_slugs:
+            course = by_slug[slug]
+            assert len(course.lessons) == 19, f"{slug}: {len(course.lessons)} lessons"
+            self._assert_ai_course_pattern(course)
+            texts = [le for le in course.lessons if le.lesson_type == "text"]
+            assert len(texts) == 9, f"{slug}: {len(texts)} text lessons"
+            for lesson in texts[1:]:  # all but the welcome
+                assert "```mermaid" in (lesson.text_body or ""), (
+                    f"{slug}/{lesson.title}: no diagram"
+                )
+            with_code = sum(
+                1 for le in texts[1:] if "```" in (le.text_body or "").replace("```mermaid", "")
+            )
+            assert with_code >= 6, f"{slug}: only {with_code} lessons carry a code/formula example"
 
     def test_every_registry_quiz_question_has_exactly_one_correct_option(self) -> None:
         # Regression: a quiz question with zero (or >1) correct options passes the
@@ -1094,6 +1133,22 @@ class TestSeedCourses:
             "satellite-orbits-missions",
             "geospatial-data-engineering",
             "environmental-geospatial-modeling",
+            "intro-environmental-engineering",
+            "environmental-chemistry",
+            "water-quality-monitoring",
+            "water-treatment",
+            "wastewater-treatment",
+            "solid-waste-management",
+            "air-pollution-control",
+            "hydrogeology-remediation",
+            "environmental-modeling",
+            "environmental-impact-assessment",
+            "environmental-management-auditing",
+            "climate-change-carbon",
+            "environmental-risk-assessment",
+            "ecological-restoration",
+            "disaster-risk-resilience",
+            "ai-for-environmental-engineering",
         }
         for course in ACADEMY_COURSES:
             assert course.lessons  # non-empty
