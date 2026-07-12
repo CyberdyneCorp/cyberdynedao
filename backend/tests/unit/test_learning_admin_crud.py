@@ -497,6 +497,24 @@ def test_pytorch_basics_module_payload_is_valid() -> None:
     assert appended_module_slugs(["a", "b"], module["slug"]) == ["a", "b", module["slug"]]
 
 
+def test_fine_tuning_llms_module_payload_is_valid() -> None:
+    from cyberdyne_backend.application.courses.seed import ACADEMY_COURSES
+    from cyberdyne_backend.cli.add_fine_tuning_llms_to_computer_engineering import (
+        appended_module_slugs,
+        build_module_payload,
+    )
+    from cyberdyne_backend.domain.learning import VALID_LEVELS
+
+    module = build_module_payload()
+    assert module["slug"] == "fine-tuning-llms"
+    assert module["level"] in VALID_LEVELS
+    catalogue = {c.slug for c in ACADEMY_COURSES}
+    missing = sorted(set(module["courseSlugs"]) - catalogue)
+    assert not missing, f"module references unseeded courses: {missing}"
+    assert appended_module_slugs(["a", module["slug"]], module["slug"]) is None
+    assert appended_module_slugs(["a", "b"], module["slug"]) == ["a", "b", module["slug"]]
+
+
 def test_tensorflow_basics_module_payload_is_valid() -> None:
     from cyberdyne_backend.application.courses.seed import ACADEMY_COURSES
     from cyberdyne_backend.cli.add_tensorflow_basics_to_computer_engineering import (

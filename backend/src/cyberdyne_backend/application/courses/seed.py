@@ -164,6 +164,7 @@ from cyberdyne_backend.application.courses.seed_estimation import ESTIMATION_COU
 from cyberdyne_backend.application.courses.seed_evolution_ecology import EVOLUTION_ECOLOGY_COURSES
 from cyberdyne_backend.application.courses.seed_fiber_optics import FIBER_OPTICS_COURSES
 from cyberdyne_backend.application.courses.seed_filter_design import FILTER_DESIGN_COURSES
+from cyberdyne_backend.application.courses.seed_fine_tuning_llms import FINE_TUNING_LLMS_COURSES
 from cyberdyne_backend.application.courses.seed_finite_element_analysis import (
     FINITE_ELEMENT_ANALYSIS_COURSES,
 )
@@ -1737,6 +1738,7 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *TENSORFLOW_COURSES,
     *GPU_PROGRAMMING_COURSES,
     *DEVOPS_FUNDAMENTALS_COURSES,
+    *FINE_TUNING_LLMS_COURSES,
 )
 
 
