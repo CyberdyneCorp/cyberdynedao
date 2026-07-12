@@ -65,6 +65,9 @@ from cyberdyne_backend.application.courses.seed_capstone_ai_drug_design import (
 from cyberdyne_backend.application.courses.seed_capstone_generative_mechanical_design import (
     CAPSTONE_GENERATIVE_MECHANICAL_DESIGN_COURSES,
 )
+from cyberdyne_backend.application.courses.seed_cartography_projections import (
+    CARTOGRAPHY_PROJECTIONS_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_cell_biology import CELL_BIOLOGY_COURSES
 from cyberdyne_backend.application.courses.seed_chemical_engineering_thermodynamics import (
     CHEMICAL_ENGINEERING_THERMODYNAMICS_COURSES,
@@ -151,6 +154,9 @@ from cyberdyne_backend.application.courses.seed_engineering_thermodynamics impor
     ENGINEERING_THERMODYNAMICS_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_english_brazil import ENGLISH_BRAZIL_COURSES
+from cyberdyne_backend.application.courses.seed_environmental_geospatial_modeling import (
+    ENVIRONMENTAL_GEOSPATIAL_MODELING_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_environmental_process_engineering import (
     ENVIRONMENTAL_PROCESS_ENGINEERING_COURSES,
 )
@@ -173,7 +179,19 @@ from cyberdyne_backend.application.courses.seed_generative_molecular_design impo
 )
 from cyberdyne_backend.application.courses.seed_genetics import GENETICS_COURSES
 from cyberdyne_backend.application.courses.seed_genomics import GENOMICS_COURSES
+from cyberdyne_backend.application.courses.seed_geoai_deep_learning import (
+    GEOAI_DEEP_LEARNING_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_geodesy import GEODESY_COURSES
+from cyberdyne_backend.application.courses.seed_geospatial_3d_visualization import (
+    GEOSPATIAL_3D_VISUALIZATION_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_geospatial_data_engineering import (
+    GEOSPATIAL_DATA_ENGINEERING_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_gis_fundamentals import GIS_FUNDAMENTALS_COURSES
 from cyberdyne_backend.application.courses.seed_git import GIT_COURSES
+from cyberdyne_backend.application.courses.seed_gnss_navigation import GNSS_NAVIGATION_COURSES
 from cyberdyne_backend.application.courses.seed_gpu_programming import GPU_PROGRAMMING_COURSES
 from cyberdyne_backend.application.courses.seed_heat_transfer import HEAT_TRANSFER_COURSES
 from cyberdyne_backend.application.courses.seed_high_voltage import HIGH_VOLTAGE_COURSES
@@ -196,10 +214,16 @@ from cyberdyne_backend.application.courses.seed_intro_chemical_engineering impor
 from cyberdyne_backend.application.courses.seed_intro_civil_engineering import (
     INTRO_CIVIL_ENGINEERING_COURSES,
 )
+from cyberdyne_backend.application.courses.seed_intro_geospatial_engineering import (
+    INTRO_GEOSPATIAL_ENGINEERING_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_kinematics_of_machinery import (
     KINEMATICS_OF_MACHINERY_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_languages import LANGUAGE_COURSES
+from cyberdyne_backend.application.courses.seed_lidar_point_clouds import (
+    LIDAR_POINT_CLOUDS_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_linux import LINUX_COURSES
 from cyberdyne_backend.application.courses.seed_machine_design import MACHINE_DESIGN_COURSES
 from cyberdyne_backend.application.courses.seed_machines import MACHINES_COURSES
@@ -247,6 +271,9 @@ from cyberdyne_backend.application.courses.seed_pharmaceutical_engineering impor
     PHARMACEUTICAL_ENGINEERING_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_pharmacology import PHARMACOLOGY_COURSES
+from cyberdyne_backend.application.courses.seed_photogrammetry_drone_mapping import (
+    PHOTOGRAMMETRY_DRONE_MAPPING_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_photonics import PHOTONICS_COURSES
 from cyberdyne_backend.application.courses.seed_phylogenetics import PHYLOGENETICS_COURSES
 from cyberdyne_backend.application.courses.seed_physical_chemistry import PHYSICAL_CHEMISTRY_COURSES
@@ -302,6 +329,12 @@ from cyberdyne_backend.application.courses.seed_react import REACT_COURSES
 from cyberdyne_backend.application.courses.seed_reinforced_concrete_design import (
     REINFORCED_CONCRETE_DESIGN_COURSES,
 )
+from cyberdyne_backend.application.courses.seed_remote_sensing_analysis import (
+    REMOTE_SENSING_ANALYSIS_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_remote_sensing_fundamentals import (
+    REMOTE_SENSING_FUNDAMENTALS_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_renewable_ev import RENEWABLE_EV_COURSES
 from cyberdyne_backend.application.courses.seed_reproducible_research import (
     REPRODUCIBLE_RESEARCH_COURSES,
@@ -312,6 +345,13 @@ from cyberdyne_backend.application.courses.seed_robot_manipulators import ROBOT_
 from cyberdyne_backend.application.courses.seed_robotics import ROBOTICS_COURSES
 from cyberdyne_backend.application.courses.seed_sanitation_drainage import (
     SANITATION_DRAINAGE_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_sar_insar import SAR_INSAR_COURSES
+from cyberdyne_backend.application.courses.seed_satellite_earth_observation import (
+    SATELLITE_EARTH_OBSERVATION_COURSES,
+)
+from cyberdyne_backend.application.courses.seed_satellite_orbits_missions import (
+    SATELLITE_ORBITS_MISSIONS_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_scientific_computing import (
     SCIENTIFIC_COMPUTING_COURSES,
@@ -332,6 +372,9 @@ from cyberdyne_backend.application.courses.seed_software_architecture import (
 )
 from cyberdyne_backend.application.courses.seed_software_quality import SOFTWARE_QUALITY_COURSES
 from cyberdyne_backend.application.courses.seed_soil_mechanics import SOIL_MECHANICS_COURSES
+from cyberdyne_backend.application.courses.seed_spatial_databases_postgis import (
+    SPATIAL_DATABASES_POSTGIS_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_startups_age_of_ai import (
     STARTUPS_AGE_OF_AI_COURSES,
 )
@@ -380,6 +423,9 @@ from cyberdyne_backend.application.courses.seed_types import (
 from cyberdyne_backend.application.courses.seed_unit_operations import UNIT_OPERATIONS_COURSES
 from cyberdyne_backend.application.courses.seed_vectorcalc import VECTORCALC_COURSES
 from cyberdyne_backend.application.courses.seed_vlsi import VLSI_COURSES
+from cyberdyne_backend.application.courses.seed_web_gis_development import (
+    WEB_GIS_DEVELOPMENT_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_webdev import WEBDEV_COURSES
 from cyberdyne_backend.application.courses.seed_wireless_comms import WIRELESS_COMMS_COURSES
 from cyberdyne_backend.application.quizzes.use_cases import (
@@ -1548,6 +1594,25 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *SUSTAINABLE_PROCESSES_COURSES,
     *PROCESS_ECONOMICS_MANAGEMENT_COURSES,
     *AI_DIGITAL_CHEMICAL_ENGINEERING_COURSES,
+    # -- Geospatial Engineering track (new geospatial-specific courses) --
+    *INTRO_GEOSPATIAL_ENGINEERING_COURSES,
+    *CARTOGRAPHY_PROJECTIONS_COURSES,
+    *GEODESY_COURSES,
+    *GIS_FUNDAMENTALS_COURSES,
+    *SPATIAL_DATABASES_POSTGIS_COURSES,
+    *REMOTE_SENSING_FUNDAMENTALS_COURSES,
+    *REMOTE_SENSING_ANALYSIS_COURSES,
+    *PHOTOGRAMMETRY_DRONE_MAPPING_COURSES,
+    *LIDAR_POINT_CLOUDS_COURSES,
+    *SAR_INSAR_COURSES,
+    *SATELLITE_EARTH_OBSERVATION_COURSES,
+    *GEOAI_DEEP_LEARNING_COURSES,
+    *WEB_GIS_DEVELOPMENT_COURSES,
+    *GEOSPATIAL_3D_VISUALIZATION_COURSES,
+    *GNSS_NAVIGATION_COURSES,
+    *SATELLITE_ORBITS_MISSIONS_COURSES,
+    *GEOSPATIAL_DATA_ENGINEERING_COURSES,
+    *ENVIRONMENTAL_GEOSPATIAL_MODELING_COURSES,
     *CONCURRENCY_COURSES,
     *SIGNAL_INTEGRITY_COURSES,
     *EMC_COURSES,

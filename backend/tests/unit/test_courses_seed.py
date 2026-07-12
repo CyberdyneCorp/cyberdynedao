@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 550
+        assert len(summary) == 568
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -416,6 +416,47 @@ class TestSeedCourses:
         }
         by_slug = {c.slug: c for c in ACADEMY_COURSES}
         for slug in chemical_slugs:
+            course = by_slug[slug]
+            assert len(course.lessons) == 19, f"{slug}: {len(course.lessons)} lessons"
+            self._assert_ai_course_pattern(course)
+            texts = [le for le in course.lessons if le.lesson_type == "text"]
+            assert len(texts) == 9, f"{slug}: {len(texts)} text lessons"
+            for lesson in texts[1:]:  # all but the welcome
+                assert "```mermaid" in (lesson.text_body or ""), (
+                    f"{slug}/{lesson.title}: no diagram"
+                )
+            with_code = sum(
+                1 for le in texts[1:] if "```" in (le.text_body or "").replace("```mermaid", "")
+            )
+            assert with_code >= 6, f"{slug}: only {with_code} lessons carry a code/formula example"
+
+    def test_geospatial_engineering_courses_shape(self) -> None:
+        # The 18 new geospatial-specific courses all follow the house pattern:
+        # welcome + 8 content lessons (each with a mermaid diagram and a
+        # code/formula example), a checkpoint quiz after each, and the
+        # comprehensive final quiz = 19 lessons.
+        geospatial_slugs = {
+            "intro-geospatial-engineering",
+            "cartography-projections",
+            "geodesy",
+            "gis-fundamentals",
+            "spatial-databases-postgis",
+            "remote-sensing-fundamentals",
+            "remote-sensing-analysis",
+            "photogrammetry-drone-mapping",
+            "lidar-point-clouds",
+            "sar-insar",
+            "satellite-earth-observation",
+            "geoai-deep-learning",
+            "web-gis-development",
+            "3d-geospatial-visualization",
+            "gnss-navigation",
+            "satellite-orbits-missions",
+            "geospatial-data-engineering",
+            "environmental-geospatial-modeling",
+        }
+        by_slug = {c.slug: c for c in ACADEMY_COURSES}
+        for slug in geospatial_slugs:
             course = by_slug[slug]
             assert len(course.lessons) == 19, f"{slug}: {len(course.lessons)} lessons"
             self._assert_ai_course_pattern(course)
@@ -1002,6 +1043,24 @@ class TestSeedCourses:
             "sustainable-processes",
             "process-economics-management",
             "ai-digital-chemical-engineering",
+            "intro-geospatial-engineering",
+            "cartography-projections",
+            "geodesy",
+            "gis-fundamentals",
+            "spatial-databases-postgis",
+            "remote-sensing-fundamentals",
+            "remote-sensing-analysis",
+            "photogrammetry-drone-mapping",
+            "lidar-point-clouds",
+            "sar-insar",
+            "satellite-earth-observation",
+            "geoai-deep-learning",
+            "web-gis-development",
+            "3d-geospatial-visualization",
+            "gnss-navigation",
+            "satellite-orbits-missions",
+            "geospatial-data-engineering",
+            "environmental-geospatial-modeling",
         }
         for course in ACADEMY_COURSES:
             assert course.lessons  # non-empty
