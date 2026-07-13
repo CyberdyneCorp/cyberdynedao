@@ -439,6 +439,9 @@ from cyberdyne_backend.application.courses.seed_sustainable_processes import (
     SUSTAINABLE_PROCESSES_COURSES,
 )
 from cyberdyne_backend.application.courses.seed_svelte import SVELTE_COURSES
+from cyberdyne_backend.application.courses.seed_system_design_interview import (
+    SYSTEM_DESIGN_INTERVIEW_COURSES,
+)
 from cyberdyne_backend.application.courses.seed_systemdesign import SYSTEM_DESIGN_COURSES
 from cyberdyne_backend.application.courses.seed_systems_biology import SYSTEMS_BIOLOGY_COURSES
 from cyberdyne_backend.application.courses.seed_sysverilog import SYSVERILOG_COURSES
@@ -1785,6 +1788,7 @@ _RAW_COURSES: tuple[SeedCourse, ...] = (
     *GPU_PROGRAMMING_COURSES,
     *DEVOPS_FUNDAMENTALS_COURSES,
     *FINE_TUNING_LLMS_COURSES,
+    *SYSTEM_DESIGN_INTERVIEW_COURSES,
     # -- Environmental Engineering track (new environmental-specific courses) --
     *INTRO_ENVIRONMENTAL_ENGINEERING_COURSES,
     *ENVIRONMENTAL_CHEMISTRY_COURSES,
