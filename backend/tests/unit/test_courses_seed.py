@@ -33,7 +33,7 @@ class TestSeedCourses:
         repo = FakeCourseRepo()
         summary = await seed_courses(repo)
 
-        assert len(summary) == 585
+        assert len(summary) == 586
         matlab = await repo.get_by_slug("matlab-basics", include_drafts=True)
         python = await repo.get_by_slug("python-course", include_drafts=True)
         assert matlab.status.value == "published"
@@ -541,6 +541,36 @@ class TestSeedCourses:
                 1 for le in texts[1:] if "```" in (le.text_body or "").replace("```mermaid", "")
             )
             assert with_code >= 6, f"{slug}: only {with_code} lessons carry a code/formula example"
+
+    def test_system_design_interview_course_shape(self) -> None:
+        # A hybrid course: 9 text lessons (welcome + 8 system-design concept
+        # lessons, each with a mermaid graph) and 1 freeCodeCamp video capstone
+        # (with a Summary / Main ideas / Mindmap companion body), every content
+        # lesson followed by a checkpoint quiz, and the final quiz last = 21.
+        import re
+
+        course = next(c for c in ACADEMY_COURSES if c.slug == "system-design-interview")
+        assert len(course.lessons) == 21
+        self._assert_ai_course_pattern(course)
+        texts = [le for le in course.lessons if le.lesson_type == "text"]
+        videos = [le for le in course.lessons if le.lesson_type == "video"]
+        assert len(texts) == 9
+        assert len(videos) == 1
+        for lesson in texts[1:]:  # every concept lesson carries a diagram
+            assert "```mermaid" in (lesson.text_body or ""), f"{lesson.title}: no diagram"
+        assert all(
+            v.content_url and v.content_url.startswith("https://www.youtube.com/watch?v=")
+            for v in videos
+        )
+        root_re = re.compile(r"^  root\(\([A-Za-z0-9 -]+\)\)$")
+        node_re = re.compile(r"^ {4,}[A-Za-z0-9][A-Za-z0-9 -]*$")
+        for v in videos:
+            block = (v.text_body or "").split("```mermaid", 1)[1].split("```", 1)[0].strip("\n")
+            lines = block.split("\n")
+            assert lines[0] == "mindmap", f"{v.title}: not a mindmap"
+            assert root_re.match(lines[1]), f"{v.title}: bad root {lines[1]!r}"
+            for line in lines[2:]:
+                assert node_re.match(line), f"{v.title}: bad node {line!r}"
 
     def test_every_registry_quiz_question_has_exactly_one_correct_option(self) -> None:
         # Regression: a quiz question with zero (or >1) correct options passes the
@@ -1079,6 +1109,7 @@ class TestSeedCourses:
             "gpu-programming-cuda-opencl",
             "devops-fundamentals",
             "fine-tuning-llms",
+            "system-design-interview",
             "intro-civil-engineering",
             "surveying-geoprocessing",
             "engineering-geology",
